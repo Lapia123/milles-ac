@@ -152,36 +152,67 @@ class FXBrokerAPITester:
         return success
 
     def test_transactions_crud(self):
-        """Test transactions CRUD operations"""
-        # Get existing accounts first
-        success, accounts = self.run_test("Get Accounts for Transactions", "GET", "api/trading-accounts", 200)
-        if not success or not accounts:
+        """Test transactions CRUD operations - now linked to clients directly"""
+        # Get existing clients first
+        success, clients = self.run_test("Get Clients for Transactions", "GET", "api/clients", 200)
+        if not success or not clients:
             return False
 
-        account_id = accounts[0]['account_id']
+        client_id = clients[0]['client_id']
+        
+        # Get treasury accounts for destination
+        success, treasury_accounts = self.run_test("Get Treasury for Transactions", "GET", "api/treasury", 200)
+        if not success or not treasury_accounts:
+            return False
+            
+        destination_account_id = treasury_accounts[0]['account_id']
 
         # Get transactions
         success, transactions = self.run_test("Get Transactions", "GET", "api/transactions", 200)
         if not success:
             return False
 
-        # Create transaction
-        tx_data = {
-            "account_id": account_id,
-            "transaction_type": "deposit",
-            "amount": 1000.00,
-            "currency": "USD",
-            "description": "Test deposit"
+        # Create transaction using form data (multipart)
+        import requests
+        url = f"{self.base_url}/api/transactions"
+        headers = {'Authorization': f'Bearer {self.token}'}
+        
+        form_data = {
+            'client_id': client_id,
+            'transaction_type': 'deposit',
+            'amount': '1500.00',
+            'currency': 'USD',
+            'destination_account_id': destination_account_id,
+            'description': 'API Test transaction'
         }
-        success, new_tx = self.run_test("Create Transaction", "POST", "api/transactions", 200, data=tx_data)
-        if not success or not new_tx.get('transaction_id'):
+        
+        self.tests_run += 1
+        print(f"\n🔍 Testing Create Transaction (Form Data)...")
+        
+        try:
+            response = requests.post(url, data=form_data, headers=headers)
+            success = response.status_code == 200
+            if success:
+                self.tests_passed += 1
+                print(f"✅ Passed - Status: {response.status_code}")
+                new_tx = response.json()
+                tx_id = new_tx.get('transaction_id')
+                print(f"   Created transaction: {new_tx.get('reference')}")
+            else:
+                print(f"❌ Failed - Expected 200, got {response.status_code}")
+                print(f"   Response: {response.text[:200]}")
+                self.failed_tests.append(f"Create Transaction: Expected 200, got {response.status_code}")
+                return False
+        except Exception as e:
+            print(f"❌ Failed - Error: {str(e)}")
+            self.failed_tests.append(f"Create Transaction: {str(e)}")
             return False
 
-        tx_id = new_tx['transaction_id']
-        print(f"   Created transaction: {new_tx.get('reference')}")
+        if not tx_id:
+            return False
 
         # Update transaction status
-        update_data = {"status": "completed"}
+        update_data = {"status": "approved"}
         success, updated = self.run_test("Update Transaction", "PUT", f"api/transactions/{tx_id}", 200, data=update_data)
         
         return success
