@@ -1,0 +1,549 @@
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Badge } from '../components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
+import { Textarea } from '../components/ui/textarea';
+import { ScrollArea } from '../components/ui/scroll-area';
+import { toast } from 'sonner';
+import { useAuth } from '../context/AuthContext';
+import {
+  Landmark,
+  Plus,
+  MoreVertical,
+  Edit,
+  Trash2,
+  Eye,
+  Building2,
+  DollarSign,
+} from 'lucide-react';
+
+const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+const accountTypes = [
+  { value: 'bank', label: 'Bank Account' },
+  { value: 'crypto_wallet', label: 'Crypto Wallet' },
+  { value: 'payment_gateway', label: 'Payment Gateway' },
+];
+
+const statusOptions = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+];
+
+export default function Treasury() {
+  const { user } = useAuth();
+  const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const [viewAccount, setViewAccount] = useState(null);
+  const [formData, setFormData] = useState({
+    account_name: '',
+    account_type: 'bank',
+    bank_name: '',
+    account_number: '',
+    routing_number: '',
+    swift_code: '',
+    currency: 'USD',
+    description: '',
+    status: 'active',
+  });
+
+  const isAdmin = user?.role === 'admin';
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('auth_token');
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    };
+  };
+
+  const fetchAccounts = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/treasury`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setAccounts(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching treasury accounts:', error);
+      toast.error('Failed to load treasury accounts');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAccounts();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const url = selectedAccount
+        ? `${API_URL}/api/treasury/${selectedAccount.account_id}`
+        : `${API_URL}/api/treasury`;
+      const method = selectedAccount ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        toast.success(selectedAccount ? 'Account updated' : 'Account created');
+        setIsDialogOpen(false);
+        resetForm();
+        fetchAccounts();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Operation failed');
+      }
+    } catch (error) {
+      toast.error('Operation failed');
+    }
+  };
+
+  const handleDelete = async (accountId) => {
+    if (!window.confirm('Are you sure you want to delete this account?')) return;
+    try {
+      const response = await fetch(`${API_URL}/api/treasury/${accountId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      if (response.ok) {
+        toast.success('Account deleted');
+        fetchAccounts();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Delete failed');
+      }
+    } catch (error) {
+      toast.error('Delete failed');
+    }
+  };
+
+  const handleEdit = (account) => {
+    setSelectedAccount(account);
+    setFormData({
+      account_name: account.account_name,
+      account_type: account.account_type,
+      bank_name: account.bank_name || '',
+      account_number: account.account_number || '',
+      routing_number: account.routing_number || '',
+      swift_code: account.swift_code || '',
+      currency: account.currency,
+      description: account.description || '',
+      status: account.status,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const resetForm = () => {
+    setSelectedAccount(null);
+    setFormData({
+      account_name: '',
+      account_type: 'bank',
+      bank_name: '',
+      account_number: '',
+      routing_number: '',
+      swift_code: '',
+      currency: 'USD',
+      description: '',
+      status: 'active',
+    });
+  };
+
+  const getStatusBadge = (status) => {
+    const styles = {
+      active: 'status-approved',
+      inactive: 'status-rejected',
+    };
+    return <Badge className={`${styles[status] || 'status-pending'} text-xs uppercase`}>{status}</Badge>;
+  };
+
+  const getTypeBadge = (type) => {
+    const labels = {
+      bank: 'Bank',
+      crypto_wallet: 'Crypto',
+      payment_gateway: 'Gateway',
+    };
+    return (
+      <Badge variant="outline" className="border-[#66FCF1]/30 text-[#66FCF1] text-xs uppercase">
+        {labels[type] || type}
+      </Badge>
+    );
+  };
+
+  const totalBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+
+  return (
+    <div className="space-y-6 animate-fade-in" data-testid="treasury-page">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
+            Treasury
+          </h1>
+          <p className="text-[#C5C6C7]">Manage bank accounts and treasury</p>
+        </div>
+        {isAdmin && (
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
+                data-testid="add-treasury-btn"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Account
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+                  {selectedAccount ? 'Edit Account' : 'Add Treasury Account'}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Name *</Label>
+                  <Input
+                    value={formData.account_name}
+                    onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
+                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                    placeholder="e.g., Main Operating Account"
+                    data-testid="treasury-name"
+                    required
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Type</Label>
+                    <Select
+                      value={formData.account_type}
+                      onValueChange={(value) => setFormData({ ...formData, account_type: value })}
+                    >
+                      <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="treasury-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#1F2833] border-white/10">
+                        {accountTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value} className="text-white hover:bg-white/5">
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Currency</Label>
+                    <Select
+                      value={formData.currency}
+                      onValueChange={(value) => setFormData({ ...formData, currency: value })}
+                    >
+                      <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="treasury-currency">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#1F2833] border-white/10">
+                        <SelectItem value="USD" className="text-white hover:bg-white/5">USD</SelectItem>
+                        <SelectItem value="EUR" className="text-white hover:bg-white/5">EUR</SelectItem>
+                        <SelectItem value="GBP" className="text-white hover:bg-white/5">GBP</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Bank Name</Label>
+                  <Input
+                    value={formData.bank_name}
+                    onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                    placeholder="e.g., Chase Bank"
+                    data-testid="treasury-bank"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Number</Label>
+                    <Input
+                      value={formData.account_number}
+                      onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      placeholder="****1234"
+                      data-testid="treasury-account-number"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Routing Number</Label>
+                    <Input
+                      value={formData.routing_number}
+                      onChange={(e) => setFormData({ ...formData, routing_number: e.target.value })}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      placeholder="Optional"
+                      data-testid="treasury-routing"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">SWIFT Code</Label>
+                  <Input
+                    value={formData.swift_code}
+                    onChange={(e) => setFormData({ ...formData, swift_code: e.target.value })}
+                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                    placeholder="Optional"
+                    data-testid="treasury-swift"
+                  />
+                </div>
+                
+                {selectedAccount && (
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Status</Label>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(value) => setFormData({ ...formData, status: value })}
+                    >
+                      <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="treasury-status">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#1F2833] border-white/10">
+                        {statusOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value} className="text-white hover:bg-white/5">
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Description</Label>
+                  <Textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                    rows={2}
+                    data-testid="treasury-description"
+                  />
+                </div>
+                
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => { setIsDialogOpen(false); resetForm(); }}
+                    className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+                    data-testid="save-treasury-btn"
+                  >
+                    {selectedAccount ? 'Update' : 'Create'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+
+      {/* Summary Card */}
+      <Card className="bg-[#1F2833] border-white/5">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Total Treasury Balance</p>
+              <p className="text-4xl font-bold font-mono text-white">${totalBalance.toLocaleString()}</p>
+            </div>
+            <div className="p-4 bg-[#66FCF1]/10 rounded-sm">
+              <DollarSign className="w-8 h-8 text-[#66FCF1]" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Accounts Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {loading ? (
+          <div className="col-span-full flex justify-center py-12">
+            <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : accounts.length === 0 ? (
+          <div className="col-span-full text-center py-12">
+            <Landmark className="w-12 h-12 text-[#C5C6C7] mx-auto mb-4" />
+            <p className="text-[#C5C6C7]">No treasury accounts found</p>
+            {isAdmin && <p className="text-sm text-[#C5C6C7]/60 mt-2">Click "Add Account" to create one</p>}
+          </div>
+        ) : (
+          accounts.map((account) => (
+            <Card key={account.account_id} className="bg-[#1F2833] border-white/5 card-hover">
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-[#66FCF1]/10 rounded-sm">
+                      <Building2 className="w-5 h-5 text-[#66FCF1]" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg text-white">{account.account_name}</CardTitle>
+                      <p className="text-xs text-[#C5C6C7]">{account.bank_name || 'N/A'}</p>
+                    </div>
+                  </div>
+                  {isAdmin && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="text-[#C5C6C7] hover:text-white hover:bg-white/5" data-testid={`treasury-actions-${account.account_id}`}>
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-[#1F2833] border-white/10">
+                        <DropdownMenuItem onClick={() => setViewAccount(account)} className="text-white hover:bg-white/5 cursor-pointer">
+                          <Eye className="w-4 h-4 mr-2" /> View
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEdit(account)} className="text-white hover:bg-white/5 cursor-pointer">
+                          <Edit className="w-4 h-4 mr-2" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDelete(account.account_id)} className="text-red-400 hover:bg-white/5 cursor-pointer">
+                          <Trash2 className="w-4 h-4 mr-2" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#C5C6C7] text-sm">Balance</span>
+                    <span className="text-xl font-mono font-bold text-white">${(account.balance || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#C5C6C7] text-sm">Currency</span>
+                    <span className="text-white font-mono">{account.currency}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#C5C6C7] text-sm">Type</span>
+                    {getTypeBadge(account.account_type)}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#C5C6C7] text-sm">Status</span>
+                    {getStatusBadge(account.status)}
+                  </div>
+                  {account.account_number && (
+                    <div className="pt-2 border-t border-white/5">
+                      <p className="text-xs text-[#C5C6C7]">Account: <span className="font-mono text-white">{account.account_number}</span></p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* View Account Dialog */}
+      <Dialog open={!!viewAccount} onOpenChange={() => setViewAccount(null)}>
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+              Account Details
+            </DialogTitle>
+          </DialogHeader>
+          {viewAccount && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-[#66FCF1]/10 rounded-sm">
+                  <Building2 className="w-8 h-8 text-[#66FCF1]" />
+                </div>
+                <div>
+                  <h3 className="text-xl text-white font-medium">{viewAccount.account_name}</h3>
+                  <p className="text-[#C5C6C7]">{viewAccount.bank_name || 'N/A'}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+                <div>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Balance</p>
+                  <p className="text-2xl font-mono font-bold text-white">${(viewAccount.balance || 0).toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Currency</p>
+                  <p className="text-white font-mono">{viewAccount.currency}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Type</p>
+                  {getTypeBadge(viewAccount.account_type)}
+                </div>
+                <div>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Status</p>
+                  {getStatusBadge(viewAccount.status)}
+                </div>
+                {viewAccount.account_number && (
+                  <div>
+                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Account Number</p>
+                    <p className="text-white font-mono">{viewAccount.account_number}</p>
+                  </div>
+                )}
+                {viewAccount.routing_number && (
+                  <div>
+                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Routing Number</p>
+                    <p className="text-white font-mono">{viewAccount.routing_number}</p>
+                  </div>
+                )}
+                {viewAccount.swift_code && (
+                  <div className="col-span-2">
+                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">SWIFT Code</p>
+                    <p className="text-white font-mono">{viewAccount.swift_code}</p>
+                  </div>
+                )}
+              </div>
+              {viewAccount.description && (
+                <div className="pt-4 border-t border-white/10">
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Description</p>
+                  <p className="text-white">{viewAccount.description}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Card, CardContent } from '../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -41,11 +41,11 @@ import {
   Search,
   MoreVertical,
   Eye,
-  CheckCircle,
-  XCircle,
   Filter,
   ArrowUpRight,
   ArrowDownRight,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -61,25 +61,30 @@ const transactionTypes = [
 
 const statusOptions = [
   { value: 'pending', label: 'Pending' },
+  { value: 'approved', label: 'Approved' },
   { value: 'completed', label: 'Completed' },
+  { value: 'rejected', label: 'Rejected' },
   { value: 'cancelled', label: 'Cancelled' },
-  { value: 'failed', label: 'Failed' },
 ];
 
 export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
-  const [accounts, setAccounts] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [viewTransaction, setViewTransaction] = useState(null);
+  const [proofImage, setProofImage] = useState(null);
+  const [proofPreview, setProofPreview] = useState(null);
   const [formData, setFormData] = useState({
-    account_id: '',
+    client_id: '',
     transaction_type: 'deposit',
     amount: '',
     currency: 'USD',
+    destination_account_id: '',
     description: '',
     reference: '',
   });
@@ -87,7 +92,6 @@ export default function Transactions() {
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
     return {
-      'Content-Type': 'application/json',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     };
   };
@@ -110,33 +114,72 @@ export default function Transactions() {
     }
   };
 
-  const fetchAccounts = async () => {
+  const fetchClients = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/trading-accounts`, { headers: getAuthHeaders(), credentials: 'include' });
+      const response = await fetch(`${API_URL}/api/clients`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setAccounts(await response.json());
+        setClients(await response.json());
       }
     } catch (error) {
-      console.error('Error fetching accounts:', error);
+      console.error('Error fetching clients:', error);
+    }
+  };
+
+  const fetchTreasuryAccounts = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/treasury`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setTreasuryAccounts(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching treasury accounts:', error);
     }
   };
 
   useEffect(() => {
     fetchTransactions();
-    fetchAccounts();
+    fetchClients();
+    fetchTreasuryAccounts();
   }, [typeFilter, statusFilter]);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setProofImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProofPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('client_id', formData.client_id);
+      formDataToSend.append('transaction_type', formData.transaction_type);
+      formDataToSend.append('amount', formData.amount);
+      formDataToSend.append('currency', formData.currency);
+      if (formData.destination_account_id) {
+        formDataToSend.append('destination_account_id', formData.destination_account_id);
+      }
+      if (formData.description) {
+        formDataToSend.append('description', formData.description);
+      }
+      if (formData.reference) {
+        formDataToSend.append('reference', formData.reference);
+      }
+      if (proofImage) {
+        formDataToSend.append('proof_image', proofImage);
+      }
+
       const response = await fetch(`${API_URL}/api/transactions`, {
         method: 'POST',
         headers: getAuthHeaders(),
         credentials: 'include',
-        body: JSON.stringify({
-          ...formData,
-          amount: parseFloat(formData.amount),
-        }),
+        body: formDataToSend,
       });
 
       if (response.ok) {
@@ -153,41 +196,26 @@ export default function Transactions() {
     }
   };
 
-  const handleStatusUpdate = async (transactionId, newStatus) => {
-    try {
-      const response = await fetch(`${API_URL}/api/transactions/${transactionId}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        credentials: 'include',
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
-        toast.success(`Transaction ${newStatus}`);
-        fetchTransactions();
-      } else {
-        toast.error('Update failed');
-      }
-    } catch (error) {
-      toast.error('Update failed');
-    }
-  };
-
   const resetForm = () => {
     setFormData({
-      account_id: '',
+      client_id: '',
       transaction_type: 'deposit',
       amount: '',
       currency: 'USD',
+      destination_account_id: '',
       description: '',
       reference: '',
     });
+    setProofImage(null);
+    setProofPreview(null);
   };
 
   const getStatusBadge = (status) => {
     const styles = {
+      approved: 'status-approved',
       completed: 'status-approved',
       pending: 'status-pending',
+      rejected: 'status-rejected',
       cancelled: 'status-rejected',
       failed: 'status-rejected',
     };
@@ -204,15 +232,15 @@ export default function Transactions() {
     );
   };
 
-  const getAccountNumber = (accountId) => {
-    const account = accounts.find(a => a.account_id === accountId);
-    return account?.account_number || accountId;
+  const getClientName = (clientId) => {
+    const client = clients.find(c => c.client_id === clientId);
+    return client ? `${client.first_name} ${client.last_name}` : clientId;
   };
 
   const filteredTransactions = transactions.filter(tx => {
-    const accountNum = getAccountNumber(tx.account_id).toLowerCase();
+    const clientName = (tx.client_name || getClientName(tx.client_id)).toLowerCase();
     const ref = (tx.reference || '').toLowerCase();
-    return accountNum.includes(searchTerm.toLowerCase()) || ref.includes(searchTerm.toLowerCase());
+    return clientName.includes(searchTerm.toLowerCase()) || ref.includes(searchTerm.toLowerCase());
   });
 
   const formatDate = (dateStr) => {
@@ -229,7 +257,6 @@ export default function Transactions() {
 
   return (
     <div className="space-y-6 animate-fade-in" data-testid="transactions-page">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
@@ -247,7 +274,7 @@ export default function Transactions() {
               New Transaction
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg">
+          <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
                 Create Transaction
@@ -255,26 +282,27 @@ export default function Transactions() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Trading Account</Label>
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Client *</Label>
                 <Select
-                  value={formData.account_id}
-                  onValueChange={(value) => setFormData({ ...formData, account_id: value })}
+                  value={formData.client_id}
+                  onValueChange={(value) => setFormData({ ...formData, client_id: value })}
                 >
-                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-tx-account">
-                    <SelectValue placeholder="Select account" />
+                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-client">
+                    <SelectValue placeholder="Select a client" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1F2833] border-white/10">
-                    {accounts.map((account) => (
-                      <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
-                        {account.account_number} (${account.balance?.toLocaleString()})
+                  <SelectContent className="bg-[#1F2833] border-white/10 max-h-60">
+                    {clients.map((client) => (
+                      <SelectItem key={client.client_id} value={client.client_id} className="text-white hover:bg-white/5">
+                        {client.first_name} {client.last_name} - {client.email}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Type</Label>
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Type *</Label>
                   <Select
                     value={formData.transaction_type}
                     onValueChange={(value) => setFormData({ ...formData, transaction_type: value })}
@@ -308,8 +336,9 @@ export default function Transactions() {
                   </Select>
                 </div>
               </div>
+              
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Amount</Label>
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Amount *</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -321,6 +350,26 @@ export default function Transactions() {
                   required
                 />
               </div>
+              
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Destination (Bank/Treasury) *</Label>
+                <Select
+                  value={formData.destination_account_id}
+                  onValueChange={(value) => setFormData({ ...formData, destination_account_id: value })}
+                >
+                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-destination">
+                    <SelectValue placeholder="Select destination account" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1F2833] border-white/10">
+                    {treasuryAccounts.map((account) => (
+                      <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
+                        {account.account_name} - {account.bank_name} ({account.currency})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
               <div className="space-y-2">
                 <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Reference (Optional)</Label>
                 <Input
@@ -331,6 +380,7 @@ export default function Transactions() {
                   data-testid="tx-reference"
                 />
               </div>
+              
               <div className="space-y-2">
                 <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Description</Label>
                 <Textarea
@@ -341,6 +391,35 @@ export default function Transactions() {
                   data-testid="tx-description"
                 />
               </div>
+              
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Proof of Payment (Screenshot)</Label>
+                <div className="border-2 border-dashed border-white/10 rounded-sm p-4 text-center hover:border-[#66FCF1]/50 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                    id="proof-upload"
+                    data-testid="proof-upload"
+                  />
+                  <label htmlFor="proof-upload" className="cursor-pointer">
+                    {proofPreview ? (
+                      <div className="space-y-2">
+                        <img src={proofPreview} alt="Proof preview" className="max-h-32 mx-auto rounded" />
+                        <p className="text-xs text-[#66FCF1]">Click to change</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Upload className="w-8 h-8 mx-auto text-[#C5C6C7]" />
+                        <p className="text-sm text-[#C5C6C7]">Click to upload proof of payment</p>
+                        <p className="text-xs text-[#C5C6C7]/60">PNG, JPG up to 5MB</p>
+                      </div>
+                    )}
+                  </label>
+                </div>
+              </div>
+              
               <div className="flex justify-end gap-3 pt-4">
                 <Button
                   type="button"
@@ -368,7 +447,7 @@ export default function Transactions() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C5C6C7]" />
           <Input
-            placeholder="Search by reference or account..."
+            placeholder="Search by client or reference..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 bg-[#1F2833] border-white/10 text-white placeholder:text-white/30 focus:border-[#66FCF1]"
@@ -412,10 +491,10 @@ export default function Transactions() {
               <TableHeader>
                 <TableRow className="border-white/10 hover:bg-transparent">
                   <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Reference</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Account</TableHead>
+                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Client</TableHead>
                   <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Type</TableHead>
                   <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Amount</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Destination</TableHead>
                   <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
                   <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
                 </TableRow>
@@ -436,37 +515,33 @@ export default function Transactions() {
                 ) : (
                   filteredTransactions.map((tx) => (
                     <TableRow key={tx.transaction_id} className="border-white/5 hover:bg-white/5">
-                      <TableCell className="font-mono text-white">{tx.reference}</TableCell>
-                      <TableCell className="font-mono text-[#66FCF1]">{getAccountNumber(tx.account_id)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-white">{tx.reference}</span>
+                          {tx.proof_image && <ImageIcon className="w-4 h-4 text-[#66FCF1]" />}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-white">{tx.client_name || getClientName(tx.client_id)}</TableCell>
                       <TableCell>{getTypeBadge(tx.transaction_type)}</TableCell>
                       <TableCell className={`font-mono font-medium ${['deposit', 'rebate'].includes(tx.transaction_type) ? 'text-green-400' : 'text-red-400'}`}>
-                        {['deposit', 'rebate'].includes(tx.transaction_type) ? '+' : '-'}${tx.amount?.toLocaleString()}
+                        {['deposit', 'rebate'].includes(tx.transaction_type) ? '+' : '-'}${tx.amount?.toLocaleString()} {tx.currency}
                       </TableCell>
-                      <TableCell className="text-[#C5C6C7] text-sm">{formatDate(tx.created_at)}</TableCell>
+                      <TableCell className="text-[#C5C6C7]">
+                        {tx.destination_bank_name ? (
+                          <span>{tx.destination_account_name}<br/><span className="text-xs">{tx.destination_bank_name}</span></span>
+                        ) : '-'}
+                      </TableCell>
                       <TableCell>{getStatusBadge(tx.status)}</TableCell>
                       <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="text-[#C5C6C7] hover:text-white hover:bg-white/5" data-testid={`tx-actions-${tx.transaction_id}`}>
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-[#1F2833] border-white/10">
-                            <DropdownMenuItem onClick={() => setViewTransaction(tx)} className="text-white hover:bg-white/5 cursor-pointer">
-                              <Eye className="w-4 h-4 mr-2" /> View Details
-                            </DropdownMenuItem>
-                            {tx.status === 'pending' && (
-                              <>
-                                <DropdownMenuItem onClick={() => handleStatusUpdate(tx.transaction_id, 'completed')} className="text-green-400 hover:bg-white/5 cursor-pointer">
-                                  <CheckCircle className="w-4 h-4 mr-2" /> Approve
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleStatusUpdate(tx.transaction_id, 'cancelled')} className="text-red-400 hover:bg-white/5 cursor-pointer">
-                                  <XCircle className="w-4 h-4 mr-2" /> Cancel
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setViewTransaction(tx)}
+                          className="text-[#C5C6C7] hover:text-white hover:bg-white/5" 
+                          data-testid={`tx-view-${tx.transaction_id}`}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -479,7 +554,7 @@ export default function Transactions() {
 
       {/* View Transaction Dialog */}
       <Dialog open={!!viewTransaction} onOpenChange={() => setViewTransaction(null)}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg">
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
               Transaction Details
@@ -496,8 +571,8 @@ export default function Transactions() {
               </div>
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Account</p>
-                  <p className="text-[#66FCF1] font-mono">{getAccountNumber(viewTransaction.account_id)}</p>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Client</p>
+                  <p className="text-white">{viewTransaction.client_name}</p>
                 </div>
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Type</p>
@@ -514,16 +589,39 @@ export default function Transactions() {
                   <p className="text-white text-sm">{formatDate(viewTransaction.created_at)}</p>
                 </div>
               </div>
+              {viewTransaction.destination_account_name && (
+                <div className="pt-4 border-t border-white/10">
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Destination</p>
+                  <p className="text-white">{viewTransaction.destination_account_name}</p>
+                  <p className="text-sm text-[#C5C6C7]">{viewTransaction.destination_bank_name}</p>
+                </div>
+              )}
               {viewTransaction.description && (
                 <div className="pt-4 border-t border-white/10">
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Description</p>
                   <p className="text-white">{viewTransaction.description}</p>
                 </div>
               )}
+              {viewTransaction.proof_image && (
+                <div className="pt-4 border-t border-white/10">
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Proof of Payment</p>
+                  <img 
+                    src={`data:image/png;base64,${viewTransaction.proof_image}`} 
+                    alt="Proof of payment" 
+                    className="max-w-full rounded border border-white/10"
+                  />
+                </div>
+              )}
+              {viewTransaction.rejection_reason && (
+                <div className="pt-4 border-t border-white/10">
+                  <p className="text-xs text-red-400 uppercase tracking-wider mb-1">Rejection Reason</p>
+                  <p className="text-white">{viewTransaction.rejection_reason}</p>
+                </div>
+              )}
               {viewTransaction.processed_at && (
                 <div className="pt-4 border-t border-white/10">
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Processed</p>
-                  <p className="text-white text-sm">{formatDate(viewTransaction.processed_at)}</p>
+                  <p className="text-white text-sm">{formatDate(viewTransaction.processed_at)} by {viewTransaction.processed_by_name}</p>
                 </div>
               )}
             </div>
