@@ -1,0 +1,119 @@
+{
+  "project_name": "FX Broker Back-Office",
+  "design_philosophy": {
+    "persona": "E1: The Anti-AI Designer",
+    "core_principle": "Fusion over Imitation. Emotion First. Content is King.",
+    "theme_strategy": "Dark Mode First (The Obsidian Ledger). High-performance, low-eye-strain for extended use.",
+    "emotional_archetype": "The Performance Pro (Archetype 2) - Elite, Precise, Tactical."
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Barlow Condensed, sans-serif",
+      "body": "Manrope, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-4xl md:text-5xl font-bold tracking-tight uppercase",
+      "h2": "text-3xl font-semibold tracking-tight",
+      "h3": "text-2xl font-medium tracking-tight",
+      "body": "text-base font-normal leading-relaxed",
+      "caption": "text-xs font-medium tracking-wider uppercase opacity-70",
+      "data": "font-mono text-sm tracking-tight"
+    },
+    "imports": [
+      "@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Manrope:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');"
+    ]
+  },
+  "colors": {
+    "palette": {
+      "background": "#0B0C10",
+      "surface": "#1F2833",
+      "surface_highlight": "#2C353F",
+      "primary": "#66FCF1",
+      "primary_dim": "rgba(102, 252, 241, 0.1)",
+      "secondary": "#45A29E",
+      "text_main": "#FFFFFF",
+      "text_muted": "#C5C6C7",
+      "success": "#00C853",
+      "warning": "#FFD600",
+      "error": "#FF3B30",
+      "border": "rgba(255, 255, 255, 0.1)"
+    },
+    "usage": {
+      "dashboard_bg": "bg-[#0B0C10]",
+      "card_bg": "bg-[#1F2833]",
+      "accent_text": "text-[#66FCF1]",
+      "border_subtle": "border-white/10"
+    }
+  },
+  "layout_system": {
+    "grid_strategy": "The Bento Grid (Mode B: High Density)",
+    "spacing": {
+      "container_padding": "p-6 md:p-8",
+      "gap": "gap-4 md:gap-6",
+      "internal_padding": "p-4"
+    },
+    "containers": {
+      "card": "rounded-sm border border-white/5 bg-[#1F2833] shadow-none overflow-hidden",
+      "main_dashboard": "grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-4"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm transition-all duration-200 shadow-[0_0_10px_rgba(102,252,241,0.3)] hover:shadow-[0_0_20px_rgba(102,252,241,0.5)]",
+      "secondary": "bg-transparent border border-[#66FCF1] text-[#66FCF1] hover:bg-[#66FCF1]/10 rounded-sm font-medium uppercase tracking-wider",
+      "ghost": "text-[#C5C6C7] hover:text-white hover:bg-white/5 rounded-sm"
+    },
+    "inputs": {
+      "style": "bg-[#0B0C10] border border-white/10 text-white rounded-sm focus:border-[#66FCF1] focus:ring-1 focus:ring-[#66FCF1] placeholder:text-white/20 font-mono text-sm h-10"
+    },
+    "tables": {
+      "style": "w-full text-sm text-left",
+      "header": "bg-[#0B0C10] text-[#C5C6C7] font-bold uppercase tracking-wider border-b border-white/10",
+      "row": "border-b border-white/5 hover:bg-white/5 transition-colors font-mono",
+      "cell": "py-3 px-4"
+    },
+    "charts": {
+      "library": "Recharts (via Shadcn)",
+      "style": "No grid lines (or very subtle opacity 0.05). Neon strokes. Custom tooltips with backdrop-blur."
+    }
+  },
+  "visual_enhancers": {
+    "borders": "1px solid rgba(255,255,255,0.08)",
+    "shadows": "none (Flat Design) or subtle glow for active elements",
+    "glassmorphism": "Only for sticky headers or modals: bg-[#0B0C10]/80 backdrop-blur-md border-b border-white/10",
+    "textures": "Subtle noise overlay on background (optional) to reduce banding"
+  },
+  "motion": {
+    "transitions": "transition-all duration-200 ease-out",
+    "hover_effects": "translate-y-[-1px] brightness-110",
+    "loading": "Pulse effects or simple neon spinners. No complex playful animations."
+  },
+  "media_assets": {
+    "login_background": "https://images.pexels.com/photos/30766684/pexels-photo-30766684.png?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    "avatars": [
+      "https://images.unsplash.com/photo-1762522926157-bcc04bf0b10a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjd8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBjb3Jwb3JhdGUlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc3MTM5MzIxN3ww&ixlib=rb-4.1.0&q=85",
+      "https://images.unsplash.com/photo-1758599543120-4e462429a4d7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjd8MHwxfHNlYXJjaHw0fHxwcm9mZXNzaW9uYWwlMjBjb3Jwb3JhdGUlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc3MTM5MzIxN3ww&ixlib=rb-4.1.0&q=85"
+    ],
+    "icons": "Lucide React (default) or Phosphor Icons (for finance)"
+  },
+  "instructions_to_main_agent": [
+    "INSTALL FONTS: Update index.css to import Barlow Condensed, Manrope, and JetBrains Mono.",
+    "TAILWIND CONFIG: Update tailwind.config.js with the 'Obsidian Ledger' color palette.",
+    "SHADCN CUSTOMIZATION: Override default 'radius' to 0 or 0.2rem (sm). Remove default shadows. Force dark mode styles.",
+    "LAYOUT: Use a Sidebar Layout with a Collapsible mechanism. Main content area must have 'p-6' or 'p-8'.",
+    "DATA DENSITY: Do not use large cards for single numbers. Group metrics in a 'Bento' grid.",
+    "CHARTS: Use Recharts. Ensure tooltips are readable in dark mode (dark bg, light text).",
+    "FORMS: Use Shadcn Form components but apply the custom input styles defined above.",
+    "LOGIN: Use the provided abstract geometric image as a side-panel or background with overlay.",
+    "ACCESSIBILITY: Ensure text contrast (Cyan on Obsidian is good, but check grey text).",
+    "TESTING: Add 'data-testid' to all interactive elements (buttons, inputs, row actions)."
+  ],
+  "universal_guidelines": [
+    "Do not use generic 'Inter' font.",
+    "Do not use gradients for backgrounds (use solid colors or noise).",
+    "Use 'sonner' for toasts.",
+    "Use 'lucide-react' for icons.",
+    "Never use transparent backgrounds for dropdowns or modals without a blur."
+  ]
+}
