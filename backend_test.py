@@ -266,14 +266,19 @@ def main():
     # Test sequence
     tests = [
         ("Seed Demo Data", tester.test_seed_data),
-        ("Authentication", tester.test_login),
+        ("Admin Authentication", tester.test_login),
         ("Auth Verification", tester.test_auth_me),
         ("Dashboard Stats", tester.test_dashboard_stats),
         ("Clients CRUD", tester.test_clients_crud),
-        ("Trading Accounts CRUD", tester.test_trading_accounts_crud),
+        ("Treasury Accounts CRUD", tester.test_treasury_crud),
         ("Transactions CRUD", tester.test_transactions_crud),
         ("Reports & Analytics", tester.test_reports_endpoints),
     ]
+    
+    # Test accountant functionality
+    accountant_success, accountant_token = tester.test_accountant_login()
+    if accountant_success:
+        tests.append(("Pending Transactions (Accountant)", lambda: tester.test_pending_transactions(accountant_token)))
     
     for test_name, test_func in tests:
         print(f"\n🧪 {test_name.upper()} TESTS")
