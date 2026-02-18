@@ -1,0 +1,191 @@
+import { useState } from 'react';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { Button } from './ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import {
+  TrendingUp,
+  LayoutDashboard,
+  Users,
+  Wallet,
+  ArrowLeftRight,
+  BarChart3,
+  Settings,
+  LogOut,
+  Menu,
+  X,
+  ChevronDown,
+} from 'lucide-react';
+
+const navItems = [
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/clients', icon: Users, label: 'Clients' },
+  { to: '/trading-accounts', icon: Wallet, label: 'Trading Accounts' },
+  { to: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
+  { to: '/reports', icon: BarChart3, label: 'Reports' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
+];
+
+export default function Layout() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
+  const NavItem = ({ to, icon: Icon, label }) => (
+    <NavLink
+      to={to}
+      onClick={() => setSidebarOpen(false)}
+      className={({ isActive }) =>
+        `flex items-center gap-3 px-4 py-3 text-sm font-medium uppercase tracking-wider transition-all duration-200 ${
+          isActive
+            ? 'bg-[#66FCF1]/10 text-[#66FCF1] border-l-2 border-[#66FCF1]'
+            : 'text-[#C5C6C7] hover:text-white hover:bg-white/5 border-l-2 border-transparent'
+        }`
+      }
+      data-testid={`nav-${label.toLowerCase().replace(' ', '-')}`}
+    >
+      <Icon className="w-5 h-5" />
+      <span>{label}</span>
+    </NavLink>
+  );
+
+  return (
+    <div className="min-h-screen bg-[#0B0C10] flex">
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#1F2833] border-r border-white/5 transform transition-transform duration-200 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
+      >
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="flex items-center justify-between h-16 px-4 border-b border-white/5">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-8 h-8 text-[#66FCF1]" />
+              <span className="text-xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
+                FX Broker
+              </span>
+            </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden text-[#C5C6C7] hover:text-white"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 py-4 overflow-y-auto">
+            {navItems.map((item) => (
+              <NavItem key={item.to} {...item} />
+            ))}
+          </nav>
+
+          {/* User section */}
+          <div className="p-4 border-t border-white/5">
+            <div className="flex items-center gap-3">
+              <Avatar className="w-10 h-10 border border-[#66FCF1]/30">
+                <AvatarImage src={user?.picture} />
+                <AvatarFallback className="bg-[#66FCF1]/20 text-[#66FCF1]">
+                  {user?.name?.charAt(0) || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+                <p className="text-xs text-[#C5C6C7] truncate capitalize">{user?.role?.replace('_', ' ')}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-h-screen">
+        {/* Header */}
+        <header className="sticky top-0 z-30 h-16 bg-[#0B0C10]/80 backdrop-blur-md border-b border-white/10">
+          <div className="flex items-center justify-between h-full px-4 md:px-6">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden text-[#C5C6C7] hover:text-white"
+              data-testid="mobile-menu-btn"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+
+            <div className="flex-1" />
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="flex items-center gap-2 text-[#C5C6C7] hover:text-white hover:bg-white/5"
+                  data-testid="user-menu-btn"
+                >
+                  <Avatar className="w-8 h-8 border border-[#66FCF1]/30">
+                    <AvatarImage src={user?.picture} />
+                    <AvatarFallback className="bg-[#66FCF1]/20 text-[#66FCF1] text-xs">
+                      {user?.name?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden md:inline text-sm">{user?.name}</span>
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-56 bg-[#1F2833] border-white/10 text-white"
+              >
+                <div className="px-3 py-2">
+                  <p className="text-sm font-medium">{user?.name}</p>
+                  <p className="text-xs text-[#C5C6C7]">{user?.email}</p>
+                </div>
+                <DropdownMenuSeparator className="bg-white/10" />
+                <DropdownMenuItem
+                  onClick={() => navigate('/settings')}
+                  className="cursor-pointer hover:bg-white/5 focus:bg-white/5"
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-white/10" />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="cursor-pointer text-red-400 hover:bg-white/5 focus:bg-white/5"
+                  data-testid="logout-btn"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 p-4 md:p-6 lg:p-8">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}
