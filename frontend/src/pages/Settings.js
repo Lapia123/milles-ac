@@ -52,6 +52,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const roleOptions = [
   { value: 'admin', label: 'Admin' },
   { value: 'sub_admin', label: 'Sub-Admin' },
+  { value: 'accountant', label: 'Accountant' },
 ];
 
 export default function Settings() {
