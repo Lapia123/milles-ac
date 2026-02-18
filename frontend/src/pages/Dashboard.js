@@ -4,7 +4,7 @@ import { Badge } from '../components/ui/badge';
 import { ScrollArea } from '../components/ui/scroll-area';
 import {
   Users,
-  Wallet,
+  Landmark,
   ArrowUpRight,
   ArrowDownRight,
   Clock,
@@ -112,11 +112,11 @@ export default function Dashboard() {
   const getStatusBadge = (status) => {
     const styles = {
       completed: 'status-approved',
+      approved: 'status-approved',
       pending: 'status-pending',
       cancelled: 'status-rejected',
-      failed: 'status-rejected',
-      approved: 'status-approved',
       rejected: 'status-rejected',
+      failed: 'status-rejected',
     };
     return <Badge className={`${styles[status] || 'status-pending'} text-xs uppercase`}>{status}</Badge>;
   };
@@ -152,16 +152,16 @@ export default function Dashboard() {
           trendUp
         />
         <StatCard
-          title="Active Accounts"
-          value={stats?.accounts?.active || 0}
-          subtitle={`${stats?.accounts?.total || 0} total`}
-          icon={Wallet}
+          title="Treasury Balance"
+          value={`$${(stats?.treasury?.total_balance || 0).toLocaleString()}`}
+          subtitle={`${stats?.treasury?.active || 0} active accounts`}
+          icon={Landmark}
           color="green"
         />
         <StatCard
-          title="Total Balance"
-          value={`$${(stats?.accounts?.total_balance || 0).toLocaleString()}`}
-          subtitle="Across all accounts"
+          title="Total Deposits"
+          value={`$${(stats?.transactions?.total_deposits || 0).toLocaleString()}`}
+          subtitle="Approved transactions"
           icon={DollarSign}
           trend="+8.5%"
           trendUp
@@ -311,7 +311,7 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <p className="text-sm text-white font-mono">{tx.reference}</p>
-                        <p className="text-xs text-[#C5C6C7] capitalize">{tx.transaction_type}</p>
+                        <p className="text-xs text-[#C5C6C7]">{tx.client_name}</p>
                       </div>
                     </div>
                     <div className="text-right">
