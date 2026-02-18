@@ -217,6 +217,33 @@ class FXBrokerAPITester:
         
         return success
 
+    def test_accountant_login(self):
+        """Test login with accountant credentials"""
+        success, response = self.run_test(
+            "Login with Accountant Credentials",
+            "POST", 
+            "api/auth/login",
+            200,
+            data={"email": "accountant@fxbroker.com", "password": "accountant123"}
+        )
+        if success and 'access_token' in response:
+            accountant_token = response['access_token']
+            print(f"   Accountant token received: {accountant_token[:20]}...")
+            return True, accountant_token
+        return False, None
+
+    def test_pending_transactions(self, accountant_token):
+        """Test getting pending transactions (accountant/admin only)"""
+        # Temporarily switch to accountant token
+        original_token = self.token
+        self.token = accountant_token
+        
+        success, response = self.run_test("Get Pending Transactions", "GET", "api/transactions/pending", 200)
+        
+        # Switch back to admin token
+        self.token = original_token
+        return success
+
     def test_reports_endpoints(self):
         """Test reports and analytics endpoints"""
         # Transaction summary
