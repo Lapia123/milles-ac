@@ -122,37 +122,32 @@ class FXBrokerAPITester:
         
         return success
 
-    def test_trading_accounts_crud(self):
-        """Test trading accounts CRUD operations"""
-        # Get existing clients first
-        success, clients = self.run_test("Get Clients for Accounts", "GET", "api/clients", 200)
-        if not success or not clients:
-            return False
-
-        client_id = clients[0]['client_id']
-
-        # Get accounts
-        success, accounts = self.run_test("Get Trading Accounts", "GET", "api/trading-accounts", 200)
+    def test_treasury_crud(self):
+        """Test treasury accounts CRUD operations (Admin only)"""
+        # Get treasury accounts
+        success, accounts = self.run_test("Get Treasury Accounts", "GET", "api/treasury", 200)
         if not success:
             return False
 
-        # Create trading account
+        # Create treasury account (Admin only)
         account_data = {
-            "client_id": client_id,
-            "account_type": "MT4",
+            "account_name": f"Test_Bank_{datetime.now().strftime('%H%M%S')}",
+            "account_type": "bank",
+            "bank_name": "Test Bank",
+            "account_number": f"****{datetime.now().strftime('%H%M%S')[-4:]}",
             "currency": "USD",
-            "leverage": 100
+            "description": "API Test Account"
         }
-        success, new_account = self.run_test("Create Trading Account", "POST", "api/trading-accounts", 200, data=account_data)
+        success, new_account = self.run_test("Create Treasury Account", "POST", "api/treasury", 200, data=account_data)
         if not success or not new_account.get('account_id'):
             return False
 
         account_id = new_account['account_id']
-        print(f"   Created account: {new_account.get('account_number')}")
+        print(f"   Created treasury account: {new_account.get('account_name')}")
 
         # Update account
-        update_data = {"leverage": 200}
-        success, updated = self.run_test("Update Trading Account", "PUT", f"api/trading-accounts/{account_id}", 200, data=update_data)
+        update_data = {"description": "Updated via API test"}
+        success, updated = self.run_test("Update Treasury Account", "PUT", f"api/treasury/{account_id}", 200, data=update_data)
         
         return success
 
