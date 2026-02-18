@@ -81,11 +81,11 @@ class FXBrokerAPITester:
         """Test dashboard statistics"""
         success, response = self.run_test("Dashboard Stats", "GET", "api/reports/dashboard", 200)
         if success:
-            # Validate response structure
-            required_keys = ['clients', 'accounts', 'transactions']
+            # Validate response structure - updated for treasury instead of trading accounts
+            required_keys = ['clients', 'treasury', 'transactions']
             has_all_keys = all(key in response for key in required_keys)
             if has_all_keys:
-                print(f"   Stats: {response.get('clients', {}).get('total', 0)} clients, {response.get('accounts', {}).get('total', 0)} accounts")
+                print(f"   Stats: {response.get('clients', {}).get('total', 0)} clients, {response.get('treasury', {}).get('total', 0)} treasury accounts")
             return has_all_keys
         return False
 
