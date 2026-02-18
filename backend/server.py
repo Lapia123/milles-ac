@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response, UploadFile, File, Form
 from fastapi.security import HTTPBearer
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -13,6 +13,7 @@ from datetime import datetime, timezone, timedelta
 import bcrypt
 import jwt
 import httpx
+import base64
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -45,6 +46,7 @@ logger = logging.getLogger(__name__)
 class UserRole:
     ADMIN = "admin"
     SUB_ADMIN = "sub_admin"
+    ACCOUNTANT = "accountant"
 
 class UserBase(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -113,38 +115,35 @@ class ClientUpdate(BaseModel):
     kyc_status: Optional[str] = None
     notes: Optional[str] = None
 
-class TradingAccountType:
-    MT4 = "MT4"
-    MT5 = "MT5"
+# Treasury/Bank Account Models
+class TreasuryAccountType:
+    BANK = "bank"
+    CRYPTO_WALLET = "crypto_wallet"
+    PAYMENT_GATEWAY = "payment_gateway"
 
-class TradingAccountStatus:
+class TreasuryAccountStatus:
     ACTIVE = "active"
     INACTIVE = "inactive"
-    SUSPENDED = "suspended"
 
-class TradingAccountBase(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    account_id: str
-    client_id: str
-    account_number: str
-    account_type: str = TradingAccountType.MT4
+class TreasuryAccountCreate(BaseModel):
+    account_name: str
+    account_type: str = TreasuryAccountType.BANK
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
+    routing_number: Optional[str] = None
+    swift_code: Optional[str] = None
     currency: str = "USD"
-    balance: float = 0.0
-    equity: float = 0.0
-    leverage: int = 100
-    status: str = TradingAccountStatus.ACTIVE
-    created_at: datetime
-    updated_at: datetime
+    description: Optional[str] = None
 
-class TradingAccountCreate(BaseModel):
-    client_id: str
-    account_type: str = TradingAccountType.MT4
-    currency: str = "USD"
-    leverage: int = 100
-
-class TradingAccountUpdate(BaseModel):
-    leverage: Optional[int] = None
+class TreasuryAccountUpdate(BaseModel):
+    account_name: Optional[str] = None
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
+    routing_number: Optional[str] = None
+    swift_code: Optional[str] = None
+    currency: Optional[str] = None
     status: Optional[str] = None
+    description: Optional[str] = None
 
 class TransactionType:
     DEPOSIT = "deposit"
@@ -156,36 +155,25 @@ class TransactionType:
 
 class TransactionStatus:
     PENDING = "pending"
+    APPROVED = "approved"
     COMPLETED = "completed"
+    REJECTED = "rejected"
     CANCELLED = "cancelled"
     FAILED = "failed"
 
-class TransactionBase(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    transaction_id: str
-    account_id: str
+class TransactionCreate(BaseModel):
     client_id: str
     transaction_type: str
     amount: float
     currency: str = "USD"
-    status: str = TransactionStatus.PENDING
-    description: Optional[str] = None
-    reference: Optional[str] = None
-    processed_by: Optional[str] = None
-    created_at: datetime
-    processed_at: Optional[datetime] = None
-
-class TransactionCreate(BaseModel):
-    account_id: str
-    transaction_type: str
-    amount: float
-    currency: str = "USD"
+    destination_account_id: Optional[str] = None
     description: Optional[str] = None
     reference: Optional[str] = None
 
 class TransactionUpdate(BaseModel):
     status: Optional[str] = None
     description: Optional[str] = None
+    rejection_reason: Optional[str] = None
 
 # ============== HELPER FUNCTIONS ==============
 
@@ -203,9 +191,6 @@ def create_jwt_token(user_id: str, email: str, role: str) -> str:
         "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-
-def generate_account_number() -> str:
-    return f"FX{uuid.uuid4().hex[:8].upper()}"
 
 async def get_current_user(request: Request) -> dict:
     # Check cookie first
@@ -258,11 +243,15 @@ async def require_admin(user: dict = Depends(get_current_user)) -> dict:
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
+async def require_accountant_or_admin(user: dict = Depends(get_current_user)) -> dict:
+    if user.get("role") not in [UserRole.ADMIN, UserRole.ACCOUNTANT]:
+        raise HTTPException(status_code=403, detail="Accountant or Admin access required")
+    return user
+
 # ============== AUTH ROUTES ==============
 
 @api_router.post("/auth/register", response_model=TokenResponse)
 async def register(user_data: UserCreate):
-    # Check if email exists
     existing = await db.users.find_one({"email": user_data.email}, {"_id": 0})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -328,10 +317,9 @@ async def process_session(request: Request, response: Response):
     if not session_id:
         raise HTTPException(status_code=400, detail="session_id required")
     
-    # Call Emergent Auth to get session data
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient() as http_client:
         try:
-            resp = await client.get(
+            resp = await http_client.get(
                 "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
                 headers={"X-Session-ID": session_id}
             )
@@ -350,18 +338,15 @@ async def process_session(request: Request, response: Response):
     
     now = datetime.now(timezone.utc)
     
-    # Check if user exists
     user = await db.users.find_one({"email": email}, {"_id": 0})
     
     if user:
         user_id = user["user_id"]
-        # Update user info
         await db.users.update_one(
             {"email": email},
             {"$set": {"name": name, "picture": picture}}
         )
     else:
-        # Create new user
         user_id = f"user_{uuid.uuid4().hex[:12]}"
         user_doc = {
             "user_id": user_id,
@@ -374,7 +359,6 @@ async def process_session(request: Request, response: Response):
         }
         await db.users.insert_one(user_doc)
     
-    # Store session
     expires_at = now + timedelta(days=7)
     await db.user_sessions.insert_one({
         "user_id": user_id,
@@ -383,7 +367,6 @@ async def process_session(request: Request, response: Response):
         "created_at": now.isoformat()
     })
     
-    # Set cookie
     response.set_cookie(
         key="session_token",
         value=session_token,
@@ -547,86 +530,70 @@ async def delete_client(client_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Client not found")
     return {"message": "Client deleted"}
 
-# ============== TRADING ACCOUNTS ROUTES ==============
+# ============== TREASURY/BANK ACCOUNTS ROUTES ==============
 
-@api_router.get("/trading-accounts")
-async def get_trading_accounts(
-    user: dict = Depends(get_current_user),
-    client_id: Optional[str] = None,
-    status: Optional[str] = None
-):
-    query = {}
-    if client_id:
-        query["client_id"] = client_id
-    if status:
-        query["status"] = status
-    
-    accounts = await db.trading_accounts.find(query, {"_id": 0}).to_list(1000)
+@api_router.get("/treasury")
+async def get_treasury_accounts(user: dict = Depends(get_current_user)):
+    accounts = await db.treasury_accounts.find({}, {"_id": 0}).to_list(1000)
     return accounts
 
-@api_router.get("/trading-accounts/{account_id}")
-async def get_trading_account(account_id: str, user: dict = Depends(get_current_user)):
-    account = await db.trading_accounts.find_one({"account_id": account_id}, {"_id": 0})
+@api_router.get("/treasury/{account_id}")
+async def get_treasury_account(account_id: str, user: dict = Depends(get_current_user)):
+    account = await db.treasury_accounts.find_one({"account_id": account_id}, {"_id": 0})
     if not account:
-        raise HTTPException(status_code=404, detail="Account not found")
+        raise HTTPException(status_code=404, detail="Treasury account not found")
     return account
 
-@api_router.post("/trading-accounts")
-async def create_trading_account(account_data: TradingAccountCreate, user: dict = Depends(get_current_user)):
-    # Verify client exists
-    client = await db.clients.find_one({"client_id": account_data.client_id}, {"_id": 0})
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
-    
-    account_id = f"acc_{uuid.uuid4().hex[:12]}"
+@api_router.post("/treasury")
+async def create_treasury_account(account_data: TreasuryAccountCreate, user: dict = Depends(require_admin)):
+    account_id = f"treasury_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
     
     account_doc = {
         "account_id": account_id,
-        "client_id": account_data.client_id,
-        "account_number": generate_account_number(),
-        "account_type": account_data.account_type,
-        "currency": account_data.currency,
+        **account_data.model_dump(),
         "balance": 0.0,
-        "equity": 0.0,
-        "leverage": account_data.leverage,
-        "status": TradingAccountStatus.ACTIVE,
+        "status": TreasuryAccountStatus.ACTIVE,
         "created_at": now.isoformat(),
         "updated_at": now.isoformat()
     }
     
-    await db.trading_accounts.insert_one(account_doc)
+    await db.treasury_accounts.insert_one(account_doc)
     
-    return await db.trading_accounts.find_one({"account_id": account_id}, {"_id": 0})
+    return await db.treasury_accounts.find_one({"account_id": account_id}, {"_id": 0})
 
-@api_router.put("/trading-accounts/{account_id}")
-async def update_trading_account(account_id: str, update_data: TradingAccountUpdate, user: dict = Depends(get_current_user)):
+@api_router.put("/treasury/{account_id}")
+async def update_treasury_account(account_id: str, update_data: TreasuryAccountUpdate, user: dict = Depends(require_admin)):
     updates = {k: v for k, v in update_data.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No updates provided")
     
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
     
-    result = await db.trading_accounts.update_one({"account_id": account_id}, {"$set": updates})
+    result = await db.treasury_accounts.update_one({"account_id": account_id}, {"$set": updates})
     if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Account not found")
+        raise HTTPException(status_code=404, detail="Treasury account not found")
     
-    return await db.trading_accounts.find_one({"account_id": account_id}, {"_id": 0})
+    return await db.treasury_accounts.find_one({"account_id": account_id}, {"_id": 0})
+
+@api_router.delete("/treasury/{account_id}")
+async def delete_treasury_account(account_id: str, user: dict = Depends(require_admin)):
+    result = await db.treasury_accounts.delete_one({"account_id": account_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Treasury account not found")
+    return {"message": "Treasury account deleted"}
 
 # ============== TRANSACTIONS ROUTES ==============
 
 @api_router.get("/transactions")
 async def get_transactions(
     user: dict = Depends(get_current_user),
-    account_id: Optional[str] = None,
     client_id: Optional[str] = None,
     transaction_type: Optional[str] = None,
     status: Optional[str] = None,
     limit: int = 100
 ):
     query = {}
-    if account_id:
-        query["account_id"] = account_id
     if client_id:
         query["client_id"] = client_id
     if transaction_type:
@@ -637,6 +604,15 @@ async def get_transactions(
     transactions = await db.transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
     return transactions
 
+@api_router.get("/transactions/pending")
+async def get_pending_transactions(user: dict = Depends(require_accountant_or_admin)):
+    """Get all pending transactions for accountant approval"""
+    transactions = await db.transactions.find(
+        {"status": TransactionStatus.PENDING}, 
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(1000)
+    return transactions
+
 @api_router.get("/transactions/{transaction_id}")
 async def get_transaction(transaction_id: str, user: dict = Depends(get_current_user)):
     transaction = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
@@ -645,33 +621,65 @@ async def get_transaction(transaction_id: str, user: dict = Depends(get_current_
     return transaction
 
 @api_router.post("/transactions")
-async def create_transaction(tx_data: TransactionCreate, user: dict = Depends(get_current_user)):
-    # Verify account exists
-    account = await db.trading_accounts.find_one({"account_id": tx_data.account_id}, {"_id": 0})
-    if not account:
-        raise HTTPException(status_code=404, detail="Account not found")
+async def create_transaction(
+    client_id: str = Form(...),
+    transaction_type: str = Form(...),
+    amount: float = Form(...),
+    currency: str = Form("USD"),
+    destination_account_id: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    reference: Optional[str] = Form(None),
+    proof_image: Optional[UploadFile] = File(None),
+    user: dict = Depends(get_current_user)
+):
+    # Verify client exists
+    client = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Verify destination account if provided
+    destination_account = None
+    if destination_account_id:
+        destination_account = await db.treasury_accounts.find_one({"account_id": destination_account_id}, {"_id": 0})
+        if not destination_account:
+            raise HTTPException(status_code=404, detail="Destination account not found")
     
     tx_id = f"tx_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
     
+    # Handle proof image upload
+    proof_image_data = None
+    if proof_image:
+        content = await proof_image.read()
+        proof_image_data = base64.b64encode(content).decode('utf-8')
+    
     tx_doc = {
         "transaction_id": tx_id,
-        "account_id": tx_data.account_id,
-        "client_id": account["client_id"],
-        "transaction_type": tx_data.transaction_type,
-        "amount": tx_data.amount,
-        "currency": tx_data.currency,
+        "client_id": client_id,
+        "client_name": f"{client['first_name']} {client['last_name']}",
+        "transaction_type": transaction_type,
+        "amount": amount,
+        "currency": currency,
+        "destination_account_id": destination_account_id,
+        "destination_account_name": destination_account["account_name"] if destination_account else None,
+        "destination_bank_name": destination_account["bank_name"] if destination_account else None,
         "status": TransactionStatus.PENDING,
-        "description": tx_data.description,
-        "reference": tx_data.reference or f"REF{uuid.uuid4().hex[:8].upper()}",
+        "description": description,
+        "reference": reference or f"REF{uuid.uuid4().hex[:8].upper()}",
+        "proof_image": proof_image_data,
+        "created_by": user["user_id"],
+        "created_by_name": user["name"],
         "processed_by": None,
+        "processed_by_name": None,
+        "rejection_reason": None,
         "created_at": now.isoformat(),
         "processed_at": None
     }
     
     await db.transactions.insert_one(tx_doc)
     
-    return await db.transactions.find_one({"transaction_id": tx_id}, {"_id": 0})
+    result = await db.transactions.find_one({"transaction_id": tx_id}, {"_id": 0})
+    return result
 
 @api_router.put("/transactions/{transaction_id}")
 async def update_transaction(transaction_id: str, update_data: TransactionUpdate, user: dict = Depends(get_current_user)):
@@ -683,19 +691,76 @@ async def update_transaction(transaction_id: str, update_data: TransactionUpdate
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
     
-    # If completing transaction, update account balance
-    if updates.get("status") == TransactionStatus.COMPLETED and tx["status"] == TransactionStatus.PENDING:
-        account = await db.trading_accounts.find_one({"account_id": tx["account_id"]}, {"_id": 0})
-        if account:
-            balance_change = tx["amount"] if tx["transaction_type"] in [TransactionType.DEPOSIT, TransactionType.REBATE] else -tx["amount"]
-            new_balance = account["balance"] + balance_change
-            await db.trading_accounts.update_one(
-                {"account_id": tx["account_id"]},
-                {"$set": {"balance": new_balance, "equity": new_balance, "updated_at": datetime.now(timezone.utc).isoformat()}}
-            )
-        
+    now = datetime.now(timezone.utc)
+    
+    # If approving/completing or rejecting transaction
+    if updates.get("status") in [TransactionStatus.APPROVED, TransactionStatus.COMPLETED, TransactionStatus.REJECTED]:
         updates["processed_by"] = user["user_id"]
-        updates["processed_at"] = datetime.now(timezone.utc).isoformat()
+        updates["processed_by_name"] = user["name"]
+        updates["processed_at"] = now.isoformat()
+        
+        # Update treasury balance if completed
+        if updates.get("status") == TransactionStatus.COMPLETED and tx.get("destination_account_id"):
+            balance_change = tx["amount"] if tx["transaction_type"] == TransactionType.DEPOSIT else -tx["amount"]
+            await db.treasury_accounts.update_one(
+                {"account_id": tx["destination_account_id"]},
+                {"$inc": {"balance": balance_change}, "$set": {"updated_at": now.isoformat()}}
+            )
+    
+    await db.transactions.update_one({"transaction_id": transaction_id}, {"$set": updates})
+    
+    return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+
+@api_router.post("/transactions/{transaction_id}/approve")
+async def approve_transaction(transaction_id: str, user: dict = Depends(require_accountant_or_admin)):
+    """Approve a pending transaction"""
+    tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if tx["status"] != TransactionStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Transaction is not pending")
+    
+    now = datetime.now(timezone.utc)
+    
+    updates = {
+        "status": TransactionStatus.APPROVED,
+        "processed_by": user["user_id"],
+        "processed_by_name": user["name"],
+        "processed_at": now.isoformat()
+    }
+    
+    # Update treasury balance
+    if tx.get("destination_account_id"):
+        balance_change = tx["amount"] if tx["transaction_type"] == TransactionType.DEPOSIT else -tx["amount"]
+        await db.treasury_accounts.update_one(
+            {"account_id": tx["destination_account_id"]},
+            {"$inc": {"balance": balance_change}, "$set": {"updated_at": now.isoformat()}}
+        )
+    
+    await db.transactions.update_one({"transaction_id": transaction_id}, {"$set": updates})
+    
+    return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+
+@api_router.post("/transactions/{transaction_id}/reject")
+async def reject_transaction(transaction_id: str, reason: str = "", user: dict = Depends(require_accountant_or_admin)):
+    """Reject a pending transaction"""
+    tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if tx["status"] != TransactionStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Transaction is not pending")
+    
+    now = datetime.now(timezone.utc)
+    
+    updates = {
+        "status": TransactionStatus.REJECTED,
+        "rejection_reason": reason,
+        "processed_by": user["user_id"],
+        "processed_by_name": user["name"],
+        "processed_at": now.isoformat()
+    }
     
     await db.transactions.update_one({"transaction_id": transaction_id}, {"$set": updates})
     
@@ -710,16 +775,16 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
     approved_clients = await db.clients.count_documents({"kyc_status": ClientStatus.APPROVED})
     pending_clients = await db.clients.count_documents({"kyc_status": ClientStatus.PENDING})
     
-    # Get account stats
-    total_accounts = await db.trading_accounts.count_documents({})
-    active_accounts = await db.trading_accounts.count_documents({"status": TradingAccountStatus.ACTIVE})
+    # Get treasury stats
+    total_treasury = await db.treasury_accounts.count_documents({})
+    active_treasury = await db.treasury_accounts.count_documents({"status": TreasuryAccountStatus.ACTIVE})
     
-    # Get total balance
+    # Get total treasury balance
     pipeline = [
-        {"$match": {"status": TradingAccountStatus.ACTIVE}},
+        {"$match": {"status": TreasuryAccountStatus.ACTIVE}},
         {"$group": {"_id": None, "total_balance": {"$sum": "$balance"}}}
     ]
-    balance_result = await db.trading_accounts.aggregate(pipeline).to_list(1)
+    balance_result = await db.treasury_accounts.aggregate(pipeline).to_list(1)
     total_balance = balance_result[0]["total_balance"] if balance_result else 0
     
     # Get transaction stats
@@ -728,11 +793,11 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
     
     # Get deposits/withdrawals totals
     deposit_pipeline = [
-        {"$match": {"transaction_type": TransactionType.DEPOSIT, "status": TransactionStatus.COMPLETED}},
+        {"$match": {"transaction_type": TransactionType.DEPOSIT, "status": {"$in": [TransactionStatus.APPROVED, TransactionStatus.COMPLETED]}}},
         {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
     ]
     withdrawal_pipeline = [
-        {"$match": {"transaction_type": TransactionType.WITHDRAWAL, "status": TransactionStatus.COMPLETED}},
+        {"$match": {"transaction_type": TransactionType.WITHDRAWAL, "status": {"$in": [TransactionStatus.APPROVED, TransactionStatus.COMPLETED]}}},
         {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
     ]
     
@@ -748,9 +813,9 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
             "approved": approved_clients,
             "pending": pending_clients
         },
-        "accounts": {
-            "total": total_accounts,
-            "active": active_accounts,
+        "treasury": {
+            "total": total_treasury,
+            "active": active_treasury,
             "total_balance": total_balance
         },
         "transactions": {
@@ -786,7 +851,6 @@ async def get_transactions_summary(
     
     results = await db.transactions.aggregate(pipeline).to_list(1000)
     
-    # Transform for chart
     summary = {}
     for r in results:
         date = r["_id"]["date"]
@@ -824,10 +888,7 @@ async def get_client_analytics(user: dict = Depends(get_current_user)):
 
 @api_router.get("/reports/recent-activity")
 async def get_recent_activity(user: dict = Depends(get_current_user), limit: int = 10):
-    # Recent transactions
     transactions = await db.transactions.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
-    
-    # Recent clients
     clients = await db.clients.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
     
     return {
@@ -835,7 +896,7 @@ async def get_recent_activity(user: dict = Depends(get_current_user), limit: int
         "recent_clients": clients
     }
 
-# ============== SEED DATA ROUTE (for demo) ==============
+# ============== SEED DATA ROUTE ==============
 
 @api_router.post("/seed")
 async def seed_demo_data():
@@ -856,6 +917,46 @@ async def seed_demo_data():
             "created_at": now.isoformat()
         }
         await db.users.insert_one(admin_doc)
+    
+    # Create accountant user if not exists
+    accountant = await db.users.find_one({"email": "accountant@fxbroker.com"}, {"_id": 0})
+    if not accountant:
+        accountant_doc = {
+            "user_id": f"user_{uuid.uuid4().hex[:12]}",
+            "email": "accountant@fxbroker.com",
+            "password_hash": hash_password("accountant123"),
+            "name": "Finance Manager",
+            "role": UserRole.ACCOUNTANT,
+            "picture": None,
+            "is_active": True,
+            "created_at": now.isoformat()
+        }
+        await db.users.insert_one(accountant_doc)
+    
+    # Create treasury accounts
+    treasury_accounts_data = [
+        {"account_name": "Main Operating Account", "account_type": "bank", "bank_name": "Chase Bank", "account_number": "****1234", "currency": "USD"},
+        {"account_name": "Client Funds Account", "account_type": "bank", "bank_name": "Bank of America", "account_number": "****5678", "currency": "USD"},
+        {"account_name": "EUR Account", "account_type": "bank", "bank_name": "Deutsche Bank", "account_number": "****9012", "currency": "EUR"},
+    ]
+    
+    treasury_ids = []
+    for ta in treasury_accounts_data:
+        existing = await db.treasury_accounts.find_one({"account_name": ta["account_name"]}, {"_id": 0})
+        if not existing:
+            account_id = f"treasury_{uuid.uuid4().hex[:12]}"
+            ta_doc = {
+                "account_id": account_id,
+                **ta,
+                "balance": 50000.0,
+                "status": TreasuryAccountStatus.ACTIVE,
+                "created_at": now.isoformat(),
+                "updated_at": now.isoformat()
+            }
+            await db.treasury_accounts.insert_one(ta_doc)
+            treasury_ids.append(account_id)
+        else:
+            treasury_ids.append(existing["account_id"])
     
     # Create sample clients
     sample_clients = [
@@ -884,50 +985,32 @@ async def seed_demo_data():
         else:
             client_ids.append(existing["client_id"])
     
-    # Create trading accounts for clients
-    account_ids = []
-    for i, client_id in enumerate(client_ids):
-        existing = await db.trading_accounts.find_one({"client_id": client_id}, {"_id": 0})
-        if not existing:
-            account_id = f"acc_{uuid.uuid4().hex[:12]}"
-            balance = [15000, 25000, 8000, 42000, 5000][i]
-            account_doc = {
-                "account_id": account_id,
-                "client_id": client_id,
-                "account_number": generate_account_number(),
-                "account_type": TradingAccountType.MT4 if i % 2 == 0 else TradingAccountType.MT5,
-                "currency": "USD",
-                "balance": balance,
-                "equity": balance,
-                "leverage": 100,
-                "status": TradingAccountStatus.ACTIVE,
-                "created_at": now.isoformat(),
-                "updated_at": now.isoformat()
-            }
-            await db.trading_accounts.insert_one(account_doc)
-            account_ids.append(account_id)
-        else:
-            account_ids.append(existing["account_id"])
-    
     # Create sample transactions
-    for i, account_id in enumerate(account_ids):
-        account = await db.trading_accounts.find_one({"account_id": account_id}, {"_id": 0})
-        if account:
-            # Create deposit
+    for i, client_id in enumerate(client_ids[:3]):
+        client = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
+        if client:
             tx_id = f"tx_{uuid.uuid4().hex[:12]}"
             tx_doc = {
                 "transaction_id": tx_id,
-                "account_id": account_id,
-                "client_id": account["client_id"],
+                "client_id": client_id,
+                "client_name": f"{client['first_name']} {client['last_name']}",
                 "transaction_type": TransactionType.DEPOSIT,
-                "amount": [5000, 10000, 3000, 15000, 2000][i],
+                "amount": [5000, 10000, 3000][i],
                 "currency": "USD",
-                "status": TransactionStatus.COMPLETED,
+                "destination_account_id": treasury_ids[0] if treasury_ids else None,
+                "destination_account_name": "Main Operating Account",
+                "destination_bank_name": "Chase Bank",
+                "status": TransactionStatus.PENDING,
                 "description": "Initial deposit",
                 "reference": f"DEP{uuid.uuid4().hex[:8].upper()}",
+                "proof_image": None,
+                "created_by": None,
+                "created_by_name": "System",
                 "processed_by": None,
+                "processed_by_name": None,
+                "rejection_reason": None,
                 "created_at": (now - timedelta(days=i+1)).isoformat(),
-                "processed_at": (now - timedelta(days=i+1)).isoformat()
+                "processed_at": None
             }
             await db.transactions.insert_one(tx_doc)
     

@@ -4,14 +4,15 @@ import Login from "./pages/Login";
 import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
-import TradingAccounts from "./pages/TradingAccounts";
 import Transactions from "./pages/Transactions";
+import Treasury from "./pages/Treasury";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import AccountantDashboard from "./pages/AccountantDashboard";
 import Layout from "./components/Layout";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
@@ -27,6 +28,10 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return children;
 };
 
@@ -34,7 +39,6 @@ function AppRouter() {
   const location = useLocation();
 
   // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-  // Check URL fragment for session_id (from Google OAuth)
   if (location.hash?.includes('session_id=')) {
     return <AuthCallback />;
   }
@@ -54,10 +58,18 @@ function AppRouter() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="clients" element={<Clients />} />
-        <Route path="trading-accounts" element={<TradingAccounts />} />
         <Route path="transactions" element={<Transactions />} />
+        <Route path="treasury" element={<Treasury />} />
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<Settings />} />
+        <Route 
+          path="accountant" 
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'accountant']}>
+              <AccountantDashboard />
+            </ProtectedRoute>
+          } 
+        />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

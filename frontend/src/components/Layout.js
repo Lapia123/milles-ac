@@ -14,24 +14,16 @@ import {
   TrendingUp,
   LayoutDashboard,
   Users,
-  Wallet,
   ArrowLeftRight,
+  Landmark,
   BarChart3,
   Settings,
   LogOut,
   Menu,
   X,
   ChevronDown,
+  ClipboardCheck,
 } from 'lucide-react';
-
-const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/clients', icon: Users, label: 'Clients' },
-  { to: '/trading-accounts', icon: Wallet, label: 'Trading Accounts' },
-  { to: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
-  { to: '/reports', icon: BarChart3, label: 'Reports' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
-];
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -42,6 +34,18 @@ export default function Layout() {
     await logout();
     navigate('/login');
   };
+
+  const isAccountantOrAdmin = user?.role === 'admin' || user?.role === 'accountant';
+
+  const navItems = [
+    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/clients', icon: Users, label: 'Clients' },
+    { to: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
+    { to: '/treasury', icon: Landmark, label: 'Treasury' },
+    { to: '/reports', icon: BarChart3, label: 'Reports' },
+    ...(isAccountantOrAdmin ? [{ to: '/accountant', icon: ClipboardCheck, label: 'Approvals' }] : []),
+    { to: '/settings', icon: Settings, label: 'Settings' },
+  ];
 
   const NavItem = ({ to, icon: Icon, label }) => (
     <NavLink
@@ -63,7 +67,6 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-[#0B0C10] flex">
-      {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -71,14 +74,12 @@ export default function Layout() {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#1F2833] border-r border-white/5 transform transition-transform duration-200 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         <div className="flex flex-col h-full">
-          {/* Logo */}
           <div className="flex items-center justify-between h-16 px-4 border-b border-white/5">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-8 h-8 text-[#66FCF1]" />
@@ -94,14 +95,12 @@ export default function Layout() {
             </button>
           </div>
 
-          {/* Navigation */}
           <nav className="flex-1 py-4 overflow-y-auto">
             {navItems.map((item) => (
               <NavItem key={item.to} {...item} />
             ))}
           </nav>
 
-          {/* User section */}
           <div className="p-4 border-t border-white/5">
             <div className="flex items-center gap-3">
               <Avatar className="w-10 h-10 border border-[#66FCF1]/30">
@@ -119,9 +118,7 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen">
-        {/* Header */}
         <header className="sticky top-0 z-30 h-16 bg-[#0B0C10]/80 backdrop-blur-md border-b border-white/10">
           <div className="flex items-center justify-between h-full px-4 md:px-6">
             <button
@@ -181,7 +178,6 @@ export default function Layout() {
           </div>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           <Outlet />
         </main>
