@@ -1914,7 +1914,11 @@ async def update_transaction(transaction_id: str, update_data: TransactionUpdate
     return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
 
 @api_router.post("/transactions/{transaction_id}/approve")
-async def approve_transaction(transaction_id: str, user: dict = Depends(require_accountant_or_admin)):
+async def approve_transaction(
+    transaction_id: str, 
+    source_account_id: Optional[str] = None,
+    user: dict = Depends(require_accountant_or_admin)
+):
     """Approve a pending transaction"""
     tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
     if not tx:
@@ -1932,13 +1936,69 @@ async def approve_transaction(transaction_id: str, user: dict = Depends(require_
         "processed_at": now.isoformat()
     }
     
-    # Update treasury balance
-    if tx.get("destination_account_id"):
-        balance_change = tx["amount"] if tx["transaction_type"] == TransactionType.DEPOSIT else -tx["amount"]
+    # For withdrawals with bank/usdt destination, require source account
+    if tx["transaction_type"] == TransactionType.WITHDRAWAL:
+        if tx.get("destination_type") in ["bank", "usdt"]:
+            if not source_account_id:
+                raise HTTPException(status_code=400, detail="Source account is required for withdrawal approvals")
+            
+            # Verify source account exists and has sufficient balance
+            source_account = await db.treasury_accounts.find_one({"account_id": source_account_id}, {"_id": 0})
+            if not source_account:
+                raise HTTPException(status_code=404, detail="Source account not found")
+            
+            if source_account.get("balance", 0) < tx["amount"]:
+                raise HTTPException(status_code=400, detail="Insufficient balance in source account")
+            
+            # Deduct from source account
+            await db.treasury_accounts.update_one(
+                {"account_id": source_account_id},
+                {"$inc": {"balance": -tx["amount"]}, "$set": {"updated_at": now.isoformat()}}
+            )
+            
+            updates["source_account_id"] = source_account_id
+            updates["source_account_name"] = source_account.get("account_name")
+            
+            # Record treasury transaction
+            treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+            treasury_tx_doc = {
+                "treasury_transaction_id": treasury_tx_id,
+                "account_id": source_account_id,
+                "transaction_type": "withdrawal",
+                "amount": -tx["amount"],
+                "currency": source_account.get("currency", "USD"),
+                "reference": f"Withdrawal: {tx.get('client_name', 'Client')} - {tx.get('reference', '')}",
+                "transaction_id": transaction_id,
+                "client_id": tx.get("client_id"),
+                "created_at": now.isoformat(),
+                "created_by": user["user_id"],
+                "created_by_name": user["name"]
+            }
+            await db.treasury_transactions.insert_one(treasury_tx_doc)
+    
+    # Update treasury balance for deposits going to treasury
+    if tx.get("destination_account_id") and tx["transaction_type"] == TransactionType.DEPOSIT:
         await db.treasury_accounts.update_one(
             {"account_id": tx["destination_account_id"]},
-            {"$inc": {"balance": balance_change}, "$set": {"updated_at": now.isoformat()}}
+            {"$inc": {"balance": tx["amount"]}, "$set": {"updated_at": now.isoformat()}}
         )
+        
+        # Record treasury transaction for deposit
+        treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+        treasury_tx_doc = {
+            "treasury_transaction_id": treasury_tx_id,
+            "account_id": tx["destination_account_id"],
+            "transaction_type": "deposit",
+            "amount": tx["amount"],
+            "currency": "USD",
+            "reference": f"Deposit: {tx.get('client_name', 'Client')} - {tx.get('reference', '')}",
+            "transaction_id": transaction_id,
+            "client_id": tx.get("client_id"),
+            "created_at": now.isoformat(),
+            "created_by": user["user_id"],
+            "created_by_name": user["name"]
+        }
+        await db.treasury_transactions.insert_one(treasury_tx_doc)
     
     await db.transactions.update_one({"transaction_id": transaction_id}, {"$set": updates})
     
