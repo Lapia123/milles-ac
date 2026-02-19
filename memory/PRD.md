@@ -246,6 +246,7 @@ Query: start_date, end_date, transaction_type, limit
 - [x] Client bank accounts saved to profile
 - [x] USDT added to all currency dropdowns
 - [x] **Inter-Treasury Transfer with math captcha security**
+- [x] **Income & Expenses Ledger with treasury integration**
 
 ### P1 (Next Phase)
 - [ ] Live exchange rate API integration
