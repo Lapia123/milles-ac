@@ -71,7 +71,7 @@ const expenseCategories = [
   { value: 'other', label: 'Other Expenses' },
 ];
 
-const currencies = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY'];
+const currencies = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY', 'USDT'];
 
 export default function IncomeExpenses() {
   const { user } = useAuth();
