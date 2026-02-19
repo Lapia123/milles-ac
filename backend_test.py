@@ -365,9 +365,11 @@ def main():
         ("Admin Authentication", tester.test_login),
         ("Auth Verification", tester.test_auth_me),
         ("Dashboard Stats", tester.test_dashboard_stats),
-        ("Clients CRUD", tester.test_clients_crud),
+        ("Clients CRUD (with MT5 & CRM)", tester.test_clients_crud),
         ("Treasury Accounts CRUD", tester.test_treasury_crud),
+        ("Treasury USD Conversion (NEW)", tester.test_treasury_usd_conversion),
         ("Transactions CRUD", tester.test_transactions_crud),
+        ("Multi-Currency Transactions (NEW)", tester.test_multi_currency_transactions),
         ("Reports & Analytics", tester.test_reports_endpoints),
     ]
     
