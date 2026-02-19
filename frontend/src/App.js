@@ -13,6 +13,7 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import AccountantDashboard from "./pages/AccountantDashboard";
 import IncomeExpenses from "./pages/IncomeExpenses";
+import Loans from "./pages/Loans";
 import Layout from "./components/Layout";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
