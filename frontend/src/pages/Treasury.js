@@ -585,6 +585,16 @@ export default function Treasury() {
                       <p className="text-xs text-[#C5C6C7]">Account: <span className="font-mono text-white">{account.account_number}</span></p>
                     </div>
                   )}
+                  <Button
+                    onClick={() => setHistoryAccount(account)}
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-2 border-[#66FCF1]/30 text-[#66FCF1] hover:bg-[#66FCF1]/10"
+                    data-testid={`view-history-${account.account_id}`}
+                  >
+                    <History className="w-3 h-3 mr-2" />
+                    View History
+                  </Button>
                 </div>
               </CardContent>
             </Card>
