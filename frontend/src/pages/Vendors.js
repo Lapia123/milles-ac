@@ -266,7 +266,7 @@ export default function Vendors() {
       });
       
       if (response.ok) {
-        toast.success('Settlement completed successfully');
+        toast.success('Settlement submitted for approval');
         setSettleDialogOpen(false);
         setSettlementType('bank');
         setSettlementDestination('');
