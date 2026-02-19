@@ -47,6 +47,7 @@ import {
   Upload,
   Image as ImageIcon,
   CreditCard,
+  Store,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
