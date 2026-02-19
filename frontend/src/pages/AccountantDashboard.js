@@ -192,14 +192,18 @@ export default function AccountantDashboard() {
     loadData();
   }, []);
 
-  const initiateApprove = (transactionId) => {
-    setCaptchaAction({ type: 'approve', transactionId });
+  const initiateApprove = (transactionId, isSettlement = false) => {
+    setCaptchaAction({ type: 'approve', transactionId, isSettlement });
     setShowCaptcha(true);
   };
 
-  const initiateReject = (transactionId) => {
-    setCaptchaAction({ type: 'reject', transactionId });
-    setShowRejectDialog(transactionId);
+  const initiateReject = (transactionId, isSettlement = false) => {
+    setCaptchaAction({ type: 'reject', transactionId, isSettlement });
+    if (isSettlement) {
+      setShowSettlementRejectDialog(transactionId);
+    } else {
+      setShowRejectDialog(transactionId);
+    }
   };
 
   const handleCaptchaVerified = async () => {
@@ -208,9 +212,17 @@ export default function AccountantDashboard() {
     setShowCaptcha(false);
     
     if (captchaAction.type === 'approve') {
-      await executeApprove(captchaAction.transactionId);
+      if (captchaAction.isSettlement) {
+        await executeApproveSettlement(captchaAction.transactionId);
+      } else {
+        await executeApprove(captchaAction.transactionId);
+      }
     } else if (captchaAction.type === 'reject') {
-      await executeReject(captchaAction.transactionId);
+      if (captchaAction.isSettlement) {
+        await executeRejectSettlement(captchaAction.transactionId);
+      } else {
+        await executeReject(captchaAction.transactionId);
+      }
     }
     
     setCaptchaAction(null);
