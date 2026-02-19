@@ -226,11 +226,8 @@ export default function Vendors() {
       vendor_name: vendor.vendor_name,
       email: vendor.email,
       password: '',
-      deposit_commission: vendor.deposit_commission.toString(),
-      withdrawal_commission: vendor.withdrawal_commission.toString(),
-      bank_settlement_commission: vendor.bank_settlement_commission.toString(),
-      cash_settlement_commission: vendor.cash_settlement_commission.toString(),
-      settlement_destination_id: vendor.settlement_destination_id,
+      deposit_commission: vendor.deposit_commission?.toString() || '',
+      withdrawal_commission: vendor.withdrawal_commission?.toString() || '',
       description: vendor.description || '',
       status: vendor.status,
     });
@@ -238,7 +235,10 @@ export default function Vendors() {
   };
 
   const handleSettleVendor = async () => {
-    if (!viewVendor) return;
+    if (!viewVendor || !settlementDestination) {
+      toast.error('Please select a settlement destination');
+      return;
+    }
     
     try {
       const response = await fetch(`${API_URL}/api/vendors/${viewVendor.vendor_id}/settle`, {
@@ -247,7 +247,10 @@ export default function Vendors() {
         credentials: 'include',
         body: JSON.stringify({
           settlement_type: settlementType,
-          destination_account_id: settlementDestination || viewVendor.settlement_destination_id
+          destination_account_id: settlementDestination,
+          commission_amount: parseFloat(settlementCommission) || 0,
+          charges_amount: parseFloat(settlementCharges) || 0,
+          charges_description: settlementChargesDescription || null
         }),
       });
       
@@ -256,6 +259,9 @@ export default function Vendors() {
         setSettleDialogOpen(false);
         setSettlementType('bank');
         setSettlementDestination('');
+        setSettlementCommission('');
+        setSettlementCharges('');
+        setSettlementChargesDescription('');
         fetchVendorTransactions(viewVendor.vendor_id);
         fetchVendorSettlements(viewVendor.vendor_id);
         fetchVendors();
