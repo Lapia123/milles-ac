@@ -95,17 +95,22 @@ Body:
 - **Vendor 1:** vendor1@fxbroker.com / vendor123
 - **Vendor 2:** vendor2@fxbroker.com / vendor123
 
-## Settlement Flow
+## Settlement Flow (Updated)
 
 1. **Transaction Created** → Destination: Vendor
 2. **Vendor Approves** → Status: Approved
-3. **Admin Settles** →
+3. **Admin Creates Settlement** →
    - Select settlement type (Bank/Cash)
    - Select destination treasury
    - Enter commission amount
    - Enter any additional charges
    - System shows preview
-   - Confirm → Funds added to treasury
+   - Confirm → **Settlement goes to PENDING status**
+4. **Accountant/Admin Approves Settlement** →
+   - View on Approvals page → Settlements tab
+   - Complete math captcha
+   - Approve → Treasury balance updated
+   - OR Reject → Transactions reset for re-settlement
 
 ## Prioritized Backlog
 
@@ -115,6 +120,9 @@ Body:
 - [x] Manual Vendor Settlement
 - [x] Commission & Charges recording
 - [x] Multi-currency settlement support
+- [x] Settlement Approval Workflow
+- [x] Treasury History with filters
+- [x] Statement Download (CSV)
 
 ### P1 (Next Phase)
 - [ ] Live exchange rate API integration
@@ -125,7 +133,7 @@ Body:
 - [ ] Export reports
 - [ ] Two-factor auth
 - [ ] MT5 API integration
-- [ ] Backend refactoring
+- [ ] Backend refactoring (APIRouter modules)
 
 ## DB Schema
 
