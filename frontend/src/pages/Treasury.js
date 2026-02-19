@@ -1095,7 +1095,7 @@ export default function Treasury() {
               {sourceAccount && destAccount && sourceAccount.currency !== destAccount.currency && (
                 <div className="space-y-2">
                   <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
-                    Exchange Rate ({sourceAccount.currency} → {destAccount.currency})
+                    Exchange Rate ({sourceAccount.currency} to {destAccount.currency})
                   </Label>
                   <Input
                     type="number"
