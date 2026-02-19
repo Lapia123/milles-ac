@@ -406,59 +406,6 @@ export default function Vendors() {
                   </div>
                 </div>
                 
-                <div className="p-3 bg-[#0B0C10] rounded-sm border border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-3">Settlement Commissions</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-[#C5C6C7] text-xs flex items-center gap-1">
-                        <Building2 className="w-3 h-3" /> Bank Settlement (%)
-                      </Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={formData.bank_settlement_commission}
-                        onChange={(e) => setFormData({ ...formData, bank_settlement_commission: e.target.value })}
-                        className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono"
-                        placeholder="0.5"
-                        data-testid="vendor-bank-commission"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-[#C5C6C7] text-xs flex items-center gap-1">
-                        <Banknote className="w-3 h-3" /> Cash Settlement (%)
-                      </Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={formData.cash_settlement_commission}
-                        onChange={(e) => setFormData({ ...formData, cash_settlement_commission: e.target.value })}
-                        className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono"
-                        placeholder="1.0"
-                        data-testid="vendor-cash-commission"
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Settlement Destination *</Label>
-                  <Select
-                    value={formData.settlement_destination_id}
-                    onValueChange={(value) => setFormData({ ...formData, settlement_destination_id: value })}
-                  >
-                    <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="vendor-destination">
-                      <SelectValue placeholder="Select treasury account" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#1F2833] border-white/10">
-                      {treasuryAccounts.map((account) => (
-                        <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
-                          {account.account_name} - {account.bank_name} ({account.currency})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
                 {selectedVendor && (
                   <div className="space-y-2">
                     <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Status</Label>
