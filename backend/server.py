@@ -844,6 +844,63 @@ async def complete_settlement(settlement_id: str, user: dict = Depends(require_a
     
     return await db.psp_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
 
+# Get pending PSP transactions (not yet settled)
+@api_router.get("/psp/{psp_id}/pending-transactions")
+async def get_psp_pending_transactions(psp_id: str, user: dict = Depends(get_current_user)):
+    """Get all pending/approved transactions for a PSP that haven't been settled"""
+    transactions = await db.transactions.find({
+        "psp_id": psp_id,
+        "destination_type": "psp",
+        "status": {"$in": [TransactionStatus.PENDING, TransactionStatus.APPROVED]},
+        "settled": {"$ne": True}
+    }, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return transactions
+
+# Get PSP dashboard summary
+@api_router.get("/psp-summary")
+async def get_psp_summary(user: dict = Depends(get_current_user)):
+    """Get summary of all PSPs with pending settlements"""
+    psps = await db.psps.find({"status": PSPStatus.ACTIVE}, {"_id": 0}).to_list(1000)
+    now = datetime.now(timezone.utc)
+    
+    result = []
+    for psp in psps:
+        # Get pending transactions count and amount
+        pending_txs = await db.transactions.find({
+            "psp_id": psp["psp_id"],
+            "destination_type": "psp",
+            "status": {"$in": [TransactionStatus.PENDING, TransactionStatus.APPROVED]},
+            "settled": {"$ne": True}
+        }, {"_id": 0}).to_list(1000)
+        
+        pending_count = len(pending_txs)
+        pending_amount = sum(tx.get("psp_net_amount", tx.get("amount", 0)) for tx in pending_txs)
+        
+        # Check for overdue settlements
+        overdue_count = 0
+        for tx in pending_txs:
+            exp_date = tx.get("psp_expected_settlement_date")
+            if exp_date:
+                exp_dt = datetime.fromisoformat(exp_date.replace('Z', '+00:00'))
+                if exp_dt.tzinfo is None:
+                    exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+                if exp_dt < now:
+                    overdue_count += 1
+        
+        # Get settlement destination
+        dest = await db.treasury_accounts.find_one({"account_id": psp.get("settlement_destination_id")}, {"_id": 0})
+        
+        result.append({
+            **psp,
+            "pending_transactions_count": pending_count,
+            "pending_amount": pending_amount,
+            "overdue_count": overdue_count,
+            "settlement_destination_name": dest["account_name"] if dest else "Unknown",
+            "settlement_destination_bank": dest.get("bank_name") if dest else None
+        })
+    
+    return result
+
 # ============== TRANSACTIONS ROUTES ==============
 
 @api_router.get("/transactions")
