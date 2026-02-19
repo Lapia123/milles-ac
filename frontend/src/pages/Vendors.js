@@ -884,9 +884,26 @@ export default function Vendors() {
                         <span className="text-white font-mono">${netSource.toFixed(2)}</span>
                       </div>
                       {destAccount && destAccount.currency !== 'USD' && (
-                        <div className="pt-2 border-t border-white/10">
-                          <p className="text-xs text-yellow-400 mb-2">Destination currency: {destAccount.currency}</p>
-                          <p className="text-xs text-[#C5C6C7]">Enter the final settlement amount in {destAccount.currency}:</p>
+                        <div className="pt-3 border-t border-white/10 space-y-2">
+                          <p className="text-xs text-yellow-400">Destination currency: {destAccount.currency}</p>
+                          <div className="space-y-1">
+                            <Label className="text-[#C5C6C7] text-xs">Settlement Amount in {destAccount.currency} *</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={settlementAmountInDestCurrency}
+                              onChange={(e) => setSettlementAmountInDestCurrency(e.target.value)}
+                              className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                              placeholder={`Enter amount in ${destAccount.currency}`}
+                              data-testid="settlement-dest-amount"
+                            />
+                          </div>
+                          {settlementAmountInDestCurrency && (
+                            <div className="flex justify-between pt-2">
+                              <span className="text-[#C5C6C7]">Final Settlement</span>
+                              <span className="text-green-400 font-mono text-lg">{destAccount.currency} {parseFloat(settlementAmountInDestCurrency).toLocaleString()}</span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
