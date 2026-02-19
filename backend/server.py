@@ -679,6 +679,73 @@ async def update_treasury_account(account_id: str, update_data: TreasuryAccountU
     
     return await db.treasury_accounts.find_one({"account_id": account_id}, {"_id": 0})
 
+# Treasury Transaction History
+@api_router.get("/treasury/{account_id}/history")
+async def get_treasury_history(
+    account_id: str, 
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    transaction_type: Optional[str] = None,
+    limit: int = 100,
+    user: dict = Depends(get_current_user)
+):
+    """Get transaction history for a treasury account"""
+    account = await db.treasury_accounts.find_one({"account_id": account_id}, {"_id": 0})
+    if not account:
+        raise HTTPException(status_code=404, detail="Treasury account not found")
+    
+    # Build query for treasury transactions
+    query = {"account_id": account_id}
+    
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = end_date
+        else:
+            query["created_at"] = {"$lte": end_date}
+    if transaction_type:
+        query["transaction_type"] = transaction_type
+    
+    # Get treasury-specific transactions
+    treasury_txs = await db.treasury_transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    
+    # Also get regular transactions that affected this treasury account
+    tx_query = {"destination_account_id": account_id}
+    if start_date:
+        tx_query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in tx_query:
+            tx_query["created_at"]["$lte"] = end_date
+        else:
+            tx_query["created_at"] = {"$lte": end_date}
+    
+    regular_txs = await db.transactions.find(
+        {**tx_query, "status": {"$in": ["approved", "completed"]}}, 
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(limit)
+    
+    # Convert regular transactions to history format
+    for tx in regular_txs:
+        treasury_txs.append({
+            "treasury_transaction_id": tx.get("transaction_id"),
+            "account_id": account_id,
+            "transaction_type": tx.get("transaction_type"),
+            "amount": tx.get("amount") if tx.get("transaction_type") == "deposit" else -tx.get("amount", 0),
+            "currency": account.get("currency", "USD"),
+            "reference": f"{tx.get('transaction_type', '').capitalize()}: {tx.get('client_name', 'Unknown')} - {tx.get('reference', '')}",
+            "client_id": tx.get("client_id"),
+            "client_name": tx.get("client_name"),
+            "created_at": tx.get("processed_at") or tx.get("created_at"),
+            "created_by": tx.get("processed_by"),
+            "created_by_name": tx.get("processed_by_name")
+        })
+    
+    # Sort combined list by date
+    treasury_txs.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    
+    return treasury_txs[:limit]
+
 @api_router.delete("/treasury/{account_id}")
 async def delete_treasury_account(account_id: str, user: dict = Depends(require_admin)):
     result = await db.treasury_accounts.delete_one({"account_id": account_id})
