@@ -768,6 +768,144 @@ export default function AccountantDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* View Settlement Dialog */}
+      <Dialog open={!!viewSettlement} onOpenChange={() => setViewSettlement(null)}>
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+              <Wallet className="w-6 h-6 text-[#66FCF1]" />
+              Settlement Details
+            </DialogTitle>
+          </DialogHeader>
+          {viewSettlement && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Store className="w-5 h-5 text-[#66FCF1]" />
+                  <span className="text-white text-lg">{viewSettlement.vendor_name}</span>
+                </div>
+                <Badge className="bg-yellow-500/20 text-yellow-400 text-xs uppercase">Pending</Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+                <div>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Settlement Type</p>
+                  <Badge className={viewSettlement.settlement_type === 'bank' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}>
+                    {viewSettlement.settlement_type === 'bank' ? <Building2 className="w-3 h-3 mr-1 inline" /> : <Banknote className="w-3 h-3 mr-1 inline" />}
+                    {viewSettlement.settlement_type}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Transactions</p>
+                  <p className="text-white font-mono">{viewSettlement.transaction_count}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Gross Amount</p>
+                  <p className="text-white font-mono text-xl">${viewSettlement.gross_amount?.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Commission</p>
+                  <p className="text-red-400 font-mono">-${viewSettlement.commission_amount?.toLocaleString()}</p>
+                </div>
+                {viewSettlement.charges_amount > 0 && (
+                  <>
+                    <div>
+                      <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Charges</p>
+                      <p className="text-red-400 font-mono">-${viewSettlement.charges_amount?.toLocaleString()}</p>
+                    </div>
+                    {viewSettlement.charges_description && (
+                      <div>
+                        <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Charges Desc.</p>
+                        <p className="text-white text-sm">{viewSettlement.charges_description}</p>
+                      </div>
+                    )}
+                  </>
+                )}
+                <div>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Net (Source)</p>
+                  <p className="text-white font-mono">${viewSettlement.net_amount_source?.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Settlement Amount</p>
+                  <p className="text-green-400 font-mono text-xl">
+                    {viewSettlement.destination_currency !== 'USD' ? viewSettlement.destination_currency : '$'} {viewSettlement.settlement_amount?.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              <div className="pt-4 border-t border-white/10">
+                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Destination Account</p>
+                <p className="text-white">{viewSettlement.settlement_destination_name}</p>
+              </div>
+              <div className="pt-4 border-t border-white/10">
+                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created By</p>
+                <p className="text-white">{viewSettlement.created_by_name}</p>
+                <p className="text-sm text-[#C5C6C7]">{formatDate(viewSettlement.created_at)}</p>
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button
+                  onClick={() => {
+                    setViewSettlement(null);
+                    initiateApprove(viewSettlement.settlement_id, true);
+                  }}
+                  className="flex-1 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Approve
+                </Button>
+                <Button
+                  onClick={() => {
+                    setViewSettlement(null);
+                    initiateReject(viewSettlement.settlement_id, true);
+                  }}
+                  className="flex-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Reject
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Settlement Reject Reason Dialog */}
+      <Dialog open={!!showSettlementRejectDialog} onOpenChange={() => { setShowSettlementRejectDialog(null); setRejectReason(''); }}>
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+              <AlertCircle className="w-6 h-6 text-red-400" />
+              Reject Settlement
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-[#C5C6C7]">Please provide a reason for rejecting this settlement:</p>
+            <Textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Enter rejection reason..."
+              className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+              rows={3}
+              data-testid="settlement-reject-reason"
+            />
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => { setShowSettlementRejectDialog(null); setRejectReason(''); }}
+                className="flex-1 border-white/10 text-[#C5C6C7] hover:bg-white/5"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSettlementRejectWithCaptcha}
+                className="flex-1 bg-red-500 text-white hover:bg-red-600"
+                data-testid="continue-settlement-reject-btn"
+              >
+                Continue
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
