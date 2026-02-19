@@ -432,24 +432,122 @@ export default function Transactions() {
                 )}
               </div>
               
+              {/* Destination Type Selection */}
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Destination (Bank/Treasury) *</Label>
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Destination Type *</Label>
                 <Select
-                  value={formData.destination_account_id}
-                  onValueChange={(value) => setFormData({ ...formData, destination_account_id: value })}
+                  value={formData.destination_type}
+                  onValueChange={(value) => setFormData({ ...formData, destination_type: value, destination_account_id: '', psp_id: '' })}
                 >
-                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-destination">
-                    <SelectValue placeholder="Select destination account" />
+                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-dest-type">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-[#1F2833] border-white/10">
-                    {treasuryAccounts.map((account) => (
-                      <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
-                        {account.account_name} - {account.bank_name} ({account.currency})
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="treasury" className="text-white hover:bg-white/5">Treasury / Bank Account</SelectItem>
+                    <SelectItem value="psp" className="text-white hover:bg-white/5">Payment Service Provider (PSP)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              
+              {/* Treasury Destination */}
+              {formData.destination_type === 'treasury' && (
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Destination (Bank/Treasury) *</Label>
+                  <Select
+                    value={formData.destination_account_id}
+                    onValueChange={(value) => setFormData({ ...formData, destination_account_id: value })}
+                  >
+                    <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-destination">
+                      <SelectValue placeholder="Select destination account" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1F2833] border-white/10">
+                      {treasuryAccounts.map((account) => (
+                        <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
+                          {account.account_name} - {account.bank_name} ({account.currency})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              
+              {/* PSP Destination */}
+              {formData.destination_type === 'psp' && (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Select PSP *</Label>
+                    <Select
+                      value={formData.psp_id}
+                      onValueChange={(value) => setFormData({ ...formData, psp_id: value })}
+                    >
+                      <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-psp">
+                        <SelectValue placeholder="Select PSP" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#1F2833] border-white/10">
+                        {psps.filter(p => p.status === 'active').map((psp) => (
+                          <SelectItem key={psp.psp_id} value={psp.psp_id} className="text-white hover:bg-white/5">
+                            {psp.psp_name} ({psp.commission_rate}% commission, T+{psp.settlement_days})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Commission Paid By *</Label>
+                    <Select
+                      value={formData.commission_paid_by}
+                      onValueChange={(value) => setFormData({ ...formData, commission_paid_by: value })}
+                    >
+                      <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-commission-paid-by">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#1F2833] border-white/10">
+                        <SelectItem value="client" className="text-white hover:bg-white/5">Client (deducted from deposit)</SelectItem>
+                        <SelectItem value="broker" className="text-white hover:bg-white/5">Broker (absorbs commission)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Commission Preview */}
+                  {formData.psp_id && formData.amount && (
+                    <div className="p-3 bg-[#0B0C10] rounded-sm border border-white/10">
+                      {(() => {
+                        const selectedPsp = psps.find(p => p.psp_id === formData.psp_id);
+                        if (!selectedPsp) return null;
+                        const grossAmount = parseFloat(formData.amount) || 0;
+                        const commissionRate = selectedPsp.commission_rate / 100;
+                        const commissionAmount = (grossAmount * commissionRate).toFixed(2);
+                        const netAmount = formData.commission_paid_by === 'client' 
+                          ? (grossAmount - parseFloat(commissionAmount)).toFixed(2)
+                          : grossAmount.toFixed(2);
+                        return (
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-[#C5C6C7]">Gross Amount</span>
+                              <span className="text-white font-mono">${grossAmount.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-[#C5C6C7]">PSP Commission ({selectedPsp.commission_rate}%)</span>
+                              <span className="text-red-400 font-mono">-${commissionAmount}</span>
+                            </div>
+                            <div className="flex justify-between pt-2 border-t border-white/10">
+                              <span className="text-[#C5C6C7]">
+                                {formData.commission_paid_by === 'client' ? 'Client Receives' : 'Client Receives (Broker pays commission)'}
+                              </span>
+                              <span className="text-green-400 font-mono">${netAmount}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-[#C5C6C7]">Expected Settlement</span>
+                              <span className="text-[#66FCF1]">T+{selectedPsp.settlement_days} days</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </>
+              )}
               
               <div className="space-y-2">
                 <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Reference (Optional)</Label>
