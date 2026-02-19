@@ -131,6 +131,8 @@ Build account software for FX broker - a back-office accounting system with admi
 - Multi-currency transactions
 - Treasury/Bank account management with history & statement download
 - **Inter-Treasury Transfer** with math captcha security
+- **Income & Expenses Ledger** with treasury integration
+- **Loan Management** with repayment tracking
 - PSP management with settlements
 - **Vendor Portal** with approve/reject workflow
 - **Manual Vendor Settlement** with commission & charges
@@ -138,7 +140,50 @@ Build account software for FX broker - a back-office accounting system with admi
 
 ## API Endpoints
 
-### Income & Expenses (NEW)
+### Loan Management (NEW)
+```
+GET /api/loans
+# Query params: status, borrower, limit
+
+POST /api/loans
+Body:
+{
+  "borrower_name": "ABC Company",
+  "amount": 50000.0,
+  "currency": "USD",
+  "interest_rate": 5.0,  // Annual percentage
+  "loan_date": "2026-02-19",
+  "due_date": "2027-02-19",
+  "repayment_mode": "lump_sum" | "installments",
+  "installment_amount": 5000,  // Optional, for installment mode
+  "installment_frequency": "monthly",  // Optional
+  "treasury_account_id": "treasury_xxx",
+  "notes": "Optional notes"
+}
+
+GET /api/loans/{loan_id}
+# Returns loan with repayment history
+
+POST /api/loans/{loan_id}/repayment
+Body:
+{
+  "amount": 10000.0,
+  "currency": "USD",
+  "treasury_account_id": "treasury_yyy",  // Can be different from source
+  "payment_date": "2026-03-19",
+  "reference": "CHQ-001",
+  "notes": "Partial repayment"
+}
+
+DELETE /api/loans/{loan_id}
+# Only works if no repayments exist, restores treasury balance
+
+GET /api/loans/reports/summary
+# Returns: total_disbursed_usd, total_outstanding_usd, total_repaid_usd, 
+#          total_interest_earned_usd, status_breakdown, by_borrower
+```
+
+### Income & Expenses
 ```
 GET /api/income-expenses
 # Query params: entry_type, category, start_date, end_date, treasury_account_id, limit
