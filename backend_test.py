@@ -96,13 +96,15 @@ class FXBrokerAPITester:
         if not success:
             return False
 
-        # Create client
+        # Create client with NEW FIELDS: MT5 Number and CRM Customer ID
         client_data = {
             "first_name": f"Test_{datetime.now().strftime('%H%M%S')}",
             "last_name": "Client", 
             "email": f"test.client.{datetime.now().strftime('%H%M%S')}@test.com",
             "phone": "+1234567890",
-            "country": "USA"
+            "country": "USA",
+            "mt5_number": f"MT5{datetime.now().strftime('%H%M%S')}",
+            "crm_customer_id": f"CRM-{datetime.now().strftime('%H%M%S')}"
         }
         success, new_client = self.run_test("Create Client", "POST", "api/clients", 200, data=client_data)
         if not success or not new_client.get('client_id'):
