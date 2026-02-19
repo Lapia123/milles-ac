@@ -175,7 +175,11 @@ export default function Transactions() {
       formDataToSend.append('client_id', formData.client_id);
       formDataToSend.append('transaction_type', formData.transaction_type);
       formDataToSend.append('amount', formData.amount);
-      formDataToSend.append('currency', formData.currency);
+      formDataToSend.append('currency', 'USD');
+      formDataToSend.append('base_currency', formData.base_currency);
+      if (formData.base_currency !== 'USD' && formData.base_amount) {
+        formDataToSend.append('base_amount', formData.base_amount);
+      }
       if (formData.destination_account_id) {
         formDataToSend.append('destination_account_id', formData.destination_account_id);
       }
