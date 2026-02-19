@@ -131,11 +131,13 @@ Query: start_date, end_date, transaction_type, limit
 - [x] Commission & Charges recording
 - [x] Multi-currency settlement support
 - [x] Settlement Approval Workflow
-- [x] Treasury History with filters
-- [x] Statement Download (CSV)
+- [x] Treasury History with filters & CSV download
 - [x] New destination types (Client Bank, USDT)
 - [x] USDT Treasury accounts
-- [x] Upload proof for withdrawals in Approvals
+- [x] Approvals page filters (Type, Destination, Client)
+- [x] Withdrawal approval requires source account + proof screenshot
+- [x] Client bank accounts saved to profile
+- [x] USDT added to all currency dropdowns
 
 ### P1 (Next Phase)
 - [ ] Live exchange rate API integration
