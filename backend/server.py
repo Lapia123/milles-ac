@@ -1521,6 +1521,11 @@ async def create_transaction(
         "psp_commission_paid_by": commission_paid_by if psp_info else None,
         "psp_net_amount": net_amount if psp_info else None,
         "psp_expected_settlement_date": expected_settlement_date,
+        "vendor_id": vendor_id if destination_type == "vendor" else None,
+        "vendor_name": vendor_info["vendor_name"] if vendor_info else None,
+        "vendor_deposit_commission": vendor_info["deposit_commission"] if vendor_info and transaction_type == TransactionType.DEPOSIT else None,
+        "vendor_withdrawal_commission": vendor_info["withdrawal_commission"] if vendor_info and transaction_type == TransactionType.WITHDRAWAL else None,
+        "vendor_proof_image": None,  # Vendor uploads when completing withdrawal
         "status": TransactionStatus.PENDING,
         "description": description,
         "reference": reference or f"REF{uuid.uuid4().hex[:8].upper()}",
@@ -1544,6 +1549,13 @@ async def create_transaction(
         await db.psps.update_one(
             {"psp_id": psp_id},
             {"$inc": {"pending_settlement": net_amount}}
+        )
+    
+    # Update vendor pending balance if this is a vendor transaction
+    if destination_type == "vendor" and vendor_info:
+        await db.vendors.update_one(
+            {"vendor_id": vendor_id},
+            {"$inc": {"pending_settlement": usd_amount}}
         )
     
     result = await db.transactions.find_one({"transaction_id": tx_id}, {"_id": 0})
