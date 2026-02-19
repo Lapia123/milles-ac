@@ -154,10 +154,22 @@ export default function Transactions() {
     }
   };
 
+  const fetchPsps = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/psp`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setPsps(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching PSPs:', error);
+    }
+  };
+
   useEffect(() => {
     fetchTransactions();
     fetchClients();
     fetchTreasuryAccounts();
+    fetchPsps();
   }, [typeFilter, statusFilter]);
 
   const handleImageChange = (e) => {
