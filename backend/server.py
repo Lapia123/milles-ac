@@ -131,6 +131,34 @@ class TreasuryAccountStatus:
     ACTIVE = "active"
     INACTIVE = "inactive"
 
+# PSP Models
+class PSPStatus:
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+
+class PSPSettlementStatus:
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+class PSPCreate(BaseModel):
+    psp_name: str
+    commission_rate: float  # percentage e.g., 2.5 for 2.5%
+    settlement_days: int = 1  # T+1, T+2, etc.
+    settlement_destination_id: str  # Treasury account ID
+    min_settlement_amount: float = 0
+    description: Optional[str] = None
+
+class PSPUpdate(BaseModel):
+    psp_name: Optional[str] = None
+    commission_rate: Optional[float] = None
+    settlement_days: Optional[int] = None
+    settlement_destination_id: Optional[str] = None
+    min_settlement_amount: Optional[float] = None
+    status: Optional[str] = None
+    description: Optional[str] = None
+
 # Exchange rates to USD (simplified - in production use live API)
 EXCHANGE_RATES_TO_USD = {
     "USD": 1.0,
