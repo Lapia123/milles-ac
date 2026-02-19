@@ -329,6 +329,7 @@ Query: start_date, end_date, transaction_type, limit
 - [x] USDT added to all currency dropdowns
 - [x] **Inter-Treasury Transfer with math captcha security**
 - [x] **Income & Expenses Ledger with treasury integration**
+- [x] **Loan Management with repayment tracking**
 
 ### P1 (Next Phase)
 - [ ] Live exchange rate API integration
@@ -343,6 +344,50 @@ Query: start_date, end_date, transaction_type, limit
 - [ ] Session management bug fix (minor redirect issue after login)
 
 ## DB Schema
+
+### loans (NEW)
+```json
+{
+  "loan_id": "loan_xxx",
+  "borrower_name": "ABC Company",
+  "amount": 50000.0,
+  "currency": "USD",
+  "amount_usd": 50000.0,
+  "interest_rate": 5.0,
+  "total_interest": 2500.0,
+  "loan_date": "2026-02-19",
+  "due_date": "2027-02-19",
+  "repayment_mode": "lump_sum|installments",
+  "installment_amount": 5000,
+  "installment_frequency": "monthly",
+  "source_treasury_id": "treasury_xxx",
+  "total_repaid": 25000.0,
+  "repayment_count": 2,
+  "status": "active|partially_paid|fully_paid|overdue",
+  "notes": "Optional notes",
+  "created_at": "ISO date",
+  "created_by": "user_id",
+  "created_by_name": "User Name"
+}
+```
+
+### loan_repayments (NEW)
+```json
+{
+  "repayment_id": "rep_xxx",
+  "loan_id": "loan_xxx",
+  "amount": 10000.0,
+  "currency": "USD",
+  "amount_in_loan_currency": 10000.0,
+  "treasury_account_id": "treasury_yyy",
+  "payment_date": "2026-03-19",
+  "reference": "CHQ-001",
+  "notes": "Partial repayment",
+  "created_at": "ISO date",
+  "created_by": "user_id",
+  "created_by_name": "User Name"
+}
+```
 
 ### treasury_transactions (Updated with transfer types)
 ```json
