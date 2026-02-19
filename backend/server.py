@@ -142,6 +142,10 @@ class PSPSettlementStatus:
     COMPLETED = "completed"
     FAILED = "failed"
 
+class CommissionPaidBy:
+    CLIENT = "client"
+    BROKER = "broker"
+
 class PSPCreate(BaseModel):
     psp_name: str
     commission_rate: float  # percentage e.g., 2.5 for 2.5%
