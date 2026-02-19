@@ -544,6 +544,9 @@ export default function Treasury() {
                         <DropdownMenuItem onClick={() => setViewAccount(account)} className="text-white hover:bg-white/5 cursor-pointer">
                           <Eye className="w-4 h-4 mr-2" /> View
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setHistoryAccount(account)} className="text-white hover:bg-white/5 cursor-pointer">
+                          <History className="w-4 h-4 mr-2" /> History
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEdit(account)} className="text-white hover:bg-white/5 cursor-pointer">
                           <Edit className="w-4 h-4 mr-2" /> Edit
                         </DropdownMenuItem>
