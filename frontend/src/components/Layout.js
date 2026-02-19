@@ -54,6 +54,7 @@ export default function Layout() {
     { to: '/clients', icon: Users, label: 'Clients' },
     { to: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
     { to: '/treasury', icon: Landmark, label: 'Treasury' },
+    ...(isAccountantOrAdmin ? [{ to: '/income-expenses', icon: Wallet, label: 'Income & Expenses' }] : []),
     { to: '/psp', icon: CreditCard, label: 'PSP' },
     ...(isAdmin ? [{ to: '/vendors', icon: Store, label: 'Vendors' }] : []),
     { to: '/reports', icon: BarChart3, label: 'Reports' },
