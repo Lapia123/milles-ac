@@ -73,6 +73,7 @@ export default function Transactions() {
   const [clients, setClients] = useState([]);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [psps, setPsps] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -91,6 +92,7 @@ export default function Transactions() {
     destination_type: 'treasury',
     destination_account_id: '',
     psp_id: '',
+    vendor_id: '',
     commission_paid_by: 'client',
     description: '',
     reference: '',
