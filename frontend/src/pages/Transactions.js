@@ -110,7 +110,7 @@ export default function Transactions() {
     client_usdt_network: '',
   });
 
-  const currencies = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY'];
+  const currencies = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY', 'USDT'];
   
   const exchangeRates = {
     USD: 1.0,
