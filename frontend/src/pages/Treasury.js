@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -57,9 +57,6 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Calendar,
-  ArrowLeftRight,
-  Calculator,
-  Wallet,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -91,23 +88,6 @@ export default function Treasury() {
     endDate: '',
     transactionType: '',
   });
-  
-  // Transfer state
-  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
-  const [transferData, setTransferData] = useState({
-    source_account_id: '',
-    destination_account_id: '',
-    amount: '',
-    exchange_rate: '1',
-    notes: '',
-  });
-  const [transferProcessing, setTransferProcessing] = useState(false);
-  
-  // Captcha state
-  const [showCaptcha, setShowCaptcha] = useState(false);
-  const [captchaNumbers, setCaptchaNumbers] = useState({ n1: 0, n2: 0 });
-  const [captchaAnswer, setCaptchaAnswer] = useState('');
-  
   const [formData, setFormData] = useState({
     account_name: '',
     account_type: 'bank',
@@ -133,14 +113,6 @@ export default function Treasury() {
       ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     };
   };
-
-  // Generate captcha
-  const generateCaptcha = useCallback(() => {
-    const n1 = Math.floor(Math.random() * 10) + 1;
-    const n2 = Math.floor(Math.random() * 10) + 1;
-    setCaptchaNumbers({ n1, n2 });
-    setCaptchaAnswer('');
-  }, []);
 
   const fetchAccounts = async () => {
     try {
@@ -218,95 +190,6 @@ export default function Treasury() {
     
     toast.success('Statement downloaded');
   };
-
-  // Transfer functions
-  const initiateTransfer = () => {
-    setTransferData({
-      source_account_id: '',
-      destination_account_id: '',
-      amount: '',
-      exchange_rate: '1',
-      notes: '',
-    });
-    setIsTransferDialogOpen(true);
-  };
-
-  const handleTransferSubmit = () => {
-    // Validate inputs
-    if (!transferData.source_account_id) {
-      toast.error('Please select source account');
-      return;
-    }
-    if (!transferData.destination_account_id) {
-      toast.error('Please select destination account');
-      return;
-    }
-    if (!transferData.amount || parseFloat(transferData.amount) <= 0) {
-      toast.error('Please enter a valid amount');
-      return;
-    }
-    
-    // Check balance
-    const sourceAccount = accounts.find(a => a.account_id === transferData.source_account_id);
-    if (sourceAccount && parseFloat(transferData.amount) > sourceAccount.balance) {
-      toast.error('Insufficient balance in source account');
-      return;
-    }
-    
-    // Show captcha
-    generateCaptcha();
-    setShowCaptcha(true);
-  };
-
-  const verifyCaptchaAndTransfer = async () => {
-    const correctAnswer = captchaNumbers.n1 + captchaNumbers.n2;
-    if (parseInt(captchaAnswer) !== correctAnswer) {
-      toast.error('Incorrect answer. Please try again.');
-      generateCaptcha();
-      setCaptchaAnswer('');
-      return;
-    }
-    
-    // Execute transfer
-    setTransferProcessing(true);
-    try {
-      const response = await fetch(`${API_URL}/api/treasury/transfer`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        credentials: 'include',
-        body: JSON.stringify({
-          source_account_id: transferData.source_account_id,
-          destination_account_id: transferData.destination_account_id,
-          amount: parseFloat(transferData.amount),
-          exchange_rate: parseFloat(transferData.exchange_rate) || 1,
-          notes: transferData.notes || null,
-        }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        toast.success(`Transferred ${result.source_amount} ${result.source_currency} to ${result.destination_account}`);
-        setShowCaptcha(false);
-        setIsTransferDialogOpen(false);
-        fetchAccounts();
-      } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Transfer failed');
-      }
-    } catch (error) {
-      toast.error('Transfer failed');
-    } finally {
-      setTransferProcessing(false);
-      setCaptchaAnswer('');
-    }
-  };
-
-  // Get source account details for preview
-  const sourceAccount = accounts.find(a => a.account_id === transferData.source_account_id);
-  const destAccount = accounts.find(a => a.account_id === transferData.destination_account_id);
-  const calculatedDestAmount = transferData.amount && transferData.exchange_rate 
-    ? (parseFloat(transferData.amount) * parseFloat(transferData.exchange_rate)).toFixed(2)
-    : '0.00';
 
   useEffect(() => {
     fetchAccounts();
@@ -446,40 +329,28 @@ export default function Treasury() {
           </h1>
           <p className="text-[#C5C6C7]">Manage bank accounts and treasury</p>
         </div>
-        <div className="flex gap-2">
-          {isAdmin && accounts.length >= 2 && (
-            <Button
-              onClick={initiateTransfer}
-              variant="outline"
-              className="border-[#66FCF1]/50 text-[#66FCF1] hover:bg-[#66FCF1]/10 font-bold uppercase tracking-wider rounded-sm"
-              data-testid="transfer-btn"
-            >
-              <ArrowLeftRight className="w-4 h-4 mr-2" />
-              Transfer
-            </Button>
-          )}
-          {isAdmin && (
-            <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-              <DialogTrigger asChild>
-                <Button
-                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
-                  data-testid="add-treasury-btn"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Account
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
-                    {selectedAccount ? 'Edit Account' : 'Add Treasury Account'}
-                  </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Name *</Label>
-                    <Input
-                      value={formData.account_name}
+        {isAdmin && (
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
+                data-testid="add-treasury-btn"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Account
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+                  {selectedAccount ? 'Edit Account' : 'Add Treasury Account'}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Name *</Label>
+                  <Input
+                    value={formData.account_name}
                     onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
                     className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
                     placeholder="e.g., Main Operating Account"
