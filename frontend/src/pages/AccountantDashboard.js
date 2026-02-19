@@ -146,6 +146,18 @@ export default function AccountantDashboard() {
   const [uploadingProof, setUploadingProof] = useState(null);
   const [proofPreview, setProofPreview] = useState(null);
   
+  // Filters
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [destFilter, setDestFilter] = useState('all');
+  const [clientFilter, setClientFilter] = useState('');
+  
+  // Withdrawal approval dialog
+  const [showApprovalDialog, setShowApprovalDialog] = useState(null);
+  const [approvalSourceAccount, setApprovalSourceAccount] = useState('');
+  const [approvalProof, setApprovalProof] = useState(null);
+  const [approvalProofPreview, setApprovalProofPreview] = useState(null);
+  const [treasuryAccounts, setTreasuryAccounts] = useState([]);
+  
   // Captcha states
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [captchaAction, setCaptchaAction] = useState(null); // { type: 'approve' | 'reject', transactionId: string, isSettlement?: boolean }
@@ -156,6 +168,20 @@ export default function AccountantDashboard() {
       'Content-Type': 'application/json',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     };
+  };
+
+  const fetchTreasuryAccounts = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/treasury`, { 
+        headers: getAuthHeaders(), 
+        credentials: 'include' 
+      });
+      if (response.ok) {
+        setTreasuryAccounts(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching treasury accounts:', error);
+    }
   };
 
   const fetchPendingTransactions = async () => {
