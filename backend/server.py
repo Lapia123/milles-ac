@@ -2613,11 +2613,16 @@ async def get_income_expenses(
     
     entries = await db.income_expenses.find(query, {"_id": 0}).sort("date", -1).limit(limit).to_list(limit)
     
-    # Get treasury account names
+    # Batch fetch treasury accounts to avoid N+1 queries
+    treasury_ids = list(set(e.get("treasury_account_id") for e in entries if e.get("treasury_account_id")))
+    treasury_map = {}
+    if treasury_ids:
+        treasuries = await db.treasury_accounts.find({"account_id": {"$in": treasury_ids}}, {"_id": 0}).to_list(len(treasury_ids))
+        treasury_map = {t["account_id"]: t["account_name"] for t in treasuries}
+    
     for entry in entries:
         if entry.get("treasury_account_id"):
-            acc = await db.treasury_accounts.find_one({"account_id": entry["treasury_account_id"]}, {"_id": 0})
-            entry["treasury_account_name"] = acc["account_name"] if acc else "Unknown"
+            entry["treasury_account_name"] = treasury_map.get(entry["treasury_account_id"], "Unknown")
     
     return entries
 
