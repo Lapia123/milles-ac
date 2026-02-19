@@ -1061,12 +1061,19 @@ async def inter_treasury_transfer(transfer: TreasuryTransferRequest, user: dict 
 @api_router.get("/psp")
 async def get_psps(user: dict = Depends(get_current_user)):
     psps = await db.psps.find({}, {"_id": 0}).to_list(1000)
-    # Get settlement destination names
+    
+    # Batch fetch treasury accounts to avoid N+1 queries
+    treasury_ids = list(set(psp.get("settlement_destination_id") for psp in psps if psp.get("settlement_destination_id")))
+    treasury_map = {}
+    if treasury_ids:
+        treasuries = await db.treasury_accounts.find({"account_id": {"$in": treasury_ids}}, {"_id": 0}).to_list(len(treasury_ids))
+        treasury_map = {t["account_id"]: t for t in treasuries}
+    
     for psp in psps:
         if psp.get("settlement_destination_id"):
-            dest = await db.treasury_accounts.find_one({"account_id": psp["settlement_destination_id"]}, {"_id": 0})
+            dest = treasury_map.get(psp["settlement_destination_id"])
             psp["settlement_destination_name"] = dest["account_name"] if dest else "Unknown"
-            psp["settlement_destination_bank"] = dest["bank_name"] if dest else None
+            psp["settlement_destination_bank"] = dest.get("bank_name") if dest else None
     return psps
 
 @api_router.get("/psp/{psp_id}")
