@@ -998,6 +998,87 @@ export default function AccountantDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Upload Proof Dialog for Withdrawals */}
+      <Dialog open={!!uploadingProof} onOpenChange={() => { setUploadingProof(null); setProofPreview(null); }}>
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+              <Upload className="w-6 h-6 text-[#66FCF1]" />
+              Upload Proof of Payment
+            </DialogTitle>
+          </DialogHeader>
+          {uploadingProof && (
+            <div className="space-y-4">
+              <div className="p-4 bg-[#0B0C10] rounded-sm">
+                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Transaction</p>
+                <p className="text-white font-mono">{uploadingProof.reference}</p>
+                <p className="text-sm text-[#C5C6C7] mt-2">
+                  Withdrawal of <span className="text-red-400 font-mono">${uploadingProof.amount?.toLocaleString()}</span> to:
+                </p>
+                {uploadingProof.destination_type === 'bank' && uploadingProof.client_bank_name && (
+                  <div className="mt-2 p-2 bg-[#1F2833] rounded-sm">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-blue-400" />
+                      <span className="text-white text-sm">{uploadingProof.client_bank_name}</span>
+                    </div>
+                    <p className="text-xs text-[#C5C6C7] font-mono mt-1">{uploadingProof.client_bank_account_number}</p>
+                  </div>
+                )}
+                {uploadingProof.destination_type === 'usdt' && uploadingProof.client_usdt_address && (
+                  <div className="mt-2 p-2 bg-[#1F2833] rounded-sm">
+                    <div className="flex items-center gap-2">
+                      <Wallet className="w-4 h-4 text-green-400" />
+                      <Badge className="bg-green-500/20 text-green-400 text-xs">{uploadingProof.client_usdt_network}</Badge>
+                    </div>
+                    <p className="text-xs text-[#C5C6C7] font-mono mt-1 break-all">{uploadingProof.client_usdt_address}</p>
+                  </div>
+                )}
+              </div>
+              
+              {proofPreview ? (
+                <div className="relative">
+                  <img src={proofPreview} alt="Proof preview" className="w-full h-48 object-contain bg-[#0B0C10] rounded-sm" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setProofPreview(null)}
+                    className="absolute top-2 right-2 bg-red-500/80 text-white hover:bg-red-500"
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-white/20 rounded-sm p-8 text-center">
+                  <Upload className="w-8 h-8 text-[#C5C6C7] mx-auto mb-2" />
+                  <p className="text-[#C5C6C7] mb-2">Upload screenshot of completed payment</p>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProofUpload}
+                    className="hidden"
+                    id="proof-upload-input"
+                  />
+                  <Label
+                    htmlFor="proof-upload-input"
+                    className="cursor-pointer inline-block px-4 py-2 bg-[#66FCF1] text-[#0B0C10] font-bold uppercase text-sm rounded-sm hover:bg-[#45A29E]"
+                  >
+                    Choose File
+                  </Label>
+                </div>
+              )}
+              
+              <Button
+                variant="outline"
+                onClick={() => { setUploadingProof(null); setProofPreview(null); }}
+                className="w-full border-white/10 text-[#C5C6C7] hover:bg-white/5"
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
