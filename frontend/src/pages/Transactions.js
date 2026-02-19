@@ -97,6 +97,15 @@ export default function Transactions() {
     commission_paid_by: 'client',
     description: '',
     reference: '',
+    // Client bank details (for withdrawal to bank)
+    client_bank_name: '',
+    client_bank_account_name: '',
+    client_bank_account_number: '',
+    client_bank_swift_iban: '',
+    client_bank_currency: 'USD',
+    // Client USDT details (for withdrawal to USDT)
+    client_usdt_address: '',
+    client_usdt_network: '',
   });
 
   const currencies = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY'];
