@@ -2540,6 +2540,300 @@ async def seed_demo_data():
     
     return {"message": "Demo data seeded successfully"}
 
+# ============== INCOME & EXPENSES ROUTES ==============
+
+@api_router.get("/income-expenses")
+async def get_income_expenses(
+    entry_type: Optional[str] = None,
+    category: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    treasury_account_id: Optional[str] = None,
+    limit: int = 100,
+    user: dict = Depends(get_current_user)
+):
+    """Get all income and expense entries with optional filters"""
+    query = {}
+    
+    if entry_type:
+        query["entry_type"] = entry_type
+    if category:
+        query["category"] = category
+    if treasury_account_id:
+        query["treasury_account_id"] = treasury_account_id
+    if start_date:
+        query["date"] = {"$gte": start_date}
+    if end_date:
+        if "date" in query:
+            query["date"]["$lte"] = end_date
+        else:
+            query["date"] = {"$lte": end_date}
+    
+    entries = await db.income_expenses.find(query, {"_id": 0}).sort("date", -1).limit(limit).to_list(limit)
+    
+    # Get treasury account names
+    for entry in entries:
+        if entry.get("treasury_account_id"):
+            acc = await db.treasury_accounts.find_one({"account_id": entry["treasury_account_id"]}, {"_id": 0})
+            entry["treasury_account_name"] = acc["account_name"] if acc else "Unknown"
+    
+    return entries
+
+@api_router.get("/income-expenses/{entry_id}")
+async def get_income_expense(entry_id: str, user: dict = Depends(get_current_user)):
+    """Get a single income/expense entry"""
+    entry = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return entry
+
+@api_router.post("/income-expenses")
+async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = Depends(get_current_user)):
+    """Create a new income or expense entry"""
+    # Verify treasury account exists
+    treasury = await db.treasury_accounts.find_one({"account_id": entry_data.treasury_account_id}, {"_id": 0})
+    if not treasury:
+        raise HTTPException(status_code=404, detail="Treasury account not found")
+    
+    if entry_data.amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be positive")
+    
+    entry_id = f"ie_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    entry_date = entry_data.date if entry_data.date else now.isoformat()[:10]
+    
+    # Calculate USD equivalent
+    amount_usd = convert_to_usd(entry_data.amount, entry_data.currency)
+    
+    entry_doc = {
+        "entry_id": entry_id,
+        "entry_type": entry_data.entry_type,
+        "category": entry_data.category,
+        "custom_category": entry_data.custom_category,
+        "amount": entry_data.amount,
+        "currency": entry_data.currency,
+        "amount_usd": amount_usd,
+        "treasury_account_id": entry_data.treasury_account_id,
+        "description": entry_data.description,
+        "reference": entry_data.reference,
+        "date": entry_date,
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    
+    await db.income_expenses.insert_one(entry_doc)
+    
+    # Update treasury account balance
+    if entry_data.entry_type == IncomeExpenseType.INCOME:
+        # Credit income to treasury
+        await db.treasury_accounts.update_one(
+            {"account_id": entry_data.treasury_account_id},
+            {"$inc": {"balance": entry_data.amount}, "$set": {"updated_at": now.isoformat()}}
+        )
+    else:
+        # Deduct expense from treasury
+        if treasury.get("balance", 0) < entry_data.amount:
+            raise HTTPException(status_code=400, detail="Insufficient balance in treasury account")
+        await db.treasury_accounts.update_one(
+            {"account_id": entry_data.treasury_account_id},
+            {"$inc": {"balance": -entry_data.amount}, "$set": {"updated_at": now.isoformat()}}
+        )
+    
+    # Record in treasury transactions
+    tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+    tx_type = "income" if entry_data.entry_type == IncomeExpenseType.INCOME else "expense"
+    tx_amount = entry_data.amount if entry_data.entry_type == IncomeExpenseType.INCOME else -entry_data.amount
+    
+    tx_doc = {
+        "treasury_transaction_id": tx_id,
+        "account_id": entry_data.treasury_account_id,
+        "transaction_type": tx_type,
+        "amount": tx_amount,
+        "currency": entry_data.currency,
+        "reference": f"{entry_data.category.replace('_', ' ').title()}: {entry_data.description or 'N/A'}",
+        "income_expense_id": entry_id,
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    await db.treasury_transactions.insert_one(tx_doc)
+    
+    entry_doc.pop("_id", None)
+    entry_doc["treasury_account_name"] = treasury["account_name"]
+    return entry_doc
+
+@api_router.put("/income-expenses/{entry_id}")
+async def update_income_expense(entry_id: str, update_data: IncomeExpenseUpdate, user: dict = Depends(get_current_user)):
+    """Update an income/expense entry (only description, reference, category - not amount)"""
+    entry = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
+    if not update_dict:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    # Don't allow amount changes (would need to reverse treasury changes)
+    if "amount" in update_dict:
+        del update_dict["amount"]
+    
+    update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.income_expenses.update_one({"entry_id": entry_id}, {"$set": update_dict})
+    
+    updated = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/income-expenses/{entry_id}")
+async def delete_income_expense(entry_id: str, user: dict = Depends(require_admin)):
+    """Delete an income/expense entry and reverse treasury balance"""
+    entry = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Reverse the treasury balance change
+    if entry["entry_type"] == IncomeExpenseType.INCOME:
+        # Reverse income - deduct from treasury
+        await db.treasury_accounts.update_one(
+            {"account_id": entry["treasury_account_id"]},
+            {"$inc": {"balance": -entry["amount"]}, "$set": {"updated_at": now.isoformat()}}
+        )
+    else:
+        # Reverse expense - credit to treasury
+        await db.treasury_accounts.update_one(
+            {"account_id": entry["treasury_account_id"]},
+            {"$inc": {"balance": entry["amount"]}, "$set": {"updated_at": now.isoformat()}}
+        )
+    
+    # Delete the entry
+    await db.income_expenses.delete_one({"entry_id": entry_id})
+    
+    # Delete related treasury transaction
+    await db.treasury_transactions.delete_one({"income_expense_id": entry_id})
+    
+    return {"message": "Entry deleted successfully"}
+
+@api_router.get("/income-expenses/reports/summary")
+async def get_income_expense_summary(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Get income vs expense summary report"""
+    query = {}
+    if start_date:
+        query["date"] = {"$gte": start_date}
+    if end_date:
+        if "date" in query:
+            query["date"]["$lte"] = end_date
+        else:
+            query["date"] = {"$lte": end_date}
+    
+    # Get all entries
+    entries = await db.income_expenses.find(query, {"_id": 0}).to_list(10000)
+    
+    total_income = sum(e["amount_usd"] for e in entries if e["entry_type"] == IncomeExpenseType.INCOME)
+    total_expense = sum(e["amount_usd"] for e in entries if e["entry_type"] == IncomeExpenseType.EXPENSE)
+    net_profit = total_income - total_expense
+    
+    # Category breakdown
+    income_by_category = {}
+    expense_by_category = {}
+    
+    for entry in entries:
+        cat = entry.get("custom_category") or entry["category"]
+        amount = entry["amount_usd"]
+        if entry["entry_type"] == IncomeExpenseType.INCOME:
+            income_by_category[cat] = income_by_category.get(cat, 0) + amount
+        else:
+            expense_by_category[cat] = expense_by_category.get(cat, 0) + amount
+    
+    return {
+        "total_income_usd": round(total_income, 2),
+        "total_expense_usd": round(total_expense, 2),
+        "net_profit_usd": round(net_profit, 2),
+        "income_by_category": {k: round(v, 2) for k, v in income_by_category.items()},
+        "expense_by_category": {k: round(v, 2) for k, v in expense_by_category.items()},
+        "entry_count": len(entries)
+    }
+
+@api_router.get("/income-expenses/reports/monthly")
+async def get_monthly_report(
+    year: Optional[int] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Get monthly P&L report"""
+    if not year:
+        year = datetime.now().year
+    
+    # Get entries for the year
+    start_date = f"{year}-01-01"
+    end_date = f"{year}-12-31"
+    
+    entries = await db.income_expenses.find({
+        "date": {"$gte": start_date, "$lte": end_date}
+    }, {"_id": 0}).to_list(10000)
+    
+    # Group by month
+    monthly_data = {}
+    for month in range(1, 13):
+        month_str = f"{year}-{month:02d}"
+        monthly_data[month_str] = {"income": 0, "expense": 0}
+    
+    for entry in entries:
+        month_str = entry["date"][:7]  # YYYY-MM
+        if month_str in monthly_data:
+            if entry["entry_type"] == IncomeExpenseType.INCOME:
+                monthly_data[month_str]["income"] += entry["amount_usd"]
+            else:
+                monthly_data[month_str]["expense"] += entry["amount_usd"]
+    
+    # Calculate net for each month
+    result = []
+    for month, data in monthly_data.items():
+        result.append({
+            "month": month,
+            "income": round(data["income"], 2),
+            "expense": round(data["expense"], 2),
+            "net": round(data["income"] - data["expense"], 2)
+        })
+    
+    return result
+
+@api_router.get("/income-expenses/categories")
+async def get_categories(user: dict = Depends(get_current_user)):
+    """Get available categories and custom categories"""
+    income_categories = [
+        {"value": "commission", "label": "Commission Income"},
+        {"value": "service_fee", "label": "Service Fees"},
+        {"value": "interest", "label": "Interest Income"},
+        {"value": "other", "label": "Other Income"},
+    ]
+    
+    expense_categories = [
+        {"value": "bank_fee", "label": "Bank Fees"},
+        {"value": "transfer_charge", "label": "Transfer Charges"},
+        {"value": "vendor_payment", "label": "Vendor Payments"},
+        {"value": "operational", "label": "Operational Costs"},
+        {"value": "marketing", "label": "Marketing"},
+        {"value": "software", "label": "Software/Subscriptions"},
+        {"value": "other", "label": "Other Expenses"},
+    ]
+    
+    # Get custom categories from existing entries
+    custom_income = await db.income_expenses.distinct("custom_category", {"entry_type": "income", "custom_category": {"$ne": None}})
+    custom_expense = await db.income_expenses.distinct("custom_category", {"entry_type": "expense", "custom_category": {"$ne": None}})
+    
+    return {
+        "income_categories": income_categories,
+        "expense_categories": expense_categories,
+        "custom_income_categories": custom_income,
+        "custom_expense_categories": custom_expense
+    }
+
 # Include router
 app.include_router(api_router)
 
