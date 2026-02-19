@@ -257,6 +257,12 @@ export default function AccountantDashboard() {
     setShowCaptcha(true);
   };
 
+  const handleSettlementRejectWithCaptcha = () => {
+    // Show captcha for settlement reject
+    setShowSettlementRejectDialog(null);
+    setShowCaptcha(true);
+  };
+
   const executeReject = async (transactionId) => {
     setProcessingId(transactionId);
     try {
