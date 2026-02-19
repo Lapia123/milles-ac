@@ -919,7 +919,7 @@ export default function Vendors() {
                 </Button>
               </div>
             </div>
-          )}}
+          )}
         </DialogContent>
       </Dialog>
     </div>
