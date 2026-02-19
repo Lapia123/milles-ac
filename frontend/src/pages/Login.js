@@ -18,9 +18,14 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await login(email, password);
+      const userData = await login(email, password);
       toast.success('Login successful');
-      navigate('/dashboard');
+      // Redirect based on role
+      if (userData?.role === 'vendor') {
+        navigate('/vendor-portal');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       toast.error(error.message || 'Login failed');
     } finally {
