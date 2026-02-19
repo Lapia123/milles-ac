@@ -342,6 +342,16 @@ async def require_accountant_or_admin(user: dict = Depends(get_current_user)) ->
         raise HTTPException(status_code=403, detail="Accountant or Admin access required")
     return user
 
+async def require_vendor(user: dict = Depends(get_current_user)) -> dict:
+    if user.get("role") != UserRole.VENDOR:
+        raise HTTPException(status_code=403, detail="Vendor access required")
+    return user
+
+async def require_vendor_or_admin(user: dict = Depends(get_current_user)) -> dict:
+    if user.get("role") not in [UserRole.ADMIN, UserRole.VENDOR]:
+        raise HTTPException(status_code=403, detail="Vendor or Admin access required")
+    return user
+
 # ============== AUTH ROUTES ==============
 
 @api_router.post("/auth/register", response_model=TokenResponse)
