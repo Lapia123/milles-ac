@@ -266,7 +266,7 @@ class FXBrokerAPITester:
         # Recent activity
         success3, _ = self.run_test("Recent Activity", "GET", "api/reports/recent-activity?limit=5", 200)
         
-        return success and success2 and success3
+        return success1 and success2 and success3
 
     def test_multi_currency_transactions(self):
         """Test multi-currency transaction support (NEW FEATURE)"""
