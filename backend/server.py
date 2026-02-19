@@ -47,6 +47,7 @@ class UserRole:
     ADMIN = "admin"
     SUB_ADMIN = "sub_admin"
     ACCOUNTANT = "accountant"
+    VENDOR = "vendor"
 
 class UserBase(BaseModel):
     model_config = ConfigDict(extra="ignore")
