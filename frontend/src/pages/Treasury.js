@@ -65,6 +65,7 @@ const accountTypes = [
   { value: 'bank', label: 'Bank Account' },
   { value: 'crypto_wallet', label: 'Crypto Wallet' },
   { value: 'payment_gateway', label: 'Payment Gateway' },
+  { value: 'usdt', label: 'USDT Wallet' },
 ];
 
 const statusOptions = [
