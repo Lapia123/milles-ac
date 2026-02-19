@@ -1021,6 +1021,376 @@ async def settle_psp_transaction(
     
     return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
 
+# ============== VENDOR ROUTES ==============
+
+@api_router.get("/vendors")
+async def get_vendors(user: dict = Depends(get_current_user)):
+    vendors = await db.vendors.find({}, {"_id": 0}).to_list(1000)
+    # Get settlement destination names and pending amounts
+    for vendor in vendors:
+        if vendor.get("settlement_destination_id"):
+            dest = await db.treasury_accounts.find_one({"account_id": vendor["settlement_destination_id"]}, {"_id": 0})
+            vendor["settlement_destination_name"] = dest["account_name"] if dest else "Unknown"
+            vendor["settlement_destination_bank"] = dest.get("bank_name") if dest else None
+        
+        # Calculate pending amounts from transactions
+        pending_txs = await db.transactions.find({
+            "vendor_id": vendor["vendor_id"],
+            "destination_type": "vendor",
+            "status": {"$in": [TransactionStatus.APPROVED, TransactionStatus.COMPLETED]},
+            "settled": {"$ne": True}
+        }, {"_id": 0}).to_list(1000)
+        
+        vendor["pending_transactions_count"] = len(pending_txs)
+        vendor["pending_amount"] = sum(tx.get("amount", 0) for tx in pending_txs)
+    
+    return vendors
+
+@api_router.get("/vendors/{vendor_id}")
+async def get_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
+    vendor = await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    return vendor
+
+@api_router.post("/vendors")
+async def create_vendor(vendor_data: VendorCreate, user: dict = Depends(require_admin)):
+    # Verify settlement destination exists
+    dest = await db.treasury_accounts.find_one({"account_id": vendor_data.settlement_destination_id}, {"_id": 0})
+    if not dest:
+        raise HTTPException(status_code=404, detail="Settlement destination account not found")
+    
+    # Check if email already exists
+    existing = await db.users.find_one({"email": vendor_data.email}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    vendor_id = f"vendor_{uuid.uuid4().hex[:12]}"
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    
+    # Create user account for vendor
+    user_doc = {
+        "user_id": user_id,
+        "email": vendor_data.email,
+        "password_hash": hash_password(vendor_data.password),
+        "name": vendor_data.vendor_name,
+        "role": UserRole.VENDOR,
+        "vendor_id": vendor_id,  # Link to vendor
+        "picture": None,
+        "is_active": True,
+        "created_at": now.isoformat()
+    }
+    await db.users.insert_one(user_doc)
+    
+    # Create vendor record
+    vendor_doc = {
+        "vendor_id": vendor_id,
+        "user_id": user_id,
+        "vendor_name": vendor_data.vendor_name,
+        "email": vendor_data.email,
+        "deposit_commission": vendor_data.deposit_commission,
+        "withdrawal_commission": vendor_data.withdrawal_commission,
+        "bank_settlement_commission": vendor_data.bank_settlement_commission,
+        "cash_settlement_commission": vendor_data.cash_settlement_commission,
+        "settlement_destination_id": vendor_data.settlement_destination_id,
+        "description": vendor_data.description,
+        "total_volume": 0.0,
+        "total_commission": 0.0,
+        "pending_settlement": 0.0,
+        "status": VendorStatus.ACTIVE,
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat()
+    }
+    
+    await db.vendors.insert_one(vendor_doc)
+    return await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
+
+@api_router.put("/vendors/{vendor_id}")
+async def update_vendor(vendor_id: str, update_data: VendorUpdate, user: dict = Depends(require_admin)):
+    updates = {k: v for k, v in update_data.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No updates provided")
+    
+    # Verify settlement destination if being updated
+    if updates.get("settlement_destination_id"):
+        dest = await db.treasury_accounts.find_one({"account_id": updates["settlement_destination_id"]}, {"_id": 0})
+        if not dest:
+            raise HTTPException(status_code=404, detail="Settlement destination account not found")
+    
+    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.vendors.update_one({"vendor_id": vendor_id}, {"$set": updates})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    # Update vendor name in user record if changed
+    if updates.get("vendor_name"):
+        vendor = await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
+        if vendor:
+            await db.users.update_one({"user_id": vendor["user_id"]}, {"$set": {"name": updates["vendor_name"]}})
+    
+    return await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
+
+@api_router.delete("/vendors/{vendor_id}")
+async def delete_vendor(vendor_id: str, user: dict = Depends(require_admin)):
+    vendor = await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    # Delete vendor user account
+    await db.users.delete_one({"user_id": vendor["user_id"]})
+    
+    # Delete vendor record
+    await db.vendors.delete_one({"vendor_id": vendor_id})
+    
+    return {"message": "Vendor deleted"}
+
+# Get vendor's assigned transactions (for vendor portal)
+@api_router.get("/vendors/{vendor_id}/transactions")
+async def get_vendor_transactions(
+    vendor_id: str, 
+    status: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    # Vendors can only see their own transactions
+    if user.get("role") == UserRole.VENDOR:
+        user_vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
+        if not user_vendor or user_vendor["vendor_id"] != vendor_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+    
+    query = {"vendor_id": vendor_id, "destination_type": "vendor"}
+    if status:
+        query["status"] = status
+    
+    transactions = await db.transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return transactions
+
+# Get current vendor info (for logged in vendor)
+@api_router.get("/vendor/me")
+async def get_my_vendor_info(user: dict = Depends(require_vendor)):
+    vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    # Get pending transactions
+    pending_txs = await db.transactions.find({
+        "vendor_id": vendor["vendor_id"],
+        "destination_type": "vendor",
+        "status": TransactionStatus.PENDING
+    }, {"_id": 0}).to_list(1000)
+    
+    vendor["pending_transactions"] = pending_txs
+    vendor["pending_count"] = len(pending_txs)
+    
+    return vendor
+
+# Vendor approve transaction
+@api_router.post("/vendor/transactions/{transaction_id}/approve")
+async def vendor_approve_transaction(transaction_id: str, user: dict = Depends(require_vendor)):
+    vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if tx.get("vendor_id") != vendor["vendor_id"]:
+        raise HTTPException(status_code=403, detail="Transaction does not belong to this vendor")
+    
+    if tx["status"] != TransactionStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Transaction is not pending")
+    
+    now = datetime.now(timezone.utc)
+    
+    updates = {
+        "status": TransactionStatus.APPROVED,
+        "processed_by": user["user_id"],
+        "processed_by_name": user["name"],
+        "processed_at": now.isoformat()
+    }
+    
+    await db.transactions.update_one({"transaction_id": transaction_id}, {"$set": updates})
+    
+    return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+
+# Vendor reject transaction
+@api_router.post("/vendor/transactions/{transaction_id}/reject")
+async def vendor_reject_transaction(
+    transaction_id: str, 
+    reason: str = "",
+    user: dict = Depends(require_vendor)
+):
+    vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if tx.get("vendor_id") != vendor["vendor_id"]:
+        raise HTTPException(status_code=403, detail="Transaction does not belong to this vendor")
+    
+    if tx["status"] != TransactionStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Transaction is not pending")
+    
+    now = datetime.now(timezone.utc)
+    
+    updates = {
+        "status": TransactionStatus.REJECTED,
+        "rejection_reason": reason,
+        "processed_by": user["user_id"],
+        "processed_by_name": user["name"],
+        "processed_at": now.isoformat()
+    }
+    
+    await db.transactions.update_one({"transaction_id": transaction_id}, {"$set": updates})
+    
+    return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+
+# Vendor complete withdrawal with screenshot upload
+@api_router.post("/vendor/transactions/{transaction_id}/complete")
+async def vendor_complete_withdrawal(
+    transaction_id: str,
+    proof_image: UploadFile = File(...),
+    user: dict = Depends(require_vendor)
+):
+    vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if tx.get("vendor_id") != vendor["vendor_id"]:
+        raise HTTPException(status_code=403, detail="Transaction does not belong to this vendor")
+    
+    if tx.get("transaction_type") != TransactionType.WITHDRAWAL:
+        raise HTTPException(status_code=400, detail="Only withdrawals can be completed with proof")
+    
+    if tx["status"] not in [TransactionStatus.PENDING, TransactionStatus.APPROVED]:
+        raise HTTPException(status_code=400, detail="Transaction cannot be completed in current status")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Handle proof image upload
+    content = await proof_image.read()
+    proof_image_data = base64.b64encode(content).decode('utf-8')
+    
+    updates = {
+        "status": TransactionStatus.COMPLETED,
+        "vendor_proof_image": proof_image_data,
+        "processed_by": user["user_id"],
+        "processed_by_name": user["name"],
+        "processed_at": now.isoformat()
+    }
+    
+    await db.transactions.update_one({"transaction_id": transaction_id}, {"$set": updates})
+    
+    return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+
+# Vendor settlements
+@api_router.get("/vendors/{vendor_id}/settlements")
+async def get_vendor_settlements(vendor_id: str, user: dict = Depends(get_current_user)):
+    settlements = await db.vendor_settlements.find({"vendor_id": vendor_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return settlements
+
+# Admin settle vendor balance
+class VendorSettlementRequest(BaseModel):
+    settlement_type: str  # "bank" or "cash"
+    destination_account_id: Optional[str] = None
+
+@api_router.post("/vendors/{vendor_id}/settle")
+async def settle_vendor_balance(
+    vendor_id: str, 
+    settlement_request: VendorSettlementRequest,
+    user: dict = Depends(require_admin)
+):
+    vendor = await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    # Get approved transactions for this vendor that haven't been settled
+    pending_txs = await db.transactions.find({
+        "vendor_id": vendor_id,
+        "destination_type": "vendor",
+        "status": {"$in": [TransactionStatus.APPROVED, TransactionStatus.COMPLETED]},
+        "settled": {"$ne": True}
+    }, {"_id": 0}).to_list(1000)
+    
+    if not pending_txs:
+        raise HTTPException(status_code=400, detail="No pending transactions to settle")
+    
+    # Calculate amounts
+    gross_amount = sum(tx["amount"] for tx in pending_txs)
+    
+    # Apply commission based on settlement type
+    if settlement_request.settlement_type == VendorSettlementType.BANK:
+        commission_rate = vendor.get("bank_settlement_commission", 0) / 100
+    else:  # cash
+        commission_rate = vendor.get("cash_settlement_commission", 0) / 100
+    
+    commission_amount = round(gross_amount * commission_rate, 2)
+    net_amount = gross_amount - commission_amount
+    
+    settlement_id = f"vstl_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    
+    dest_account_id = settlement_request.destination_account_id or vendor.get("settlement_destination_id")
+    dest = await db.treasury_accounts.find_one({"account_id": dest_account_id}, {"_id": 0})
+    if not dest:
+        raise HTTPException(status_code=404, detail="Settlement destination account not found")
+    
+    settlement_doc = {
+        "settlement_id": settlement_id,
+        "vendor_id": vendor_id,
+        "vendor_name": vendor["vendor_name"],
+        "settlement_type": settlement_request.settlement_type,
+        "gross_amount": gross_amount,
+        "commission_rate": commission_rate * 100,
+        "commission_amount": commission_amount,
+        "net_amount": net_amount,
+        "transaction_count": len(pending_txs),
+        "transaction_ids": [tx["transaction_id"] for tx in pending_txs],
+        "settlement_destination_id": dest_account_id,
+        "settlement_destination_name": dest["account_name"],
+        "status": VendorSettlementStatus.COMPLETED,
+        "created_at": now.isoformat(),
+        "settled_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    
+    await db.vendor_settlements.insert_one(settlement_doc)
+    
+    # Mark transactions as settled
+    await db.transactions.update_many(
+        {"transaction_id": {"$in": [tx["transaction_id"] for tx in pending_txs]}},
+        {"$set": {"settled": True, "settlement_id": settlement_id, "settlement_status": "completed"}}
+    )
+    
+    # Update treasury balance
+    await db.treasury_accounts.update_one(
+        {"account_id": dest_account_id},
+        {"$inc": {"balance": net_amount}, "$set": {"updated_at": now.isoformat()}}
+    )
+    
+    # Update vendor stats
+    await db.vendors.update_one(
+        {"vendor_id": vendor_id},
+        {
+            "$inc": {
+                "total_volume": gross_amount,
+                "total_commission": commission_amount
+            }
+        }
+    )
+    
+    return await db.vendor_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
+
 # ============== TRANSACTIONS ROUTES ==============
 
 @api_router.get("/transactions")
