@@ -26,6 +26,7 @@ import {
   CreditCard,
   Store,
   Wallet,
+  Banknote,
 } from 'lucide-react';
 
 export default function Layout() {
