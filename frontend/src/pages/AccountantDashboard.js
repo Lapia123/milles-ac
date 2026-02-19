@@ -132,15 +132,19 @@ const MathCaptcha = ({ onVerified, onCancel, actionType }) => {
 export default function AccountantDashboard() {
   const { user } = useAuth();
   const [pendingTransactions, setPendingTransactions] = useState([]);
+  const [pendingSettlements, setPendingSettlements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewTransaction, setViewTransaction] = useState(null);
+  const [viewSettlement, setViewSettlement] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectDialog, setShowRejectDialog] = useState(null);
+  const [showSettlementRejectDialog, setShowSettlementRejectDialog] = useState(null);
   const [processingId, setProcessingId] = useState(null);
+  const [activeTab, setActiveTab] = useState('transactions');
   
   // Captcha states
   const [showCaptcha, setShowCaptcha] = useState(false);
-  const [captchaAction, setCaptchaAction] = useState(null); // { type: 'approve' | 'reject', transactionId: string }
+  const [captchaAction, setCaptchaAction] = useState(null); // { type: 'approve' | 'reject', transactionId: string, isSettlement?: boolean }
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
