@@ -57,6 +57,7 @@ import {
   Building2,
   Banknote,
   Wallet,
+  Receipt,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -74,15 +75,15 @@ export default function Vendors() {
   const [settleDialogOpen, setSettleDialogOpen] = useState(false);
   const [settlementType, setSettlementType] = useState('bank');
   const [settlementDestination, setSettlementDestination] = useState('');
+  const [settlementCommission, setSettlementCommission] = useState('');
+  const [settlementCharges, setSettlementCharges] = useState('');
+  const [settlementChargesDescription, setSettlementChargesDescription] = useState('');
   const [formData, setFormData] = useState({
     vendor_name: '',
     email: '',
     password: '',
     deposit_commission: '',
     withdrawal_commission: '',
-    bank_settlement_commission: '',
-    cash_settlement_commission: '',
-    settlement_destination_id: '',
     description: '',
     status: 'active',
   });
