@@ -79,6 +79,14 @@ export default function Treasury() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [viewAccount, setViewAccount] = useState(null);
+  const [historyAccount, setHistoryAccount] = useState(null);
+  const [historyData, setHistoryData] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyFilters, setHistoryFilters] = useState({
+    startDate: '',
+    endDate: '',
+    transactionType: '',
+  });
   const [formData, setFormData] = useState({
     account_name: '',
     account_type: 'bank',
