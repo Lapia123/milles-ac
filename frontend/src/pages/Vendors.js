@@ -169,9 +169,6 @@ export default function Vendors() {
         vendor_name: formData.vendor_name,
         deposit_commission: parseFloat(formData.deposit_commission) || 0,
         withdrawal_commission: parseFloat(formData.withdrawal_commission) || 0,
-        bank_settlement_commission: parseFloat(formData.bank_settlement_commission) || 0,
-        cash_settlement_commission: parseFloat(formData.cash_settlement_commission) || 0,
-        settlement_destination_id: formData.settlement_destination_id,
         description: formData.description || null,
       };
 
