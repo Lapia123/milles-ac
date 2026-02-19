@@ -379,71 +379,125 @@ export default function Treasury() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Currency</Label>
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Currency</Label>
+                  <Select
+                    value={formData.currency}
+                    onValueChange={(value) => setFormData({ ...formData, currency: value })}
+                  >
+                    <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="treasury-currency">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1F2833] border-white/10">
+                      <SelectItem value="USD" className="text-white hover:bg-white/5">USD</SelectItem>
+                      <SelectItem value="EUR" className="text-white hover:bg-white/5">EUR</SelectItem>
+                      <SelectItem value="GBP" className="text-white hover:bg-white/5">GBP</SelectItem>
+                      <SelectItem value="AED" className="text-white hover:bg-white/5">AED</SelectItem>
+                      <SelectItem value="SAR" className="text-white hover:bg-white/5">SAR</SelectItem>
+                      <SelectItem value="INR" className="text-white hover:bg-white/5">INR</SelectItem>
+                      <SelectItem value="JPY" className="text-white hover:bg-white/5">JPY</SelectItem>
+                      {formData.account_type === 'usdt' && (
+                        <SelectItem value="USDT" className="text-white hover:bg-white/5">USDT</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {/* Bank-specific fields */}
+              {formData.account_type !== 'usdt' && (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Bank Name</Label>
+                    <Input
+                      value={formData.bank_name}
+                      onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                      placeholder="e.g., Chase Bank"
+                      data-testid="treasury-bank"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Number</Label>
+                      <Input
+                        value={formData.account_number}
+                        onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
+                        className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                        placeholder="****1234"
+                        data-testid="treasury-account-number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Routing Number</Label>
+                      <Input
+                        value={formData.routing_number}
+                        onChange={(e) => setFormData({ ...formData, routing_number: e.target.value })}
+                        className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                        placeholder="Optional"
+                        data-testid="treasury-routing"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">SWIFT Code</Label>
+                    <Input
+                      value={formData.swift_code}
+                      onChange={(e) => setFormData({ ...formData, swift_code: e.target.value })}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      placeholder="Optional"
+                      data-testid="treasury-swift"
+                    />
+                  </div>
+                </>
+              )}
+              
+              {/* USDT-specific fields */}
+              {formData.account_type === 'usdt' && (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">USDT Wallet Address *</Label>
+                    <Input
+                      value={formData.usdt_address}
+                      onChange={(e) => setFormData({ ...formData, usdt_address: e.target.value })}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      placeholder="Enter USDT wallet address"
+                      data-testid="treasury-usdt-address"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Network *</Label>
                     <Select
-                      value={formData.currency}
-                      onValueChange={(value) => setFormData({ ...formData, currency: value })}
+                      value={formData.usdt_network}
+                      onValueChange={(value) => setFormData({ ...formData, usdt_network: value })}
                     >
-                      <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="treasury-currency">
-                        <SelectValue />
+                      <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="treasury-usdt-network">
+                        <SelectValue placeholder="Select network" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#1F2833] border-white/10">
-                        <SelectItem value="USD" className="text-white hover:bg-white/5">USD</SelectItem>
-                        <SelectItem value="EUR" className="text-white hover:bg-white/5">EUR</SelectItem>
-                        <SelectItem value="GBP" className="text-white hover:bg-white/5">GBP</SelectItem>
-                        <SelectItem value="AED" className="text-white hover:bg-white/5">AED</SelectItem>
-                        <SelectItem value="SAR" className="text-white hover:bg-white/5">SAR</SelectItem>
-                        <SelectItem value="INR" className="text-white hover:bg-white/5">INR</SelectItem>
-                        <SelectItem value="JPY" className="text-white hover:bg-white/5">JPY</SelectItem>
+                        <SelectItem value="TRC20" className="text-white hover:bg-white/5">TRC20 (Tron)</SelectItem>
+                        <SelectItem value="ERC20" className="text-white hover:bg-white/5">ERC20 (Ethereum)</SelectItem>
+                        <SelectItem value="BEP20" className="text-white hover:bg-white/5">BEP20 (BSC)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Bank Name</Label>
-                  <Input
-                    value={formData.bank_name}
-                    onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
-                    placeholder="e.g., Chase Bank"
-                    data-testid="treasury-bank"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
+                  
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Number</Label>
-                    <Input
-                      value={formData.account_number}
-                      onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
-                      placeholder="****1234"
-                      data-testid="treasury-account-number"
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Private Notes/Labels</Label>
+                    <Textarea
+                      value={formData.usdt_notes}
+                      onChange={(e) => setFormData({ ...formData, usdt_notes: e.target.value })}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                      placeholder="Internal notes for this wallet..."
+                      rows={2}
+                      data-testid="treasury-usdt-notes"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Routing Number</Label>
-                    <Input
-                      value={formData.routing_number}
-                      onChange={(e) => setFormData({ ...formData, routing_number: e.target.value })}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
-                      placeholder="Optional"
-                      data-testid="treasury-routing"
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">SWIFT Code</Label>
-                  <Input
-                    value={formData.swift_code}
-                    onChange={(e) => setFormData({ ...formData, swift_code: e.target.value })}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
-                    placeholder="Optional"
-                    data-testid="treasury-swift"
-                  />
-                </div>
+                </>
+              )}
                 
                 {selectedAccount && (
                   <div className="space-y-2">
