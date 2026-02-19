@@ -193,11 +193,16 @@ export default function Transactions() {
       formDataToSend.append('amount', formData.amount);
       formDataToSend.append('currency', 'USD');
       formDataToSend.append('base_currency', formData.base_currency);
+      formDataToSend.append('destination_type', formData.destination_type);
       if (formData.base_currency !== 'USD' && formData.base_amount) {
         formDataToSend.append('base_amount', formData.base_amount);
       }
-      if (formData.destination_account_id) {
+      if (formData.destination_type === 'treasury' && formData.destination_account_id) {
         formDataToSend.append('destination_account_id', formData.destination_account_id);
+      }
+      if (formData.destination_type === 'psp' && formData.psp_id) {
+        formDataToSend.append('psp_id', formData.psp_id);
+        formDataToSend.append('commission_paid_by', formData.commission_paid_by);
       }
       if (formData.description) {
         formDataToSend.append('description', formData.description);
