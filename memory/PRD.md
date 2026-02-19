@@ -101,7 +101,40 @@ Build account software for FX broker - a back-office accounting system with admi
 
 ## API Endpoints
 
-### Inter-Treasury Transfer (NEW)
+### Income & Expenses (NEW)
+```
+GET /api/income-expenses
+# Query params: entry_type, category, start_date, end_date, treasury_account_id, limit
+
+POST /api/income-expenses
+Body:
+{
+  "entry_type": "income" | "expense",
+  "category": "commission" | "service_fee" | "interest" | "bank_fee" | "operational" | "other",
+  "custom_category": "Custom Name",  // Optional, used when category is "other"
+  "amount": 5000.0,
+  "currency": "USD",
+  "treasury_account_id": "treasury_xxx",
+  "description": "Monthly commission",  // Optional
+  "reference": "INV-001",  // Optional
+  "date": "2026-02-19"  // Optional, defaults to today
+}
+
+DELETE /api/income-expenses/{entry_id}
+# Reverses treasury balance change and deletes entry
+
+GET /api/income-expenses/reports/summary
+# Query params: start_date, end_date
+# Returns: total_income_usd, total_expense_usd, net_profit_usd, income_by_category, expense_by_category
+
+GET /api/income-expenses/reports/monthly?year=2026
+# Returns: Array of {month, income, expense, net} for 12 months
+
+GET /api/income-expenses/categories
+# Returns: income_categories, expense_categories, custom_income_categories, custom_expense_categories
+```
+
+### Inter-Treasury Transfer
 ```
 POST /api/treasury/transfer
 Body:
