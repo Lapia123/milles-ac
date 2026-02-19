@@ -69,6 +69,8 @@ export default function Clients() {
     email: '',
     phone: '',
     country: '',
+    mt5_number: '',
+    crm_customer_id: '',
     notes: '',
   });
 
@@ -158,6 +160,8 @@ export default function Clients() {
       email: client.email,
       phone: client.phone || '',
       country: client.country || '',
+      mt5_number: client.mt5_number || '',
+      crm_customer_id: client.crm_customer_id || '',
       notes: client.notes || '',
       kyc_status: client.kyc_status,
     });
@@ -172,6 +176,8 @@ export default function Clients() {
       email: '',
       phone: '',
       country: '',
+      mt5_number: '',
+      crm_customer_id: '',
       notes: '',
     });
   };
