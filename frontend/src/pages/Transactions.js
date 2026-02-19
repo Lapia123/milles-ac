@@ -85,6 +85,8 @@ export default function Transactions() {
   const [viewTransaction, setViewTransaction] = useState(null);
   const [proofImage, setProofImage] = useState(null);
   const [proofPreview, setProofPreview] = useState(null);
+  const [clientBankAccounts, setClientBankAccounts] = useState([]);
+  const [selectedBankAccount, setSelectedBankAccount] = useState('new');
   const [formData, setFormData] = useState({
     client_id: '',
     transaction_type: 'deposit',
