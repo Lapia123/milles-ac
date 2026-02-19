@@ -233,6 +233,47 @@ class IncomeExpenseUpdate(BaseModel):
     description: Optional[str] = None
     reference: Optional[str] = None
 
+# Loan Models
+class LoanStatus:
+    ACTIVE = "active"
+    PARTIALLY_PAID = "partially_paid"
+    FULLY_PAID = "fully_paid"
+    OVERDUE = "overdue"
+
+class RepaymentMode:
+    LUMP_SUM = "lump_sum"
+    INSTALLMENTS = "installments"
+
+class LoanCreate(BaseModel):
+    borrower_name: str
+    amount: float
+    currency: str = "USD"
+    interest_rate: float = 0  # Annual percentage
+    loan_date: str  # ISO date
+    due_date: str  # ISO date
+    repayment_mode: str = RepaymentMode.LUMP_SUM
+    installment_amount: Optional[float] = None  # For installment mode
+    installment_frequency: Optional[str] = None  # monthly, weekly, etc.
+    treasury_account_id: str  # Source treasury account
+    notes: Optional[str] = None
+
+class LoanUpdate(BaseModel):
+    borrower_name: Optional[str] = None
+    interest_rate: Optional[float] = None
+    due_date: Optional[str] = None
+    repayment_mode: Optional[str] = None
+    installment_amount: Optional[float] = None
+    installment_frequency: Optional[str] = None
+    notes: Optional[str] = None
+
+class LoanRepaymentCreate(BaseModel):
+    amount: float
+    currency: str = "USD"
+    treasury_account_id: str  # Where repayment goes
+    payment_date: Optional[str] = None
+    reference: Optional[str] = None
+    notes: Optional[str] = None
+
 # Exchange rates to USD (simplified - in production use live API)
 EXCHANGE_RATES_TO_USD = {
     "USD": 1.0,
