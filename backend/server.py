@@ -3216,7 +3216,14 @@ async def get_loans_summary(user: dict = Depends(get_current_user)):
             active_count += 1
             # Check if overdue
             if loan.get("due_date"):
-                due = datetime.fromisoformat(loan["due_date"].replace("Z", "+00:00"))
+                due_str = loan["due_date"]
+                if "T" in due_str:
+                    due = datetime.fromisoformat(due_str.replace("Z", "+00:00"))
+                else:
+                    # Date only string like "2026-03-15"
+                    due = datetime.strptime(due_str[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                if due.tzinfo is None:
+                    due = due.replace(tzinfo=timezone.utc)
                 if due < datetime.now(timezone.utc):
                     overdue_count += 1
         elif loan["status"] == LoanStatus.PARTIALLY_PAID:
