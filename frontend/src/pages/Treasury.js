@@ -131,6 +131,14 @@ export default function Treasury() {
     };
   };
 
+  // Generate captcha
+  const generateCaptcha = useCallback(() => {
+    const n1 = Math.floor(Math.random() * 10) + 1;
+    const n2 = Math.floor(Math.random() * 10) + 1;
+    setCaptchaNumbers({ n1, n2 });
+    setCaptchaAnswer('');
+  }, []);
+
   const fetchAccounts = async () => {
     try {
       const response = await fetch(`${API_URL}/api/treasury`, { headers: getAuthHeaders(), credentials: 'include' });
