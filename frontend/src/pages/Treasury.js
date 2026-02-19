@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -57,9 +57,6 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Calendar,
-  ArrowLeftRight,
-  Calculator,
-  Wallet,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -91,23 +88,6 @@ export default function Treasury() {
     endDate: '',
     transactionType: '',
   });
-  
-  // Transfer state
-  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
-  const [transferData, setTransferData] = useState({
-    source_account_id: '',
-    destination_account_id: '',
-    amount: '',
-    exchange_rate: '1',
-    notes: '',
-  });
-  const [transferProcessing, setTransferProcessing] = useState(false);
-  
-  // Captcha state
-  const [showCaptcha, setShowCaptcha] = useState(false);
-  const [captchaNumbers, setCaptchaNumbers] = useState({ n1: 0, n2: 0 });
-  const [captchaAnswer, setCaptchaAnswer] = useState('');
-  
   const [formData, setFormData] = useState({
     account_name: '',
     account_type: 'bank',
@@ -133,14 +113,6 @@ export default function Treasury() {
       ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     };
   };
-
-  // Generate captcha
-  const generateCaptcha = useCallback(() => {
-    const n1 = Math.floor(Math.random() * 10) + 1;
-    const n2 = Math.floor(Math.random() * 10) + 1;
-    setCaptchaNumbers({ n1, n2 });
-    setCaptchaAnswer('');
-  }, []);
 
   const fetchAccounts = async () => {
     try {
@@ -218,95 +190,6 @@ export default function Treasury() {
     
     toast.success('Statement downloaded');
   };
-
-  // Transfer functions
-  const initiateTransfer = () => {
-    setTransferData({
-      source_account_id: '',
-      destination_account_id: '',
-      amount: '',
-      exchange_rate: '1',
-      notes: '',
-    });
-    setIsTransferDialogOpen(true);
-  };
-
-  const handleTransferSubmit = () => {
-    // Validate inputs
-    if (!transferData.source_account_id) {
-      toast.error('Please select source account');
-      return;
-    }
-    if (!transferData.destination_account_id) {
-      toast.error('Please select destination account');
-      return;
-    }
-    if (!transferData.amount || parseFloat(transferData.amount) <= 0) {
-      toast.error('Please enter a valid amount');
-      return;
-    }
-    
-    // Check balance
-    const sourceAccount = accounts.find(a => a.account_id === transferData.source_account_id);
-    if (sourceAccount && parseFloat(transferData.amount) > sourceAccount.balance) {
-      toast.error('Insufficient balance in source account');
-      return;
-    }
-    
-    // Show captcha
-    generateCaptcha();
-    setShowCaptcha(true);
-  };
-
-  const verifyCaptchaAndTransfer = async () => {
-    const correctAnswer = captchaNumbers.n1 + captchaNumbers.n2;
-    if (parseInt(captchaAnswer) !== correctAnswer) {
-      toast.error('Incorrect answer. Please try again.');
-      generateCaptcha();
-      setCaptchaAnswer('');
-      return;
-    }
-    
-    // Execute transfer
-    setTransferProcessing(true);
-    try {
-      const response = await fetch(`${API_URL}/api/treasury/transfer`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        credentials: 'include',
-        body: JSON.stringify({
-          source_account_id: transferData.source_account_id,
-          destination_account_id: transferData.destination_account_id,
-          amount: parseFloat(transferData.amount),
-          exchange_rate: parseFloat(transferData.exchange_rate) || 1,
-          notes: transferData.notes || null,
-        }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        toast.success(`Transferred ${result.source_amount} ${result.source_currency} to ${result.destination_account}`);
-        setShowCaptcha(false);
-        setIsTransferDialogOpen(false);
-        fetchAccounts();
-      } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Transfer failed');
-      }
-    } catch (error) {
-      toast.error('Transfer failed');
-    } finally {
-      setTransferProcessing(false);
-      setCaptchaAnswer('');
-    }
-  };
-
-  // Get source account details for preview
-  const sourceAccount = accounts.find(a => a.account_id === transferData.source_account_id);
-  const destAccount = accounts.find(a => a.account_id === transferData.destination_account_id);
-  const calculatedDestAmount = transferData.amount && transferData.exchange_rate 
-    ? (parseFloat(transferData.amount) * parseFloat(transferData.exchange_rate)).toFixed(2)
-    : '0.00';
 
   useEffect(() => {
     fetchAccounts();
@@ -446,40 +329,28 @@ export default function Treasury() {
           </h1>
           <p className="text-[#C5C6C7]">Manage bank accounts and treasury</p>
         </div>
-        <div className="flex gap-2">
-          {isAdmin && accounts.length >= 2 && (
-            <Button
-              onClick={initiateTransfer}
-              variant="outline"
-              className="border-[#66FCF1]/50 text-[#66FCF1] hover:bg-[#66FCF1]/10 font-bold uppercase tracking-wider rounded-sm"
-              data-testid="transfer-btn"
-            >
-              <ArrowLeftRight className="w-4 h-4 mr-2" />
-              Transfer
-            </Button>
-          )}
-          {isAdmin && (
-            <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-              <DialogTrigger asChild>
-                <Button
-                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
-                  data-testid="add-treasury-btn"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Account
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
-                    {selectedAccount ? 'Edit Account' : 'Add Treasury Account'}
-                  </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Name *</Label>
-                    <Input
-                      value={formData.account_name}
+        {isAdmin && (
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
+                data-testid="add-treasury-btn"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Account
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+                  {selectedAccount ? 'Edit Account' : 'Add Treasury Account'}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Name *</Label>
+                  <Input
+                    value={formData.account_name}
                     onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
                     className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
                     placeholder="e.g., Main Operating Account"
@@ -987,269 +858,6 @@ export default function Treasury() {
                   </Table>
                 )}
               </ScrollArea>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Inter-Treasury Transfer Dialog */}
-      <Dialog open={isTransferDialogOpen} onOpenChange={(open) => { 
-        setIsTransferDialogOpen(open); 
-        if (!open) {
-          setShowCaptcha(false);
-          setCaptchaAnswer('');
-        }
-      }}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
-              <ArrowLeftRight className="w-6 h-6 text-[#66FCF1]" />
-              Inter-Treasury Transfer
-            </DialogTitle>
-          </DialogHeader>
-          
-          {!showCaptcha ? (
-            <div className="space-y-4" data-testid="transfer-form">
-              {/* From Account */}
-              <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">From Account *</Label>
-                <Select
-                  value={transferData.source_account_id}
-                  onValueChange={(value) => setTransferData({ ...transferData, source_account_id: value })}
-                >
-                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="transfer-from-account">
-                    <SelectValue placeholder="Select source account" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1F2833] border-white/10">
-                    {accounts
-                      .filter(acc => acc.status === 'active' && acc.account_id !== transferData.destination_account_id)
-                      .map((acc) => (
-                        <SelectItem key={acc.account_id} value={acc.account_id} className="text-white hover:bg-white/5">
-                          <div className="flex items-center justify-between w-full gap-4">
-                            <span>{acc.account_name}</span>
-                            <span className="text-[#66FCF1] font-mono text-sm">
-                              {acc.balance?.toLocaleString()} {acc.currency}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-                {sourceAccount && (
-                  <p className="text-xs text-[#C5C6C7]">
-                    Available: <span className="text-[#66FCF1] font-mono">{sourceAccount.balance?.toLocaleString()} {sourceAccount.currency}</span>
-                  </p>
-                )}
-              </div>
-
-              {/* To Account */}
-              <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">To Account *</Label>
-                <Select
-                  value={transferData.destination_account_id}
-                  onValueChange={(value) => setTransferData({ ...transferData, destination_account_id: value })}
-                >
-                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="transfer-to-account">
-                    <SelectValue placeholder="Select destination account" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1F2833] border-white/10">
-                    {accounts
-                      .filter(acc => acc.status === 'active' && acc.account_id !== transferData.source_account_id)
-                      .map((acc) => (
-                        <SelectItem key={acc.account_id} value={acc.account_id} className="text-white hover:bg-white/5">
-                          <div className="flex items-center justify-between w-full gap-4">
-                            <span>{acc.account_name}</span>
-                            <span className="text-[#66FCF1] font-mono text-sm">
-                              {acc.balance?.toLocaleString()} {acc.currency}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Amount */}
-              <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Amount *</Label>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={transferData.amount}
-                    onChange={(e) => setTransferData({ ...transferData, amount: e.target.value })}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono pr-16"
-                    placeholder="0.00"
-                    data-testid="transfer-amount"
-                  />
-                  {sourceAccount && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#C5C6C7] text-sm">
-                      {sourceAccount.currency}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Exchange Rate (if different currencies) */}
-              {sourceAccount && destAccount && sourceAccount.currency !== destAccount.currency && (
-                <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
-                    Exchange Rate ({sourceAccount.currency} to {destAccount.currency})
-                  </Label>
-                  <Input
-                    type="number"
-                    step="0.0001"
-                    min="0"
-                    value={transferData.exchange_rate}
-                    onChange={(e) => setTransferData({ ...transferData, exchange_rate: e.target.value })}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
-                    placeholder="1.00"
-                    data-testid="transfer-exchange-rate"
-                  />
-                </div>
-              )}
-
-              {/* Transfer Preview */}
-              {transferData.amount && sourceAccount && destAccount && (
-                <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10 space-y-2">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Transfer Preview</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#C5C6C7] text-sm">From:</span>
-                    <span className="text-white font-medium">{sourceAccount.account_name}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#C5C6C7] text-sm">Deduct:</span>
-                    <span className="text-red-400 font-mono">-{parseFloat(transferData.amount).toLocaleString()} {sourceAccount.currency}</span>
-                  </div>
-                  <div className="border-t border-white/10 my-2"></div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#C5C6C7] text-sm">To:</span>
-                    <span className="text-white font-medium">{destAccount.account_name}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#C5C6C7] text-sm">Credit:</span>
-                    <span className="text-green-400 font-mono">+{calculatedDestAmount} {destAccount.currency}</span>
-                  </div>
-                  {sourceAccount.currency !== destAccount.currency && (
-                    <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                      <span className="text-[#C5C6C7] text-sm">Rate:</span>
-                      <span className="text-[#66FCF1] font-mono text-sm">1 {sourceAccount.currency} = {transferData.exchange_rate} {destAccount.currency}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Notes */}
-              <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Notes (Optional)</Label>
-                <Textarea
-                  value={transferData.notes}
-                  onChange={(e) => setTransferData({ ...transferData, notes: e.target.value })}
-                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
-                  rows={2}
-                  placeholder="Add internal notes for this transfer..."
-                  data-testid="transfer-notes"
-                />
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsTransferDialogOpen(false)}
-                  className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleTransferSubmit}
-                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
-                  data-testid="transfer-continue-btn"
-                >
-                  Continue
-                </Button>
-              </div>
-            </div>
-          ) : (
-            /* Captcha Verification Step */
-            <div className="space-y-6" data-testid="transfer-captcha">
-              <div className="p-4 bg-[#0B0C10] rounded-sm border border-[#66FCF1]/30">
-                <div className="flex items-center gap-3 mb-4">
-                  <Calculator className="w-6 h-6 text-[#66FCF1]" />
-                  <div>
-                    <p className="text-white font-medium">Security Verification</p>
-                    <p className="text-xs text-[#C5C6C7]">Solve this simple math problem to confirm the transfer</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-4 justify-center py-4">
-                  <span className="text-3xl font-mono text-white">{captchaNumbers.n1}</span>
-                  <span className="text-3xl font-mono text-[#66FCF1]">+</span>
-                  <span className="text-3xl font-mono text-white">{captchaNumbers.n2}</span>
-                  <span className="text-3xl font-mono text-[#C5C6C7]">=</span>
-                  <Input
-                    type="number"
-                    value={captchaAnswer}
-                    onChange={(e) => setCaptchaAnswer(e.target.value)}
-                    className="w-20 bg-[#1F2833] border-[#66FCF1]/50 text-white focus:border-[#66FCF1] font-mono text-2xl text-center"
-                    placeholder="?"
-                    autoFocus
-                    data-testid="transfer-captcha-answer"
-                  />
-                </div>
-              </div>
-
-              {/* Transfer Summary */}
-              <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-3">Transfer Summary</p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-[#C5C6C7]">From:</span>
-                    <span className="text-white">{sourceAccount?.account_name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#C5C6C7]">To:</span>
-                    <span className="text-white">{destAccount?.account_name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#C5C6C7]">Amount:</span>
-                    <span className="text-red-400 font-mono">-{parseFloat(transferData.amount || 0).toLocaleString()} {sourceAccount?.currency}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#C5C6C7]">Credit:</span>
-                    <span className="text-green-400 font-mono">+{calculatedDestAmount} {destAccount?.currency}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => { setShowCaptcha(false); setCaptchaAnswer(''); }}
-                  className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
-                >
-                  Back
-                </Button>
-                <Button
-                  onClick={verifyCaptchaAndTransfer}
-                  disabled={!captchaAnswer || transferProcessing}
-                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
-                  data-testid="transfer-confirm-btn"
-                >
-                  {transferProcessing ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-[#0B0C10] border-t-transparent rounded-full animate-spin mr-2" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Confirm Transfer'
-                  )}
-                </Button>
-              </div>
             </div>
           )}
         </DialogContent>
