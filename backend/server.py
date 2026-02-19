@@ -847,7 +847,7 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
         "treasury": {
             "total": total_treasury,
             "active": active_treasury,
-            "total_balance": total_balance
+            "total_balance": total_balance_usd
         },
         "transactions": {
             "total": total_transactions,
