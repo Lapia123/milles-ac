@@ -1618,6 +1618,15 @@ async def create_transaction(
     commission_paid_by: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     reference: Optional[str] = Form(None),
+    # Client bank details (for withdrawal to bank)
+    client_bank_name: Optional[str] = Form(None),
+    client_bank_account_name: Optional[str] = Form(None),
+    client_bank_account_number: Optional[str] = Form(None),
+    client_bank_swift_iban: Optional[str] = Form(None),
+    client_bank_currency: Optional[str] = Form(None),
+    # Client USDT details (for withdrawal to USDT)
+    client_usdt_address: Optional[str] = Form(None),
+    client_usdt_network: Optional[str] = Form(None),
     proof_image: Optional[UploadFile] = File(None),
     user: dict = Depends(get_current_user)
 ):
@@ -1635,6 +1644,11 @@ async def create_transaction(
         destination_account = await db.treasury_accounts.find_one({"account_id": destination_account_id}, {"_id": 0})
         if not destination_account:
             raise HTTPException(status_code=404, detail="Destination account not found")
+    elif destination_type == "usdt" and destination_account_id:
+        # For USDT deposits, select the USDT treasury account
+        destination_account = await db.treasury_accounts.find_one({"account_id": destination_account_id}, {"_id": 0})
+        if not destination_account:
+            raise HTTPException(status_code=404, detail="USDT treasury account not found")
     elif destination_type == "psp" and psp_id:
         psp_info = await db.psps.find_one({"psp_id": psp_id}, {"_id": 0})
         if not psp_info:
@@ -1686,9 +1700,18 @@ async def create_transaction(
         "base_currency": base_currency or "USD",
         "base_amount": base_amount if base_currency != "USD" else None,
         "destination_type": destination_type,
-        "destination_account_id": destination_account_id if destination_type == "treasury" else None,
+        "destination_account_id": destination_account_id if destination_type in ["treasury", "usdt"] else None,
         "destination_account_name": destination_account["account_name"] if destination_account else None,
         "destination_bank_name": destination_account["bank_name"] if destination_account else None,
+        # Client bank details (for withdrawal to bank)
+        "client_bank_name": client_bank_name if destination_type == "bank" else None,
+        "client_bank_account_name": client_bank_account_name if destination_type == "bank" else None,
+        "client_bank_account_number": client_bank_account_number if destination_type == "bank" else None,
+        "client_bank_swift_iban": client_bank_swift_iban if destination_type == "bank" else None,
+        "client_bank_currency": client_bank_currency if destination_type == "bank" else None,
+        # Client USDT details (for withdrawal to USDT)
+        "client_usdt_address": client_usdt_address if destination_type == "usdt" else None,
+        "client_usdt_network": client_usdt_network if destination_type == "usdt" else None,
         "psp_id": psp_id if destination_type == "psp" else None,
         "psp_name": psp_info["psp_name"] if psp_info else None,
         "psp_commission_rate": psp_info["commission_rate"] if psp_info else None,
@@ -1701,6 +1724,7 @@ async def create_transaction(
         "vendor_deposit_commission": vendor_info["deposit_commission"] if vendor_info and transaction_type == TransactionType.DEPOSIT else None,
         "vendor_withdrawal_commission": vendor_info["withdrawal_commission"] if vendor_info and transaction_type == TransactionType.WITHDRAWAL else None,
         "vendor_proof_image": None,  # Vendor uploads when completing withdrawal
+        "accountant_proof_image": None,  # Accountant uploads for withdrawal approvals
         "status": TransactionStatus.PENDING,
         "description": description,
         "reference": reference or f"REF{uuid.uuid4().hex[:8].upper()}",
