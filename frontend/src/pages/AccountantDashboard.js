@@ -223,6 +223,14 @@ export default function AccountantDashboard() {
   }, []);
 
   const initiateApprove = (transactionId, isSettlement = false) => {
+    // For withdrawals, show approval dialog with source account and screenshot
+    if (!isSettlement) {
+      const tx = pendingTransactions.find(t => t.transaction_id === transactionId);
+      if (tx && tx.transaction_type === 'withdrawal') {
+        setShowApprovalDialog(tx);
+        return;
+      }
+    }
     setCaptchaAction({ type: 'approve', transactionId, isSettlement });
     setShowCaptcha(true);
   };
@@ -236,6 +244,40 @@ export default function AccountantDashboard() {
     }
   };
 
+  const handleApprovalProofChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setApprovalProof(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setApprovalProofPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleWithdrawalApproval = () => {
+    // Validate source account and proof
+    if (!approvalSourceAccount) {
+      toast.error('Please select a source treasury/USDT account');
+      return;
+    }
+    if (!approvalProof) {
+      toast.error('Please upload proof of payment');
+      return;
+    }
+    // Proceed to captcha
+    setCaptchaAction({ 
+      type: 'approve', 
+      transactionId: showApprovalDialog.transaction_id, 
+      isSettlement: false,
+      sourceAccount: approvalSourceAccount,
+      proofFile: approvalProof
+    });
+    setShowApprovalDialog(null);
+    setShowCaptcha(true);
+  };
+
   const handleCaptchaVerified = async () => {
     if (!captchaAction) return;
     
@@ -245,7 +287,7 @@ export default function AccountantDashboard() {
       if (captchaAction.isSettlement) {
         await executeApproveSettlement(captchaAction.transactionId);
       } else {
-        await executeApprove(captchaAction.transactionId);
+        await executeApprove(captchaAction.transactionId, captchaAction.sourceAccount, captchaAction.proofFile);
       }
     } else if (captchaAction.type === 'reject') {
       if (captchaAction.isSettlement) {
@@ -255,13 +297,43 @@ export default function AccountantDashboard() {
       }
     }
     
+    // Reset approval dialog state
+    setApprovalSourceAccount('');
+    setApprovalProof(null);
+    setApprovalProofPreview(null);
     setCaptchaAction(null);
   };
 
-  const executeApprove = async (transactionId) => {
+  const executeApprove = async (transactionId, sourceAccount = null, proofFile = null) => {
     setProcessingId(transactionId);
     try {
-      const response = await fetch(`${API_URL}/api/transactions/${transactionId}/approve`, {
+      // If there's a proof file, upload it first
+      if (proofFile) {
+        const formData = new FormData();
+        formData.append('proof_image', proofFile);
+        
+        const uploadResponse = await fetch(`${API_URL}/api/transactions/${transactionId}/upload-proof`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          },
+          credentials: 'include',
+          body: formData,
+        });
+        
+        if (!uploadResponse.ok) {
+          const error = await uploadResponse.json();
+          toast.error(error.detail || 'Failed to upload proof');
+          return;
+        }
+      }
+      
+      // Approve the transaction (optionally with source account)
+      const url = sourceAccount 
+        ? `${API_URL}/api/transactions/${transactionId}/approve?source_account_id=${sourceAccount}`
+        : `${API_URL}/api/transactions/${transactionId}/approve`;
+        
+      const response = await fetch(url, {
         method: 'POST',
         headers: getAuthHeaders(),
         credentials: 'include',
