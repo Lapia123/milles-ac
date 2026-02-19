@@ -495,13 +495,15 @@ export default function Transactions() {
                   </SelectTrigger>
                   <SelectContent className="bg-[#1F2833] border-white/10">
                     <SelectItem value="treasury" className="text-white hover:bg-white/5">Treasury / Bank Account</SelectItem>
+                    <SelectItem value="bank" className="text-white hover:bg-white/5">Client Bank (Withdrawal)</SelectItem>
+                    <SelectItem value="usdt" className="text-white hover:bg-white/5">USDT</SelectItem>
                     <SelectItem value="psp" className="text-white hover:bg-white/5">Payment Service Provider (PSP)</SelectItem>
                     <SelectItem value="vendor" className="text-white hover:bg-white/5">Vendor</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
-              {/* Treasury Destination */}
+              {/* Treasury Destination (for deposits or non-bank transactions) */}
               {formData.destination_type === 'treasury' && (
                 <div className="space-y-2">
                   <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Destination (Bank/Treasury) *</Label>
@@ -513,13 +515,145 @@ export default function Transactions() {
                       <SelectValue placeholder="Select destination account" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1F2833] border-white/10">
-                      {treasuryAccounts.map((account) => (
+                      {treasuryAccounts.filter(a => a.account_type !== 'usdt').map((account) => (
                         <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
                           {account.account_name} - {account.bank_name} ({account.currency})
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              )}
+              
+              {/* Client Bank Details (for withdrawal to bank) */}
+              {formData.destination_type === 'bank' && (
+                <div className="space-y-4 p-4 bg-[#0B0C10] rounded-sm border border-white/10">
+                  <div className="flex items-center gap-2 text-[#66FCF1] mb-2">
+                    <Building2 className="w-4 h-4" />
+                    <span className="text-xs uppercase tracking-wider font-bold">Client Bank Details</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Bank Name *</Label>
+                      <Input
+                        value={formData.client_bank_name}
+                        onChange={(e) => setFormData({ ...formData, client_bank_name: e.target.value })}
+                        className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1]"
+                        placeholder="e.g., Chase Bank"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Name *</Label>
+                      <Input
+                        value={formData.client_bank_account_name}
+                        onChange={(e) => setFormData({ ...formData, client_bank_account_name: e.target.value })}
+                        className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1]"
+                        placeholder="Account holder name"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Number *</Label>
+                      <Input
+                        value={formData.client_bank_account_number}
+                        onChange={(e) => setFormData({ ...formData, client_bank_account_number: e.target.value })}
+                        className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                        placeholder="Account number"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">SWIFT / IBAN</Label>
+                      <Input
+                        value={formData.client_bank_swift_iban}
+                        onChange={(e) => setFormData({ ...formData, client_bank_swift_iban: e.target.value })}
+                        className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                        placeholder="SWIFT or IBAN code"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Currency *</Label>
+                    <Select
+                      value={formData.client_bank_currency}
+                      onValueChange={(value) => setFormData({ ...formData, client_bank_currency: value })}
+                    >
+                      <SelectTrigger className="bg-[#1F2833] border-white/10 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#1F2833] border-white/10">
+                        {currencies.map((cur) => (
+                          <SelectItem key={cur} value={cur} className="text-white hover:bg-white/5">
+                            {cur}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+              
+              {/* USDT Destination */}
+              {formData.destination_type === 'usdt' && (
+                <div className="space-y-4">
+                  {/* For deposits - select USDT treasury account */}
+                  {formData.transaction_type === 'deposit' && (
+                    <div className="space-y-2">
+                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">USDT Treasury Account *</Label>
+                      <Select
+                        value={formData.destination_account_id}
+                        onValueChange={(value) => setFormData({ ...formData, destination_account_id: value })}
+                      >
+                        <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-usdt-treasury">
+                          <SelectValue placeholder="Select USDT wallet" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#1F2833] border-white/10">
+                          {treasuryAccounts.filter(a => a.account_type === 'usdt').map((account) => (
+                            <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
+                              {account.account_name} ({account.usdt_network || 'USDT'})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
+                  {/* For withdrawals - enter client USDT address */}
+                  {formData.transaction_type === 'withdrawal' && (
+                    <div className="space-y-4 p-4 bg-[#0B0C10] rounded-sm border border-white/10">
+                      <div className="flex items-center gap-2 text-[#66FCF1] mb-2">
+                        <Wallet className="w-4 h-4" />
+                        <span className="text-xs uppercase tracking-wider font-bold">Client USDT Details</span>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">USDT Address *</Label>
+                        <Input
+                          value={formData.client_usdt_address}
+                          onChange={(e) => setFormData({ ...formData, client_usdt_address: e.target.value })}
+                          className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                          placeholder="Enter USDT wallet address"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Network *</Label>
+                        <Select
+                          value={formData.client_usdt_network}
+                          onValueChange={(value) => setFormData({ ...formData, client_usdt_network: value })}
+                        >
+                          <SelectTrigger className="bg-[#1F2833] border-white/10 text-white">
+                            <SelectValue placeholder="Select network" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#1F2833] border-white/10">
+                            <SelectItem value="TRC20" className="text-white hover:bg-white/5">TRC20 (Tron)</SelectItem>
+                            <SelectItem value="ERC20" className="text-white hover:bg-white/5">ERC20 (Ethereum)</SelectItem>
+                            <SelectItem value="BEP20" className="text-white hover:bg-white/5">BEP20 (BSC)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               
