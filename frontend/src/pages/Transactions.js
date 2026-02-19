@@ -84,10 +84,24 @@ export default function Transactions() {
     transaction_type: 'deposit',
     amount: '',
     currency: 'USD',
+    base_currency: 'USD',
+    base_amount: '',
     destination_account_id: '',
     description: '',
     reference: '',
   });
+
+  const currencies = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY'];
+  
+  const exchangeRates = {
+    USD: 1.0,
+    EUR: 1.08,
+    GBP: 1.27,
+    AED: 0.27,
+    SAR: 0.27,
+    INR: 0.012,
+    JPY: 0.0067,
+  };
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -202,6 +216,8 @@ export default function Transactions() {
       transaction_type: 'deposit',
       amount: '',
       currency: 'USD',
+      base_currency: 'USD',
+      base_amount: '',
       destination_account_id: '',
       description: '',
       reference: '',
