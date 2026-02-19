@@ -137,6 +137,9 @@ Query: start_date, end_date, transaction_type, limit
 - [x] Settlement Approval Workflow
 - [x] Treasury History with filters
 - [x] Statement Download (CSV)
+- [x] New destination types (Client Bank, USDT)
+- [x] USDT Treasury accounts
+- [x] Upload proof for withdrawals in Approvals
 
 ### P1 (Next Phase)
 - [ ] Live exchange rate API integration
