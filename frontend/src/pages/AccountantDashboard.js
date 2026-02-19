@@ -466,8 +466,36 @@ export default function AccountantDashboard() {
                       <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Destination</p>
-                          <p className="text-white">{tx.destination_account_name || 'N/A'}</p>
-                          <p className="text-xs text-[#C5C6C7]">{tx.destination_bank_name || ''}</p>
+                          {tx.destination_type === 'bank' && tx.client_bank_name ? (
+                            <div className="flex items-start gap-2">
+                              <Building2 className="w-4 h-4 text-blue-400 mt-0.5" />
+                              <div>
+                                <p className="text-white text-sm">{tx.client_bank_name}</p>
+                                <p className="text-xs text-[#C5C6C7] font-mono">{tx.client_bank_account_number}</p>
+                                {tx.client_bank_swift_iban && (
+                                  <p className="text-xs text-[#C5C6C7]">SWIFT: {tx.client_bank_swift_iban}</p>
+                                )}
+                                <p className="text-xs text-[#66FCF1]">{tx.client_bank_currency || 'USD'}</p>
+                              </div>
+                            </div>
+                          ) : tx.destination_type === 'usdt' && tx.client_usdt_address ? (
+                            <div className="flex items-start gap-2">
+                              <Wallet className="w-4 h-4 text-green-400 mt-0.5" />
+                              <div>
+                                <p className="text-white text-sm font-mono truncate max-w-[150px]" title={tx.client_usdt_address}>
+                                  {tx.client_usdt_address?.slice(0, 10)}...{tx.client_usdt_address?.slice(-6)}
+                                </p>
+                                <Badge className="bg-green-500/20 text-green-400 text-xs mt-1">
+                                  {tx.client_usdt_network || 'USDT'}
+                                </Badge>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <p className="text-white">{tx.destination_account_name || tx.vendor_name || 'N/A'}</p>
+                              <p className="text-xs text-[#C5C6C7]">{tx.destination_bank_name || ''}</p>
+                            </>
+                          )}
                         </div>
                         <div>
                           <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created</p>
@@ -487,6 +515,24 @@ export default function AccountantDashboard() {
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
+                        {/* Upload Proof button for withdrawals */}
+                        {tx.transaction_type === 'withdrawal' && !tx.accountant_proof_image && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setUploadingProof(tx)}
+                            className="text-[#66FCF1] hover:text-white hover:bg-[#66FCF1]/10"
+                            data-testid={`upload-proof-${tx.transaction_id}`}
+                          >
+                            <Upload className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {tx.accountant_proof_image && (
+                          <Badge className="bg-green-500/20 text-green-400 text-xs">
+                            <ImageIcon className="w-3 h-3 mr-1" />
+                            Proof
+                          </Badge>
+                        )}
                         <Button
                           onClick={() => initiateApprove(tx.transaction_id, false)}
                           disabled={processingId === tx.transaction_id}
