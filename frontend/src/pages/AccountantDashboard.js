@@ -560,11 +560,65 @@ export default function AccountantDashboard() {
         </Card>
       </div>
 
+      {/* Filters */}
+      <Card className="bg-[#1F2833] border-white/5">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-[#66FCF1]" />
+              <span className="text-[#C5C6C7] text-sm uppercase tracking-wider">Filters</span>
+            </div>
+            <div className="flex-1 flex flex-wrap gap-4">
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-[150px] bg-[#0B0C10] border-white/10 text-white">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1F2833] border-white/10">
+                  <SelectItem value="all" className="text-white hover:bg-white/5">All Types</SelectItem>
+                  <SelectItem value="deposit" className="text-white hover:bg-white/5">Deposit</SelectItem>
+                  <SelectItem value="withdrawal" className="text-white hover:bg-white/5">Withdrawal</SelectItem>
+                  <SelectItem value="transfer" className="text-white hover:bg-white/5">Transfer</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={destFilter} onValueChange={setDestFilter}>
+                <SelectTrigger className="w-[180px] bg-[#0B0C10] border-white/10 text-white">
+                  <SelectValue placeholder="Destination" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1F2833] border-white/10">
+                  <SelectItem value="all" className="text-white hover:bg-white/5">All Destinations</SelectItem>
+                  <SelectItem value="treasury" className="text-white hover:bg-white/5">Treasury</SelectItem>
+                  <SelectItem value="bank" className="text-white hover:bg-white/5">Client Bank</SelectItem>
+                  <SelectItem value="usdt" className="text-white hover:bg-white/5">USDT</SelectItem>
+                  <SelectItem value="psp" className="text-white hover:bg-white/5">PSP</SelectItem>
+                  <SelectItem value="vendor" className="text-white hover:bg-white/5">Vendor</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                value={clientFilter}
+                onChange={(e) => setClientFilter(e.target.value)}
+                placeholder="Search client..."
+                className="w-[200px] bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+              />
+              {(typeFilter !== 'all' || destFilter !== 'all' || clientFilter) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setTypeFilter('all'); setDestFilter('all'); setClientFilter(''); }}
+                  className="text-[#66FCF1] hover:bg-[#66FCF1]/10"
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Tabs for Transactions and Settlements */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-[#0B0C10] border border-white/10 mb-4">
           <TabsTrigger value="transactions" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-            Transactions ({pendingTransactions.length})
+            Transactions ({filteredTransactions.length})
           </TabsTrigger>
           <TabsTrigger value="settlements" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
             Settlements ({pendingSettlements.length})
@@ -578,7 +632,7 @@ export default function AccountantDashboard() {
               <div className="flex justify-center py-12">
                 <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
               </div>
-            ) : pendingTransactions.length === 0 ? (
+            ) : filteredTransactions.length === 0 ? (
               <Card className="bg-[#1F2833] border-white/5">
                 <CardContent className="p-12 text-center">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
@@ -587,7 +641,7 @@ export default function AccountantDashboard() {
                 </CardContent>
               </Card>
             ) : (
-              pendingTransactions.map((tx) => (
+              filteredTransactions.map((tx) => (
                 <Card key={tx.transaction_id} className="bg-[#1F2833] border-white/5">
                   <CardContent className="p-6">
                     <div className="flex flex-col lg:flex-row lg:items-center gap-4">
