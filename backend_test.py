@@ -266,7 +266,92 @@ class FXBrokerAPITester:
         # Recent activity
         success3, _ = self.run_test("Recent Activity", "GET", "api/reports/recent-activity?limit=5", 200)
         
-        return success1 and success2 and success3
+        return success and success2 and success3
+
+    def test_multi_currency_transactions(self):
+        """Test multi-currency transaction support (NEW FEATURE)"""
+        # Get existing clients first
+        success, clients = self.run_test("Get Clients for Multi-Currency Tx", "GET", "api/clients", 200)
+        if not success or not clients:
+            return False
+
+        client_id = clients[0]['client_id']
+        
+        # Get treasury accounts for destination
+        success, treasury_accounts = self.run_test("Get Treasury for Multi-Currency", "GET", "api/treasury", 200)
+        if not success or not treasury_accounts:
+            return False
+            
+        destination_account_id = treasury_accounts[0]['account_id']
+
+        # Create AED transaction (should auto-convert to USD)
+        import requests
+        url = f"{self.base_url}/api/transactions"
+        headers = {'Authorization': f'Bearer {self.token}'}
+        
+        form_data = {
+            'client_id': client_id,
+            'transaction_type': 'deposit',
+            'amount': '540.00',  # This should be USD equivalent
+            'currency': 'USD',
+            'base_currency': 'AED', 
+            'base_amount': '2000.00',  # 2000 AED = 540 USD (2000 * 0.27)
+            'destination_account_id': destination_account_id,
+            'description': 'Multi-currency AED deposit test'
+        }
+        
+        self.tests_run += 1
+        print(f"\n🔍 Testing Multi-Currency Transaction (AED → USD)...")
+        
+        try:
+            response = requests.post(url, data=form_data, headers=headers)
+            success = response.status_code == 200
+            if success:
+                self.tests_passed += 1
+                print(f"✅ Passed - Status: {response.status_code}")
+                new_tx = response.json()
+                print(f"   Created AED transaction: {new_tx.get('reference')}")
+                print(f"   Base: {new_tx.get('base_amount')} {new_tx.get('base_currency')} → USD: ${new_tx.get('amount')}")
+                
+                # Verify currency conversion
+                expected_usd = 2000 * 0.27  # AED to USD rate
+                actual_usd = new_tx.get('amount')
+                if abs(actual_usd - expected_usd) < 1:  # Allow small rounding difference
+                    print(f"   ✅ Currency conversion correct: {expected_usd} ≈ {actual_usd}")
+                    return True
+                else:
+                    print(f"   ❌ Currency conversion failed: expected ~{expected_usd}, got {actual_usd}")
+                    self.failed_tests.append(f"Multi-Currency: Wrong conversion - expected ~{expected_usd}, got {actual_usd}")
+                    return False
+            else:
+                print(f"❌ Failed - Expected 200, got {response.status_code}")
+                print(f"   Response: {response.text[:200]}")
+                self.failed_tests.append(f"Multi-Currency Transaction: Expected 200, got {response.status_code}")
+                return False
+        except Exception as e:
+            print(f"❌ Failed - Error: {str(e)}")
+            self.failed_tests.append(f"Multi-Currency Transaction: {str(e)}")
+            return False
+
+    def test_treasury_usd_conversion(self):
+        """Test treasury accounts show USD equivalent (NEW FEATURE)"""
+        success, accounts = self.run_test("Get Treasury Accounts for USD Check", "GET", "api/treasury", 200)
+        if not success:
+            return False
+            
+        # Check if accounts have balance_usd field
+        usd_conversion_working = True
+        for account in accounts:
+            if 'balance_usd' not in account:
+                print(f"   ❌ Account {account.get('account_name')} missing balance_usd field")
+                usd_conversion_working = False
+            else:
+                currency = account.get('currency', 'USD')
+                balance = account.get('balance', 0)
+                balance_usd = account.get('balance_usd', 0)
+                print(f"   ✅ {account.get('account_name')}: {balance} {currency} = ${balance_usd} USD")
+        
+        return usd_conversion_working
 
 def main():
     print("🚀 Starting FX Broker API Tests")
