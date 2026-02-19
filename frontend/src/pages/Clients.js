@@ -272,6 +272,28 @@ export default function Clients() {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">MT5 Number</Label>
+                  <Input
+                    value={formData.mt5_number}
+                    onChange={(e) => setFormData({ ...formData, mt5_number: e.target.value })}
+                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                    placeholder="e.g., 12345678"
+                    data-testid="client-mt5"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">CRM Customer ID</Label>
+                  <Input
+                    value={formData.crm_customer_id}
+                    onChange={(e) => setFormData({ ...formData, crm_customer_id: e.target.value })}
+                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                    placeholder="e.g., CRM-001"
+                    data-testid="client-crm-id"
+                  />
+                </div>
+              </div>
               {selectedClient && (
                 <div className="space-y-2">
                   <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">KYC Status</Label>
