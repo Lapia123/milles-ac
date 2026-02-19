@@ -508,6 +508,14 @@ export default function AccountantDashboard() {
     });
   };
 
+  // Filter transactions
+  const filteredTransactions = pendingTransactions.filter(tx => {
+    if (typeFilter !== 'all' && tx.transaction_type !== typeFilter) return false;
+    if (destFilter !== 'all' && tx.destination_type !== destFilter) return false;
+    if (clientFilter && !tx.client_name?.toLowerCase().includes(clientFilter.toLowerCase())) return false;
+    return true;
+  });
+
   return (
     <div className="space-y-6 animate-fade-in" data-testid="accountant-dashboard">
       {/* Header */}
@@ -525,7 +533,10 @@ export default function AccountantDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Pending Transactions</p>
-                <p className="text-4xl font-bold font-mono text-yellow-400">{pendingTransactions.length}</p>
+                <p className="text-4xl font-bold font-mono text-yellow-400">{filteredTransactions.length}</p>
+                {filteredTransactions.length !== pendingTransactions.length && (
+                  <p className="text-xs text-[#C5C6C7]">({pendingTransactions.length} total)</p>
+                )}
               </div>
               <div className="p-4 bg-yellow-500/10 rounded-sm">
                 <Clock className="w-8 h-8 text-yellow-400" />
