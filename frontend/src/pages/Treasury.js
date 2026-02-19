@@ -446,28 +446,40 @@ export default function Treasury() {
           </h1>
           <p className="text-[#C5C6C7]">Manage bank accounts and treasury</p>
         </div>
-        {isAdmin && (
-          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button
-                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
-                data-testid="add-treasury-btn"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Account
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg">
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
-                  {selectedAccount ? 'Edit Account' : 'Add Treasury Account'}
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Name *</Label>
-                  <Input
-                    value={formData.account_name}
+        <div className="flex gap-2">
+          {isAdmin && accounts.length >= 2 && (
+            <Button
+              onClick={initiateTransfer}
+              variant="outline"
+              className="border-[#66FCF1]/50 text-[#66FCF1] hover:bg-[#66FCF1]/10 font-bold uppercase tracking-wider rounded-sm"
+              data-testid="transfer-btn"
+            >
+              <ArrowLeftRight className="w-4 h-4 mr-2" />
+              Transfer
+            </Button>
+          )}
+          {isAdmin && (
+            <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button
+                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
+                  data-testid="add-treasury-btn"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Account
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+                    {selectedAccount ? 'Edit Account' : 'Add Treasury Account'}
+                  </DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Name *</Label>
+                    <Input
+                      value={formData.account_name}
                     onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
                     className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
                     placeholder="e.g., Main Operating Account"
