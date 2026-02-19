@@ -132,7 +132,7 @@ export default function Layout() {
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-                <p className="text-xs text-[#C5C6C7] truncate capitalize">{user?.role?.replace('_', ' ')}</p>
+                <p className="text-xs text-[#94A3B8] truncate capitalize">{user?.role?.replace('_', ' ')}</p>
               </div>
             </div>
           </div>
@@ -140,11 +140,11 @@ export default function Layout() {
       </aside>
 
       <div className="flex-1 flex flex-col min-h-screen">
-        <header className="sticky top-0 z-30 h-16 bg-[#0B0C10]/80 backdrop-blur-md border-b border-white/10">
+        <header className="sticky top-0 z-30 h-16 bg-[#0F172A]/80 backdrop-blur-md border-b border-white/10">
           <div className="flex items-center justify-between h-full px-4 md:px-6">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-[#C5C6C7] hover:text-white"
+              className="lg:hidden text-[#94A3B8] hover:text-white"
               data-testid="mobile-menu-btn"
             >
               <Menu className="w-6 h-6" />
@@ -156,12 +156,12 @@ export default function Layout() {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="flex items-center gap-2 text-[#C5C6C7] hover:text-white hover:bg-white/5"
+                  className="flex items-center gap-2 text-[#94A3B8] hover:text-white hover:bg-white/5"
                   data-testid="user-menu-btn"
                 >
-                  <Avatar className="w-8 h-8 border border-[#66FCF1]/30">
+                  <Avatar className="w-8 h-8 border border-[#3B82F6]/30">
                     <AvatarImage src={user?.picture} />
-                    <AvatarFallback className="bg-[#66FCF1]/20 text-[#66FCF1] text-xs">
+                    <AvatarFallback className="bg-[#3B82F6]/20 text-[#3B82F6] text-xs">
                       {user?.name?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
@@ -171,11 +171,11 @@ export default function Layout() {
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-56 bg-[#1F2833] border-white/10 text-white"
+                className="w-56 bg-[#1E293B] border-white/10 text-white"
               >
                 <div className="px-3 py-2">
                   <p className="text-sm font-medium">{user?.name}</p>
-                  <p className="text-xs text-[#C5C6C7]">{user?.email}</p>
+                  <p className="text-xs text-[#94A3B8]">{user?.email}</p>
                 </div>
                 <DropdownMenuSeparator className="bg-white/10" />
                 <DropdownMenuItem
