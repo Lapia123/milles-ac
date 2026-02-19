@@ -35,6 +35,8 @@ import {
   Store,
   Building2,
   Banknote,
+  Upload,
+  CreditCard,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
