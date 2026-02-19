@@ -58,43 +58,49 @@ Build account software for FX broker - a back-office accounting system with admi
 
 ## API Endpoints
 
-### Settlement Approval Endpoints (New)
+### Transaction Endpoints (Updated)
 ```
-GET /api/settlements/pending
-# Returns all pending vendor settlements for approval
+POST /api/transactions
+# Form data fields:
+# - client_id, transaction_type, amount, currency
+# - destination_type: "treasury" | "bank" | "usdt" | "psp" | "vendor"
+# - destination_account_id (for treasury/usdt deposits)
+# - client_bank_name, client_bank_account_name, client_bank_account_number, 
+#   client_bank_swift_iban, client_bank_currency (for bank withdrawals)
+# - client_usdt_address, client_usdt_network (for usdt withdrawals)
+# - psp_id, vendor_id, commission_paid_by
 
-POST /api/settlements/{settlement_id}/approve
-# Approves settlement, updates treasury, marks transactions as settled
-
-POST /api/settlements/{settlement_id}/reject?reason=X
-# Rejects settlement, resets transactions for re-settlement
-```
-
-### Treasury History Endpoint (New)
-```
-GET /api/treasury/{account_id}/history
-Query params:
-  - start_date: ISO date string (optional)
-  - end_date: ISO date string (optional)
-  - transaction_type: deposit|withdrawal|settlement_in (optional)
-  - limit: number (default 100)
+POST /api/transactions/{id}/upload-proof
+# Upload proof of payment for withdrawal transactions (accountant)
+# multipart/form-data: proof_image file
 ```
 
-### Vendor Settlement
+### Treasury Endpoints (Updated)
 ```
-POST /api/vendors/{vendor_id}/settle
+POST /api/treasury
+# Create treasury account (including USDT type)
 Body:
 {
-  "settlement_type": "bank|cash",
-  "destination_account_id": "treasury_xxx",  // Required
-  "commission_amount": 50.00,                // Manual entry
-  "charges_amount": 10.00,                   // Optional
-  "charges_description": "Bank fee",         // Optional
-  "source_currency": "USD",
-  "destination_currency": "AED",
-  "exchange_rate": 3.67
+  "account_name": "USDT Hot Wallet",
+  "account_type": "usdt",  // "bank" | "usdt" | "crypto_wallet" | "payment_gateway"
+  "currency": "USDT",
+  "usdt_address": "TXyz...",  // For USDT type
+  "usdt_network": "TRC20",    // TRC20 | ERC20 | BEP20
+  "usdt_notes": "Hot wallet for withdrawals"
 }
-# Settlement now goes to "pending" status, requires approval
+```
+
+### Settlement Approval Endpoints
+```
+GET /api/settlements/pending
+POST /api/settlements/{id}/approve
+POST /api/settlements/{id}/reject?reason=X
+```
+
+### Treasury History Endpoint
+```
+GET /api/treasury/{account_id}/history
+Query: start_date, end_date, transaction_type, limit
 ```
 
 ## Demo Credentials
