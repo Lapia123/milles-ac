@@ -969,6 +969,7 @@ async def seed_demo_data():
         {"account_name": "Main Operating Account", "account_type": "bank", "bank_name": "Chase Bank", "account_number": "****1234", "currency": "USD"},
         {"account_name": "Client Funds Account", "account_type": "bank", "bank_name": "Bank of America", "account_number": "****5678", "currency": "USD"},
         {"account_name": "EUR Account", "account_type": "bank", "bank_name": "Deutsche Bank", "account_number": "****9012", "currency": "EUR"},
+        {"account_name": "AED Account", "account_type": "bank", "bank_name": "Emirates NBD", "account_number": "****3456", "currency": "AED"},
     ]
     
     treasury_ids = []
