@@ -34,6 +34,12 @@ import {
 } from '../components/ui/dropdown-menu';
 import { Textarea } from '../components/ui/textarea';
 import { ScrollArea } from '../components/ui/scroll-area';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../components/ui/tabs';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -45,6 +51,12 @@ import {
   Eye,
   Building2,
   DollarSign,
+  History,
+  Download,
+  Filter,
+  ArrowDownRight,
+  ArrowUpRight,
+  Calendar,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
