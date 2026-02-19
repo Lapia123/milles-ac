@@ -278,6 +278,9 @@ export default function Treasury() {
       currency: 'USD',
       description: '',
       status: 'active',
+      usdt_address: '',
+      usdt_network: '',
+      usdt_notes: '',
     });
   };
 
@@ -293,6 +296,7 @@ export default function Treasury() {
     const labels = {
       bank: 'Bank',
       crypto_wallet: 'Crypto',
+      usdt: 'USDT',
       payment_gateway: 'Gateway',
     };
     return (
