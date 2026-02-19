@@ -195,6 +195,44 @@ class VendorUpdate(BaseModel):
     status: Optional[str] = None
     description: Optional[str] = None
 
+# Income & Expense Models
+class IncomeExpenseType:
+    INCOME = "income"
+    EXPENSE = "expense"
+
+class IncomeCategory:
+    COMMISSION = "commission"
+    SERVICE_FEE = "service_fee"
+    INTEREST = "interest"
+    OTHER = "other"
+
+class ExpenseCategory:
+    BANK_FEE = "bank_fee"
+    TRANSFER_CHARGE = "transfer_charge"
+    VENDOR_PAYMENT = "vendor_payment"
+    OPERATIONAL = "operational"
+    MARKETING = "marketing"
+    SOFTWARE = "software"
+    OTHER = "other"
+
+class IncomeExpenseCreate(BaseModel):
+    entry_type: str  # income or expense
+    category: str
+    custom_category: Optional[str] = None
+    amount: float
+    currency: str = "USD"
+    treasury_account_id: str
+    description: Optional[str] = None
+    reference: Optional[str] = None
+    date: Optional[str] = None  # ISO date string
+
+class IncomeExpenseUpdate(BaseModel):
+    category: Optional[str] = None
+    custom_category: Optional[str] = None
+    amount: Optional[float] = None
+    description: Optional[str] = None
+    reference: Optional[str] = None
+
 # Exchange rates to USD (simplified - in production use live API)
 EXCHANGE_RATES_TO_USD = {
     "USD": 1.0,
