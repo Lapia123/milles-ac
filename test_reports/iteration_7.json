@@ -1,0 +1,94 @@
+{
+  "summary": "Comprehensive testing of new Transaction features: 5 destination types (Treasury, Client Bank, USDT, PSP, Vendor), USDT Treasury accounts, and Approvals page enhancements. All 11 backend tests passed. All UI features verified working.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "Backend: Withdrawal + Client Bank creates transaction with bank details (no treasury selector required)",
+    "Backend: Withdrawal + USDT creates transaction with client USDT address and network",
+    "Backend: Deposit to Treasury requires destination_account_id",
+    "Backend: Deposit to PSP with commission_paid_by",
+    "Backend: Deposit to Vendor",
+    "Backend: Create USDT Treasury account with wallet address, network, and notes",
+    "Backend: Deposit to USDT Treasury account",
+    "Backend: Upload proof for withdrawal transaction",
+    "Backend: Upload proof rejected for deposit (withdrawal only)",
+    "Backend: Pending transactions include client bank details",
+    "Backend: Pending transactions include client USDT details",
+    "Frontend: Transaction form has 5 destination types (Treasury/Bank, Client Bank, USDT, PSP, Vendor)",
+    "Frontend: Client Bank destination shows Bank Name, Account Name, Account Number, SWIFT/IBAN, Currency fields",
+    "Frontend: Client Bank destination does NOT show treasury selector",
+    "Frontend: USDT Withdrawal shows client USDT address and network selector (TRC20/ERC20/BEP20)",
+    "Frontend: USDT Deposit shows USDT Treasury Account selector",
+    "Frontend: Treasury page has USDT Wallet account type in dropdown",
+    "Frontend: USDT Treasury form shows Wallet Address, Network, and Private Notes fields",
+    "Frontend: Approvals page shows client bank details for bank withdrawals (Bank name, Account number, SWIFT, Currency)",
+    "Frontend: Approvals page shows client USDT details for USDT withdrawals (Address, Network badge)",
+    "Frontend: Upload Proof button appears on withdrawal transactions",
+    "Frontend: Upload Proof dialog shows transaction details including bank/USDT destination info"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_new_transaction_features.py",
+    "/app/test_reports/pytest/new_tx_features_tests.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_new_transaction_features.py"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11 tests passed)",
+    "frontend": "100% (all new features working)"
+  },
+  "test_credentials": {
+    "admin": "admin@fxbroker.com / admin123"
+  },
+  "seed_data_creation": "Test transactions created during testing include bank and USDT withdrawals",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "New Transaction features fully tested. 5 destination types working: Treasury, Client Bank (shows bank details form), USDT (withdrawal shows client address/network, deposit shows USDT treasury selector), PSP, Vendor. USDT Treasury accounts can be created with wallet address, network (TRC20/ERC20/BEP20), and private notes. Approvals page shows bank/USDT details for withdrawals and has Upload Proof button. Upload-proof endpoint at POST /api/transactions/{id}/upload-proof works for withdrawal transactions only.",
+  "features_verified": {
+    "destination_types": {
+      "treasury": "Working - Deposit/Withdrawal to treasury bank accounts",
+      "client_bank": "Working - Withdrawal shows client bank details form (Bank Name, Account Name, Account Number, SWIFT/IBAN, Currency)",
+      "usdt": "Working - Deposit shows USDT treasury selector, Withdrawal shows client USDT address and network",
+      "psp": "Working - Deposit via PSP with commission",
+      "vendor": "Working - Deposit via Vendor"
+    },
+    "client_bank_for_withdrawals": {
+      "bank_name_field": "Working",
+      "account_name_field": "Working",
+      "account_number_field": "Working",
+      "swift_iban_field": "Working",
+      "currency_field": "Working",
+      "no_treasury_selector": "Working - Treasury selector hidden for bank destination"
+    },
+    "usdt_features": {
+      "client_usdt_address": "Working - Text input for client's USDT wallet address",
+      "client_usdt_network": "Working - Dropdown with TRC20, ERC20, BEP20 options",
+      "usdt_treasury_selector": "Working - Shows for USDT deposits"
+    },
+    "usdt_treasury_accounts": {
+      "account_type_dropdown": "Working - USDT Wallet option available",
+      "usdt_address_field": "Working",
+      "usdt_network_field": "Working - TRC20, ERC20, BEP20",
+      "usdt_notes_field": "Working - Private notes/labels"
+    },
+    "approvals_page": {
+      "bank_details_shown": "Working - Shows bank name, account number, SWIFT, currency for bank withdrawals",
+      "usdt_details_shown": "Working - Shows truncated USDT address with network badge (ERC20/TRC20/BEP20)",
+      "upload_proof_button": "Working - Appears on withdrawal transactions",
+      "upload_proof_dialog": "Working - Shows transaction details and file upload"
+    },
+    "upload_proof_endpoint": {
+      "post_transactions_upload_proof": "Working - POST /api/transactions/{id}/upload-proof",
+      "withdrawal_only": "Working - Returns 400 for non-withdrawal transactions"
+    }
+  }
+}
