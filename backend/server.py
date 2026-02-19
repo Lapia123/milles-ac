@@ -639,6 +639,206 @@ async def delete_treasury_account(account_id: str, user: dict = Depends(require_
         raise HTTPException(status_code=404, detail="Treasury account not found")
     return {"message": "Treasury account deleted"}
 
+# ============== PSP ROUTES ==============
+
+@api_router.get("/psp")
+async def get_psps(user: dict = Depends(get_current_user)):
+    psps = await db.psps.find({}, {"_id": 0}).to_list(1000)
+    # Get settlement destination names
+    for psp in psps:
+        if psp.get("settlement_destination_id"):
+            dest = await db.treasury_accounts.find_one({"account_id": psp["settlement_destination_id"]}, {"_id": 0})
+            psp["settlement_destination_name"] = dest["account_name"] if dest else "Unknown"
+            psp["settlement_destination_bank"] = dest["bank_name"] if dest else None
+    return psps
+
+@api_router.get("/psp/{psp_id}")
+async def get_psp(psp_id: str, user: dict = Depends(get_current_user)):
+    psp = await db.psps.find_one({"psp_id": psp_id}, {"_id": 0})
+    if not psp:
+        raise HTTPException(status_code=404, detail="PSP not found")
+    return psp
+
+@api_router.post("/psp")
+async def create_psp(psp_data: PSPCreate, user: dict = Depends(require_admin)):
+    # Verify settlement destination exists
+    dest = await db.treasury_accounts.find_one({"account_id": psp_data.settlement_destination_id}, {"_id": 0})
+    if not dest:
+        raise HTTPException(status_code=404, detail="Settlement destination account not found")
+    
+    psp_id = f"psp_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    
+    psp_doc = {
+        "psp_id": psp_id,
+        **psp_data.model_dump(),
+        "total_volume": 0.0,
+        "total_commission": 0.0,
+        "pending_settlement": 0.0,
+        "status": PSPStatus.ACTIVE,
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat()
+    }
+    
+    await db.psps.insert_one(psp_doc)
+    return await db.psps.find_one({"psp_id": psp_id}, {"_id": 0})
+
+@api_router.put("/psp/{psp_id}")
+async def update_psp(psp_id: str, update_data: PSPUpdate, user: dict = Depends(require_admin)):
+    updates = {k: v for k, v in update_data.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No updates provided")
+    
+    # Verify settlement destination if being updated
+    if updates.get("settlement_destination_id"):
+        dest = await db.treasury_accounts.find_one({"account_id": updates["settlement_destination_id"]}, {"_id": 0})
+        if not dest:
+            raise HTTPException(status_code=404, detail="Settlement destination account not found")
+    
+    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.psps.update_one({"psp_id": psp_id}, {"$set": updates})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="PSP not found")
+    
+    return await db.psps.find_one({"psp_id": psp_id}, {"_id": 0})
+
+@api_router.delete("/psp/{psp_id}")
+async def delete_psp(psp_id: str, user: dict = Depends(require_admin)):
+    result = await db.psps.delete_one({"psp_id": psp_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="PSP not found")
+    return {"message": "PSP deleted"}
+
+# PSP Settlements
+@api_router.get("/psp/{psp_id}/settlements")
+async def get_psp_settlements(psp_id: str, user: dict = Depends(get_current_user)):
+    settlements = await db.psp_settlements.find({"psp_id": psp_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return settlements
+
+@api_router.get("/psp-settlements")
+async def get_all_settlements(
+    user: dict = Depends(get_current_user),
+    status: Optional[str] = None,
+    limit: int = 100
+):
+    query = {}
+    if status:
+        query["status"] = status
+    settlements = await db.psp_settlements.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    return settlements
+
+@api_router.post("/psp/{psp_id}/settle")
+async def create_settlement(psp_id: str, user: dict = Depends(require_admin)):
+    """Create a settlement for pending PSP transactions"""
+    psp = await db.psps.find_one({"psp_id": psp_id}, {"_id": 0})
+    if not psp:
+        raise HTTPException(status_code=404, detail="PSP not found")
+    
+    # Get pending transactions for this PSP
+    pending_txs = await db.transactions.find({
+        "psp_id": psp_id,
+        "status": {"$in": [TransactionStatus.APPROVED, TransactionStatus.COMPLETED]},
+        "settled": {"$ne": True}
+    }, {"_id": 0}).to_list(1000)
+    
+    if not pending_txs:
+        raise HTTPException(status_code=400, detail="No pending transactions to settle")
+    
+    # Calculate totals
+    gross_amount = sum(tx["amount"] for tx in pending_txs)
+    commission_rate = psp.get("commission_rate", 0) / 100
+    commission_amount = round(gross_amount * commission_rate, 2)
+    net_amount = gross_amount - commission_amount
+    
+    settlement_id = f"stl_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    settlement_date = now + timedelta(days=psp.get("settlement_days", 1))
+    
+    settlement_doc = {
+        "settlement_id": settlement_id,
+        "psp_id": psp_id,
+        "psp_name": psp["psp_name"],
+        "gross_amount": gross_amount,
+        "commission_rate": psp.get("commission_rate", 0),
+        "commission_amount": commission_amount,
+        "net_amount": net_amount,
+        "transaction_count": len(pending_txs),
+        "transaction_ids": [tx["transaction_id"] for tx in pending_txs],
+        "settlement_destination_id": psp["settlement_destination_id"],
+        "status": PSPSettlementStatus.PENDING,
+        "expected_settlement_date": settlement_date.isoformat(),
+        "created_at": now.isoformat(),
+        "settled_at": None,
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    
+    await db.psp_settlements.insert_one(settlement_doc)
+    
+    # Mark transactions as pending settlement
+    await db.transactions.update_many(
+        {"transaction_id": {"$in": [tx["transaction_id"] for tx in pending_txs]}},
+        {"$set": {"settlement_id": settlement_id, "settlement_status": "pending"}}
+    )
+    
+    # Update PSP stats
+    await db.psps.update_one(
+        {"psp_id": psp_id},
+        {"$inc": {"pending_settlement": net_amount}}
+    )
+    
+    return await db.psp_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
+
+@api_router.post("/psp-settlements/{settlement_id}/complete")
+async def complete_settlement(settlement_id: str, user: dict = Depends(require_admin)):
+    """Mark a settlement as completed and transfer funds to treasury"""
+    settlement = await db.psp_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
+    if not settlement:
+        raise HTTPException(status_code=404, detail="Settlement not found")
+    
+    if settlement["status"] == PSPSettlementStatus.COMPLETED:
+        raise HTTPException(status_code=400, detail="Settlement already completed")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Update treasury balance
+    await db.treasury_accounts.update_one(
+        {"account_id": settlement["settlement_destination_id"]},
+        {"$inc": {"balance": settlement["net_amount"]}, "$set": {"updated_at": now.isoformat()}}
+    )
+    
+    # Update settlement status
+    await db.psp_settlements.update_one(
+        {"settlement_id": settlement_id},
+        {"$set": {
+            "status": PSPSettlementStatus.COMPLETED,
+            "settled_at": now.isoformat()
+        }}
+    )
+    
+    # Mark transactions as settled
+    await db.transactions.update_many(
+        {"settlement_id": settlement_id},
+        {"$set": {"settled": True, "settlement_status": "completed"}}
+    )
+    
+    # Update PSP stats
+    psp = await db.psps.find_one({"psp_id": settlement["psp_id"]}, {"_id": 0})
+    if psp:
+        await db.psps.update_one(
+            {"psp_id": settlement["psp_id"]},
+            {
+                "$inc": {
+                    "total_volume": settlement["gross_amount"],
+                    "total_commission": settlement["commission_amount"],
+                    "pending_settlement": -settlement["net_amount"]
+                }
+            }
+        )
+    
+    return await db.psp_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
+
 # ============== TRANSACTIONS ROUTES ==============
 
 @api_router.get("/transactions")
