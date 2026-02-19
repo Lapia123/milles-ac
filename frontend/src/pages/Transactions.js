@@ -269,6 +269,10 @@ export default function Transactions() {
         formDataToSend.append('client_bank_account_number', formData.client_bank_account_number);
         formDataToSend.append('client_bank_swift_iban', formData.client_bank_swift_iban);
         formDataToSend.append('client_bank_currency', formData.client_bank_currency);
+        // Flag to save bank details to client profile
+        if (selectedBankAccount === 'new') {
+          formDataToSend.append('save_bank_to_client', 'true');
+        }
       }
       // Client USDT details (for withdrawal to USDT)
       if (formData.destination_type === 'usdt' && formData.transaction_type === 'withdrawal') {
