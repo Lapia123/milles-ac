@@ -287,6 +287,53 @@ export default function AccountantDashboard() {
     }
   };
 
+  const executeApproveSettlement = async (settlementId) => {
+    setProcessingId(settlementId);
+    try {
+      const response = await fetch(`${API_URL}/api/settlements/${settlementId}/approve`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        toast.success('Settlement approved');
+        fetchPendingSettlements();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Settlement approval failed');
+      }
+    } catch (error) {
+      toast.error('Settlement approval failed');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const executeRejectSettlement = async (settlementId) => {
+    setProcessingId(settlementId);
+    try {
+      const response = await fetch(`${API_URL}/api/settlements/${settlementId}/reject?reason=${encodeURIComponent(rejectReason)}`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        toast.success('Settlement rejected');
+        setRejectReason('');
+        fetchPendingSettlements();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Settlement rejection failed');
+      }
+    } catch (error) {
+      toast.error('Settlement rejection failed');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const getTypeBadge = (type) => {
     const isIncoming = ['deposit', 'rebate'].includes(type);
     return (
