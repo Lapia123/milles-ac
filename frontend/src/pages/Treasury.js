@@ -674,6 +674,7 @@ export default function Treasury() {
             </DialogContent>
           </Dialog>
         )}
+        </div>
       </div>
 
       {/* Summary Card */}
