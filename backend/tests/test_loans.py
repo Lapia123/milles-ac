@@ -272,7 +272,10 @@ class TestLoanManagement:
             pytest.skip("No treasury accounts available")
         
         treasury = self.treasury_accounts[0]
-        initial_balance = treasury.get("balance", 0)
+        
+        # Get current treasury balance AFTER loan was created (loan already deducted)
+        treasury_resp = self.session.get(f"{BASE_URL}/api/treasury/{treasury['account_id']}")
+        balance_before_repayment = treasury_resp.json().get("balance", 0) if treasury_resp.status_code == 200 else 0
         
         payload = {
             "amount": 300,  # Partial repayment (out of 1000)
@@ -290,12 +293,12 @@ class TestLoanManagement:
         assert data["amount"] == 300
         assert data["loan_status"] == "partially_paid", "Status should change to partially_paid"
         
-        # Verify treasury was credited
+        # Verify treasury was credited with repayment amount
         treasury_resp = self.session.get(f"{BASE_URL}/api/treasury/{treasury['account_id']}")
         if treasury_resp.status_code == 200:
             new_balance = treasury_resp.json().get("balance", 0)
             # Balance should have increased by repayment amount
-            assert new_balance >= initial_balance, "Treasury should be credited"
+            assert new_balance == balance_before_repayment + 300, f"Treasury should be credited. Expected {balance_before_repayment + 300}, got {new_balance}"
     
     def test_record_repayment_full(self):
         """Test recording repayments until loan is fully paid"""
