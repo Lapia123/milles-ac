@@ -1392,21 +1392,37 @@ async def settle_psp_transaction(
 @api_router.get("/vendors")
 async def get_vendors(user: dict = Depends(get_current_user)):
     vendors = await db.vendors.find({}, {"_id": 0}).to_list(1000)
-    # Get settlement destination names and pending amounts
+    
+    # Batch fetch treasury accounts to avoid N+1 queries
+    treasury_ids = list(set(v.get("settlement_destination_id") for v in vendors if v.get("settlement_destination_id")))
+    treasury_map = {}
+    if treasury_ids:
+        treasuries = await db.treasury_accounts.find({"account_id": {"$in": treasury_ids}}, {"_id": 0}).to_list(len(treasury_ids))
+        treasury_map = {t["account_id"]: t for t in treasuries}
+    
+    # Batch fetch all pending transactions for all vendors
+    vendor_ids = [v["vendor_id"] for v in vendors]
+    pending_txs_all = await db.transactions.find({
+        "vendor_id": {"$in": vendor_ids},
+        "destination_type": "vendor",
+        "status": {"$in": [TransactionStatus.APPROVED, TransactionStatus.COMPLETED]},
+        "settled": {"$ne": True}
+    }, {"_id": 0}).to_list(10000)
+    
+    # Group transactions by vendor_id
+    from collections import defaultdict
+    pending_by_vendor = defaultdict(list)
+    for tx in pending_txs_all:
+        pending_by_vendor[tx["vendor_id"]].append(tx)
+    
+    # Populate vendor data
     for vendor in vendors:
         if vendor.get("settlement_destination_id"):
-            dest = await db.treasury_accounts.find_one({"account_id": vendor["settlement_destination_id"]}, {"_id": 0})
+            dest = treasury_map.get(vendor["settlement_destination_id"])
             vendor["settlement_destination_name"] = dest["account_name"] if dest else "Unknown"
             vendor["settlement_destination_bank"] = dest.get("bank_name") if dest else None
         
-        # Calculate pending amounts from transactions
-        pending_txs = await db.transactions.find({
-            "vendor_id": vendor["vendor_id"],
-            "destination_type": "vendor",
-            "status": {"$in": [TransactionStatus.APPROVED, TransactionStatus.COMPLETED]},
-            "settled": {"$ne": True}
-        }, {"_id": 0}).to_list(1000)
-        
+        pending_txs = pending_by_vendor.get(vendor["vendor_id"], [])
         vendor["pending_transactions_count"] = len(pending_txs)
         vendor["pending_amount"] = sum(tx.get("amount", 0) for tx in pending_txs)
     
