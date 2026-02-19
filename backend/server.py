@@ -1358,36 +1358,133 @@ async def settle_vendor_balance(
         "transaction_ids": [tx["transaction_id"] for tx in pending_txs],
         "settlement_destination_id": dest_account_id,
         "settlement_destination_name": dest["account_name"],
-        "status": VendorSettlementStatus.COMPLETED,
+        "status": VendorSettlementStatus.PENDING,  # Settlements go to pending first
         "created_at": now.isoformat(),
-        "settled_at": now.isoformat(),
+        "settled_at": None,  # Will be set on approval
+        "approved_at": None,
+        "approved_by": None,
+        "approved_by_name": None,
+        "rejection_reason": None,
         "created_by": user["user_id"],
         "created_by_name": user["name"]
     }
     
     await db.vendor_settlements.insert_one(settlement_doc)
     
-    # Mark transactions as settled
+    # Mark transactions as pending settlement (not fully settled yet)
     await db.transactions.update_many(
         {"transaction_id": {"$in": [tx["transaction_id"] for tx in pending_txs]}},
-        {"$set": {"settled": True, "settlement_id": settlement_id, "settlement_status": "completed"}}
+        {"$set": {"settlement_id": settlement_id, "settlement_status": "pending_approval"}}
     )
     
-    # Update treasury balance with settlement amount in destination currency
+    return await db.vendor_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
+
+# Get all pending settlements (for approval page)
+@api_router.get("/settlements/pending")
+async def get_pending_settlements(user: dict = Depends(require_accountant_or_admin)):
+    """Get all pending vendor settlements awaiting approval"""
+    settlements = await db.vendor_settlements.find(
+        {"status": VendorSettlementStatus.PENDING}, 
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(1000)
+    return settlements
+
+# Approve vendor settlement
+@api_router.post("/settlements/{settlement_id}/approve")
+async def approve_settlement(settlement_id: str, user: dict = Depends(require_accountant_or_admin)):
+    """Approve a pending vendor settlement"""
+    settlement = await db.vendor_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
+    if not settlement:
+        raise HTTPException(status_code=404, detail="Settlement not found")
+    
+    if settlement["status"] != VendorSettlementStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Settlement is not pending")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Update settlement status
+    await db.vendor_settlements.update_one(
+        {"settlement_id": settlement_id},
+        {"$set": {
+            "status": VendorSettlementStatus.APPROVED,
+            "approved_at": now.isoformat(),
+            "approved_by": user["user_id"],
+            "approved_by_name": user["name"],
+            "settled_at": now.isoformat()
+        }}
+    )
+    
+    # Mark transactions as fully settled
+    await db.transactions.update_many(
+        {"settlement_id": settlement_id},
+        {"$set": {"settled": True, "settlement_status": "completed"}}
+    )
+    
+    # Update treasury balance with settlement amount
     await db.treasury_accounts.update_one(
-        {"account_id": dest_account_id},
-        {"$inc": {"balance": settlement_amount}, "$set": {"updated_at": now.isoformat()}}
+        {"account_id": settlement["settlement_destination_id"]},
+        {"$inc": {"balance": settlement["settlement_amount"]}, "$set": {"updated_at": now.isoformat()}}
     )
     
     # Update vendor stats
     await db.vendors.update_one(
-        {"vendor_id": vendor_id},
+        {"vendor_id": settlement["vendor_id"]},
         {
             "$inc": {
-                "total_volume": gross_amount,
-                "total_commission": commission_amount
+                "total_volume": settlement["gross_amount"],
+                "total_commission": settlement["commission_amount"]
             }
         }
+    )
+    
+    # Record treasury transaction for history
+    treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+    treasury_tx_doc = {
+        "treasury_transaction_id": treasury_tx_id,
+        "account_id": settlement["settlement_destination_id"],
+        "transaction_type": "settlement_in",
+        "amount": settlement["settlement_amount"],
+        "currency": settlement["destination_currency"],
+        "reference": f"Vendor Settlement: {settlement['vendor_name']}",
+        "settlement_id": settlement_id,
+        "vendor_id": settlement["vendor_id"],
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    await db.treasury_transactions.insert_one(treasury_tx_doc)
+    
+    return await db.vendor_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
+
+# Reject vendor settlement
+@api_router.post("/settlements/{settlement_id}/reject")
+async def reject_settlement(settlement_id: str, reason: str = "", user: dict = Depends(require_accountant_or_admin)):
+    """Reject a pending vendor settlement"""
+    settlement = await db.vendor_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
+    if not settlement:
+        raise HTTPException(status_code=404, detail="Settlement not found")
+    
+    if settlement["status"] != VendorSettlementStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Settlement is not pending")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Update settlement status
+    await db.vendor_settlements.update_one(
+        {"settlement_id": settlement_id},
+        {"$set": {
+            "status": VendorSettlementStatus.REJECTED,
+            "rejection_reason": reason,
+            "approved_at": now.isoformat(),
+            "approved_by": user["user_id"],
+            "approved_by_name": user["name"]
+        }}
+    )
+    
+    # Reset transaction settlement status so they can be settled again
+    await db.transactions.update_many(
+        {"settlement_id": settlement_id},
+        {"$set": {"settlement_id": None, "settlement_status": None}}
     )
     
     return await db.vendor_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
