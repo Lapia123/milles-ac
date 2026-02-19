@@ -123,9 +123,78 @@ export default function Treasury() {
     }
   };
 
+  const fetchAccountHistory = async (accountId) => {
+    setHistoryLoading(true);
+    try {
+      let url = `${API_URL}/api/treasury/${accountId}/history?limit=100`;
+      if (historyFilters.startDate) {
+        url += `&start_date=${historyFilters.startDate}`;
+      }
+      if (historyFilters.endDate) {
+        url += `&end_date=${historyFilters.endDate}`;
+      }
+      if (historyFilters.transactionType) {
+        url += `&transaction_type=${historyFilters.transactionType}`;
+      }
+      
+      const response = await fetch(url, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setHistoryData(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching history:', error);
+      toast.error('Failed to load transaction history');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const downloadStatement = () => {
+    if (!historyAccount || historyData.length === 0) return;
+    
+    // Generate CSV content
+    const headers = ['Date', 'Type', 'Reference', 'Amount', 'Currency'];
+    const rows = historyData.map(tx => [
+      new Date(tx.created_at).toLocaleDateString(),
+      tx.transaction_type || 'N/A',
+      tx.reference || 'N/A',
+      tx.amount?.toLocaleString() || '0',
+      historyAccount.currency || 'USD'
+    ]);
+    
+    const csvContent = [
+      `Treasury Account Statement - ${historyAccount.account_name}`,
+      `Currency: ${historyAccount.currency}`,
+      `Balance: ${historyAccount.balance?.toLocaleString()}`,
+      `Generated: ${new Date().toLocaleDateString()}`,
+      '',
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+    
+    // Download file
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `statement_${historyAccount.account_name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    toast.success('Statement downloaded');
+  };
+
   useEffect(() => {
     fetchAccounts();
   }, []);
+
+  useEffect(() => {
+    if (historyAccount) {
+      fetchAccountHistory(historyAccount.account_id);
+    }
+  }, [historyAccount, historyFilters]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
