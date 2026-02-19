@@ -597,7 +597,7 @@ export default function Vendors() {
           {viewVendor && (
             <div className="space-y-4">
               {/* Vendor Info */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-[#0B0C10] rounded-sm">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-[#0B0C10] rounded-sm">
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Deposit Commission</p>
                   <p className="text-xl font-mono text-white">{viewVendor.deposit_commission}%</p>
@@ -609,24 +609,6 @@ export default function Vendors() {
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Pending Amount</p>
                   <p className="text-xl font-mono text-yellow-400">${(viewVendor.pending_amount || 0).toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Settlement To</p>
-                  <p className="text-sm text-white">{viewVendor.settlement_destination_name}</p>
-                </div>
-              </div>
-
-              {/* Settlement Commission Info */}
-              <div className="grid grid-cols-2 gap-4 p-3 bg-[#0B0C10]/50 rounded-sm">
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-[#66FCF1]" />
-                  <span className="text-sm text-[#C5C6C7]">Bank Settlement:</span>
-                  <span className="text-white font-mono">{viewVendor.bank_settlement_commission}%</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Banknote className="w-4 h-4 text-[#66FCF1]" />
-                  <span className="text-sm text-[#C5C6C7]">Cash Settlement:</span>
-                  <span className="text-white font-mono">{viewVendor.cash_settlement_commission}%</span>
                 </div>
               </div>
 
