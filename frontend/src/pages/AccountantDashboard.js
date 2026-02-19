@@ -363,91 +363,255 @@ export default function AccountantDashboard() {
         <h1 className="text-4xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
           Pending Approvals
         </h1>
-        <p className="text-[#C5C6C7]">Review and approve/reject transactions</p>
+        <p className="text-[#C5C6C7]">Review and approve/reject transactions and settlements</p>
       </div>
 
       {/* Stats */}
-      <Card className="bg-[#1F2833] border-white/5">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Pending Transactions</p>
-              <p className="text-4xl font-bold font-mono text-yellow-400">{pendingTransactions.length}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="bg-[#1F2833] border-white/5">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Pending Transactions</p>
+                <p className="text-4xl font-bold font-mono text-yellow-400">{pendingTransactions.length}</p>
+              </div>
+              <div className="p-4 bg-yellow-500/10 rounded-sm">
+                <Clock className="w-8 h-8 text-yellow-400" />
+              </div>
             </div>
-            <div className="p-4 bg-yellow-500/10 rounded-sm">
-              <Clock className="w-8 h-8 text-yellow-400" />
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-[#1F2833] border-white/5">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Pending Settlements</p>
+                <p className="text-4xl font-bold font-mono text-purple-400">{pendingSettlements.length}</p>
+              </div>
+              <div className="p-4 bg-purple-500/10 rounded-sm">
+                <Wallet className="w-8 h-8 text-purple-400" />
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Pending Transactions List */}
-      <div className="space-y-4">
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : pendingTransactions.length === 0 ? (
-          <Card className="bg-[#1F2833] border-white/5">
-            <CardContent className="p-12 text-center">
-              <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
-              <p className="text-white text-lg">All caught up!</p>
-              <p className="text-[#C5C6C7] mt-2">No pending transactions to review</p>
-            </CardContent>
-          </Card>
-        ) : (
-          pendingTransactions.map((tx) => (
-            <Card key={tx.transaction_id} className="bg-[#1F2833] border-white/5">
-              <CardContent className="p-6">
-                <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                  {/* Transaction Info */}
-                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reference</p>
+      {/* Tabs for Transactions and Settlements */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="bg-[#0B0C10] border border-white/10 mb-4">
+          <TabsTrigger value="transactions" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+            Transactions ({pendingTransactions.length})
+          </TabsTrigger>
+          <TabsTrigger value="settlements" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+            Settlements ({pendingSettlements.length})
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Transactions Tab */}
+        <TabsContent value="transactions">
+          <div className="space-y-4">
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : pendingTransactions.length === 0 ? (
+              <Card className="bg-[#1F2833] border-white/5">
+                <CardContent className="p-12 text-center">
+                  <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
+                  <p className="text-white text-lg">All caught up!</p>
+                  <p className="text-[#C5C6C7] mt-2">No pending transactions to review</p>
+                </CardContent>
+              </Card>
+            ) : (
+              pendingTransactions.map((tx) => (
+                <Card key={tx.transaction_id} className="bg-[#1F2833] border-white/5">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                      {/* Transaction Info */}
+                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reference</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-white font-mono">{tx.reference}</p>
+                            {tx.proof_image && <ImageIcon className="w-4 h-4 text-[#66FCF1]" />}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Client</p>
+                          <p className="text-white">{tx.client_name}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Type</p>
+                          {getTypeBadge(tx.transaction_type)}
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Amount</p>
+                          <p className={`font-mono text-lg font-bold ${['deposit', 'rebate'].includes(tx.transaction_type) ? 'text-green-400' : 'text-red-400'}`}>
+                            {['deposit', 'rebate'].includes(tx.transaction_type) ? '+' : '-'}${tx.amount?.toLocaleString()} USD
+                          </p>
+                          {tx.base_currency && tx.base_currency !== 'USD' && tx.base_amount && (
+                            <p className="text-xs text-[#C5C6C7]">
+                              ({tx.base_amount?.toLocaleString()} {tx.base_currency})
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Destination & Date */}
+                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Destination</p>
+                          <p className="text-white">{tx.destination_account_name || 'N/A'}</p>
+                          <p className="text-xs text-[#C5C6C7]">{tx.destination_bank_name || ''}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created</p>
+                          <p className="text-white text-sm">{formatDate(tx.created_at)}</p>
+                          <p className="text-xs text-[#C5C6C7]">by {tx.created_by_name || 'System'}</p>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
                       <div className="flex items-center gap-2">
-                        <p className="text-white font-mono">{tx.reference}</p>
-                        {tx.proof_image && <ImageIcon className="w-4 h-4 text-[#66FCF1]" />}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setViewTransaction(tx)}
+                          className="text-[#C5C6C7] hover:text-white hover:bg-white/5"
+                          data-testid={`view-tx-${tx.transaction_id}`}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={() => initiateApprove(tx.transaction_id, false)}
+                          disabled={processingId === tx.transaction_id}
+                          className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
+                          data-testid={`approve-tx-${tx.transaction_id}`}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Approve
+                        </Button>
+                        <Button
+                          onClick={() => initiateReject(tx.transaction_id, false)}
+                          disabled={processingId === tx.transaction_id}
+                          className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+                          data-testid={`reject-tx-${tx.transaction_id}`}
+                        >
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Reject
+                        </Button>
                       </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Client</p>
-                      <p className="text-white">{tx.client_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Type</p>
-                      {getTypeBadge(tx.transaction_type)}
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Amount</p>
-                      <p className={`font-mono text-lg font-bold ${['deposit', 'rebate'].includes(tx.transaction_type) ? 'text-green-400' : 'text-red-400'}`}>
-                        {['deposit', 'rebate'].includes(tx.transaction_type) ? '+' : '-'}${tx.amount?.toLocaleString()} USD
-                      </p>
-                      {tx.base_currency && tx.base_currency !== 'USD' && tx.base_amount && (
-                        <p className="text-xs text-[#C5C6C7]">
-                          ({tx.base_amount?.toLocaleString()} {tx.base_currency})
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
 
-                  {/* Destination & Date */}
-                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Destination</p>
-                      <p className="text-white">{tx.destination_account_name || 'N/A'}</p>
-                      <p className="text-xs text-[#C5C6C7]">{tx.destination_bank_name || ''}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created</p>
-                      <p className="text-white text-sm">{formatDate(tx.created_at)}</p>
-                      <p className="text-xs text-[#C5C6C7]">by {tx.created_by_name || 'System'}</p>
-                    </div>
-                  </div>
+        {/* Settlements Tab */}
+        <TabsContent value="settlements">
+          <div className="space-y-4">
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : pendingSettlements.length === 0 ? (
+              <Card className="bg-[#1F2833] border-white/5">
+                <CardContent className="p-12 text-center">
+                  <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
+                  <p className="text-white text-lg">All caught up!</p>
+                  <p className="text-[#C5C6C7] mt-2">No pending settlements to review</p>
+                </CardContent>
+              </Card>
+            ) : (
+              pendingSettlements.map((settlement) => (
+                <Card key={settlement.settlement_id} className="bg-[#1F2833] border-white/5">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                      {/* Settlement Info */}
+                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Vendor</p>
+                          <div className="flex items-center gap-2">
+                            <Store className="w-4 h-4 text-[#66FCF1]" />
+                            <p className="text-white">{settlement.vendor_name}</p>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Type</p>
+                          <Badge className={settlement.settlement_type === 'bank' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}>
+                            {settlement.settlement_type === 'bank' ? <Building2 className="w-3 h-3 mr-1" /> : <Banknote className="w-3 h-3 mr-1" />}
+                            {settlement.settlement_type}
+                          </Badge>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Gross Amount</p>
+                          <p className="font-mono text-lg font-bold text-white">
+                            ${settlement.gross_amount?.toLocaleString()} USD
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Settlement Amount</p>
+                          <p className="font-mono text-lg font-bold text-green-400">
+                            {settlement.destination_currency !== 'USD' ? settlement.destination_currency : '$'} {settlement.settlement_amount?.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
+                      {/* Destination & Date */}
+                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Destination</p>
+                          <p className="text-white">{settlement.settlement_destination_name}</p>
+                          <p className="text-xs text-[#C5C6C7]">{settlement.transaction_count} transactions</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created</p>
+                          <p className="text-white text-sm">{formatDate(settlement.created_at)}</p>
+                          <p className="text-xs text-[#C5C6C7]">by {settlement.created_by_name || 'System'}</p>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setViewSettlement(settlement)}
+                          className="text-[#C5C6C7] hover:text-white hover:bg-white/5"
+                          data-testid={`view-settlement-${settlement.settlement_id}`}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={() => initiateApprove(settlement.settlement_id, true)}
+                          disabled={processingId === settlement.settlement_id}
+                          className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
+                          data-testid={`approve-settlement-${settlement.settlement_id}`}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Approve
+                        </Button>
+                        <Button
+                          onClick={() => initiateReject(settlement.settlement_id, true)}
+                          disabled={processingId === settlement.settlement_id}
+                          className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+                          data-testid={`reject-settlement-${settlement.settlement_id}`}
+                        >
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
                       size="sm"
                       onClick={() => setViewTransaction(tx)}
                       className="text-[#C5C6C7] hover:text-white hover:bg-white/5"
