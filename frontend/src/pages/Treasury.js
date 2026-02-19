@@ -208,7 +208,7 @@ export default function Treasury() {
     );
   };
 
-  const totalBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+  const totalBalanceUSD = accounts.reduce((sum, acc) => sum + (acc.balance_usd || acc.balance || 0), 0);
 
   return (
     <div className="space-y-6 animate-fade-in" data-testid="treasury-page">
@@ -391,8 +391,9 @@ export default function Treasury() {
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Total Treasury Balance</p>
-              <p className="text-4xl font-bold font-mono text-white">${totalBalance.toLocaleString()}</p>
+              <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Total Treasury Balance (USD Equivalent)</p>
+              <p className="text-4xl font-bold font-mono text-white">${totalBalanceUSD.toLocaleString()}</p>
+              <p className="text-xs text-[#C5C6C7] mt-1">Converted from all currencies to USD</p>
             </div>
             <div className="p-4 bg-[#66FCF1]/10 rounded-sm">
               <DollarSign className="w-8 h-8 text-[#66FCF1]" />
@@ -452,13 +453,17 @@ export default function Treasury() {
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-[#C5C6C7] text-sm">Balance</span>
-                    <span className="text-xl font-mono font-bold text-white">${(account.balance || 0).toLocaleString()}</span>
+                    <span className="text-[#C5C6C7] text-sm">Balance ({account.currency})</span>
+                    <span className="text-xl font-mono font-bold text-white">
+                      {account.currency === 'USD' ? '$' : ''}{(account.balance || 0).toLocaleString()} {account.currency !== 'USD' ? account.currency : ''}
+                    </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#C5C6C7] text-sm">Currency</span>
-                    <span className="text-white font-mono">{account.currency}</span>
-                  </div>
+                  {account.currency !== 'USD' && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#C5C6C7] text-sm">USD Equivalent</span>
+                      <span className="text-lg font-mono text-[#66FCF1]">${(account.balance_usd || 0).toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <span className="text-[#C5C6C7] text-sm">Type</span>
                     {getTypeBadge(account.account_type)}
