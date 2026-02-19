@@ -217,7 +217,9 @@ class TransactionCreate(BaseModel):
     currency: str = "USD"
     base_currency: str = "USD"
     base_amount: Optional[float] = None
+    destination_type: str = "treasury"  # "treasury" or "psp"
     destination_account_id: Optional[str] = None
+    psp_id: Optional[str] = None
     description: Optional[str] = None
     reference: Optional[str] = None
 
