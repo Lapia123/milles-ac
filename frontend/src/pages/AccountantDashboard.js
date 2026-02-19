@@ -12,6 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../components/ui/tabs';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -25,6 +31,10 @@ import {
   Image as ImageIcon,
   AlertCircle,
   Calculator,
+  Wallet,
+  Store,
+  Building2,
+  Banknote,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
