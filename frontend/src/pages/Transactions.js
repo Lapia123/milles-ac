@@ -280,6 +280,13 @@ export default function Transactions() {
       commission_paid_by: 'client',
       description: '',
       reference: '',
+      client_bank_name: '',
+      client_bank_account_name: '',
+      client_bank_account_number: '',
+      client_bank_swift_iban: '',
+      client_bank_currency: 'USD',
+      client_usdt_address: '',
+      client_usdt_network: '',
     });
     setProofImage(null);
     setProofPreview(null);
