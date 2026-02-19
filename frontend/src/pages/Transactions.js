@@ -456,7 +456,7 @@ export default function Transactions() {
                 <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Destination Type *</Label>
                 <Select
                   value={formData.destination_type}
-                  onValueChange={(value) => setFormData({ ...formData, destination_type: value, destination_account_id: '', psp_id: '' })}
+                  onValueChange={(value) => setFormData({ ...formData, destination_type: value, destination_account_id: '', psp_id: '', vendor_id: '' })}
                 >
                   <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-dest-type">
                     <SelectValue />
@@ -464,6 +464,7 @@ export default function Transactions() {
                   <SelectContent className="bg-[#1F2833] border-white/10">
                     <SelectItem value="treasury" className="text-white hover:bg-white/5">Treasury / Bank Account</SelectItem>
                     <SelectItem value="psp" className="text-white hover:bg-white/5">Payment Service Provider (PSP)</SelectItem>
+                    <SelectItem value="vendor" className="text-white hover:bg-white/5">Vendor</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -483,6 +484,28 @@ export default function Transactions() {
                       {treasuryAccounts.map((account) => (
                         <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
                           {account.account_name} - {account.bank_name} ({account.currency})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              
+              {/* Vendor Destination */}
+              {formData.destination_type === 'vendor' && (
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Select Vendor *</Label>
+                  <Select
+                    value={formData.vendor_id}
+                    onValueChange={(value) => setFormData({ ...formData, vendor_id: value })}
+                  >
+                    <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-vendor">
+                      <SelectValue placeholder="Select vendor" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1F2833] border-white/10">
+                      {vendors.filter(v => v.status === 'active').map((vendor) => (
+                        <SelectItem key={vendor.vendor_id} value={vendor.vendor_id} className="text-white hover:bg-white/5">
+                          {vendor.vendor_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
