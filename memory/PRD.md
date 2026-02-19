@@ -5,48 +5,48 @@ Build account software for FX broker - a back-office accounting system with admi
 
 ## Latest Update (2026-02-19)
 
-### Vendor Settlement Updates - COMPLETED
-Simplified vendor creation and manual settlement:
+### Settlement Approval Workflow & Treasury History - COMPLETED
 
-1. **Add Vendor Form (Simplified)**
-   - Vendor Name, Email, Password
-   - Deposit Commission %, Withdrawal Commission %
-   - Description
-   - **Removed**: Settlement Commissions (Bank/Cash) and Settlement Destination from create form
+1. **Settlement Approval Workflow**
+   - Vendor settlements now go to "pending" status first
+   - Settlements appear in Approvals page under "Settlements" tab
+   - Accountant/Admin can approve or reject with math captcha verification
+   - Treasury balance updated only upon settlement approval
+   - Rejected settlements allow transactions to be re-settled
 
-2. **Manual Settlement (New Flow)**
-   - Admin enters commission amount manually at settlement time
-   - Admin selects destination treasury account at settlement time
-   - Option to record additional charges/fees
-   - Settlement preview showing calculations
-   - Multi-currency support (vendor in INR → settlement in AED)
+2. **Treasury History & Statement Download**
+   - New "View History" button on treasury account cards
+   - History dialog with transaction table (Date, Type, Reference, Amount)
+   - Date filters (Start Date, End Date)
+   - Transaction type filter (All Types, Deposit, Withdrawal, Settlement In)
+   - Download Statement button generates CSV file
 
-3. **Settlement Dialog Features**
-   - Settlement Type: Bank / Cash
-   - Settlement Destination: Select from treasury accounts
-   - Commission Amount: Manual entry
-   - Additional Charges: Optional with description
-   - Settlement Preview with net calculations
+3. **Approvals Page Enhancements**
+   - Two tabs: "Transactions" and "Settlements"
+   - Stats cards showing pending counts for both
+   - Math captcha for approve/reject actions
 
 ### Previous Updates
-- **2026-02-19 (Earlier)**: Vendor Portal feature
+- **2026-02-19**: Vendor Settlement with manual commission & multi-currency
+- **2026-02-19**: Vendor Portal feature
 - **2026-02-19**: PSP Management with commission tracking
 - **2026-02-18**: Math captcha, MT5 Number, CRM Customer ID, Multi-currency
 
 ## User Roles
 1. **Admin** - Full access, manage vendors/PSPs, manual settlements
 2. **Sub-Admin** - Manage clients, create transactions
-3. **Accountant** - Approve/reject pending transactions
+3. **Accountant** - Approve/reject pending transactions AND settlements
 4. **Vendor** - View/approve/reject assigned transactions, upload withdrawal proofs
 
 ## Core Features
 - Client management
 - Transaction ledger with proof upload
 - Multi-currency transactions
-- Treasury/Bank account management
+- Treasury/Bank account management with history & statement download
 - PSP management with settlements
 - **Vendor Portal** with approve/reject workflow
 - **Manual Vendor Settlement** with commission & charges
+- **Settlement Approval Workflow** - two-step approval process
 
 ## API Endpoints
 
