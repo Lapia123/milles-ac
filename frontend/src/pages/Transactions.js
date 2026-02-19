@@ -193,6 +193,25 @@ export default function Transactions() {
     }
   };
 
+  const fetchClientBankAccounts = async (clientId) => {
+    if (!clientId) {
+      setClientBankAccounts([]);
+      return;
+    }
+    try {
+      const response = await fetch(`${API_URL}/api/clients/${clientId}/bank-accounts`, { 
+        headers: getAuthHeaders(), 
+        credentials: 'include' 
+      });
+      if (response.ok) {
+        setClientBankAccounts(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching client bank accounts:', error);
+      setClientBankAccounts([]);
+    }
+  };
+
   useEffect(() => {
     fetchTransactions();
     fetchClients();
