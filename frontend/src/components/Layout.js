@@ -43,6 +43,7 @@ export default function Layout() {
     { to: '/clients', icon: Users, label: 'Clients' },
     { to: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
     { to: '/treasury', icon: Landmark, label: 'Treasury' },
+    { to: '/psp', icon: CreditCard, label: 'PSP' },
     { to: '/reports', icon: BarChart3, label: 'Reports' },
     ...(isAccountantOrAdmin ? [{ to: '/accountant', icon: ClipboardCheck, label: 'Approvals' }] : []),
     { to: '/settings', icon: Settings, label: 'Settings' },
