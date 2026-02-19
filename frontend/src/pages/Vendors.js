@@ -758,6 +758,7 @@ export default function Vendors() {
         setSettlementCommission('');
         setSettlementCharges('');
         setSettlementChargesDescription('');
+        setSettlementAmountInDestCurrency('');
       }}>
         <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
