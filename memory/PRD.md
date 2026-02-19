@@ -5,28 +5,36 @@ Build account software for FX broker - a back-office accounting system with admi
 
 ## Latest Update (2026-02-19)
 
-### Settlement Approval Workflow & Treasury History - COMPLETED
+### New Transaction Destination Types & USDT Support - COMPLETED
 
-1. **Settlement Approval Workflow**
-   - Vendor settlements now go to "pending" status first
-   - Settlements appear in Approvals page under "Settlements" tab
-   - Accountant/Admin can approve or reject with math captcha verification
-   - Treasury balance updated only upon settlement approval
-   - Rejected settlements allow transactions to be re-settled
+1. **New Destination Types**
+   - Treasury/Bank Account (existing)
+   - **Client Bank (Withdrawal)** - Shows client bank details form instead of treasury selector
+   - **USDT** - For both deposit and withdrawal
+   - PSP (existing)
+   - Vendor (existing)
 
-2. **Treasury History & Statement Download**
-   - New "View History" button on treasury account cards
-   - History dialog with transaction table (Date, Type, Reference, Amount)
-   - Date filters (Start Date, End Date)
-   - Transaction type filter (All Types, Deposit, Withdrawal, Settlement In)
-   - Download Statement button generates CSV file
+2. **Client Bank Withdrawal**
+   - Bank Name, Account Name, Account Number, SWIFT/IBAN, Currency
+   - NO treasury account selector shown for this type
+   - Details stored with transaction and shown in Approvals
 
-3. **Approvals Page Enhancements**
-   - Two tabs: "Transactions" and "Settlements"
-   - Stats cards showing pending counts for both
-   - Math captcha for approve/reject actions
+3. **USDT Transactions**
+   - Deposit: Select USDT treasury account
+   - Withdrawal: Enter client USDT address + Network (TRC20/ERC20/BEP20)
+   - Details shown in Pending Approvals
+
+4. **USDT Treasury Accounts**
+   - New account type: USDT Wallet
+   - Fields: Wallet Address, Network, Private Notes/Labels, Balance
+
+5. **Pending Approvals Enhancements**
+   - Shows client bank/USDT details for withdrawal transactions
+   - Upload Proof button for accountants to upload payment screenshot
+   - Proof stored as `accountant_proof_image` in transaction
 
 ### Previous Updates
+- **2026-02-19**: Settlement Approval Workflow & Treasury History
 - **2026-02-19**: Vendor Settlement with manual commission & multi-currency
 - **2026-02-19**: Vendor Portal feature
 - **2026-02-19**: PSP Management with commission tracking
