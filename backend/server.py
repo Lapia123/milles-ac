@@ -884,7 +884,9 @@ async def create_transaction(
     currency: str = Form("USD"),
     base_currency: str = Form("USD"),
     base_amount: Optional[float] = Form(None),
+    destination_type: str = Form("treasury"),
     destination_account_id: Optional[str] = Form(None),
+    psp_id: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     reference: Optional[str] = Form(None),
     proof_image: Optional[UploadFile] = File(None),
@@ -895,12 +897,18 @@ async def create_transaction(
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     
-    # Verify destination account if provided
+    # Verify destination based on type
     destination_account = None
-    if destination_account_id:
+    psp_info = None
+    
+    if destination_type == "treasury" and destination_account_id:
         destination_account = await db.treasury_accounts.find_one({"account_id": destination_account_id}, {"_id": 0})
         if not destination_account:
             raise HTTPException(status_code=404, detail="Destination account not found")
+    elif destination_type == "psp" and psp_id:
+        psp_info = await db.psps.find_one({"psp_id": psp_id}, {"_id": 0})
+        if not psp_info:
+            raise HTTPException(status_code=404, detail="PSP not found")
     
     tx_id = f"tx_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
@@ -925,9 +933,13 @@ async def create_transaction(
         "currency": "USD",
         "base_currency": base_currency or "USD",
         "base_amount": base_amount if base_currency != "USD" else None,
-        "destination_account_id": destination_account_id,
+        "destination_type": destination_type,
+        "destination_account_id": destination_account_id if destination_type == "treasury" else None,
         "destination_account_name": destination_account["account_name"] if destination_account else None,
         "destination_bank_name": destination_account["bank_name"] if destination_account else None,
+        "psp_id": psp_id if destination_type == "psp" else None,
+        "psp_name": psp_info["psp_name"] if psp_info else None,
+        "psp_commission_rate": psp_info["commission_rate"] if psp_info else None,
         "status": TransactionStatus.PENDING,
         "description": description,
         "reference": reference or f"REF{uuid.uuid4().hex[:8].upper()}",
@@ -937,6 +949,9 @@ async def create_transaction(
         "processed_by": None,
         "processed_by_name": None,
         "rejection_reason": None,
+        "settled": False,
+        "settlement_id": None,
+        "settlement_status": None,
         "created_at": now.isoformat(),
         "processed_at": None
     }
