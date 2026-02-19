@@ -667,6 +667,138 @@ export default function Treasury() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Transaction History Dialog */}
+      <Dialog open={!!historyAccount} onOpenChange={() => { 
+        setHistoryAccount(null); 
+        setHistoryData([]);
+        setHistoryFilters({ startDate: '', endDate: '', transactionType: '' });
+      }}>
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-4xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+              <History className="w-6 h-6 text-[#66FCF1]" />
+              Transaction History
+            </DialogTitle>
+          </DialogHeader>
+          {historyAccount && (
+            <div className="space-y-4">
+              {/* Account Info */}
+              <div className="flex items-center justify-between p-4 bg-[#0B0C10] rounded-sm">
+                <div className="flex items-center gap-3">
+                  <Building2 className="w-5 h-5 text-[#66FCF1]" />
+                  <div>
+                    <p className="text-white font-medium">{historyAccount.account_name}</p>
+                    <p className="text-xs text-[#C5C6C7]">{historyAccount.bank_name || 'N/A'}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider">Balance</p>
+                  <p className="text-xl font-mono font-bold text-white">
+                    {historyAccount.currency === 'USD' ? '$' : ''}{(historyAccount.balance || 0).toLocaleString()} {historyAccount.currency !== 'USD' ? historyAccount.currency : ''}
+                  </p>
+                </div>
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-wrap items-end gap-4 p-4 bg-[#0B0C10] rounded-sm">
+                <div className="flex-1 min-w-[150px] space-y-1">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Start Date</Label>
+                  <Input
+                    type="date"
+                    value={historyFilters.startDate}
+                    onChange={(e) => setHistoryFilters({ ...historyFilters, startDate: e.target.value })}
+                    className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1]"
+                    data-testid="history-start-date"
+                  />
+                </div>
+                <div className="flex-1 min-w-[150px] space-y-1">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">End Date</Label>
+                  <Input
+                    type="date"
+                    value={historyFilters.endDate}
+                    onChange={(e) => setHistoryFilters({ ...historyFilters, endDate: e.target.value })}
+                    className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1]"
+                    data-testid="history-end-date"
+                  />
+                </div>
+                <div className="flex-1 min-w-[150px] space-y-1">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Type</Label>
+                  <Select
+                    value={historyFilters.transactionType}
+                    onValueChange={(value) => setHistoryFilters({ ...historyFilters, transactionType: value === 'all' ? '' : value })}
+                  >
+                    <SelectTrigger className="bg-[#1F2833] border-white/10 text-white" data-testid="history-type-filter">
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1F2833] border-white/10">
+                      <SelectItem value="all" className="text-white hover:bg-white/5">All Types</SelectItem>
+                      <SelectItem value="deposit" className="text-white hover:bg-white/5">Deposit</SelectItem>
+                      <SelectItem value="withdrawal" className="text-white hover:bg-white/5">Withdrawal</SelectItem>
+                      <SelectItem value="settlement_in" className="text-white hover:bg-white/5">Settlement In</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  onClick={downloadStatement}
+                  disabled={historyData.length === 0}
+                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+                  data-testid="download-statement-btn"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download Statement
+                </Button>
+              </div>
+
+              {/* Transaction Table */}
+              <ScrollArea className="h-[350px]">
+                {historyLoading ? (
+                  <div className="flex justify-center py-12">
+                    <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : historyData.length === 0 ? (
+                  <div className="text-center py-12">
+                    <History className="w-12 h-12 text-[#C5C6C7] mx-auto mb-4" />
+                    <p className="text-[#C5C6C7]">No transaction history found</p>
+                    <p className="text-sm text-[#C5C6C7]/60 mt-2">Transactions will appear here once approved</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-white/10 hover:bg-transparent">
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Type</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {historyData.map((tx, idx) => {
+                        const isIncoming = tx.amount > 0 || tx.transaction_type === 'deposit' || tx.transaction_type === 'settlement_in';
+                        return (
+                          <TableRow key={tx.treasury_transaction_id || idx} className="border-white/5 hover:bg-white/5">
+                            <TableCell className="text-white text-sm">{formatDate(tx.created_at)}</TableCell>
+                            <TableCell>
+                              <div className={`flex items-center gap-1 ${isIncoming ? 'text-green-400' : 'text-red-400'}`}>
+                                {isIncoming ? <ArrowDownRight className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
+                                <span className="capitalize text-sm">{tx.transaction_type || 'N/A'}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-white text-sm max-w-[200px] truncate">{tx.reference || '-'}</TableCell>
+                            <TableCell className={`font-mono text-right ${isIncoming ? 'text-green-400' : 'text-red-400'}`}>
+                              {isIncoming ? '+' : ''}{Math.abs(tx.amount || 0).toLocaleString()} {historyAccount.currency}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </ScrollArea>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
