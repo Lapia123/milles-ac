@@ -1049,11 +1049,6 @@ async def get_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
 
 @api_router.post("/vendors")
 async def create_vendor(vendor_data: VendorCreate, user: dict = Depends(require_admin)):
-    # Verify settlement destination exists
-    dest = await db.treasury_accounts.find_one({"account_id": vendor_data.settlement_destination_id}, {"_id": 0})
-    if not dest:
-        raise HTTPException(status_code=404, detail="Settlement destination account not found")
-    
     # Check if email already exists
     existing = await db.users.find_one({"email": vendor_data.email}, {"_id": 0})
     if existing:
@@ -1085,9 +1080,6 @@ async def create_vendor(vendor_data: VendorCreate, user: dict = Depends(require_
         "email": vendor_data.email,
         "deposit_commission": vendor_data.deposit_commission,
         "withdrawal_commission": vendor_data.withdrawal_commission,
-        "bank_settlement_commission": vendor_data.bank_settlement_commission,
-        "cash_settlement_commission": vendor_data.cash_settlement_commission,
-        "settlement_destination_id": vendor_data.settlement_destination_id,
         "description": vendor_data.description,
         "total_volume": 0.0,
         "total_commission": 0.0,
@@ -1105,12 +1097,6 @@ async def update_vendor(vendor_id: str, update_data: VendorUpdate, user: dict = 
     updates = {k: v for k, v in update_data.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No updates provided")
-    
-    # Verify settlement destination if being updated
-    if updates.get("settlement_destination_id"):
-        dest = await db.treasury_accounts.find_one({"account_id": updates["settlement_destination_id"]}, {"_id": 0})
-        if not dest:
-            raise HTTPException(status_code=404, detail="Settlement destination account not found")
     
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
     
