@@ -2876,6 +2876,378 @@ async def delete_income_expense(entry_id: str, user: dict = Depends(require_admi
     
     return {"message": "Entry deleted successfully"}
 
+# ============== LOAN MANAGEMENT ROUTES ==============
+
+@api_router.get("/loans")
+async def get_loans(
+    status: Optional[str] = None,
+    borrower: Optional[str] = None,
+    limit: int = 100,
+    user: dict = Depends(get_current_user)
+):
+    """Get all loans with optional filters"""
+    query = {}
+    if status:
+        query["status"] = status
+    if borrower:
+        query["borrower_name"] = {"$regex": borrower, "$options": "i"}
+    
+    loans = await db.loans.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    # Get treasury account names and calculate outstanding
+    for loan in loans:
+        if loan.get("source_treasury_id"):
+            acc = await db.treasury_accounts.find_one({"account_id": loan["source_treasury_id"]}, {"_id": 0})
+            loan["source_treasury_name"] = acc["account_name"] if acc else "Unknown"
+        
+        # Calculate outstanding balance
+        loan["outstanding_balance"] = loan["amount"] + loan.get("total_interest", 0) - loan.get("total_repaid", 0)
+        
+        # Check if overdue
+        if loan["status"] == LoanStatus.ACTIVE:
+            from datetime import datetime
+            if loan.get("due_date") and datetime.fromisoformat(loan["due_date"].replace("Z", "+00:00")) < datetime.now(timezone.utc):
+                loan["is_overdue"] = True
+    
+    return loans
+
+@api_router.get("/loans/{loan_id}")
+async def get_loan(loan_id: str, user: dict = Depends(get_current_user)):
+    """Get a single loan with repayment history"""
+    loan = await db.loans.find_one({"loan_id": loan_id}, {"_id": 0})
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    
+    # Get treasury account name
+    if loan.get("source_treasury_id"):
+        acc = await db.treasury_accounts.find_one({"account_id": loan["source_treasury_id"]}, {"_id": 0})
+        loan["source_treasury_name"] = acc["account_name"] if acc else "Unknown"
+    
+    # Get repayment history
+    repayments = await db.loan_repayments.find({"loan_id": loan_id}, {"_id": 0}).sort("payment_date", -1).to_list(1000)
+    for rep in repayments:
+        if rep.get("treasury_account_id"):
+            acc = await db.treasury_accounts.find_one({"account_id": rep["treasury_account_id"]}, {"_id": 0})
+            rep["treasury_account_name"] = acc["account_name"] if acc else "Unknown"
+    
+    loan["repayments"] = repayments
+    loan["outstanding_balance"] = loan["amount"] + loan.get("total_interest", 0) - loan.get("total_repaid", 0)
+    
+    return loan
+
+@api_router.post("/loans")
+async def create_loan(loan_data: LoanCreate, user: dict = Depends(get_current_user)):
+    """Create a new loan and deduct from treasury"""
+    # Verify treasury account exists and has sufficient balance
+    treasury = await db.treasury_accounts.find_one({"account_id": loan_data.treasury_account_id}, {"_id": 0})
+    if not treasury:
+        raise HTTPException(status_code=404, detail="Treasury account not found")
+    
+    if treasury.get("balance", 0) < loan_data.amount:
+        raise HTTPException(status_code=400, detail="Insufficient balance in treasury account")
+    
+    if loan_data.amount <= 0:
+        raise HTTPException(status_code=400, detail="Loan amount must be positive")
+    
+    loan_id = f"loan_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    
+    # Calculate interest (simple interest for now)
+    # Interest = Principal * Rate * Time (in years)
+    loan_date = datetime.fromisoformat(loan_data.loan_date.replace("Z", "+00:00"))
+    due_date = datetime.fromisoformat(loan_data.due_date.replace("Z", "+00:00"))
+    days_diff = (due_date - loan_date).days
+    years = days_diff / 365
+    total_interest = round(loan_data.amount * (loan_data.interest_rate / 100) * years, 2)
+    
+    # Calculate USD equivalent
+    amount_usd = convert_to_usd(loan_data.amount, loan_data.currency)
+    
+    loan_doc = {
+        "loan_id": loan_id,
+        "borrower_name": loan_data.borrower_name,
+        "amount": loan_data.amount,
+        "currency": loan_data.currency,
+        "amount_usd": amount_usd,
+        "interest_rate": loan_data.interest_rate,
+        "total_interest": total_interest,
+        "loan_date": loan_data.loan_date,
+        "due_date": loan_data.due_date,
+        "repayment_mode": loan_data.repayment_mode,
+        "installment_amount": loan_data.installment_amount,
+        "installment_frequency": loan_data.installment_frequency,
+        "source_treasury_id": loan_data.treasury_account_id,
+        "total_repaid": 0,
+        "repayment_count": 0,
+        "status": LoanStatus.ACTIVE,
+        "notes": loan_data.notes,
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    
+    await db.loans.insert_one(loan_doc)
+    
+    # Deduct from treasury account
+    await db.treasury_accounts.update_one(
+        {"account_id": loan_data.treasury_account_id},
+        {"$inc": {"balance": -loan_data.amount}, "$set": {"updated_at": now.isoformat()}}
+    )
+    
+    # Record treasury transaction
+    tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+    tx_doc = {
+        "treasury_transaction_id": tx_id,
+        "account_id": loan_data.treasury_account_id,
+        "transaction_type": "loan_disbursement",
+        "amount": -loan_data.amount,
+        "currency": loan_data.currency,
+        "reference": f"Loan to {loan_data.borrower_name}",
+        "loan_id": loan_id,
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    await db.treasury_transactions.insert_one(tx_doc)
+    
+    loan_doc.pop("_id", None)
+    loan_doc["source_treasury_name"] = treasury["account_name"]
+    loan_doc["outstanding_balance"] = loan_data.amount + total_interest
+    return loan_doc
+
+@api_router.put("/loans/{loan_id}")
+async def update_loan(loan_id: str, update_data: LoanUpdate, user: dict = Depends(get_current_user)):
+    """Update loan details (not amount)"""
+    loan = await db.loans.find_one({"loan_id": loan_id}, {"_id": 0})
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    
+    update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
+    if not update_dict:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.loans.update_one({"loan_id": loan_id}, {"$set": update_dict})
+    
+    updated = await db.loans.find_one({"loan_id": loan_id}, {"_id": 0})
+    return updated
+
+@api_router.post("/loans/{loan_id}/repayment")
+async def record_loan_repayment(loan_id: str, repayment: LoanRepaymentCreate, user: dict = Depends(get_current_user)):
+    """Record a loan repayment"""
+    loan = await db.loans.find_one({"loan_id": loan_id}, {"_id": 0})
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    
+    if loan["status"] == LoanStatus.FULLY_PAID:
+        raise HTTPException(status_code=400, detail="Loan is already fully paid")
+    
+    # Verify treasury account exists
+    treasury = await db.treasury_accounts.find_one({"account_id": repayment.treasury_account_id}, {"_id": 0})
+    if not treasury:
+        raise HTTPException(status_code=404, detail="Treasury account not found")
+    
+    if repayment.amount <= 0:
+        raise HTTPException(status_code=400, detail="Repayment amount must be positive")
+    
+    repayment_id = f"rep_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    payment_date = repayment.payment_date if repayment.payment_date else now.isoformat()[:10]
+    
+    # Convert to loan currency if different
+    repayment_amount_in_loan_currency = repayment.amount
+    if repayment.currency != loan["currency"]:
+        # Convert to USD first, then to loan currency
+        amount_usd = convert_to_usd(repayment.amount, repayment.currency)
+        loan_rate = EXCHANGE_RATES_TO_USD.get(loan["currency"].upper(), 1.0)
+        repayment_amount_in_loan_currency = round(amount_usd / loan_rate, 2) if loan_rate else repayment.amount
+    
+    repayment_doc = {
+        "repayment_id": repayment_id,
+        "loan_id": loan_id,
+        "amount": repayment.amount,
+        "currency": repayment.currency,
+        "amount_in_loan_currency": repayment_amount_in_loan_currency,
+        "treasury_account_id": repayment.treasury_account_id,
+        "payment_date": payment_date,
+        "reference": repayment.reference,
+        "notes": repayment.notes,
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    
+    await db.loan_repayments.insert_one(repayment_doc)
+    
+    # Update loan totals
+    new_total_repaid = loan.get("total_repaid", 0) + repayment_amount_in_loan_currency
+    outstanding = loan["amount"] + loan.get("total_interest", 0) - new_total_repaid
+    
+    # Determine new status
+    new_status = loan["status"]
+    if outstanding <= 0:
+        new_status = LoanStatus.FULLY_PAID
+    elif new_total_repaid > 0:
+        new_status = LoanStatus.PARTIALLY_PAID
+    
+    await db.loans.update_one(
+        {"loan_id": loan_id},
+        {
+            "$set": {
+                "total_repaid": new_total_repaid,
+                "status": new_status,
+                "updated_at": now.isoformat()
+            },
+            "$inc": {"repayment_count": 1}
+        }
+    )
+    
+    # Credit treasury account
+    await db.treasury_accounts.update_one(
+        {"account_id": repayment.treasury_account_id},
+        {"$inc": {"balance": repayment.amount}, "$set": {"updated_at": now.isoformat()}}
+    )
+    
+    # Record treasury transaction
+    tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+    tx_doc = {
+        "treasury_transaction_id": tx_id,
+        "account_id": repayment.treasury_account_id,
+        "transaction_type": "loan_repayment",
+        "amount": repayment.amount,
+        "currency": repayment.currency,
+        "reference": f"Loan repayment from {loan['borrower_name']}",
+        "loan_id": loan_id,
+        "repayment_id": repayment_id,
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    await db.treasury_transactions.insert_one(tx_doc)
+    
+    repayment_doc.pop("_id", None)
+    repayment_doc["treasury_account_name"] = treasury["account_name"]
+    repayment_doc["new_outstanding"] = max(0, outstanding)
+    repayment_doc["loan_status"] = new_status
+    return repayment_doc
+
+@api_router.get("/loans/{loan_id}/repayments")
+async def get_loan_repayments(loan_id: str, user: dict = Depends(get_current_user)):
+    """Get repayment history for a loan"""
+    loan = await db.loans.find_one({"loan_id": loan_id}, {"_id": 0})
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    
+    repayments = await db.loan_repayments.find({"loan_id": loan_id}, {"_id": 0}).sort("payment_date", -1).to_list(1000)
+    
+    for rep in repayments:
+        if rep.get("treasury_account_id"):
+            acc = await db.treasury_accounts.find_one({"account_id": rep["treasury_account_id"]}, {"_id": 0})
+            rep["treasury_account_name"] = acc["account_name"] if acc else "Unknown"
+    
+    return repayments
+
+@api_router.delete("/loans/{loan_id}")
+async def delete_loan(loan_id: str, user: dict = Depends(require_admin)):
+    """Delete a loan (admin only) - reverses treasury if no repayments"""
+    loan = await db.loans.find_one({"loan_id": loan_id}, {"_id": 0})
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    
+    # Check if there are repayments
+    repayment_count = await db.loan_repayments.count_documents({"loan_id": loan_id})
+    if repayment_count > 0:
+        raise HTTPException(status_code=400, detail="Cannot delete loan with repayments. Delete repayments first.")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Reverse treasury balance (credit back the loan amount)
+    await db.treasury_accounts.update_one(
+        {"account_id": loan["source_treasury_id"]},
+        {"$inc": {"balance": loan["amount"]}, "$set": {"updated_at": now.isoformat()}}
+    )
+    
+    # Delete the loan
+    await db.loans.delete_one({"loan_id": loan_id})
+    
+    # Delete related treasury transaction
+    await db.treasury_transactions.delete_one({"loan_id": loan_id})
+    
+    return {"message": "Loan deleted successfully"}
+
+@api_router.get("/loans/reports/summary")
+async def get_loans_summary(user: dict = Depends(get_current_user)):
+    """Get loan portfolio summary"""
+    loans = await db.loans.find({}, {"_id": 0}).to_list(10000)
+    
+    total_disbursed = 0
+    total_outstanding = 0
+    total_repaid = 0
+    total_interest_expected = 0
+    total_interest_earned = 0
+    
+    active_count = 0
+    partially_paid_count = 0
+    fully_paid_count = 0
+    overdue_count = 0
+    
+    by_borrower = {}
+    
+    for loan in loans:
+        amount_usd = loan.get("amount_usd", convert_to_usd(loan["amount"], loan["currency"]))
+        interest_usd = convert_to_usd(loan.get("total_interest", 0), loan["currency"])
+        repaid_usd = convert_to_usd(loan.get("total_repaid", 0), loan["currency"])
+        
+        total_disbursed += amount_usd
+        total_interest_expected += interest_usd
+        total_repaid += repaid_usd
+        
+        outstanding = amount_usd + interest_usd - repaid_usd
+        if outstanding > 0:
+            total_outstanding += outstanding
+        
+        # Interest earned is the interest portion of repayments
+        if loan.get("total_repaid", 0) > loan["amount"]:
+            total_interest_earned += convert_to_usd(loan["total_repaid"] - loan["amount"], loan["currency"])
+        
+        # Count by status
+        if loan["status"] == LoanStatus.ACTIVE:
+            active_count += 1
+            # Check if overdue
+            if loan.get("due_date"):
+                due = datetime.fromisoformat(loan["due_date"].replace("Z", "+00:00"))
+                if due < datetime.now(timezone.utc):
+                    overdue_count += 1
+        elif loan["status"] == LoanStatus.PARTIALLY_PAID:
+            partially_paid_count += 1
+        elif loan["status"] == LoanStatus.FULLY_PAID:
+            fully_paid_count += 1
+        
+        # Group by borrower
+        borrower = loan["borrower_name"]
+        if borrower not in by_borrower:
+            by_borrower[borrower] = {"disbursed": 0, "outstanding": 0, "count": 0}
+        by_borrower[borrower]["disbursed"] += amount_usd
+        by_borrower[borrower]["outstanding"] += max(0, outstanding)
+        by_borrower[borrower]["count"] += 1
+    
+    return {
+        "total_loans": len(loans),
+        "total_disbursed_usd": round(total_disbursed, 2),
+        "total_outstanding_usd": round(total_outstanding, 2),
+        "total_repaid_usd": round(total_repaid, 2),
+        "total_interest_expected_usd": round(total_interest_expected, 2),
+        "total_interest_earned_usd": round(total_interest_earned, 2),
+        "status_breakdown": {
+            "active": active_count,
+            "partially_paid": partially_paid_count,
+            "fully_paid": fully_paid_count,
+            "overdue": overdue_count
+        },
+        "by_borrower": {k: {**v, "disbursed": round(v["disbursed"], 2), "outstanding": round(v["outstanding"], 2)} for k, v in by_borrower.items()}
+    }
+
 # Include router
 app.include_router(api_router)
 
