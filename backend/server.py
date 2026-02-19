@@ -648,6 +648,98 @@ async def delete_client(client_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Client not found")
     return {"message": "Client deleted"}
 
+# ============== CLIENT BANK ACCOUNTS ROUTES ==============
+
+@api_router.get("/clients/{client_id}/bank-accounts")
+async def get_client_bank_accounts(client_id: str, user: dict = Depends(get_current_user)):
+    """Get all saved bank accounts for a client"""
+    accounts = await db.client_bank_accounts.find({"client_id": client_id}, {"_id": 0}).to_list(100)
+    return accounts
+
+@api_router.post("/clients/{client_id}/bank-accounts")
+async def create_client_bank_account(
+    client_id: str,
+    bank_name: str = Form(...),
+    account_name: str = Form(...),
+    account_number: str = Form(...),
+    swift_iban: str = Form(None),
+    currency: str = Form("USD"),
+    user: dict = Depends(get_current_user)
+):
+    """Save a new bank account for a client"""
+    # Check if client exists
+    client = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Check for duplicate account
+    existing = await db.client_bank_accounts.find_one({
+        "client_id": client_id,
+        "account_number": account_number,
+        "bank_name": bank_name
+    })
+    if existing:
+        return existing  # Return existing instead of creating duplicate
+    
+    bank_account_id = f"cba_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    
+    bank_doc = {
+        "bank_account_id": bank_account_id,
+        "client_id": client_id,
+        "bank_name": bank_name,
+        "account_name": account_name,
+        "account_number": account_number,
+        "swift_iban": swift_iban,
+        "currency": currency,
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"]
+    }
+    
+    await db.client_bank_accounts.insert_one(bank_doc)
+    return await db.client_bank_accounts.find_one({"bank_account_id": bank_account_id}, {"_id": 0})
+
+@api_router.put("/clients/{client_id}/bank-accounts/{bank_account_id}")
+async def update_client_bank_account(
+    client_id: str,
+    bank_account_id: str,
+    bank_name: str = Form(None),
+    account_name: str = Form(None),
+    account_number: str = Form(None),
+    swift_iban: str = Form(None),
+    currency: str = Form(None),
+    user: dict = Depends(get_current_user)
+):
+    """Update a client's bank account"""
+    updates = {}
+    if bank_name: updates["bank_name"] = bank_name
+    if account_name: updates["account_name"] = account_name
+    if account_number: updates["account_number"] = account_number
+    if swift_iban is not None: updates["swift_iban"] = swift_iban
+    if currency: updates["currency"] = currency
+    
+    if not updates:
+        raise HTTPException(status_code=400, detail="No updates provided")
+    
+    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.client_bank_accounts.update_one(
+        {"bank_account_id": bank_account_id, "client_id": client_id},
+        {"$set": updates}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Bank account not found")
+    
+    return await db.client_bank_accounts.find_one({"bank_account_id": bank_account_id}, {"_id": 0})
+
+@api_router.delete("/clients/{client_id}/bank-accounts/{bank_account_id}")
+async def delete_client_bank_account(client_id: str, bank_account_id: str, user: dict = Depends(get_current_user)):
+    """Delete a client's bank account"""
+    result = await db.client_bank_accounts.delete_one({"bank_account_id": bank_account_id, "client_id": client_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Bank account not found")
+    return {"message": "Bank account deleted"}
+
 # ============== TREASURY/BANK ACCOUNTS ROUTES ==============
 
 @api_router.get("/treasury")
