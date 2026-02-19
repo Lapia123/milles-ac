@@ -23,6 +23,7 @@ import {
   X,
   ChevronDown,
   ClipboardCheck,
+  CreditCard,
 } from 'lucide-react';
 
 export default function Layout() {
