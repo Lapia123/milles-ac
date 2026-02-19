@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -57,6 +57,9 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Calendar,
+  ArrowLeftRight,
+  Calculator,
+  Wallet,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
