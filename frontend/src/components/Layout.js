@@ -38,17 +38,29 @@ export default function Layout() {
   };
 
   const isAccountantOrAdmin = user?.role === 'admin' || user?.role === 'accountant';
+  const isVendor = user?.role === 'vendor';
+  const isAdmin = user?.role === 'admin';
 
-  const navItems = [
+  // Vendor-specific navigation
+  const vendorNavItems = [
+    { to: '/vendor-portal', icon: Store, label: 'My Portal' },
+    { to: '/settings', icon: Settings, label: 'Settings' },
+  ];
+
+  // Admin/Sub-admin navigation
+  const adminNavItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/clients', icon: Users, label: 'Clients' },
     { to: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
     { to: '/treasury', icon: Landmark, label: 'Treasury' },
     { to: '/psp', icon: CreditCard, label: 'PSP' },
+    ...(isAdmin ? [{ to: '/vendors', icon: Store, label: 'Vendors' }] : []),
     { to: '/reports', icon: BarChart3, label: 'Reports' },
     ...(isAccountantOrAdmin ? [{ to: '/accountant', icon: ClipboardCheck, label: 'Approvals' }] : []),
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
+
+  const navItems = isVendor ? vendorNavItems : adminNavItems;
 
   const NavItem = ({ to, icon: Icon, label }) => (
     <NavLink
