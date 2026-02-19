@@ -1821,6 +1821,37 @@ async def approve_transaction(transaction_id: str, user: dict = Depends(require_
     
     return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
 
+@api_router.post("/transactions/{transaction_id}/upload-proof")
+async def upload_withdrawal_proof(
+    transaction_id: str,
+    proof_image: UploadFile = File(...),
+    user: dict = Depends(require_accountant_or_admin)
+):
+    """Upload proof of payment for withdrawal transactions"""
+    tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    # Allow uploading proof for pending withdrawals
+    if tx["transaction_type"] != TransactionType.WITHDRAWAL:
+        raise HTTPException(status_code=400, detail="Proof upload is only for withdrawal transactions")
+    
+    content = await proof_image.read()
+    proof_image_data = base64.b64encode(content).decode('utf-8')
+    
+    now = datetime.now(timezone.utc)
+    await db.transactions.update_one(
+        {"transaction_id": transaction_id},
+        {"$set": {
+            "accountant_proof_image": proof_image_data,
+            "proof_uploaded_at": now.isoformat(),
+            "proof_uploaded_by": user["user_id"],
+            "proof_uploaded_by_name": user["name"]
+        }}
+    )
+    
+    return {"message": "Proof uploaded successfully", "transaction_id": transaction_id}
+
 @api_router.post("/transactions/{transaction_id}/reject")
 async def reject_transaction(transaction_id: str, reason: str = "", user: dict = Depends(require_accountant_or_admin)):
     """Reject a pending transaction"""
