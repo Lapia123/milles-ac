@@ -1250,6 +1250,151 @@ export default function AccountantDashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Withdrawal Approval Dialog - Source Account + Screenshot */}
+      <Dialog open={!!showApprovalDialog} onOpenChange={() => { 
+        setShowApprovalDialog(null); 
+        setApprovalSourceAccount(''); 
+        setApprovalProof(null); 
+        setApprovalProofPreview(null); 
+      }}>
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+              <CheckCircle className="w-6 h-6 text-green-400" />
+              Approve Withdrawal
+            </DialogTitle>
+          </DialogHeader>
+          {showApprovalDialog && (
+            <div className="space-y-4">
+              {/* Transaction Details */}
+              <div className="p-4 bg-[#0B0C10] rounded-sm">
+                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Transaction</p>
+                <p className="text-white font-mono">{showApprovalDialog.reference}</p>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-[#C5C6C7]">Amount:</span>
+                  <span className="text-red-400 font-mono text-lg font-bold">-${showApprovalDialog.amount?.toLocaleString()}</span>
+                </div>
+                <div className="mt-2">
+                  <span className="text-[#C5C6C7] text-sm">Client: </span>
+                  <span className="text-white">{showApprovalDialog.client_name}</span>
+                </div>
+              </div>
+
+              {/* Destination Details */}
+              <div className="p-4 bg-[#0B0C10] rounded-sm">
+                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Sending To</p>
+                {showApprovalDialog.destination_type === 'bank' && showApprovalDialog.client_bank_name && (
+                  <div className="flex items-start gap-2">
+                    <Building2 className="w-5 h-5 text-blue-400 mt-0.5" />
+                    <div>
+                      <p className="text-white">{showApprovalDialog.client_bank_name}</p>
+                      <p className="text-sm text-[#C5C6C7]">{showApprovalDialog.client_bank_account_name}</p>
+                      <p className="text-xs text-[#C5C6C7] font-mono">{showApprovalDialog.client_bank_account_number}</p>
+                      {showApprovalDialog.client_bank_swift_iban && (
+                        <p className="text-xs text-[#C5C6C7]">SWIFT: {showApprovalDialog.client_bank_swift_iban}</p>
+                      )}
+                      <Badge className="mt-1 bg-blue-500/20 text-blue-400 text-xs">{showApprovalDialog.client_bank_currency || 'USD'}</Badge>
+                    </div>
+                  </div>
+                )}
+                {showApprovalDialog.destination_type === 'usdt' && showApprovalDialog.client_usdt_address && (
+                  <div className="flex items-start gap-2">
+                    <Wallet className="w-5 h-5 text-green-400 mt-0.5" />
+                    <div>
+                      <Badge className="bg-green-500/20 text-green-400 text-xs">{showApprovalDialog.client_usdt_network}</Badge>
+                      <p className="text-xs text-[#C5C6C7] font-mono mt-1 break-all">{showApprovalDialog.client_usdt_address}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Source Treasury/USDT Account Selection */}
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Source Account (Where funds come from) *</Label>
+                <Select value={approvalSourceAccount} onValueChange={setApprovalSourceAccount}>
+                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="approval-source-account">
+                    <SelectValue placeholder="Select treasury/USDT account" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1F2833] border-white/10 max-h-[200px]">
+                    {treasuryAccounts.map((account) => (
+                      <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
+                        <div className="flex items-center gap-2">
+                          {account.account_type === 'usdt' ? <Wallet className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
+                          <span>{account.account_name}</span>
+                          <span className="text-[#C5C6C7] text-xs">({account.currency})</span>
+                          <span className="text-[#66FCF1] font-mono text-xs">${account.balance?.toLocaleString()}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Proof of Payment Upload */}
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Proof of Payment (Screenshot) *</Label>
+                {approvalProofPreview ? (
+                  <div className="relative">
+                    <img src={approvalProofPreview} alt="Proof preview" className="w-full h-40 object-contain bg-[#0B0C10] rounded-sm" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setApprovalProof(null); setApprovalProofPreview(null); }}
+                      className="absolute top-2 right-2 bg-red-500/80 text-white hover:bg-red-500"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-white/20 rounded-sm p-6 text-center">
+                    <Upload className="w-6 h-6 text-[#C5C6C7] mx-auto mb-2" />
+                    <p className="text-[#C5C6C7] text-sm mb-2">Upload payment confirmation screenshot</p>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleApprovalProofChange}
+                      className="hidden"
+                      id="approval-proof-input"
+                    />
+                    <Label
+                      htmlFor="approval-proof-input"
+                      className="cursor-pointer inline-block px-4 py-2 bg-[#66FCF1] text-[#0B0C10] font-bold uppercase text-sm rounded-sm hover:bg-[#45A29E]"
+                    >
+                      Choose File
+                    </Label>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => { 
+                    setShowApprovalDialog(null); 
+                    setApprovalSourceAccount(''); 
+                    setApprovalProof(null); 
+                    setApprovalProofPreview(null); 
+                  }}
+                  className="flex-1 border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleWithdrawalApproval}
+                  disabled={!approvalSourceAccount || !approvalProof}
+                  className="flex-1 bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  data-testid="confirm-withdrawal-approval"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Continue to Approve
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
