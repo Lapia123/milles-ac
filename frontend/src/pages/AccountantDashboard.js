@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { ScrollArea } from '../components/ui/scroll-area';
 import {
@@ -22,9 +24,100 @@ import {
   ArrowDownRight,
   Image as ImageIcon,
   AlertCircle,
+  Calculator,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// Math Captcha Component
+const MathCaptcha = ({ onVerified, onCancel, actionType }) => {
+  const [num1, setNum1] = useState(0);
+  const [num2, setNum2] = useState(0);
+  const [answer, setAnswer] = useState('');
+  const [error, setError] = useState('');
+
+  const generateCaptcha = useCallback(() => {
+    const n1 = Math.floor(Math.random() * 10) + 1;
+    const n2 = Math.floor(Math.random() * 10) + 1;
+    setNum1(n1);
+    setNum2(n2);
+    setAnswer('');
+    setError('');
+  }, []);
+
+  useEffect(() => {
+    generateCaptcha();
+  }, [generateCaptcha]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const correctAnswer = num1 + num2;
+    if (parseInt(answer) === correctAnswer) {
+      onVerified();
+    } else {
+      setError('Incorrect answer. Please try again.');
+      generateCaptcha();
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 text-[#66FCF1]">
+        <Calculator className="w-5 h-5" />
+        <span className="text-sm uppercase tracking-wider">Security Verification</span>
+      </div>
+      
+      <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
+        <p className="text-[#C5C6C7] text-sm mb-3">
+          Please solve this math problem to {actionType === 'approve' ? 'approve' : 'reject'} the transaction:
+        </p>
+        <div className="flex items-center justify-center gap-4 text-3xl font-mono text-white">
+          <span>{num1}</span>
+          <span className="text-[#66FCF1]">+</span>
+          <span>{num2}</span>
+          <span className="text-[#C5C6C7]">=</span>
+          <span className="text-[#66FCF1]">?</span>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Your Answer</Label>
+          <Input
+            type="number"
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono text-xl text-center"
+            placeholder="Enter the sum"
+            autoFocus
+            data-testid="captcha-answer"
+          />
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+        </div>
+        
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            className="flex-1 border-white/10 text-[#C5C6C7] hover:bg-white/5"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            className={`flex-1 ${actionType === 'approve' 
+              ? 'bg-green-500 text-white hover:bg-green-600' 
+              : 'bg-red-500 text-white hover:bg-red-600'}`}
+            data-testid="captcha-submit"
+          >
+            Verify & {actionType === 'approve' ? 'Approve' : 'Reject'}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+};
 
 export default function AccountantDashboard() {
   const { user } = useAuth();
@@ -34,6 +127,10 @@ export default function AccountantDashboard() {
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectDialog, setShowRejectDialog] = useState(null);
   const [processingId, setProcessingId] = useState(null);
+  
+  // Captcha states
+  const [showCaptcha, setShowCaptcha] = useState(false);
+  const [captchaAction, setCaptchaAction] = useState(null); // { type: 'approve' | 'reject', transactionId: string }
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -64,7 +161,31 @@ export default function AccountantDashboard() {
     fetchPendingTransactions();
   }, []);
 
-  const handleApprove = async (transactionId) => {
+  const initiateApprove = (transactionId) => {
+    setCaptchaAction({ type: 'approve', transactionId });
+    setShowCaptcha(true);
+  };
+
+  const initiateReject = (transactionId) => {
+    setCaptchaAction({ type: 'reject', transactionId });
+    setShowRejectDialog(transactionId);
+  };
+
+  const handleCaptchaVerified = async () => {
+    if (!captchaAction) return;
+    
+    setShowCaptcha(false);
+    
+    if (captchaAction.type === 'approve') {
+      await executeApprove(captchaAction.transactionId);
+    } else if (captchaAction.type === 'reject') {
+      await executeReject(captchaAction.transactionId);
+    }
+    
+    setCaptchaAction(null);
+  };
+
+  const executeApprove = async (transactionId) => {
     setProcessingId(transactionId);
     try {
       const response = await fetch(`${API_URL}/api/transactions/${transactionId}/approve`, {
@@ -87,7 +208,13 @@ export default function AccountantDashboard() {
     }
   };
 
-  const handleReject = async (transactionId) => {
+  const handleRejectWithCaptcha = () => {
+    // Show captcha for reject
+    setShowRejectDialog(null);
+    setShowCaptcha(true);
+  };
+
+  const executeReject = async (transactionId) => {
     setProcessingId(transactionId);
     try {
       const response = await fetch(`${API_URL}/api/transactions/${transactionId}/reject?reason=${encodeURIComponent(rejectReason)}`, {
@@ -98,7 +225,6 @@ export default function AccountantDashboard() {
 
       if (response.ok) {
         toast.success('Transaction rejected');
-        setShowRejectDialog(null);
         setRejectReason('');
         fetchPendingTransactions();
       } else {
@@ -198,8 +324,13 @@ export default function AccountantDashboard() {
                     <div>
                       <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Amount</p>
                       <p className={`font-mono text-lg font-bold ${['deposit', 'rebate'].includes(tx.transaction_type) ? 'text-green-400' : 'text-red-400'}`}>
-                        {['deposit', 'rebate'].includes(tx.transaction_type) ? '+' : '-'}${tx.amount?.toLocaleString()} {tx.currency}
+                        {['deposit', 'rebate'].includes(tx.transaction_type) ? '+' : '-'}${tx.amount?.toLocaleString()} USD
                       </p>
+                      {tx.base_currency && tx.base_currency !== 'USD' && tx.base_amount && (
+                        <p className="text-xs text-[#C5C6C7]">
+                          ({tx.base_amount?.toLocaleString()} {tx.base_currency})
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -229,7 +360,7 @@ export default function AccountantDashboard() {
                       <Eye className="w-4 h-4" />
                     </Button>
                     <Button
-                      onClick={() => handleApprove(tx.transaction_id)}
+                      onClick={() => initiateApprove(tx.transaction_id)}
                       disabled={processingId === tx.transaction_id}
                       className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
                       data-testid={`approve-tx-${tx.transaction_id}`}
@@ -238,7 +369,7 @@ export default function AccountantDashboard() {
                       Approve
                     </Button>
                     <Button
-                      onClick={() => setShowRejectDialog(tx.transaction_id)}
+                      onClick={() => initiateReject(tx.transaction_id)}
                       disabled={processingId === tx.transaction_id}
                       className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
                       data-testid={`reject-tx-${tx.transaction_id}`}
@@ -281,10 +412,15 @@ export default function AccountantDashboard() {
                   {getTypeBadge(viewTransaction.transaction_type)}
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Amount</p>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Amount (USD)</p>
                   <p className={`font-mono text-xl ${['deposit', 'rebate'].includes(viewTransaction.transaction_type) ? 'text-green-400' : 'text-red-400'}`}>
-                    {['deposit', 'rebate'].includes(viewTransaction.transaction_type) ? '+' : '-'}${viewTransaction.amount?.toLocaleString()} {viewTransaction.currency}
+                    {['deposit', 'rebate'].includes(viewTransaction.transaction_type) ? '+' : '-'}${viewTransaction.amount?.toLocaleString()} USD
                   </p>
+                  {viewTransaction.base_currency && viewTransaction.base_currency !== 'USD' && viewTransaction.base_amount && (
+                    <p className="text-sm text-[#C5C6C7]">
+                      Original: {viewTransaction.base_amount?.toLocaleString()} {viewTransaction.base_currency}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created</p>
@@ -317,8 +453,8 @@ export default function AccountantDashboard() {
               <div className="flex gap-2 pt-4">
                 <Button
                   onClick={() => {
-                    handleApprove(viewTransaction.transaction_id);
                     setViewTransaction(null);
+                    initiateApprove(viewTransaction.transaction_id);
                   }}
                   className="flex-1 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
                 >
@@ -327,8 +463,8 @@ export default function AccountantDashboard() {
                 </Button>
                 <Button
                   onClick={() => {
-                    setShowRejectDialog(viewTransaction.transaction_id);
                     setViewTransaction(null);
+                    initiateReject(viewTransaction.transaction_id);
                   }}
                   className="flex-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
                 >
@@ -341,7 +477,32 @@ export default function AccountantDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Reject Dialog */}
+      {/* Captcha Dialog */}
+      <Dialog open={showCaptcha} onOpenChange={(open) => { 
+        if (!open) {
+          setShowCaptcha(false);
+          setCaptchaAction(null);
+        }
+      }}>
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+              <Calculator className="w-6 h-6 text-[#66FCF1]" />
+              Verification Required
+            </DialogTitle>
+          </DialogHeader>
+          <MathCaptcha
+            actionType={captchaAction?.type}
+            onVerified={handleCaptchaVerified}
+            onCancel={() => {
+              setShowCaptcha(false);
+              setCaptchaAction(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Reason Dialog */}
       <Dialog open={!!showRejectDialog} onOpenChange={() => { setShowRejectDialog(null); setRejectReason(''); }}>
         <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
           <DialogHeader>
@@ -369,12 +530,11 @@ export default function AccountantDashboard() {
                 Cancel
               </Button>
               <Button
-                onClick={() => handleReject(showRejectDialog)}
-                disabled={processingId === showRejectDialog}
+                onClick={handleRejectWithCaptcha}
                 className="flex-1 bg-red-500 text-white hover:bg-red-600"
-                data-testid="confirm-reject-btn"
+                data-testid="continue-reject-btn"
               >
-                Confirm Reject
+                Continue
               </Button>
             </div>
           </div>
