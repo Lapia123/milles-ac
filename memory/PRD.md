@@ -5,6 +5,27 @@ Build account software for FX broker - a back-office accounting system with admi
 
 ## Latest Update (2026-02-19)
 
+### Inter-Treasury Transfer Feature - COMPLETED
+
+1. **Transfer Dialog**
+   - Opens from "Transfer" button on Treasury page (visible when 2+ accounts exist)
+   - Two-step process: Form entry → Security verification
+   - Select source and destination accounts
+   - Enter transfer amount with live preview
+   - Exchange rate field appears for cross-currency transfers
+   - Optional notes field
+
+2. **Security Verification**
+   - Math captcha required to confirm transfer (e.g., "5 + 7 = ?")
+   - Transfer summary shown before confirmation
+   - Back button to modify details
+
+3. **Balance Updates**
+   - Source account balance deducted immediately
+   - Destination account credited with converted amount
+   - Transfers recorded in treasury_transactions as transfer_out/transfer_in
+   - Visible in View History for both accounts
+
 ### Enhanced Approvals & Client Bank Management - COMPLETED
 
 1. **Approvals Page Filters**
@@ -37,7 +58,7 @@ Build account software for FX broker - a back-office accounting system with admi
 - **2026-02-19**: Vendor Portal, PSP Management
 
 ## User Roles
-1. **Admin** - Full access, manage vendors/PSPs, manual settlements
+1. **Admin** - Full access, manage vendors/PSPs, manual settlements, inter-treasury transfers
 2. **Sub-Admin** - Manage clients, create transactions
 3. **Accountant** - Approve/reject pending transactions AND settlements
 4. **Vendor** - View/approve/reject assigned transactions, upload withdrawal proofs
@@ -47,12 +68,40 @@ Build account software for FX broker - a back-office accounting system with admi
 - Transaction ledger with proof upload
 - Multi-currency transactions
 - Treasury/Bank account management with history & statement download
+- **Inter-Treasury Transfer** with math captcha security
 - PSP management with settlements
 - **Vendor Portal** with approve/reject workflow
 - **Manual Vendor Settlement** with commission & charges
 - **Settlement Approval Workflow** - two-step approval process
 
 ## API Endpoints
+
+### Inter-Treasury Transfer (NEW)
+```
+POST /api/treasury/transfer
+Body:
+{
+  "source_account_id": "treasury_xxx",
+  "destination_account_id": "treasury_yyy",
+  "amount": 1000.0,
+  "exchange_rate": 1.08,  // Optional, defaults to 1
+  "notes": "Internal transfer"  // Optional
+}
+
+Response:
+{
+  "transfer_id": "trf_xxx",
+  "source_account": "Main Operating Account",
+  "destination_account": "EUR Account",
+  "source_amount": 1000.0,
+  "source_currency": "USD",
+  "destination_amount": 1080.0,
+  "destination_currency": "EUR",
+  "exchange_rate": 1.08,
+  "created_at": "ISO date",
+  "created_by_name": "System Admin"
+}
+```
 
 ### Transaction Endpoints (Updated)
 ```
@@ -138,6 +187,7 @@ Query: start_date, end_date, transaction_type, limit
 - [x] Withdrawal approval requires source account + proof screenshot
 - [x] Client bank accounts saved to profile
 - [x] USDT added to all currency dropdowns
+- [x] **Inter-Treasury Transfer with math captcha security**
 
 ### P1 (Next Phase)
 - [ ] Live exchange rate API integration
@@ -149,10 +199,33 @@ Query: start_date, end_date, transaction_type, limit
 - [ ] Two-factor auth
 - [ ] MT5 API integration
 - [ ] Backend refactoring (APIRouter modules)
+- [ ] Session management bug fix (minor redirect issue after login)
 
 ## DB Schema
 
-### vendor_settlements (Updated)
+### treasury_transactions (Updated with transfer types)
+```json
+{
+  "treasury_transaction_id": "ttx_xxx",
+  "account_id": "treasury_xxx",
+  "transaction_type": "settlement_in|deposit|withdrawal|transfer_out|transfer_in",
+  "amount": 3449.8,
+  "currency": "AED",
+  "reference": "Transfer to EUR Account",
+  "transfer_id": "trf_xxx",  // For transfers
+  "related_account_id": "treasury_yyy",  // For transfers
+  "related_account_name": "EUR Account",  // For transfers
+  "exchange_rate": 1.08,  // For transfers
+  "destination_amount": 1080.0,  // For transfers
+  "destination_currency": "EUR",  // For transfers
+  "notes": "Internal transfer",  // For transfers
+  "created_at": "ISO date",
+  "created_by": "user_id",
+  "created_by_name": "User Name"
+}
+```
+
+### vendor_settlements
 ```json
 {
   "settlement_id": "vstl_xxx",
@@ -173,21 +246,5 @@ Query: start_date, end_date, transaction_type, limit
   "approved_by": "user_id",
   "approved_by_name": "User Name",
   "rejection_reason": "optional reason"
-}
-```
-
-### treasury_transactions (New Collection)
-```json
-{
-  "treasury_transaction_id": "ttx_xxx",
-  "account_id": "treasury_xxx",
-  "transaction_type": "settlement_in|deposit|withdrawal",
-  "amount": 3449.8,
-  "currency": "AED",
-  "reference": "Vendor Settlement: VendorName",
-  "settlement_id": "vstl_xxx",
-  "vendor_id": "vendor_xxx",
-  "created_at": "ISO date",
-  "created_by": "user_id"
 }
 ```
