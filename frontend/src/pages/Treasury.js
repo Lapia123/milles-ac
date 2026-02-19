@@ -439,10 +439,22 @@ export default function Treasury() {
           </h1>
           <p className="text-[#C5C6C7]">Manage bank accounts and treasury</p>
         </div>
-        {isAdmin && (
-          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button
+        <div className="flex gap-2">
+          {isAdmin && accounts.length >= 2 && (
+            <Button
+              onClick={initiateTransfer}
+              variant="outline"
+              className="border-[#66FCF1]/50 text-[#66FCF1] hover:bg-[#66FCF1]/10 font-bold uppercase tracking-wider rounded-sm"
+              data-testid="transfer-btn"
+            >
+              <ArrowLeftRight className="w-4 h-4 mr-2" />
+              Transfer
+            </Button>
+          )}
+          {isAdmin && (
+            <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button
                 className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
                 data-testid="add-treasury-btn"
               >
