@@ -2580,6 +2580,124 @@ async def get_income_expenses(
     
     return entries
 
+@api_router.get("/income-expenses/reports/summary")
+async def get_income_expense_summary(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Get income vs expense summary report"""
+    query = {}
+    if start_date:
+        query["date"] = {"$gte": start_date}
+    if end_date:
+        if "date" in query:
+            query["date"]["$lte"] = end_date
+        else:
+            query["date"] = {"$lte": end_date}
+    
+    # Get all entries
+    entries = await db.income_expenses.find(query, {"_id": 0}).to_list(10000)
+    
+    total_income = sum(e["amount_usd"] for e in entries if e["entry_type"] == IncomeExpenseType.INCOME)
+    total_expense = sum(e["amount_usd"] for e in entries if e["entry_type"] == IncomeExpenseType.EXPENSE)
+    net_profit = total_income - total_expense
+    
+    # Category breakdown
+    income_by_category = {}
+    expense_by_category = {}
+    
+    for entry in entries:
+        cat = entry.get("custom_category") or entry["category"]
+        amount = entry["amount_usd"]
+        if entry["entry_type"] == IncomeExpenseType.INCOME:
+            income_by_category[cat] = income_by_category.get(cat, 0) + amount
+        else:
+            expense_by_category[cat] = expense_by_category.get(cat, 0) + amount
+    
+    return {
+        "total_income_usd": round(total_income, 2),
+        "total_expense_usd": round(total_expense, 2),
+        "net_profit_usd": round(net_profit, 2),
+        "income_by_category": {k: round(v, 2) for k, v in income_by_category.items()},
+        "expense_by_category": {k: round(v, 2) for k, v in expense_by_category.items()},
+        "entry_count": len(entries)
+    }
+
+@api_router.get("/income-expenses/reports/monthly")
+async def get_monthly_report(
+    year: Optional[int] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Get monthly P&L report"""
+    if not year:
+        year = datetime.now().year
+    
+    # Get entries for the year
+    start_date = f"{year}-01-01"
+    end_date = f"{year}-12-31"
+    
+    entries = await db.income_expenses.find({
+        "date": {"$gte": start_date, "$lte": end_date}
+    }, {"_id": 0}).to_list(10000)
+    
+    # Group by month
+    monthly_data = {}
+    for month in range(1, 13):
+        month_str = f"{year}-{month:02d}"
+        monthly_data[month_str] = {"income": 0, "expense": 0}
+    
+    for entry in entries:
+        month_str = entry["date"][:7]  # YYYY-MM
+        if month_str in monthly_data:
+            if entry["entry_type"] == IncomeExpenseType.INCOME:
+                monthly_data[month_str]["income"] += entry["amount_usd"]
+            else:
+                monthly_data[month_str]["expense"] += entry["amount_usd"]
+    
+    # Calculate net for each month
+    result = []
+    for month, data in monthly_data.items():
+        result.append({
+            "month": month,
+            "income": round(data["income"], 2),
+            "expense": round(data["expense"], 2),
+            "net": round(data["income"] - data["expense"], 2)
+        })
+    
+    return result
+
+@api_router.get("/income-expenses/categories")
+async def get_categories(user: dict = Depends(get_current_user)):
+    """Get available categories and custom categories"""
+    income_categories = [
+        {"value": "commission", "label": "Commission Income"},
+        {"value": "service_fee", "label": "Service Fees"},
+        {"value": "interest", "label": "Interest Income"},
+        {"value": "other", "label": "Other Income"},
+    ]
+    
+    expense_categories = [
+        {"value": "bank_fee", "label": "Bank Fees"},
+        {"value": "transfer_charge", "label": "Transfer Charges"},
+        {"value": "vendor_payment", "label": "Vendor Payments"},
+        {"value": "operational", "label": "Operational Costs"},
+        {"value": "marketing", "label": "Marketing"},
+        {"value": "software", "label": "Software/Subscriptions"},
+        {"value": "other", "label": "Other Expenses"},
+    ]
+    
+    # Get custom categories from existing entries
+    custom_income = await db.income_expenses.distinct("custom_category", {"entry_type": "income", "custom_category": {"$ne": None}})
+    custom_expense = await db.income_expenses.distinct("custom_category", {"entry_type": "expense", "custom_category": {"$ne": None}})
+    
+    return {
+        "income_categories": income_categories,
+        "expense_categories": expense_categories,
+        "custom_income_categories": custom_income,
+        "custom_expense_categories": custom_expense
+    }
+
 @api_router.get("/income-expenses/{entry_id}")
 async def get_income_expense(entry_id: str, user: dict = Depends(get_current_user)):
     """Get a single income/expense entry"""
