@@ -78,6 +78,7 @@ export default function Vendors() {
   const [settlementCommission, setSettlementCommission] = useState('');
   const [settlementCharges, setSettlementCharges] = useState('');
   const [settlementChargesDescription, setSettlementChargesDescription] = useState('');
+  const [settlementAmountInDestCurrency, setSettlementAmountInDestCurrency] = useState('');
   const [formData, setFormData] = useState({
     vendor_name: '',
     email: '',
