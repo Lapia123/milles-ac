@@ -4,56 +4,51 @@ The user wants to build a back-office accounting software for an FX (foreign exc
 **PRODUCT REQUIREMENTS:**
 - **User Roles:** Admin, Sub-admin, Accountant, and Vendor for the back office.
 - **Authentication:** JWT (email/password) and Google Social Login.
-- **Client Management:** Create, Read, Update, Delete (CRUD) for clients, including KYC status, MT5 Number, and CRM Customer ID.
+- **Client Management:** Create, Read, Update, Delete (CRUD) for clients, including KYC status, MT5 Number, CRM Customer ID, and saved bank account details.
 - **Transaction Management:**
     - Track deposits, withdrawals, and transfers linked to a client.
     - Support uploading proof of payment.
-    - Specify a destination: Treasury/Bank, PSP, or Vendor.
+    - Specify a destination: Treasury/Bank, PSP, Vendor, Client's own Bank Account, or USDT address.
     - Multi-currency support, with all final balances tracked in USD.
-- **Treasury Management:** Manage bank accounts in different currencies. Show total treasury balance in USD, transaction history, filtering, and statement downloads.
-- **Accountant Dashboard:** A dedicated view for accountants to approve or reject pending client transactions, protected by a math captcha.
-- **PSP (Payment Service Provider) Management:** A manual ledgering system to track PSPs, their commissions, and settlement status.
-- **Vendor Portal:**
-    - A separate login and filtered dashboard for vendors to manage their assigned transactions (approve/reject with captcha).
-    - Admins manage vendors, including setting deposit/withdrawal commissions.
-    - Admins perform manual, multi-currency settlements for vendors, recording charges and destination treasury at the time of settlement.
-- **Settlement Approvals:** Settlements performed by admins must go into a pending state for a final approval step.
+- **Treasury Management:** Manage bank and USDT wallet accounts. Show total treasury balance in USD, transaction history, filtering, statement downloads, and support for inter-treasury transfers.
+- **Accountant Dashboard:** A dedicated view for accountants to approve or reject pending client transactions and settlements, protected by a math captcha. For withdrawals, accountants must select a source treasury account and upload proof of payment.
+- **PSP (Payment Service Provider) Management:** A manual ledgering system to track PSPs.
+- **Vendor Portal:** A separate portal for vendors to manage their assigned transactions.
+- **Settlement Approvals:** Admin-initiated settlements for vendors require final approval from an accountant.
 
 **User's preferred language**: English
 
 **what currently exists?**
 A full-stack application with a React frontend and a monolithic FastAPI backend using a MongoDB database.
-- **Backend ():** Contains all API endpoints and data models for users, clients, transactions, treasury, PSPs, and vendors. It handles JWT/Google auth, transaction/settlement workflows, and role-based access.
-- **Frontend:** A React SPA with pages for Login, Dashboard, and management of Clients, Transactions, Treasury, PSPs, and Vendors. It also includes a dedicated portal for the Vendor role.
-- **Features:** Authentication, Client/Transaction CRUD, Accountant approvals (with captcha), PSP management, and a comprehensive Vendor management system are all implemented. The UI is built with TailwindCSS and Shadcn/UI components.
+- **Backend ():** Contains all API endpoints for users, clients, transactions, treasury, PSPs, and vendors. It handles auth, complex transaction/settlement workflows, role-based access, client bank account management, and inter-treasury transfers.
+- **Frontend:** A React SPA with pages for all major features. The UI uses TailwindCSS and Shadcn/UI.
+- **Key Features Implemented:**
+    - Authentication (JWT & Google).
+    - Full CRUD for Clients, Transactions, PSPs, and Vendors.
+    - Accountant Dashboard with multi-tab approvals (Transactions, Settlements), filters, and a new mandatory approval dialog for withdrawals (requiring source account selection & screenshot upload).
+    - Treasury management with support for Bank and USDT wallet accounts, including transaction history and filtering.
+    - Transaction form now supports saving client bank details and sending funds to client-owned bank accounts or USDT addresses.
 
 **Last working item**:
-    - Last item agent was working: The agent was addressing user feedback on the **Vendor Settlement** process following a screenshot review. Specifically, the agent started implementing the first of four requested changes: adding a manual input field for the destination currency amount in the settlement dialog when the vendor's currency differs from the treasury's currency.
+    - Last item agent was working: The agent was implementing an **Inter-Treasury Transfer** feature. The backend endpoint has been created, and the frontend  page has been updated with the necessary state, handler functions, and a Transfer Funds button. The final step is to add the transfer dialog UI itself.
     - Status: IN PROGRESS
     - Agent Testing Done: N
     - Which testing method agent to use? both
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Address Vendor Settlement & Treasury Feedback (Priority: P0)
+  - Issue 1: Complete Inter-Treasury Transfer Feature (Priority: P0)
   - Issue 2: Minor session management bug (Priority: P2)
   
   **Issues Detail:**
-  - **Issue 1:** Address Vendor Settlement & Treasury Feedback
-     - **Attempted fixes:** The agent started modifying  to add state () and was about to add the corresponding input field to the settlement dialog.
+  - **Issue 1:** Complete Inter-Treasury Transfer Feature
+     - **Attempted fixes:** The backend endpoint  was created and is ready. On the frontend (), state variables, the  function, and the Transfer Funds button have been added.
      - **Next debug checklist:**
-        1.  **Multi-Currency Settlement Input (In Progress):**
-            - Finish editing : Add the input field to the settlement dialog JSX to capture the .
-            - Update the  function to pass this new amount to the backend.
-            - Modify the  endpoint in  to accept and save the .
-        2.  **Settlement Approval Workflow (Not Started):**
-            - In , modify the settlement logic so that creating a settlement sets its status to .
-            - Create a new API endpoint to fetch pending settlements.
-            - Create a new frontend page/component for Pending Settlement Approvals where an admin can approve or reject them.
-        3.  **Treasury Page Enhancements (Not Started):**
-            - In , create an endpoint to return a detailed transaction history for a treasury account, supporting filters (e.g., by date).
-            - Overhaul  to display the history in a table, add filter controls, and include a Download Statement button.
-     - **Why fix this issue and what will be achieved with the fix?** This will resolve direct user feedback and complete the core functionality for vendor and treasury management.
+        1. Edit  to add the JSX for the .
+        2. The dialog must include 'From Account', 'To Account', 'Amount' fields, and a math captcha for security.
+        3. Ensure the  function is correctly called on form submission.
+        4. Perform an end-to-end test: open the dialog, fill it, solve the captcha, submit the transfer, and verify that the treasury account balances are updated correctly and the transfer appears in the history of both accounts.
+     - **Why fix this issue and what will be achieved with the fix?** This will complete a core user-requested feature, allowing admins to move funds internally between different treasury accounts.
      - **Status:** IN PROGRESS
      - **Is recurring issue?** N
      - **Should Test frontend/backend/both after fix?** both
@@ -71,9 +66,9 @@ A full-stack application with a React frontend and a monolithic FastAPI backend 
      - **Blocked on other issue:** None
 
 **In progress Task List**:
-  - **Task 1:** Implement Vendor Settlement & Treasury Enhancements
-     - **Where to resume:** Continue editing . The agent has viewed the file and is ready to add the input field for  to the settlement dialog, and then update the corresponding state and handler functions.
-     - **What will be achieved with this?** The vendor settlement dialog will support manual multi-currency entry. Subsequently, the settlement approval workflow and enhanced treasury page will be built.
+  - **Task 1:** Implement Inter-Treasury Transfer Feature
+     - **Where to resume:** Continue editing . The agent was about to add the JSX for the  at the end of the component file.
+     - **What will be achieved with this?** Admins will be able to perform instant, captcha-protected fund transfers between treasury accounts via a dialog on the Treasury page.
      - **Status:** IN PROGRESS
      - **Should Test frontend/backend/both after fix?** both
      - **Blocked on something:** None
@@ -84,9 +79,19 @@ A full-stack application with a React frontend and a monolithic FastAPI backend 
     - **P2:** Refactor  from a monolith into smaller modules using FastAPI's .
 
 **Completed work in this session**
-- **PSP Management Feature:** Implemented backend models, API endpoints, and a frontend management page (). Updated the transaction form to include PSPs as a destination.
-- **Vendor Portal Feature:** Created the  user role, backend APIs, and frontend pages for admin management () and a dedicated vendor-facing portal (). Implemented role-based login redirects.
-- **Vendor Settlement Refinements:** Updated the vendor creation and settlement process to support manual commission and charge entry at the time of settlement, based on user feedback.
+- **Enhanced Accountant Approval Workflow:**
+  - Integrated Settlement approvals into the  using a tabbed interface.
+  - Implemented a mandatory Approve Withdrawal dialog requiring the accountant to select a source treasury account and upload a proof-of-payment screenshot.
+  - Added filtering (by type, destination, client search) to the approvals page.
+- **Client Withdrawal & USDT Support:**
+  - Added USDT as a currency/destination type and Client Bank as a withdrawal destination.
+  - Implemented functionality to save, select, and edit a client's bank accounts during transaction creation.
+  - Created backend models and endpoints for  and updated  and  models to support USDT wallets.
+- **Treasury Page Enhancements:**
+  - Added a View History feature for each treasury account, with a dialog showing a filterable and downloadable transaction history.
+- **Vendor Settlement Workflow:**
+  - Modified vendor settlements to go into a pending state for accountant approval.
+  - Updated the settlement success message to reflect the pending status.
 
 **Earlier issues found/mentioned but not fixed**
    - **Issue 1:** Session management redirect issue.
@@ -113,43 +118,35 @@ A full-stack application with a React frontend and a monolithic FastAPI backend 
   - **clients:** 
   - **transactions:** 
   - **treasury_accounts:** 
-  - **psps:** 
-  - **vendors:** 
   - **vendor_settlements:** 
+  - **client_bank_accounts:** 
 
 **changes in tech stack**
   - None
 
 **All files of reference**
-- : Heavily modified to add PSP and Vendor logic, including settlement endpoints.
-- : **Currently being edited.** This is the main file for the next agent.
-- : Will be modified to add history and filtering.
-- : New page created for PSP management.
-- : New page created for the vendor role.
-- : Modified to include PSP and Vendor destinations.
-- : Updated to add new sidebar links and handle vendor role.
-- : Updated with routes for new pages.
+- : Heavily modified to add endpoints for client bank accounts, USDT support, the enhanced withdrawal approval flow, and inter-treasury transfers.
+- : **Currently being edited.** Updated for history, USDT accounts, and the new inter-treasury transfer feature.
+- : Heavily modified to include settlement approvals, filters, and the new withdrawal approval dialog.
+- : Modified to support USDT, client bank withdrawals, and saving/reusing client bank details.
 
 **Areas that need refactoring**:
--  remains a monolith and is a candidate for being broken down into smaller modules.
--  is growing very large with multiple dialogs and complex state. It could be refactored into smaller, more manageable components.
+-  remains a large monolith and is a prime candidate for being broken down into smaller modules.
+-  and  have grown complex and could be refactored into smaller, more manageable components.
 
 **key api endpoints**
-- 
--  (CRUD)
--  (CRUD)
-- 
--  (CRUD)
+-  **(New, Backend complete)**
 -  (CRUD)
 - 
--  (CRUD)
--  (will need modification)
--  (new endpoint will be needed for approvals)
+-  (Modified to accept )
+- 
+- 
 
 **Critical Info for New Agent**
-- Your immediate task is to continue the work on  to add the manual input for multi-currency settlements, as requested by the user.
-- After completing the settlement dialog, you must implement the settlement approval workflow and then enhance the Treasury page with history and filtering. These three items address the user's latest feedback.
-- The currency conversion rates in  are still hardcoded. This is a known limitation.
+- Your immediate task is to complete the **Inter-Treasury Transfer** feature. The backend is done. You only need to add the final UI piece: the transfer dialog JSX in .
+- All necessary state and handler functions are already in place in the frontend file.
+- After adding the dialog, perform a full end-to-end test of the feature before moving on.
+- Once complete, address the user's next request or tackle the minor pending session bug.
 
 **documents and test reports created in this job**
   - 
@@ -157,16 +154,13 @@ A full-stack application with a React frontend and a monolithic FastAPI backend 
   - 
 
 **Last 10 User Messages and any pending HUMAN messages** 
-- **1. (LATEST):** User provided a screenshot and identified 4 issues: 1) Missing currency conversion/input in settlement dialog, 2) No manual input for settlement amount, 3) Settlements need an approval step, 4) Treasury page needs history, filtering, and statement download. (IN PROGRESS)
-- **2.** User requested multi-currency support for vendor settlements (e.g., INR vendor, AED settlement). (IN PROGRESS)
-- **3.** User requested simplifying the 'Add Vendor' form and making settlement charges/destination a manual entry at settlement time. (DONE)
-- **4.** User confirmed vendor portal requirements: use the same math captcha and have admins choose settlement type (Bank/Cash) during settlement. (DONE)
-- **5.** User clarified vendor requirements: vendors must upload a screenshot for withdrawal approvals, and admins set separate deposit/withdrawal commissions. (DONE)
-- **6.** User introduced the new Vendor Portal feature request, where vendors act like PSPs with their own login to manage transactions. (DONE)
-- **7.** User approved the plan to implement the PSP feature. (SUPERSEDED by pivot)
-- **8.** User clarified the PSP settlement notification should be a visual indicator on the PSP page. (DONE)
-- **9.** User clarified the PSP commission could be paid by either the client or the broker. (DONE)
-- **10. (OLDEST):** User pivoted away from a full, automated PSP integration to a simpler, manual ledgering system. (DONE)
+- **1. (LATEST):** User requested an inter-treasury transaction option. (IN PROGRESS)
+- **2.** User specified the transfer should be instant but require a math captcha for security. (IN PROGRESS)
+- **3.** User provided a 4-point list of requirements: add USDT currency support, require source account selection and screenshot upload for withdrawal approvals, add filters to the approvals page, and save/reuse client bank details. (DONE)
+- **4.** User clarified that the withdrawal approval flow should be a single dialog that collects the source account and screenshot together. (DONE)
+- **5.** User asked to implement all the new requirements from the 4-point list. (DONE)
+- **6.** User confirmed the settlement approval workflow should be integrated into the existing Accountant Dashboard. (DONE)
+- **7.** User approved the initial plan to implement the settlement approval workflow and treasury enhancements. (DONE)
 
 **Project Health Check:**
 - **Broken:** None
@@ -176,7 +170,7 @@ A full-stack application with a React frontend and a monolithic FastAPI backend 
 - **Emergent-managed Google Auth:** Provides Google social login functionality.
 
 **Testing status**
-  - Testing agent used after significant changes: YES (for PSP and Vendor features)
+  - Testing agent used after significant changes: YES (twice this session)
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created:
     - 
@@ -189,4 +183,4 @@ A full-stack application with a React frontend and a monolithic FastAPI backend 
 - **Vendor:**  / 
 
 **What agent forgot to execute**
-The agent has not forgotten any tasks but is actively working on a new set of requirements from the user to refine the vendor settlement and treasury features. The work is incomplete pending the implementation of these new requests.</analysis>
+- The agent has not yet addressed the minor session management bug where users are sometimes not redirected correctly after login. This was carried over from the previous session and remains a low-priority pending task.</analysis>
