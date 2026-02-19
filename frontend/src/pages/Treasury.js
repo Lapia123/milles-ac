@@ -91,6 +91,23 @@ export default function Treasury() {
     endDate: '',
     transactionType: '',
   });
+  
+  // Transfer state
+  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
+  const [transferData, setTransferData] = useState({
+    source_account_id: '',
+    destination_account_id: '',
+    amount: '',
+    exchange_rate: '1',
+    notes: '',
+  });
+  const [transferProcessing, setTransferProcessing] = useState(false);
+  
+  // Captcha state
+  const [showCaptcha, setShowCaptcha] = useState(false);
+  const [captchaNumbers, setCaptchaNumbers] = useState({ n1: 0, n2: 0 });
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
+  
   const [formData, setFormData] = useState({
     account_name: '',
     account_type: 'bank',
@@ -116,6 +133,14 @@ export default function Treasury() {
       ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     };
   };
+
+  // Generate captcha
+  const generateCaptcha = useCallback(() => {
+    const n1 = Math.floor(Math.random() * 10) + 1;
+    const n2 = Math.floor(Math.random() * 10) + 1;
+    setCaptchaNumbers({ n1, n2 });
+    setCaptchaAnswer('');
+  }, []);
 
   const fetchAccounts = async () => {
     try {
