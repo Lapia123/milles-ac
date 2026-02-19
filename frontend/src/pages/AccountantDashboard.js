@@ -216,7 +216,7 @@ export default function AccountantDashboard() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchPendingTransactions(), fetchPendingSettlements()]);
+      await Promise.all([fetchPendingTransactions(), fetchPendingSettlements(), fetchTreasuryAccounts()]);
       setLoading(false);
     };
     loadData();
