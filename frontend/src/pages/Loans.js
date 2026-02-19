@@ -1,0 +1,996 @@
+import { useEffect, useState, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Badge } from '../components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../components/ui/tabs';
+import { Textarea } from '../components/ui/textarea';
+import { ScrollArea } from '../components/ui/scroll-area';
+import { toast } from 'sonner';
+import { useAuth } from '../context/AuthContext';
+import {
+  Banknote,
+  Plus,
+  DollarSign,
+  Calendar,
+  Building2,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  Eye,
+  Trash2,
+  CreditCard,
+  TrendingUp,
+  PiggyBank,
+  Receipt,
+  X,
+} from 'lucide-react';
+
+const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+const currencies = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY', 'USDT'];
+
+const repaymentModes = [
+  { value: 'lump_sum', label: 'Lump Sum (Single Payment)' },
+  { value: 'installments', label: 'Installments' },
+];
+
+const installmentFrequencies = [
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'biweekly', label: 'Bi-Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
+];
+
+export default function Loans() {
+  const { user } = useAuth();
+  const [loans, setLoans] = useState([]);
+  const [treasuryAccounts, setTreasuryAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isLoanDialogOpen, setIsLoanDialogOpen] = useState(false);
+  const [isRepaymentDialogOpen, setIsRepaymentDialogOpen] = useState(false);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [selectedLoan, setSelectedLoan] = useState(null);
+  const [activeTab, setActiveTab] = useState('all');
+  const [summary, setSummary] = useState(null);
+  
+  // Filter
+  const [statusFilter, setStatusFilter] = useState('');
+  
+  // Loan form
+  const [loanForm, setLoanForm] = useState({
+    borrower_name: '',
+    amount: '',
+    currency: 'USD',
+    interest_rate: '0',
+    loan_date: new Date().toISOString().split('T')[0],
+    due_date: '',
+    repayment_mode: 'lump_sum',
+    installment_amount: '',
+    installment_frequency: 'monthly',
+    treasury_account_id: '',
+    notes: '',
+  });
+  
+  // Repayment form
+  const [repaymentForm, setRepaymentForm] = useState({
+    amount: '',
+    currency: 'USD',
+    treasury_account_id: '',
+    payment_date: new Date().toISOString().split('T')[0],
+    reference: '',
+    notes: '',
+  });
+
+  const isAdmin = user?.role === 'admin';
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('auth_token');
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    };
+  };
+
+  const fetchLoans = useCallback(async () => {
+    try {
+      let url = `${API_URL}/api/loans?limit=200`;
+      if (statusFilter) url += `&status=${statusFilter}`;
+      
+      const response = await fetch(url, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setLoans(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching loans:', error);
+      toast.error('Failed to load loans');
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter]);
+
+  const fetchTreasuryAccounts = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/treasury`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        const accounts = await response.json();
+        setTreasuryAccounts(accounts.filter(a => a.status === 'active'));
+      }
+    } catch (error) {
+      console.error('Error fetching treasury accounts:', error);
+    }
+  };
+
+  const fetchSummary = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/loans/reports/summary`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setSummary(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching summary:', error);
+    }
+  };
+
+  const fetchLoanDetail = async (loanId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/loans/${loanId}`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setSelectedLoan(await response.json());
+        setIsDetailDialogOpen(true);
+      }
+    } catch (error) {
+      toast.error('Failed to load loan details');
+    }
+  };
+
+  useEffect(() => {
+    fetchLoans();
+    fetchTreasuryAccounts();
+    fetchSummary();
+  }, []);
+
+  useEffect(() => {
+    fetchLoans();
+  }, [fetchLoans]);
+
+  const handleCreateLoan = async (e) => {
+    e.preventDefault();
+    
+    if (!loanForm.borrower_name) {
+      toast.error('Please enter borrower name');
+      return;
+    }
+    if (!loanForm.amount || parseFloat(loanForm.amount) <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    if (!loanForm.treasury_account_id) {
+      toast.error('Please select source treasury account');
+      return;
+    }
+    if (!loanForm.due_date) {
+      toast.error('Please enter due date');
+      return;
+    }
+    
+    try {
+      const payload = {
+        ...loanForm,
+        amount: parseFloat(loanForm.amount),
+        interest_rate: parseFloat(loanForm.interest_rate) || 0,
+        installment_amount: loanForm.installment_amount ? parseFloat(loanForm.installment_amount) : null,
+      };
+      
+      const response = await fetch(`${API_URL}/api/loans`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        toast.success('Loan created successfully');
+        setIsLoanDialogOpen(false);
+        resetLoanForm();
+        fetchLoans();
+        fetchSummary();
+        fetchTreasuryAccounts();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to create loan');
+      }
+    } catch (error) {
+      toast.error('Failed to create loan');
+    }
+  };
+
+  const handleRecordRepayment = async (e) => {
+    e.preventDefault();
+    
+    if (!repaymentForm.amount || parseFloat(repaymentForm.amount) <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    if (!repaymentForm.treasury_account_id) {
+      toast.error('Please select treasury account');
+      return;
+    }
+    
+    try {
+      const payload = {
+        ...repaymentForm,
+        amount: parseFloat(repaymentForm.amount),
+      };
+      
+      const response = await fetch(`${API_URL}/api/loans/${selectedLoan.loan_id}/repayment`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(`Repayment recorded. Outstanding: ${result.new_outstanding.toLocaleString()} ${selectedLoan.currency}`);
+        setIsRepaymentDialogOpen(false);
+        resetRepaymentForm();
+        fetchLoans();
+        fetchSummary();
+        fetchTreasuryAccounts();
+        if (selectedLoan) fetchLoanDetail(selectedLoan.loan_id);
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to record repayment');
+      }
+    } catch (error) {
+      toast.error('Failed to record repayment');
+    }
+  };
+
+  const handleDeleteLoan = async (loanId) => {
+    if (!window.confirm('Are you sure you want to delete this loan? This will reverse the treasury disbursement.')) return;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/loans/${loanId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        toast.success('Loan deleted');
+        fetchLoans();
+        fetchSummary();
+        fetchTreasuryAccounts();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Delete failed');
+      }
+    } catch (error) {
+      toast.error('Delete failed');
+    }
+  };
+
+  const resetLoanForm = () => {
+    setLoanForm({
+      borrower_name: '',
+      amount: '',
+      currency: 'USD',
+      interest_rate: '0',
+      loan_date: new Date().toISOString().split('T')[0],
+      due_date: '',
+      repayment_mode: 'lump_sum',
+      installment_amount: '',
+      installment_frequency: 'monthly',
+      treasury_account_id: '',
+      notes: '',
+    });
+  };
+
+  const resetRepaymentForm = () => {
+    setRepaymentForm({
+      amount: '',
+      currency: 'USD',
+      treasury_account_id: '',
+      payment_date: new Date().toISOString().split('T')[0],
+      reference: '',
+      notes: '',
+    });
+  };
+
+  const openRepaymentDialog = (loan) => {
+    setSelectedLoan(loan);
+    setRepaymentForm({
+      ...repaymentForm,
+      currency: loan.currency,
+    });
+    setIsRepaymentDialogOpen(true);
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const getStatusBadge = (loan) => {
+    const isOverdue = loan.is_overdue || (loan.status === 'active' && loan.due_date && new Date(loan.due_date) < new Date());
+    
+    if (isOverdue) {
+      return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Overdue</Badge>;
+    }
+    
+    switch (loan.status) {
+      case 'active':
+        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Active</Badge>;
+      case 'partially_paid':
+        return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Partially Paid</Badge>;
+      case 'fully_paid':
+        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Fully Paid</Badge>;
+      default:
+        return <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">{loan.status}</Badge>;
+    }
+  };
+
+  const filteredLoans = activeTab === 'all' ? loans : loans.filter(l => l.status === activeTab);
+
+  return (
+    <div className="space-y-6 animate-fade-in" data-testid="loans-page">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
+            Loan Management
+          </h1>
+          <p className="text-[#C5C6C7]">Track loans given to other companies</p>
+        </div>
+        <Button
+          onClick={() => setIsLoanDialogOpen(true)}
+          className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
+          data-testid="add-loan-btn"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          New Loan
+        </Button>
+      </div>
+
+      {/* Summary Cards */}
+      {summary && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-[#1F2833] border-white/5">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Total Disbursed</p>
+                  <p className="text-2xl font-bold font-mono text-white">${summary.total_disbursed_usd?.toLocaleString()}</p>
+                </div>
+                <div className="p-3 bg-blue-500/10 rounded-sm">
+                  <Banknote className="w-6 h-6 text-blue-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-[#1F2833] border-white/5">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Outstanding</p>
+                  <p className="text-2xl font-bold font-mono text-[#66FCF1]">${summary.total_outstanding_usd?.toLocaleString()}</p>
+                </div>
+                <div className="p-3 bg-[#66FCF1]/10 rounded-sm">
+                  <PiggyBank className="w-6 h-6 text-[#66FCF1]" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-[#1F2833] border-white/5">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Total Repaid</p>
+                  <p className="text-2xl font-bold font-mono text-green-400">${summary.total_repaid_usd?.toLocaleString()}</p>
+                </div>
+                <div className="p-3 bg-green-500/10 rounded-sm">
+                  <Receipt className="w-6 h-6 text-green-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-[#1F2833] border-white/5">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Interest Earned</p>
+                  <p className="text-2xl font-bold font-mono text-yellow-400">${summary.total_interest_earned_usd?.toLocaleString()}</p>
+                </div>
+                <div className="p-3 bg-yellow-500/10 rounded-sm">
+                  <TrendingUp className="w-6 h-6 text-yellow-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Status Summary */}
+      {summary && (
+        <div className="flex gap-4 flex-wrap">
+          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 px-3 py-1">
+            Active: {summary.status_breakdown?.active || 0}
+          </Badge>
+          <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 px-3 py-1">
+            Partially Paid: {summary.status_breakdown?.partially_paid || 0}
+          </Badge>
+          <Badge className="bg-green-500/20 text-green-400 border-green-500/30 px-3 py-1">
+            Fully Paid: {summary.status_breakdown?.fully_paid || 0}
+          </Badge>
+          <Badge className="bg-red-500/20 text-red-400 border-red-500/30 px-3 py-1">
+            Overdue: {summary.status_breakdown?.overdue || 0}
+          </Badge>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="bg-[#1F2833] border border-white/10">
+          <TabsTrigger value="all" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
+            All Loans ({loans.length})
+          </TabsTrigger>
+          <TabsTrigger value="active" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400">
+            Active
+          </TabsTrigger>
+          <TabsTrigger value="partially_paid" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400">
+            Partially Paid
+          </TabsTrigger>
+          <TabsTrigger value="fully_paid" className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400">
+            Fully Paid
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Loans Table */}
+        <TabsContent value={activeTab} className="mt-4">
+          {loading ? (
+            <Card className="bg-[#1F2833] border-white/5">
+              <CardContent className="p-12 flex justify-center">
+                <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
+              </CardContent>
+            </Card>
+          ) : filteredLoans.length === 0 ? (
+            <Card className="bg-[#1F2833] border-white/5">
+              <CardContent className="p-12 text-center">
+                <Banknote className="w-12 h-12 text-[#C5C6C7] mx-auto mb-4" />
+                <p className="text-[#C5C6C7]">No loans found</p>
+                <p className="text-sm text-[#C5C6C7]/60 mt-2">Click "New Loan" to create one</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-[#1F2833] border-white/5">
+              <CardContent className="p-0">
+                <ScrollArea className="h-[500px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-white/10 hover:bg-transparent">
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Borrower</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Outstanding</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Due Date</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Treasury</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs w-32">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredLoans.map((loan) => (
+                        <TableRow key={loan.loan_id} className="border-white/5 hover:bg-white/5">
+                          <TableCell className="text-white font-medium">{loan.borrower_name}</TableCell>
+                          <TableCell className="text-white font-mono text-right">
+                            {loan.amount?.toLocaleString()} {loan.currency}
+                            {loan.interest_rate > 0 && (
+                              <span className="text-xs text-[#C5C6C7] block">@ {loan.interest_rate}%</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-[#66FCF1] font-mono text-right">
+                            {loan.outstanding_balance?.toLocaleString()} {loan.currency}
+                          </TableCell>
+                          <TableCell className="text-white text-sm">{formatDate(loan.due_date)}</TableCell>
+                          <TableCell>{getStatusBadge(loan)}</TableCell>
+                          <TableCell className="text-[#C5C6C7] text-sm">{loan.source_treasury_name}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => fetchLoanDetail(loan.loan_id)}
+                                className="text-[#66FCF1] hover:text-[#66FCF1] hover:bg-[#66FCF1]/10"
+                                title="View Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              {loan.status !== 'fully_paid' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openRepaymentDialog(loan)}
+                                  className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
+                                  title="Record Repayment"
+                                >
+                                  <CreditCard className="w-4 h-4" />
+                                </Button>
+                              )}
+                              {isAdmin && loan.repayment_count === 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteLoan(loan.loan_id)}
+                                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Create Loan Dialog */}
+      <Dialog open={isLoanDialogOpen} onOpenChange={(open) => { setIsLoanDialogOpen(open); if (!open) resetLoanForm(); }}>
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+              <Banknote className="w-6 h-6 text-[#66FCF1]" />
+              New Loan
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateLoan} className="space-y-4">
+            {/* Borrower Name */}
+            <div className="space-y-2">
+              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Borrower Company *</Label>
+              <Input
+                value={loanForm.borrower_name}
+                onChange={(e) => setLoanForm({ ...loanForm, borrower_name: e.target.value })}
+                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                placeholder="Company name"
+                data-testid="loan-borrower"
+              />
+            </div>
+
+            {/* Amount & Currency */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Amount *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={loanForm.amount}
+                  onChange={(e) => setLoanForm({ ...loanForm, amount: e.target.value })}
+                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                  placeholder="0.00"
+                  data-testid="loan-amount"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Currency</Label>
+                <Select
+                  value={loanForm.currency}
+                  onValueChange={(value) => setLoanForm({ ...loanForm, currency: value })}
+                >
+                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1F2833] border-white/10">
+                    {currencies.map((cur) => (
+                      <SelectItem key={cur} value={cur} className="text-white hover:bg-white/5">{cur}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Interest Rate */}
+            <div className="space-y-2">
+              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Annual Interest Rate (%)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={loanForm.interest_rate}
+                onChange={(e) => setLoanForm({ ...loanForm, interest_rate: e.target.value })}
+                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                placeholder="0"
+              />
+            </div>
+
+            {/* Dates */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Loan Date *</Label>
+                <Input
+                  type="date"
+                  value={loanForm.loan_date}
+                  onChange={(e) => setLoanForm({ ...loanForm, loan_date: e.target.value })}
+                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Due Date *</Label>
+                <Input
+                  type="date"
+                  value={loanForm.due_date}
+                  onChange={(e) => setLoanForm({ ...loanForm, due_date: e.target.value })}
+                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                />
+              </div>
+            </div>
+
+            {/* Repayment Mode */}
+            <div className="space-y-2">
+              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Repayment Mode</Label>
+              <Select
+                value={loanForm.repayment_mode}
+                onValueChange={(value) => setLoanForm({ ...loanForm, repayment_mode: value })}
+              >
+                <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1F2833] border-white/10">
+                  {repaymentModes.map((mode) => (
+                    <SelectItem key={mode.value} value={mode.value} className="text-white hover:bg-white/5">{mode.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Installment Details */}
+            {loanForm.repayment_mode === 'installments' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Installment Amount</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={loanForm.installment_amount}
+                    onChange={(e) => setLoanForm({ ...loanForm, installment_amount: e.target.value })}
+                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Frequency</Label>
+                  <Select
+                    value={loanForm.installment_frequency}
+                    onValueChange={(value) => setLoanForm({ ...loanForm, installment_frequency: value })}
+                  >
+                    <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1F2833] border-white/10">
+                      {installmentFrequencies.map((freq) => (
+                        <SelectItem key={freq.value} value={freq.value} className="text-white hover:bg-white/5">{freq.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            {/* Treasury Account */}
+            <div className="space-y-2">
+              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Disburse From Treasury *</Label>
+              <Select
+                value={loanForm.treasury_account_id}
+                onValueChange={(value) => setLoanForm({ ...loanForm, treasury_account_id: value })}
+              >
+                <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="loan-treasury">
+                  <SelectValue placeholder="Select treasury account" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1F2833] border-white/10">
+                  {treasuryAccounts.map((acc) => (
+                    <SelectItem key={acc.account_id} value={acc.account_id} className="text-white hover:bg-white/5">
+                      {acc.account_name} ({acc.balance?.toLocaleString()} {acc.currency})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Notes</Label>
+              <Textarea
+                value={loanForm.notes}
+                onChange={(e) => setLoanForm({ ...loanForm, notes: e.target.value })}
+                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                rows={2}
+                placeholder="Additional notes..."
+              />
+            </div>
+
+            {/* Buttons */}
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { setIsLoanDialogOpen(false); resetLoanForm(); }}
+                className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+                data-testid="create-loan-btn"
+              >
+                Create Loan
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Record Repayment Dialog */}
+      <Dialog open={isRepaymentDialogOpen} onOpenChange={(open) => { setIsRepaymentDialogOpen(open); if (!open) resetRepaymentForm(); }}>
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+              <CreditCard className="w-6 h-6 text-green-400" />
+              Record Repayment
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedLoan && (
+            <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10 mb-4">
+              <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Loan Details</p>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-[#C5C6C7]">Borrower:</span>
+                  <span className="text-white">{selectedLoan.borrower_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#C5C6C7]">Outstanding:</span>
+                  <span className="text-[#66FCF1] font-mono">{selectedLoan.outstanding_balance?.toLocaleString()} {selectedLoan.currency}</span>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <form onSubmit={handleRecordRepayment} className="space-y-4">
+            {/* Amount & Currency */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Amount *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={repaymentForm.amount}
+                  onChange={(e) => setRepaymentForm({ ...repaymentForm, amount: e.target.value })}
+                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                  placeholder="0.00"
+                  data-testid="repayment-amount"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Currency</Label>
+                <Select
+                  value={repaymentForm.currency}
+                  onValueChange={(value) => setRepaymentForm({ ...repaymentForm, currency: value })}
+                >
+                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1F2833] border-white/10">
+                    {currencies.map((cur) => (
+                      <SelectItem key={cur} value={cur} className="text-white hover:bg-white/5">{cur}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Treasury Account */}
+            <div className="space-y-2">
+              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Credit to Treasury *</Label>
+              <Select
+                value={repaymentForm.treasury_account_id}
+                onValueChange={(value) => setRepaymentForm({ ...repaymentForm, treasury_account_id: value })}
+              >
+                <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="repayment-treasury">
+                  <SelectValue placeholder="Select treasury account" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1F2833] border-white/10">
+                  {treasuryAccounts.map((acc) => (
+                    <SelectItem key={acc.account_id} value={acc.account_id} className="text-white hover:bg-white/5">
+                      {acc.account_name} ({acc.currency})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Payment Date */}
+            <div className="space-y-2">
+              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Payment Date</Label>
+              <Input
+                type="date"
+                value={repaymentForm.payment_date}
+                onChange={(e) => setRepaymentForm({ ...repaymentForm, payment_date: e.target.value })}
+                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+              />
+            </div>
+
+            {/* Reference */}
+            <div className="space-y-2">
+              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Reference</Label>
+              <Input
+                value={repaymentForm.reference}
+                onChange={(e) => setRepaymentForm({ ...repaymentForm, reference: e.target.value })}
+                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                placeholder="Payment reference..."
+              />
+            </div>
+
+            {/* Buttons */}
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { setIsRepaymentDialogOpen(false); resetRepaymentForm(); }}
+                className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="bg-green-500 hover:bg-green-600 text-white font-bold uppercase tracking-wider"
+                data-testid="record-repayment-btn"
+              >
+                Record Payment
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Loan Detail Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+              Loan Details
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedLoan && (
+            <div className="space-y-6">
+              {/* Loan Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Borrower</p>
+                  <p className="text-white font-medium">{selectedLoan.borrower_name}</p>
+                </div>
+                <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Status</p>
+                  {getStatusBadge(selectedLoan)}
+                </div>
+                <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Loan Amount</p>
+                  <p className="text-white font-mono">{selectedLoan.amount?.toLocaleString()} {selectedLoan.currency}</p>
+                </div>
+                <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Interest Rate</p>
+                  <p className="text-white font-mono">{selectedLoan.interest_rate}%</p>
+                </div>
+                <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Total Interest</p>
+                  <p className="text-yellow-400 font-mono">{selectedLoan.total_interest?.toLocaleString()} {selectedLoan.currency}</p>
+                </div>
+                <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Outstanding</p>
+                  <p className="text-[#66FCF1] font-mono">{selectedLoan.outstanding_balance?.toLocaleString()} {selectedLoan.currency}</p>
+                </div>
+                <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Loan Date</p>
+                  <p className="text-white">{formatDate(selectedLoan.loan_date)}</p>
+                </div>
+                <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Due Date</p>
+                  <p className="text-white">{formatDate(selectedLoan.due_date)}</p>
+                </div>
+              </div>
+
+              {/* Repayment History */}
+              <div>
+                <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                  <Receipt className="w-5 h-5 text-[#66FCF1]" />
+                  Repayment History ({selectedLoan.repayments?.length || 0})
+                </h3>
+                {selectedLoan.repayments?.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-white/10 hover:bg-transparent">
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Treasury</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedLoan.repayments.map((rep) => (
+                        <TableRow key={rep.repayment_id} className="border-white/5 hover:bg-white/5">
+                          <TableCell className="text-white text-sm">{formatDate(rep.payment_date)}</TableCell>
+                          <TableCell className="text-green-400 font-mono text-right">+{rep.amount?.toLocaleString()} {rep.currency}</TableCell>
+                          <TableCell className="text-[#C5C6C7] text-sm">{rep.treasury_account_name}</TableCell>
+                          <TableCell className="text-[#C5C6C7] text-sm">{rep.reference || '-'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <p className="text-[#C5C6C7] text-sm">No repayments recorded yet</p>
+                )}
+              </div>
+
+              {/* Action Button */}
+              {selectedLoan.status !== 'fully_paid' && (
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => { setIsDetailDialogOpen(false); openRepaymentDialog(selectedLoan); }}
+                    className="bg-green-500 hover:bg-green-600 text-white font-bold uppercase tracking-wider"
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Record Repayment
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
