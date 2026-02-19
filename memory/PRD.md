@@ -1,90 +1,70 @@
 # FX Broker Back-Office Accounting System - PRD
 
 ## Original Problem Statement
-Build account software for FX broker - a back-office accounting system with admin and sub-admin roles for managing client accounts, trading accounts, transaction/ledger tracking, and reporting (basic + advanced including P&L, commissions, and client analytics). Authentication includes both JWT custom auth and Google OAuth.
+Build account software for FX broker - a back-office accounting system with admin, sub-admin, and accountant roles for managing client accounts, transactions, treasury/bank accounts, and reporting.
+
+## Latest Update (2026-02-19)
+Major changes per user request:
+1. Removed Trading Accounts feature
+2. Transactions now directly linked to Clients (not trading accounts)
+3. Added proof of payment upload and destination bank selection in transactions
+4. Added Accountant Dashboard for approving/rejecting transactions
+5. Added Treasury page for bank account management
 
 ## User Personas
-1. **Admin** - Full system access, user management, all CRUD operations
-2. **Sub-Admin** - Limited access, can manage clients, accounts, and transactions but cannot manage users
+1. **Admin** - Full system access, user management, treasury management, all operations
+2. **Sub-Admin** - Can manage clients and transactions, limited settings access
+3. **Accountant** - Can approve/reject pending transactions, view treasury
 
-## Core Requirements
-- Client account management (registration, KYC status, profile)
-- Trading account management (MT4/MT5 accounts)
-- Transaction/ledger tracking (deposits, withdrawals, transfers)
-- Basic + Advanced Reporting (P&L, commissions, analytics)
+## Core Features
+- Client account management (registration, KYC status)
+- Transaction ledger (deposits, withdrawals with proof of payment)
+- Treasury/Bank account management
+- Transaction approval workflow (Accountant/Admin)
+- Basic + Advanced Reporting
 - Authentication (JWT + Google OAuth)
-- User management (Admin/Sub-admin roles)
 
 ## Architecture
-- **Frontend**: React 19 with Tailwind CSS, Shadcn/UI components
-- **Backend**: FastAPI with async MongoDB (motor)
+- **Frontend**: React 19 with Tailwind CSS, Shadcn/UI
+- **Backend**: FastAPI with async MongoDB
 - **Database**: MongoDB
-- **Auth**: JWT tokens + Emergent Google OAuth
+- **Auth**: JWT + Emergent Google OAuth
 
-## What's Been Implemented (2026-02-18)
-### Backend (FastAPI)
-- [x] User authentication (JWT + Google OAuth via Emergent)
-- [x] User management API (CRUD with role-based access)
-- [x] Client management API (CRUD, search, filter by KYC status)
-- [x] Trading accounts API (MT4/MT5 accounts, balance tracking)
-- [x] Transactions API (deposits, withdrawals, status management)
-- [x] Reports API (dashboard stats, transaction summaries, client analytics)
-- [x] Demo data seeding endpoint
+## What's Implemented
 
-### Frontend (React)
-- [x] Login page with email/password and Google OAuth
-- [x] Dashboard with stats cards, charts, and recent activity
-- [x] Clients management page with CRUD, search, filter
-- [x] Trading Accounts page with account creation
-- [x] Transactions ledger with filtering and status updates
-- [x] Reports page with P&L, client analytics, geography tabs
-- [x] Settings page with user management (admin only)
-- [x] Responsive sidebar navigation
-- [x] Dark theme "Obsidian Ledger" with neon cyan accents
+### Backend
+- [x] User auth (JWT + Google OAuth)
+- [x] User management with 3 roles (admin, sub_admin, accountant)
+- [x] Client management API
+- [x] Treasury/Bank accounts API
+- [x] Transactions API with client selection and proof upload
+- [x] Transaction approval/rejection workflow
+- [x] Reports API
 
-### Design Theme
-- Background: #0B0C10 (Obsidian)
-- Surface: #1F2833
-- Primary: #66FCF1 (Neon Cyan)
-- Fonts: Barlow Condensed (headings), Manrope (body), JetBrains Mono (data)
+### Frontend Pages
+- [x] Login (email/password + Google OAuth)
+- [x] Dashboard (stats, charts, recent activity)
+- [x] Clients (CRUD, KYC status)
+- [x] Transactions (client selection, destination bank, proof upload)
+- [x] Treasury (bank account management)
+- [x] Approvals (accountant dashboard for approve/reject)
+- [x] Reports (P&L, analytics)
+- [x] Settings (user management)
+
+## Demo Credentials
+- Admin: admin@fxbroker.com / admin123
+- Accountant: accountant@fxbroker.com / accountant123
 
 ## Prioritized Backlog
 
-### P0 (Critical)
-- All core features implemented ✅
-
-### P1 (High Priority - Next Phase)
-- [ ] Actual MT4/MT5 API integration for real trading data
+### P1 (Next Phase)
+- [ ] Email notifications for transaction approvals/rejections
 - [ ] Document upload for KYC verification
-- [ ] Email notifications for transactions
-- [ ] Commission calculation module
-- [ ] Client IB (Introducing Broker) relationships
+- [ ] Transaction history per client view
+- [ ] Bulk transaction import
 
-### P2 (Medium Priority)
+### P2 (Future)
 - [ ] Export reports to PDF/Excel
-- [ ] Bulk transaction processing
 - [ ] Audit log for all actions
 - [ ] Two-factor authentication
-- [ ] Multi-currency support with exchange rates
-
-### P3 (Low Priority)
-- [ ] Client portal (self-service)
-- [ ] Mobile app
-- [ ] Advanced charting with historical data
-- [ ] Automated KYC verification
-
-## Demo Credentials
-- Email: admin@fxbroker.com
-- Password: admin123
-
-## API Endpoints
-- POST /api/auth/login - JWT login
-- POST /api/auth/session - Google OAuth session
-- GET /api/auth/me - Current user
-- GET/POST /api/clients - Client management
-- GET/POST /api/trading-accounts - Account management
-- GET/POST /api/transactions - Transaction ledger
-- GET /api/reports/dashboard - Dashboard stats
-- GET /api/reports/transactions-summary - Transaction charts
-- GET /api/reports/client-analytics - Client analytics
-- GET/POST /api/users - User management (admin only)
+- [ ] Multi-currency exchange rates
