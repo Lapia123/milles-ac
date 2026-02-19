@@ -50,7 +50,29 @@ Build account software for FX broker - a back-office accounting system with admi
 
 ## API Endpoints
 
-### Vendor Settlement (Updated)
+### Settlement Approval Endpoints (New)
+```
+GET /api/settlements/pending
+# Returns all pending vendor settlements for approval
+
+POST /api/settlements/{settlement_id}/approve
+# Approves settlement, updates treasury, marks transactions as settled
+
+POST /api/settlements/{settlement_id}/reject?reason=X
+# Rejects settlement, resets transactions for re-settlement
+```
+
+### Treasury History Endpoint (New)
+```
+GET /api/treasury/{account_id}/history
+Query params:
+  - start_date: ISO date string (optional)
+  - end_date: ISO date string (optional)
+  - transaction_type: deposit|withdrawal|settlement_in (optional)
+  - limit: number (default 100)
+```
+
+### Vendor Settlement
 ```
 POST /api/vendors/{vendor_id}/settle
 Body:
@@ -64,6 +86,7 @@ Body:
   "destination_currency": "AED",
   "exchange_rate": 3.67
 }
+# Settlement now goes to "pending" status, requires approval
 ```
 
 ## Demo Credentials
