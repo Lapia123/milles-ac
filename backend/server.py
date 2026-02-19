@@ -1301,7 +1301,15 @@ async def get_vendor_settlements(vendor_id: str, user: dict = Depends(get_curren
 # Admin settle vendor balance
 class VendorSettlementRequest(BaseModel):
     settlement_type: str  # "bank" or "cash"
-    destination_account_id: Optional[str] = None
+    destination_account_id: str  # Required - treasury account
+    commission_amount: float = 0  # Manual commission entry
+    charges_amount: float = 0  # Additional charges/fees
+    charges_description: Optional[str] = None
+    # Multi-currency support
+    source_currency: str = "USD"  # Currency of transactions
+    destination_currency: str = "USD"  # Currency of destination treasury
+    exchange_rate: float = 1.0  # Conversion rate
+    settlement_amount_in_dest_currency: Optional[float] = None  # Final amount in destination currency
 
 @api_router.post("/vendors/{vendor_id}/settle")
 async def settle_vendor_balance(
@@ -1327,19 +1335,25 @@ async def settle_vendor_balance(
     # Calculate amounts
     gross_amount = sum(tx["amount"] for tx in pending_txs)
     
-    # Apply commission based on settlement type
-    if settlement_request.settlement_type == VendorSettlementType.BANK:
-        commission_rate = vendor.get("bank_settlement_commission", 0) / 100
-    else:  # cash
-        commission_rate = vendor.get("cash_settlement_commission", 0) / 100
+    # Manual commission and charges
+    commission_amount = settlement_request.commission_amount
+    charges_amount = settlement_request.charges_amount
     
-    commission_amount = round(gross_amount * commission_rate, 2)
-    net_amount = gross_amount - commission_amount
+    # Net amount before currency conversion
+    net_amount_source = gross_amount - commission_amount - charges_amount
+    
+    # Calculate settlement amount in destination currency
+    if settlement_request.settlement_amount_in_dest_currency is not None:
+        # Admin entered final amount directly
+        settlement_amount = settlement_request.settlement_amount_in_dest_currency
+    else:
+        # Use exchange rate
+        settlement_amount = round(net_amount_source * settlement_request.exchange_rate, 2)
     
     settlement_id = f"vstl_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
     
-    dest_account_id = settlement_request.destination_account_id or vendor.get("settlement_destination_id")
+    dest_account_id = settlement_request.destination_account_id
     dest = await db.treasury_accounts.find_one({"account_id": dest_account_id}, {"_id": 0})
     if not dest:
         raise HTTPException(status_code=404, detail="Settlement destination account not found")
@@ -1350,9 +1364,14 @@ async def settle_vendor_balance(
         "vendor_name": vendor["vendor_name"],
         "settlement_type": settlement_request.settlement_type,
         "gross_amount": gross_amount,
-        "commission_rate": commission_rate * 100,
+        "source_currency": settlement_request.source_currency,
         "commission_amount": commission_amount,
-        "net_amount": net_amount,
+        "charges_amount": charges_amount,
+        "charges_description": settlement_request.charges_description,
+        "net_amount_source": net_amount_source,
+        "exchange_rate": settlement_request.exchange_rate,
+        "destination_currency": settlement_request.destination_currency,
+        "settlement_amount": settlement_amount,
         "transaction_count": len(pending_txs),
         "transaction_ids": [tx["transaction_id"] for tx in pending_txs],
         "settlement_destination_id": dest_account_id,
@@ -1372,10 +1391,10 @@ async def settle_vendor_balance(
         {"$set": {"settled": True, "settlement_id": settlement_id, "settlement_status": "completed"}}
     )
     
-    # Update treasury balance
+    # Update treasury balance with settlement amount in destination currency
     await db.treasury_accounts.update_one(
         {"account_id": dest_account_id},
-        {"$inc": {"balance": net_amount}, "$set": {"updated_at": now.isoformat()}}
+        {"$inc": {"balance": settlement_amount}, "$set": {"updated_at": now.isoformat()}}
     )
     
     # Update vendor stats
