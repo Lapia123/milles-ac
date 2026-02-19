@@ -252,13 +252,22 @@ class TransactionCreate(BaseModel):
     currency: str = "USD"
     base_currency: str = "USD"
     base_amount: Optional[float] = None
-    destination_type: str = "treasury"  # "treasury", "psp", or "vendor"
+    destination_type: str = "treasury"  # "treasury", "psp", "vendor", "bank", "usdt"
     destination_account_id: Optional[str] = None
     psp_id: Optional[str] = None
     vendor_id: Optional[str] = None
     commission_paid_by: Optional[str] = None  # "client" or "broker"
     description: Optional[str] = None
     reference: Optional[str] = None
+    # Client bank details (for withdrawal to bank)
+    client_bank_name: Optional[str] = None
+    client_bank_account_name: Optional[str] = None
+    client_bank_account_number: Optional[str] = None
+    client_bank_swift_iban: Optional[str] = None
+    client_bank_currency: Optional[str] = None
+    # Client USDT details (for withdrawal to USDT)
+    client_usdt_address: Optional[str] = None
+    client_usdt_network: Optional[str] = None  # TRC20, ERC20, BEP20
 
 class TransactionUpdate(BaseModel):
     status: Optional[str] = None
