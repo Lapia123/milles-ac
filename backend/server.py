@@ -219,6 +219,10 @@ class TreasuryAccountCreate(BaseModel):
     swift_code: Optional[str] = None
     currency: str = "USD"
     description: Optional[str] = None
+    # USDT specific fields
+    usdt_address: Optional[str] = None
+    usdt_network: Optional[str] = None  # TRC20, ERC20, BEP20
+    usdt_notes: Optional[str] = None
 
 class TreasuryAccountUpdate(BaseModel):
     account_name: Optional[str] = None
@@ -229,6 +233,10 @@ class TreasuryAccountUpdate(BaseModel):
     currency: Optional[str] = None
     status: Optional[str] = None
     description: Optional[str] = None
+    # USDT specific fields
+    usdt_address: Optional[str] = None
+    usdt_network: Optional[str] = None
+    usdt_notes: Optional[str] = None
 
 class TransactionType:
     DEPOSIT = "deposit"
