@@ -92,6 +92,8 @@ class ClientBase(BaseModel):
     email: str
     phone: Optional[str] = None
     country: Optional[str] = None
+    mt5_number: Optional[str] = None
+    crm_customer_id: Optional[str] = None
     kyc_status: str = ClientStatus.PENDING
     kyc_documents: List[str] = []
     notes: Optional[str] = None
@@ -104,6 +106,8 @@ class ClientCreate(BaseModel):
     email: EmailStr
     phone: Optional[str] = None
     country: Optional[str] = None
+    mt5_number: Optional[str] = None
+    crm_customer_id: Optional[str] = None
     notes: Optional[str] = None
 
 class ClientUpdate(BaseModel):
@@ -112,6 +116,8 @@ class ClientUpdate(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     country: Optional[str] = None
+    mt5_number: Optional[str] = None
+    crm_customer_id: Optional[str] = None
     kyc_status: Optional[str] = None
     notes: Optional[str] = None
 
@@ -124,6 +130,21 @@ class TreasuryAccountType:
 class TreasuryAccountStatus:
     ACTIVE = "active"
     INACTIVE = "inactive"
+
+# Exchange rates to USD (simplified - in production use live API)
+EXCHANGE_RATES_TO_USD = {
+    "USD": 1.0,
+    "EUR": 1.08,
+    "GBP": 1.27,
+    "AED": 0.27,
+    "SAR": 0.27,
+    "INR": 0.012,
+    "JPY": 0.0067,
+}
+
+def convert_to_usd(amount: float, currency: str) -> float:
+    rate = EXCHANGE_RATES_TO_USD.get(currency.upper(), 1.0)
+    return round(amount * rate, 2)
 
 class TreasuryAccountCreate(BaseModel):
     account_name: str
@@ -166,6 +187,8 @@ class TransactionCreate(BaseModel):
     transaction_type: str
     amount: float
     currency: str = "USD"
+    base_currency: str = "USD"
+    base_amount: Optional[float] = None
     destination_account_id: Optional[str] = None
     description: Optional[str] = None
     reference: Optional[str] = None
