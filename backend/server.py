@@ -1439,6 +1439,7 @@ async def create_transaction(
     destination_type: str = Form("treasury"),
     destination_account_id: Optional[str] = Form(None),
     psp_id: Optional[str] = Form(None),
+    vendor_id: Optional[str] = Form(None),
     commission_paid_by: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     reference: Optional[str] = Form(None),
@@ -1453,6 +1454,7 @@ async def create_transaction(
     # Verify destination based on type
     destination_account = None
     psp_info = None
+    vendor_info = None
     
     if destination_type == "treasury" and destination_account_id:
         destination_account = await db.treasury_accounts.find_one({"account_id": destination_account_id}, {"_id": 0})
@@ -1462,6 +1464,10 @@ async def create_transaction(
         psp_info = await db.psps.find_one({"psp_id": psp_id}, {"_id": 0})
         if not psp_info:
             raise HTTPException(status_code=404, detail="PSP not found")
+    elif destination_type == "vendor" and vendor_id:
+        vendor_info = await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
+        if not vendor_info:
+            raise HTTPException(status_code=404, detail="Vendor not found")
     
     tx_id = f"tx_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
