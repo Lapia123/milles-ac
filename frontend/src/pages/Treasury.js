@@ -97,6 +97,10 @@ export default function Treasury() {
     currency: 'USD',
     description: '',
     status: 'active',
+    // USDT specific fields
+    usdt_address: '',
+    usdt_network: '',
+    usdt_notes: '',
   });
 
   const isAdmin = user?.role === 'admin';
