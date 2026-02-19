@@ -241,6 +241,13 @@ export default function Vendors() {
       return;
     }
     
+    // Get destination account to check currency
+    const destAccount = treasuryAccounts.find(a => a.account_id === settlementDestination);
+    if (destAccount && destAccount.currency !== 'USD' && !settlementAmountInDestCurrency) {
+      toast.error(`Please enter the settlement amount in ${destAccount.currency}`);
+      return;
+    }
+    
     try {
       const response = await fetch(`${API_URL}/api/vendors/${viewVendor.vendor_id}/settle`, {
         method: 'POST',
@@ -251,7 +258,10 @@ export default function Vendors() {
           destination_account_id: settlementDestination,
           commission_amount: parseFloat(settlementCommission) || 0,
           charges_amount: parseFloat(settlementCharges) || 0,
-          charges_description: settlementChargesDescription || null
+          charges_description: settlementChargesDescription || null,
+          source_currency: 'USD',
+          destination_currency: destAccount?.currency || 'USD',
+          settlement_amount_in_dest_currency: settlementAmountInDestCurrency ? parseFloat(settlementAmountInDestCurrency) : null
         }),
       });
       
@@ -263,6 +273,7 @@ export default function Vendors() {
         setSettlementCommission('');
         setSettlementCharges('');
         setSettlementChargesDescription('');
+        setSettlementAmountInDestCurrency('');
         fetchVendorTransactions(viewVendor.vendor_id);
         fetchVendorSettlements(viewVendor.vendor_id);
         fetchVendors();
