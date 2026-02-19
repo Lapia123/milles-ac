@@ -220,6 +220,13 @@ export default function Transactions() {
     fetchVendors();
   }, [typeFilter, statusFilter]);
 
+  // Fetch client bank accounts when client changes
+  useEffect(() => {
+    if (formData.client_id && formData.destination_type === 'bank') {
+      fetchClientBankAccounts(formData.client_id);
+    }
+  }, [formData.client_id, formData.destination_type]);
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
