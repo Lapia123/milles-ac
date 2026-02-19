@@ -934,6 +934,7 @@ export default function Vendors() {
                     setSettlementCommission('');
                     setSettlementCharges('');
                     setSettlementChargesDescription('');
+                    setSettlementAmountInDestCurrency('');
                   }}
                   className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
                 >
