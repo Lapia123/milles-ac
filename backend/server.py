@@ -712,11 +712,16 @@ async def update_client_bank_account(
 ):
     """Update a client's bank account"""
     updates = {}
-    if bank_name: updates["bank_name"] = bank_name
-    if account_name: updates["account_name"] = account_name
-    if account_number: updates["account_number"] = account_number
-    if swift_iban is not None: updates["swift_iban"] = swift_iban
-    if currency: updates["currency"] = currency
+    if bank_name:
+        updates["bank_name"] = bank_name
+    if account_name:
+        updates["account_name"] = account_name
+    if account_number:
+        updates["account_number"] = account_number
+    if swift_iban is not None:
+        updates["swift_iban"] = swift_iban
+    if currency:
+        updates["currency"] = currency
     
     if not updates:
         raise HTTPException(status_code=400, detail="No updates provided")
