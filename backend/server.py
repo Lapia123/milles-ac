@@ -183,18 +183,12 @@ class VendorCreate(BaseModel):
     password: str
     deposit_commission: float = 0  # percentage for deposits
     withdrawal_commission: float = 0  # percentage for withdrawals
-    bank_settlement_commission: float = 0  # commission when settling via bank
-    cash_settlement_commission: float = 0  # commission when settling via cash
-    settlement_destination_id: str  # Treasury account ID
     description: Optional[str] = None
 
 class VendorUpdate(BaseModel):
     vendor_name: Optional[str] = None
     deposit_commission: Optional[float] = None
     withdrawal_commission: Optional[float] = None
-    bank_settlement_commission: Optional[float] = None
-    cash_settlement_commission: Optional[float] = None
-    settlement_destination_id: Optional[str] = None
     status: Optional[str] = None
     description: Optional[str] = None
 
