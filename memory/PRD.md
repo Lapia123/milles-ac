@@ -152,6 +152,27 @@ Body:
   "exchange_rate": 3.67,
   "destination_currency": "AED",
   "settlement_amount": 3449.8,
-  "settlement_destination_id": "treasury_xxx"
+  "settlement_destination_id": "treasury_xxx",
+  "status": "pending|approved|rejected",
+  "approved_at": "ISO date",
+  "approved_by": "user_id",
+  "approved_by_name": "User Name",
+  "rejection_reason": "optional reason"
+}
+```
+
+### treasury_transactions (New Collection)
+```json
+{
+  "treasury_transaction_id": "ttx_xxx",
+  "account_id": "treasury_xxx",
+  "transaction_type": "settlement_in|deposit|withdrawal",
+  "amount": 3449.8,
+  "currency": "AED",
+  "reference": "Vendor Settlement: VendorName",
+  "settlement_id": "vstl_xxx",
+  "vendor_id": "vendor_xxx",
+  "created_at": "ISO date",
+  "created_by": "user_id"
 }
 ```
