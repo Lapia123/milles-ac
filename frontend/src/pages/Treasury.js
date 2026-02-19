@@ -219,6 +219,95 @@ export default function Treasury() {
     toast.success('Statement downloaded');
   };
 
+  // Transfer functions
+  const initiateTransfer = () => {
+    setTransferData({
+      source_account_id: '',
+      destination_account_id: '',
+      amount: '',
+      exchange_rate: '1',
+      notes: '',
+    });
+    setIsTransferDialogOpen(true);
+  };
+
+  const handleTransferSubmit = () => {
+    // Validate inputs
+    if (!transferData.source_account_id) {
+      toast.error('Please select source account');
+      return;
+    }
+    if (!transferData.destination_account_id) {
+      toast.error('Please select destination account');
+      return;
+    }
+    if (!transferData.amount || parseFloat(transferData.amount) <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    
+    // Check balance
+    const sourceAccount = accounts.find(a => a.account_id === transferData.source_account_id);
+    if (sourceAccount && parseFloat(transferData.amount) > sourceAccount.balance) {
+      toast.error('Insufficient balance in source account');
+      return;
+    }
+    
+    // Show captcha
+    generateCaptcha();
+    setShowCaptcha(true);
+  };
+
+  const verifyCaptchaAndTransfer = async () => {
+    const correctAnswer = captchaNumbers.n1 + captchaNumbers.n2;
+    if (parseInt(captchaAnswer) !== correctAnswer) {
+      toast.error('Incorrect answer. Please try again.');
+      generateCaptcha();
+      setCaptchaAnswer('');
+      return;
+    }
+    
+    // Execute transfer
+    setTransferProcessing(true);
+    try {
+      const response = await fetch(`${API_URL}/api/treasury/transfer`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          source_account_id: transferData.source_account_id,
+          destination_account_id: transferData.destination_account_id,
+          amount: parseFloat(transferData.amount),
+          exchange_rate: parseFloat(transferData.exchange_rate) || 1,
+          notes: transferData.notes || null,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(`Transferred ${result.source_amount} ${result.source_currency} to ${result.destination_account}`);
+        setShowCaptcha(false);
+        setIsTransferDialogOpen(false);
+        fetchAccounts();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Transfer failed');
+      }
+    } catch (error) {
+      toast.error('Transfer failed');
+    } finally {
+      setTransferProcessing(false);
+      setCaptchaAnswer('');
+    }
+  };
+
+  // Get source account details for preview
+  const sourceAccount = accounts.find(a => a.account_id === transferData.source_account_id);
+  const destAccount = accounts.find(a => a.account_id === transferData.destination_account_id);
+  const calculatedDestAmount = transferData.amount && transferData.exchange_rate 
+    ? (parseFloat(transferData.amount) * parseFloat(transferData.exchange_rate)).toFixed(2)
+    : '0.00';
+
   useEffect(() => {
     fetchAccounts();
   }, []);
