@@ -335,6 +335,8 @@ export default function Transactions() {
     });
     setProofImage(null);
     setProofPreview(null);
+    setSelectedBankAccount('new');
+    setClientBankAccounts([]);
   };
 
   const getStatusBadge = (status) => {
