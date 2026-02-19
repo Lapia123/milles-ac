@@ -264,6 +264,7 @@ export default function Transactions() {
       destination_type: 'treasury',
       destination_account_id: '',
       psp_id: '',
+      vendor_id: '',
       commission_paid_by: 'client',
       description: '',
       reference: '',
