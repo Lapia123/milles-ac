@@ -64,6 +64,8 @@ function AppRouter() {
         <Route path="transactions" element={<Transactions />} />
         <Route path="treasury" element={<Treasury />} />
         <Route path="psp" element={<PSPs />} />
+        <Route path="vendors" element={<Vendors />} />
+        <Route path="vendor-portal" element={<VendorDashboard />} />
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<Settings />} />
         <Route 
