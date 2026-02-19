@@ -2894,11 +2894,17 @@ async def get_loans(
     
     loans = await db.loans.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
     
-    # Get treasury account names and calculate outstanding
+    # Batch fetch treasury accounts to avoid N+1 queries
+    treasury_ids = list(set(loan.get("source_treasury_id") for loan in loans if loan.get("source_treasury_id")))
+    treasury_map = {}
+    if treasury_ids:
+        treasuries = await db.treasury_accounts.find({"account_id": {"$in": treasury_ids}}, {"_id": 0}).to_list(len(treasury_ids))
+        treasury_map = {t["account_id"]: t["account_name"] for t in treasuries}
+    
+    # Process loans
     for loan in loans:
         if loan.get("source_treasury_id"):
-            acc = await db.treasury_accounts.find_one({"account_id": loan["source_treasury_id"]}, {"_id": 0})
-            loan["source_treasury_name"] = acc["account_name"] if acc else "Unknown"
+            loan["source_treasury_name"] = treasury_map.get(loan["source_treasury_id"], "Unknown")
         
         # Calculate outstanding balance
         loan["outstanding_balance"] = loan["amount"] + loan.get("total_interest", 0) - loan.get("total_repaid", 0)
