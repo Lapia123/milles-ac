@@ -297,6 +297,18 @@ export default function Treasury() {
     );
   };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   const totalBalanceUSD = accounts.reduce((sum, acc) => sum + (acc.balance_usd || acc.balance || 0), 0);
 
   return (
