@@ -242,6 +242,7 @@ EXCHANGE_RATES_TO_USD = {
     "SAR": 0.27,
     "INR": 0.012,
     "JPY": 0.0067,
+    "USDT": 1.0,
 }
 
 def convert_to_usd(amount: float, currency: str) -> float:
