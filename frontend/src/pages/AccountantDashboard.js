@@ -338,6 +338,48 @@ export default function AccountantDashboard() {
     }
   };
 
+  const handleProofUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !uploadingProof) return;
+    
+    // Show preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProofPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+    
+    // Upload the file
+    setProcessingId(uploadingProof.transaction_id);
+    try {
+      const formData = new FormData();
+      formData.append('proof_image', file);
+      
+      const response = await fetch(`${API_URL}/api/transactions/${uploadingProof.transaction_id}/upload-proof`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (response.ok) {
+        toast.success('Proof of payment uploaded');
+        setUploadingProof(null);
+        setProofPreview(null);
+        fetchPendingTransactions();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Upload failed');
+      }
+    } catch (error) {
+      toast.error('Upload failed');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const getTypeBadge = (type) => {
     const isIncoming = ['deposit', 'rebate'].includes(type);
     return (
