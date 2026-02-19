@@ -2905,9 +2905,16 @@ async def get_loans(
         
         # Check if overdue
         if loan["status"] == LoanStatus.ACTIVE:
-            from datetime import datetime
-            if loan.get("due_date") and datetime.fromisoformat(loan["due_date"].replace("Z", "+00:00")) < datetime.now(timezone.utc):
-                loan["is_overdue"] = True
+            if loan.get("due_date"):
+                due_str = loan["due_date"]
+                if "T" in due_str:
+                    due = datetime.fromisoformat(due_str.replace("Z", "+00:00"))
+                else:
+                    due = datetime.strptime(due_str[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                if due.tzinfo is None:
+                    due = due.replace(tzinfo=timezone.utc)
+                if due < datetime.now(timezone.utc):
+                    loan["is_overdue"] = True
     
     return loans
 
