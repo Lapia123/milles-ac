@@ -143,6 +143,8 @@ export default function AccountantDashboard() {
   const [showSettlementRejectDialog, setShowSettlementRejectDialog] = useState(null);
   const [processingId, setProcessingId] = useState(null);
   const [activeTab, setActiveTab] = useState('transactions');
+  const [uploadingProof, setUploadingProof] = useState(null);
+  const [proofPreview, setProofPreview] = useState(null);
   
   // Captcha states
   const [showCaptcha, setShowCaptcha] = useState(false);
