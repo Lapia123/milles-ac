@@ -166,13 +166,30 @@ export default function AccountantDashboard() {
     } catch (error) {
       console.error('Error fetching pending transactions:', error);
       toast.error('Failed to load pending transactions');
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const fetchPendingSettlements = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/settlements/pending`, { 
+        headers: getAuthHeaders(), 
+        credentials: 'include' 
+      });
+      if (response.ok) {
+        setPendingSettlements(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching pending settlements:', error);
     }
   };
 
   useEffect(() => {
-    fetchPendingTransactions();
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchPendingTransactions(), fetchPendingSettlements()]);
+      setLoading(false);
+    };
+    loadData();
   }, []);
 
   const initiateApprove = (transactionId) => {
