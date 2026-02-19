@@ -566,6 +566,54 @@ export default function Transactions() {
                     <Building2 className="w-4 h-4" />
                     <span className="text-xs uppercase tracking-wider font-bold">Client Bank Details</span>
                   </div>
+                  
+                  {/* Saved Bank Accounts Dropdown */}
+                  {clientBankAccounts.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Saved Bank Accounts</Label>
+                      <Select
+                        value={selectedBankAccount}
+                        onValueChange={(value) => {
+                          setSelectedBankAccount(value);
+                          if (value !== 'new') {
+                            const bank = clientBankAccounts.find(b => b.bank_account_id === value);
+                            if (bank) {
+                              setFormData({
+                                ...formData,
+                                client_bank_name: bank.bank_name,
+                                client_bank_account_name: bank.account_name,
+                                client_bank_account_number: bank.account_number,
+                                client_bank_swift_iban: bank.swift_iban || '',
+                                client_bank_currency: bank.currency || 'USD',
+                              });
+                            }
+                          } else {
+                            setFormData({
+                              ...formData,
+                              client_bank_name: '',
+                              client_bank_account_name: '',
+                              client_bank_account_number: '',
+                              client_bank_swift_iban: '',
+                              client_bank_currency: 'USD',
+                            });
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="bg-[#1F2833] border-white/10 text-white">
+                          <SelectValue placeholder="Select saved bank or add new" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#1F2833] border-white/10">
+                          <SelectItem value="new" className="text-[#66FCF1] hover:bg-white/5">+ Add New Bank Account</SelectItem>
+                          {clientBankAccounts.map((bank) => (
+                            <SelectItem key={bank.bank_account_id} value={bank.bank_account_id} className="text-white hover:bg-white/5">
+                              {bank.bank_name} - {bank.account_number} ({bank.currency})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Bank Name *</Label>
@@ -625,6 +673,11 @@ export default function Transactions() {
                       </SelectContent>
                     </Select>
                   </div>
+                  {selectedBankAccount === 'new' && (
+                    <p className="text-xs text-[#66FCF1]">
+                      This bank account will be saved to the client's profile for future use.
+                    </p>
+                  )}
                 </div>
               )}
               
