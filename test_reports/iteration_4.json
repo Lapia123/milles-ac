@@ -1,0 +1,91 @@
+{
+  "summary": "Comprehensive testing of PSP (Payment Service Provider) feature completed successfully. All 14 backend tests passed. UI testing confirmed PSP management page, transaction creation with PSP destination, commission preview, settlement workflow, and navigation. Settlement API verified to correctly update treasury balance.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Dialogs", "issues": ["Console warning: Missing Description or aria-describedby for DialogContent - accessibility improvement needed but not blocking"]}
+    ]
+  },
+  "passed_tests": [
+    "Backend: Admin login (admin@fxbroker.com / admin123)",
+    "Backend: Accountant login (accountant@fxbroker.com / accountant123)",
+    "Backend: GET /api/psp - List all PSPs returns seeded PSPs (Stripe, PayPal, Skrill)",
+    "Backend: GET /api/psp-summary - Returns PSPs with pending_transactions_count, pending_amount, overdue_count",
+    "Backend: POST /api/psp - Create PSP with commission rate and settlement days",
+    "Backend: PUT /api/psp/{psp_id} - Update PSP commission rate and description",
+    "Backend: GET /api/psp/{psp_id} - Get single PSP details",
+    "Backend: POST /api/transactions (PSP) - Create transaction with PSP destination, commission_paid_by=client",
+    "Backend: POST /api/transactions (PSP) - Create transaction with PSP destination, commission_paid_by=broker",
+    "Backend: GET /api/psp/{psp_id}/pending-transactions - List pending PSP transactions",
+    "Backend: GET /api/psp/{psp_id}/settlements - List settlement history",
+    "Backend: POST /api/psp/transactions/{tx_id}/settle - Settle single transaction, updates treasury balance",
+    "Backend: DELETE /api/psp/{psp_id} - Delete PSP",
+    "Backend: Treasury balance update verification after settlement",
+    "Frontend: Login page loads correctly",
+    "Frontend: PSP navigation link visible in sidebar with CreditCard icon",
+    "Frontend: PSP page loads with summary cards (Total PSPs, Pending Settlement, Overdue Settlements)",
+    "Frontend: PSP cards display commission rate (%), settlement time (T+X), pending amount, status badge",
+    "Frontend: Add PSP button opens dialog with all fields (name, commission %, settlement days, destination, min amount, description)",
+    "Frontend: PSP creation via UI form works correctly",
+    "Frontend: Click PSP card opens details dialog with Pending Settlements and Settlement History tabs",
+    "Frontend: Pending transactions table shows Reference, Client, Amount, Commission, Net Amount, Expected date, Settle button",
+    "Frontend: Transaction form - Destination Type dropdown has Treasury and PSP options",
+    "Frontend: Transaction form - When PSP selected: shows PSP dropdown, Commission Paid By toggle, Commission Preview",
+    "Frontend: Commission preview shows Gross Amount, PSP Commission (-$X), Client Receives, Expected Settlement",
+    "Frontend: Commission toggle correctly switches between Client pays (deducted from deposit) and Broker (absorbs commission)",
+    "Frontend: Transaction created with PSP destination appears in transactions list"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_psp_features.py",
+    "/app/test_reports/pytest/psp_tests.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Missing aria-describedby on DialogContent components causing accessibility console warnings",
+    "Several React useEffect hooks have missing dependency warnings (non-blocking)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_psp_features.py"
+  ],
+  "success_rate": {
+    "backend": "100% (14/14 tests passed)",
+    "frontend": "100% (all PSP features working)"
+  },
+  "seed_data_creation": "Seeded 3 PSPs (Stripe 2.9%, PayPal 3.5%, Skrill 2.5%) via /api/seed endpoint",
+  "test_credentials": {
+    "admin": "admin@fxbroker.com / admin123",
+    "accountant": "accountant@fxbroker.com / accountant123"
+  },
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "PSP feature fully tested. All CRUD operations work. Transaction creation with PSP destination, commission toggle (client/broker), commission preview, and settlement workflow all functional. Settlement correctly updates treasury balance. No mocked APIs - all real backend integration. 3 seeded PSPs available for testing.",
+  "features_verified": {
+    "psp_management": {
+      "create": "Working - POST /api/psp",
+      "read": "Working - GET /api/psp, GET /api/psp/{id}, GET /api/psp-summary",
+      "update": "Working - PUT /api/psp/{id}",
+      "delete": "Working - DELETE /api/psp/{id}"
+    },
+    "psp_dashboard": {
+      "summary_cards": "Working - Total PSPs, Pending Settlement, Overdue Settlements",
+      "psp_cards": "Working - Shows commission rate, T+X settlement, pending amount, status"
+    },
+    "transactions_with_psp": {
+      "destination_type_dropdown": "Working - Treasury / PSP options",
+      "psp_selection": "Working - Dropdown with PSP name, commission %, settlement time",
+      "commission_paid_by_toggle": "Working - Client (deducted) / Broker (absorbs)",
+      "commission_preview": "Working - Shows gross, commission, net, expected settlement"
+    },
+    "settlement_workflow": {
+      "pending_transactions": "Working - GET /api/psp/{id}/pending-transactions",
+      "settle_button": "Working - Opens confirmation dialog",
+      "mark_as_settled": "Working - POST /api/psp/transactions/{tx_id}/settle",
+      "treasury_update": "Working - Balance increases after settlement"
+    }
+  }
+}
