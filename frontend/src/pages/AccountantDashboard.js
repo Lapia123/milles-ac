@@ -612,38 +612,6 @@ export default function AccountantDashboard() {
           </div>
         </TabsContent>
       </Tabs>
-                      size="sm"
-                      onClick={() => setViewTransaction(tx)}
-                      className="text-[#C5C6C7] hover:text-white hover:bg-white/5"
-                      data-testid={`view-tx-${tx.transaction_id}`}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      onClick={() => initiateApprove(tx.transaction_id)}
-                      disabled={processingId === tx.transaction_id}
-                      className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
-                      data-testid={`approve-tx-${tx.transaction_id}`}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Approve
-                    </Button>
-                    <Button
-                      onClick={() => initiateReject(tx.transaction_id)}
-                      disabled={processingId === tx.transaction_id}
-                      className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
-                      data-testid={`reject-tx-${tx.transaction_id}`}
-                    >
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Reject
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
 
       {/* View Transaction Dialog */}
       <Dialog open={!!viewTransaction} onOpenChange={() => setViewTransaction(null)}>
