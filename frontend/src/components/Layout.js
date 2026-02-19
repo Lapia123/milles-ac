@@ -85,7 +85,7 @@ export default function Layout() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0B0C10] flex">
+    <div className="min-h-screen bg-[#0F172A] flex">
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -94,21 +94,23 @@ export default function Layout() {
       )}
 
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#1F2833] border-r border-white/5 transform transition-transform duration-200 ${
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#1E293B] border-r border-white/5 transform transition-transform duration-200 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between h-16 px-4 border-b border-white/5">
             <div className="flex items-center gap-2">
-              <TrendingUp className="w-8 h-8 text-[#66FCF1]" />
+              <div className="w-8 h-8 bg-[#3B82F6] rounded-lg flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
               <span className="text-xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
-                FX Broker
+                Miles Capitals
               </span>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden text-[#C5C6C7] hover:text-white"
+              className="lg:hidden text-[#94A3B8] hover:text-white"
             >
               <X className="w-6 h-6" />
             </button>
@@ -122,9 +124,9 @@ export default function Layout() {
 
           <div className="p-4 border-t border-white/5">
             <div className="flex items-center gap-3">
-              <Avatar className="w-10 h-10 border border-[#66FCF1]/30">
+              <Avatar className="w-10 h-10 border border-[#3B82F6]/30">
                 <AvatarImage src={user?.picture} />
-                <AvatarFallback className="bg-[#66FCF1]/20 text-[#66FCF1]">
+                <AvatarFallback className="bg-[#3B82F6]/20 text-[#3B82F6]">
                   {user?.name?.charAt(0) || 'U'}
                 </AvatarFallback>
               </Avatar>
