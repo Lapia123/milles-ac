@@ -224,7 +224,7 @@ export default function Transactions() {
       if (formData.base_currency !== 'USD' && formData.base_amount) {
         formDataToSend.append('base_amount', formData.base_amount);
       }
-      if (formData.destination_type === 'treasury' && formData.destination_account_id) {
+      if ((formData.destination_type === 'treasury' || formData.destination_type === 'usdt') && formData.destination_account_id) {
         formDataToSend.append('destination_account_id', formData.destination_account_id);
       }
       if (formData.destination_type === 'psp' && formData.psp_id) {
@@ -233,6 +233,19 @@ export default function Transactions() {
       }
       if (formData.destination_type === 'vendor' && formData.vendor_id) {
         formDataToSend.append('vendor_id', formData.vendor_id);
+      }
+      // Client bank details (for withdrawal to bank)
+      if (formData.destination_type === 'bank') {
+        formDataToSend.append('client_bank_name', formData.client_bank_name);
+        formDataToSend.append('client_bank_account_name', formData.client_bank_account_name);
+        formDataToSend.append('client_bank_account_number', formData.client_bank_account_number);
+        formDataToSend.append('client_bank_swift_iban', formData.client_bank_swift_iban);
+        formDataToSend.append('client_bank_currency', formData.client_bank_currency);
+      }
+      // Client USDT details (for withdrawal to USDT)
+      if (formData.destination_type === 'usdt' && formData.transaction_type === 'withdrawal') {
+        formDataToSend.append('client_usdt_address', formData.client_usdt_address);
+        formDataToSend.append('client_usdt_network', formData.client_usdt_network);
       }
       if (formData.description) {
         formDataToSend.append('description', formData.description);
