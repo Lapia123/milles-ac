@@ -18,6 +18,13 @@ import {
   TabsList,
   TabsTrigger,
 } from '../components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -37,6 +44,7 @@ import {
   Banknote,
   Upload,
   CreditCard,
+  Filter,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
