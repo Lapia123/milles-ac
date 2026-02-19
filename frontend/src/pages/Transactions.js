@@ -219,6 +219,9 @@ export default function Transactions() {
         formDataToSend.append('psp_id', formData.psp_id);
         formDataToSend.append('commission_paid_by', formData.commission_paid_by);
       }
+      if (formData.destination_type === 'vendor' && formData.vendor_id) {
+        formDataToSend.append('vendor_id', formData.vendor_id);
+      }
       if (formData.description) {
         formDataToSend.append('description', formData.description);
       }
