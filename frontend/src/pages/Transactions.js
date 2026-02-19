@@ -243,7 +243,10 @@ export default function Transactions() {
       currency: 'USD',
       base_currency: 'USD',
       base_amount: '',
+      destination_type: 'treasury',
       destination_account_id: '',
+      psp_id: '',
+      commission_paid_by: 'client',
       description: '',
       reference: '',
     });
