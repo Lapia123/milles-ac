@@ -5,6 +5,43 @@ Build account software for FX broker - a back-office accounting system with admi
 
 ## Latest Update (2026-02-19)
 
+### Loan Management - COMPLETED
+
+1. **Create Loan**
+   - Borrower company name
+   - Loan amount & currency (multi-currency support)
+   - Annual interest rate (simple interest calculation)
+   - Loan date & due date
+   - Repayment mode: Lump Sum or Installments (with frequency)
+   - Select treasury account to disburse from
+   - Auto-deducts from treasury on creation
+
+2. **Record Repayments**
+   - Record partial or full payments
+   - Select different treasury account for repayment
+   - Multi-currency support (converts to loan currency)
+   - Auto-credits treasury account
+   - Shows outstanding balance
+
+3. **Loan Status Tracking**
+   - Active: Loan created, no repayments
+   - Partially Paid: Some repayments made
+   - Fully Paid: Total repaid >= loan amount + interest
+   - Overdue: Due date passed (auto-detected)
+
+4. **Loan Reports**
+   - Total Disbursed (USD)
+   - Outstanding Balance (USD)
+   - Total Repaid (USD)
+   - Interest Earned (USD)
+   - Status breakdown counts
+   - By-borrower breakdown
+
+5. **Loan Details View**
+   - Full loan information
+   - Repayment history table
+   - Record repayment from details view
+
 ### Income & Expenses Ledger - COMPLETED
 
 1. **Income Entry**
