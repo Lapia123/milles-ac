@@ -282,9 +282,6 @@ export default function Vendors() {
       password: '',
       deposit_commission: '',
       withdrawal_commission: '',
-      bank_settlement_commission: '',
-      cash_settlement_commission: '',
-      settlement_destination_id: '',
       description: '',
       status: 'active',
     });
