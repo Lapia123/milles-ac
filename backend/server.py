@@ -127,6 +127,7 @@ class TreasuryAccountType:
     BANK = "bank"
     CRYPTO_WALLET = "crypto_wallet"
     PAYMENT_GATEWAY = "payment_gateway"
+    USDT = "usdt"  # USDT Wallet
 
 class TreasuryAccountStatus:
     ACTIVE = "active"
