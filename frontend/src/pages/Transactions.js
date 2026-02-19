@@ -168,11 +168,23 @@ export default function Transactions() {
     }
   };
 
+  const fetchVendors = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/vendors`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setVendors(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching vendors:', error);
+    }
+  };
+
   useEffect(() => {
     fetchTransactions();
     fetchClients();
     fetchTreasuryAccounts();
     fetchPsps();
+    fetchVendors();
   }, [typeFilter, statusFilter]);
 
   const handleImageChange = (e) => {
