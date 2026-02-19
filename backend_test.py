@@ -119,8 +119,17 @@ class FXBrokerAPITester:
         if not success:
             return False
 
-        # Get specific client
+        # Get specific client and verify new fields
         success, client = self.run_test("Get Specific Client", "GET", f"api/clients/{client_id}", 200)
+        if success:
+            # Verify MT5 and CRM fields are present
+            has_mt5 = 'mt5_number' in client and client['mt5_number']
+            has_crm = 'crm_customer_id' in client and client['crm_customer_id']
+            if has_mt5 and has_crm:
+                print(f"   ✅ MT5 Number: {client['mt5_number']}, CRM ID: {client['crm_customer_id']}")
+            else:
+                print(f"   ❌ Missing new fields - MT5: {has_mt5}, CRM: {has_crm}")
+                return False
         
         return success
 
