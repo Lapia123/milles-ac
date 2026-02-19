@@ -1724,6 +1724,7 @@ async def create_transaction(
     client_bank_account_number: Optional[str] = Form(None),
     client_bank_swift_iban: Optional[str] = Form(None),
     client_bank_currency: Optional[str] = Form(None),
+    save_bank_to_client: Optional[str] = Form(None),  # 'true' to save bank to client profile
     # Client USDT details (for withdrawal to USDT)
     client_usdt_address: Optional[str] = Form(None),
     client_usdt_network: Optional[str] = Form(None),
@@ -1757,6 +1758,28 @@ async def create_transaction(
         vendor_info = await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
         if not vendor_info:
             raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    # Save bank account to client profile if requested
+    if destination_type == "bank" and save_bank_to_client == "true" and client_bank_name and client_bank_account_number:
+        existing_bank = await db.client_bank_accounts.find_one({
+            "client_id": client_id,
+            "account_number": client_bank_account_number,
+            "bank_name": client_bank_name
+        })
+        if not existing_bank:
+            bank_account_id = f"cba_{uuid.uuid4().hex[:12]}"
+            bank_doc = {
+                "bank_account_id": bank_account_id,
+                "client_id": client_id,
+                "bank_name": client_bank_name,
+                "account_name": client_bank_account_name,
+                "account_number": client_bank_account_number,
+                "swift_iban": client_bank_swift_iban,
+                "currency": client_bank_currency or "USD",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_by": user["user_id"]
+            }
+            await db.client_bank_accounts.insert_one(bank_doc)
     
     tx_id = f"tx_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
