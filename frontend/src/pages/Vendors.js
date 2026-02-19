@@ -744,8 +744,15 @@ export default function Vendors() {
       </Dialog>
 
       {/* Settle Vendor Dialog */}
-      <Dialog open={settleDialogOpen} onOpenChange={() => { setSettleDialogOpen(false); setSettlementType('bank'); setSettlementDestination(''); }}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+      <Dialog open={settleDialogOpen} onOpenChange={() => { 
+        setSettleDialogOpen(false); 
+        setSettlementType('bank'); 
+        setSettlementDestination(''); 
+        setSettlementCommission('');
+        setSettlementCharges('');
+        setSettlementChargesDescription('');
+      }}>
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
               Settle Vendor Balance
@@ -763,7 +770,7 @@ export default function Vendors() {
                   <span className="text-white">{pendingTransactions.filter(t => (t.status === 'approved' || t.status === 'completed') && !t.settled).length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#C5C6C7]">Gross Amount</span>
+                  <span className="text-[#C5C6C7]">Gross Amount (Source)</span>
                   <span className="text-white font-mono">${pendingTransactions.filter(t => (t.status === 'approved' || t.status === 'completed') && !t.settled).reduce((s, t) => s + t.amount, 0).toLocaleString()}</span>
                 </div>
               </div>
@@ -777,42 +784,22 @@ export default function Vendors() {
                   <SelectContent className="bg-[#1F2833] border-white/10">
                     <SelectItem value="bank" className="text-white hover:bg-white/5">
                       <span className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4" /> Bank ({viewVendor.bank_settlement_commission}% commission)
+                        <Building2 className="w-4 h-4" /> Bank Transfer
                       </span>
                     </SelectItem>
                     <SelectItem value="cash" className="text-white hover:bg-white/5">
                       <span className="flex items-center gap-2">
-                        <Banknote className="w-4 h-4" /> Cash ({viewVendor.cash_settlement_commission}% commission)
+                        <Banknote className="w-4 h-4" /> Cash
                       </span>
                     </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
-              {/* Commission Preview */}
-              {(() => {
-                const grossAmount = pendingTransactions.filter(t => (t.status === 'approved' || t.status === 'completed') && !t.settled).reduce((s, t) => s + t.amount, 0);
-                const commissionRate = settlementType === 'bank' ? viewVendor.bank_settlement_commission : viewVendor.cash_settlement_commission;
-                const commissionAmount = (grossAmount * commissionRate / 100).toFixed(2);
-                const netAmount = (grossAmount - parseFloat(commissionAmount)).toFixed(2);
-                return (
-                  <div className="p-3 bg-[#0B0C10] rounded-sm space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-[#C5C6C7]">Commission ({commissionRate}%)</span>
-                      <span className="text-red-400 font-mono">-${commissionAmount}</span>
-                    </div>
-                    <div className="flex justify-between pt-2 border-t border-white/10">
-                      <span className="text-[#C5C6C7] font-medium">Net to Treasury</span>
-                      <span className="text-green-400 font-mono text-lg">${netAmount}</span>
-                    </div>
-                  </div>
-                );
-              })()}
-              
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Settlement Destination</Label>
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Settlement Destination *</Label>
                 <Select
-                  value={settlementDestination || viewVendor.settlement_destination_id}
+                  value={settlementDestination}
                   onValueChange={setSettlementDestination}
                 >
                   <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white">
@@ -821,18 +808,108 @@ export default function Vendors() {
                   <SelectContent className="bg-[#1F2833] border-white/10">
                     {treasuryAccounts.map((account) => (
                       <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
-                        {account.account_name} - {account.bank_name}
+                        {account.account_name} - {account.bank_name} ({account.currency})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Commission Amount</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={settlementCommission}
+                    onChange={(e) => setSettlementCommission(e.target.value)}
+                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                    placeholder="0.00"
+                    data-testid="settlement-commission"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Additional Charges</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={settlementCharges}
+                    onChange={(e) => setSettlementCharges(e.target.value)}
+                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                    placeholder="0.00"
+                    data-testid="settlement-charges"
+                  />
+                </div>
+              </div>
+              
+              {settlementCharges && parseFloat(settlementCharges) > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Charges Description</Label>
+                  <Input
+                    value={settlementChargesDescription}
+                    onChange={(e) => setSettlementChargesDescription(e.target.value)}
+                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                    placeholder="e.g., Bank transfer fee, Processing fee"
+                    data-testid="settlement-charges-desc"
+                  />
+                </div>
+              )}
+              
+              {/* Multi-Currency Settlement */}
+              {settlementDestination && (() => {
+                const destAccount = treasuryAccounts.find(a => a.account_id === settlementDestination);
+                const grossAmount = pendingTransactions.filter(t => (t.status === 'approved' || t.status === 'completed') && !t.settled).reduce((s, t) => s + t.amount, 0);
+                const commission = parseFloat(settlementCommission) || 0;
+                const charges = parseFloat(settlementCharges) || 0;
+                const netSource = grossAmount - commission - charges;
+                
+                return (
+                  <div className="p-3 bg-[#0B0C10] rounded-sm border border-white/10 space-y-3">
+                    <p className="text-xs text-[#66FCF1] uppercase tracking-wider flex items-center gap-1">
+                      <Receipt className="w-3 h-3" /> Settlement Preview
+                    </p>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-[#C5C6C7]">Gross Amount (USD)</span>
+                        <span className="text-white font-mono">${grossAmount.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#C5C6C7]">Commission</span>
+                        <span className="text-red-400 font-mono">-${commission.toFixed(2)}</span>
+                      </div>
+                      {charges > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-[#C5C6C7]">Charges</span>
+                          <span className="text-red-400 font-mono">-${charges.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between pt-2 border-t border-white/10">
+                        <span className="text-[#C5C6C7]">Net Amount (USD)</span>
+                        <span className="text-white font-mono">${netSource.toFixed(2)}</span>
+                      </div>
+                      {destAccount && destAccount.currency !== 'USD' && (
+                        <div className="pt-2 border-t border-white/10">
+                          <p className="text-xs text-yellow-400 mb-2">Destination currency: {destAccount.currency}</p>
+                          <p className="text-xs text-[#C5C6C7]">Enter the final settlement amount in {destAccount.currency}:</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+              
               <div className="flex justify-end gap-3 pt-4">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => { setSettleDialogOpen(false); setSettlementType('bank'); setSettlementDestination(''); }}
+                  onClick={() => { 
+                    setSettleDialogOpen(false); 
+                    setSettlementType('bank'); 
+                    setSettlementDestination(''); 
+                    setSettlementCommission('');
+                    setSettlementCharges('');
+                    setSettlementChargesDescription('');
+                  }}
                   className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
                 >
                   Cancel
@@ -847,7 +924,7 @@ export default function Vendors() {
                 </Button>
               </div>
             </div>
-          )}
+          )}}
         </DialogContent>
       </Dialog>
     </div>
