@@ -649,6 +649,8 @@ async def create_transaction(
     transaction_type: str = Form(...),
     amount: float = Form(...),
     currency: str = Form("USD"),
+    base_currency: str = Form("USD"),
+    base_amount: Optional[float] = Form(None),
     destination_account_id: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     reference: Optional[str] = Form(None),
@@ -676,13 +678,20 @@ async def create_transaction(
         content = await proof_image.read()
         proof_image_data = base64.b64encode(content).decode('utf-8')
     
+    # Calculate USD amount if base currency is different
+    usd_amount = amount
+    if base_currency and base_currency != "USD" and base_amount:
+        usd_amount = convert_to_usd(base_amount, base_currency)
+    
     tx_doc = {
         "transaction_id": tx_id,
         "client_id": client_id,
         "client_name": f"{client['first_name']} {client['last_name']}",
         "transaction_type": transaction_type,
-        "amount": amount,
-        "currency": currency,
+        "amount": usd_amount,
+        "currency": "USD",
+        "base_currency": base_currency or "USD",
+        "base_amount": base_amount if base_currency != "USD" else None,
         "destination_account_id": destination_account_id,
         "destination_account_name": destination_account["account_name"] if destination_account else None,
         "destination_bank_name": destination_account["bank_name"] if destination_account else None,
