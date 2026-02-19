@@ -267,17 +267,38 @@ Query: start_date, end_date, transaction_type, limit
 {
   "treasury_transaction_id": "ttx_xxx",
   "account_id": "treasury_xxx",
-  "transaction_type": "settlement_in|deposit|withdrawal|transfer_out|transfer_in",
+  "transaction_type": "settlement_in|deposit|withdrawal|transfer_out|transfer_in|income|expense",
   "amount": 3449.8,
   "currency": "AED",
   "reference": "Transfer to EUR Account",
   "transfer_id": "trf_xxx",  // For transfers
+  "income_expense_id": "ie_xxx",  // For income/expenses
   "related_account_id": "treasury_yyy",  // For transfers
   "related_account_name": "EUR Account",  // For transfers
   "exchange_rate": 1.08,  // For transfers
   "destination_amount": 1080.0,  // For transfers
   "destination_currency": "EUR",  // For transfers
   "notes": "Internal transfer",  // For transfers
+  "created_at": "ISO date",
+  "created_by": "user_id",
+  "created_by_name": "User Name"
+}
+```
+
+### income_expenses (NEW)
+```json
+{
+  "entry_id": "ie_xxx",
+  "entry_type": "income|expense",
+  "category": "commission|service_fee|interest|bank_fee|operational|marketing|software|other",
+  "custom_category": "Custom Category Name",  // When category is "other"
+  "amount": 5000.0,
+  "currency": "USD",
+  "amount_usd": 5000.0,  // Converted to USD for reporting
+  "treasury_account_id": "treasury_xxx",
+  "description": "Monthly commission income",
+  "reference": "INV-001",
+  "date": "2026-02-19",
   "created_at": "ISO date",
   "created_by": "user_id",
   "created_by_name": "User Name"
