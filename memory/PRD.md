@@ -5,6 +5,31 @@ Build account software for FX broker - a back-office accounting system with admi
 
 ## Latest Update (2026-02-19)
 
+### Income & Expenses Ledger - COMPLETED
+
+1. **Income Entry**
+   - Categories: Commission, Service Fees, Interest, Other (custom)
+   - Select treasury account to credit
+   - Multi-currency with USD conversion
+   - Auto-updates treasury balance (credits on create, debits on delete)
+
+2. **Expense Entry**
+   - Categories: Bank Fees, Transfer Charges, Vendor Payments, Operational, Marketing, Software, Other (custom)
+   - Select treasury account to deduct from
+   - Validates sufficient balance before deduction
+   - Auto-updates treasury balance (debits on create, credits on delete)
+
+3. **Filtering & Reports**
+   - Filter by: Entry type, Date range, Treasury account
+   - Summary: Total Income, Total Expenses, Net Profit/Loss (USD)
+   - Category breakdown for income and expenses
+   - Monthly P&L report (12 months)
+
+4. **Treasury Integration**
+   - All entries linked to specific treasury accounts
+   - Balance updated immediately on entry creation/deletion
+   - Recorded in treasury_transactions as income/expense type
+
 ### Inter-Treasury Transfer Feature - COMPLETED
 
 1. **Transfer Dialog**
