@@ -814,13 +814,9 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
     total_treasury = await db.treasury_accounts.count_documents({})
     active_treasury = await db.treasury_accounts.count_documents({"status": TreasuryAccountStatus.ACTIVE})
     
-    # Get total treasury balance
-    pipeline = [
-        {"$match": {"status": TreasuryAccountStatus.ACTIVE}},
-        {"$group": {"_id": None, "total_balance": {"$sum": "$balance"}}}
-    ]
-    balance_result = await db.treasury_accounts.aggregate(pipeline).to_list(1)
-    total_balance = balance_result[0]["total_balance"] if balance_result else 0
+    # Get total treasury balance in USD (converting all currencies)
+    all_accounts = await db.treasury_accounts.find({"status": TreasuryAccountStatus.ACTIVE}, {"_id": 0}).to_list(1000)
+    total_balance_usd = sum(convert_to_usd(acc.get("balance", 0), acc.get("currency", "USD")) for acc in all_accounts)
     
     # Get transaction stats
     total_transactions = await db.transactions.count_documents({})
