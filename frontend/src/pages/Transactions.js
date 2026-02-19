@@ -340,35 +340,72 @@ export default function Transactions() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Currency</Label>
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Payment Currency</Label>
                   <Select
-                    value={formData.currency}
-                    onValueChange={(value) => setFormData({ ...formData, currency: value })}
+                    value={formData.base_currency}
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, base_currency: value });
+                      // Auto-calculate USD if base currency changes
+                      if (value !== 'USD' && formData.base_amount) {
+                        const usdAmount = (parseFloat(formData.base_amount) * exchangeRates[value]).toFixed(2);
+                        setFormData(prev => ({ ...prev, base_currency: value, amount: usdAmount }));
+                      }
+                    }}
                   >
-                    <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-tx-currency">
+                    <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-base-currency">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1F2833] border-white/10">
-                      <SelectItem value="USD" className="text-white hover:bg-white/5">USD</SelectItem>
-                      <SelectItem value="EUR" className="text-white hover:bg-white/5">EUR</SelectItem>
-                      <SelectItem value="GBP" className="text-white hover:bg-white/5">GBP</SelectItem>
+                      {currencies.map((cur) => (
+                        <SelectItem key={cur} value={cur} className="text-white hover:bg-white/5">
+                          {cur}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               
+              {formData.base_currency !== 'USD' && (
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Amount in {formData.base_currency} *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.base_amount}
+                    onChange={(e) => {
+                      const baseAmt = e.target.value;
+                      const usdAmount = baseAmt ? (parseFloat(baseAmt) * exchangeRates[formData.base_currency]).toFixed(2) : '';
+                      setFormData({ ...formData, base_amount: baseAmt, amount: usdAmount });
+                    }}
+                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                    placeholder={`0.00 ${formData.base_currency}`}
+                    data-testid="tx-base-amount"
+                    required
+                  />
+                </div>
+              )}
+              
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Amount *</Label>
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                  {formData.base_currency !== 'USD' ? 'Amount in USD (Auto-calculated)' : 'Amount in USD *'}
+                </Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
-                  placeholder="0.00"
+                  placeholder="0.00 USD"
                   data-testid="tx-amount"
+                  readOnly={formData.base_currency !== 'USD'}
                   required
                 />
+                {formData.base_currency !== 'USD' && formData.base_amount && (
+                  <p className="text-xs text-[#66FCF1]">
+                    Rate: 1 {formData.base_currency} = {exchangeRates[formData.base_currency]} USD
+                  </p>
+                )}
               </div>
               
               <div className="space-y-2">
