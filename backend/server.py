@@ -175,7 +175,9 @@ class VendorSettlementType:
 
 class VendorSettlementStatus:
     PENDING = "pending"
+    APPROVED = "approved"
     COMPLETED = "completed"
+    REJECTED = "rejected"
 
 class VendorCreate(BaseModel):
     vendor_name: str
