@@ -281,6 +281,10 @@ export default function Treasury() {
                         <SelectItem value="USD" className="text-white hover:bg-white/5">USD</SelectItem>
                         <SelectItem value="EUR" className="text-white hover:bg-white/5">EUR</SelectItem>
                         <SelectItem value="GBP" className="text-white hover:bg-white/5">GBP</SelectItem>
+                        <SelectItem value="AED" className="text-white hover:bg-white/5">AED</SelectItem>
+                        <SelectItem value="SAR" className="text-white hover:bg-white/5">SAR</SelectItem>
+                        <SelectItem value="INR" className="text-white hover:bg-white/5">INR</SelectItem>
+                        <SelectItem value="JPY" className="text-white hover:bg-white/5">JPY</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
