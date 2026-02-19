@@ -892,6 +892,7 @@ async def create_transaction(
     destination_type: str = Form("treasury"),
     destination_account_id: Optional[str] = Form(None),
     psp_id: Optional[str] = Form(None),
+    commission_paid_by: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     reference: Optional[str] = Form(None),
     proof_image: Optional[UploadFile] = File(None),
@@ -929,6 +930,24 @@ async def create_transaction(
     if base_currency and base_currency != "USD" and base_amount:
         usd_amount = convert_to_usd(base_amount, base_currency)
     
+    # Calculate PSP commission if applicable
+    commission_amount = 0.0
+    net_amount = usd_amount
+    expected_settlement_date = None
+    
+    if destination_type == "psp" and psp_info:
+        commission_rate = psp_info.get("commission_rate", 0) / 100
+        commission_amount = round(usd_amount * commission_rate, 2)
+        
+        # If commission paid by client, net amount is reduced
+        if commission_paid_by == CommissionPaidBy.CLIENT:
+            net_amount = usd_amount - commission_amount
+        # If commission paid by broker, net amount stays same (broker absorbs)
+        
+        # Calculate expected settlement date
+        settlement_days = psp_info.get("settlement_days", 1)
+        expected_settlement_date = (now + timedelta(days=settlement_days)).isoformat()
+    
     tx_doc = {
         "transaction_id": tx_id,
         "client_id": client_id,
@@ -945,6 +964,10 @@ async def create_transaction(
         "psp_id": psp_id if destination_type == "psp" else None,
         "psp_name": psp_info["psp_name"] if psp_info else None,
         "psp_commission_rate": psp_info["commission_rate"] if psp_info else None,
+        "psp_commission_amount": commission_amount if psp_info else None,
+        "psp_commission_paid_by": commission_paid_by if psp_info else None,
+        "psp_net_amount": net_amount if psp_info else None,
+        "psp_expected_settlement_date": expected_settlement_date,
         "status": TransactionStatus.PENDING,
         "description": description,
         "reference": reference or f"REF{uuid.uuid4().hex[:8].upper()}",
@@ -962,6 +985,13 @@ async def create_transaction(
     }
     
     await db.transactions.insert_one(tx_doc)
+    
+    # Update PSP pending balance if this is a PSP transaction
+    if destination_type == "psp" and psp_info:
+        await db.psps.update_one(
+            {"psp_id": psp_id},
+            {"$inc": {"pending_settlement": net_amount}}
+        )
     
     result = await db.transactions.find_one({"transaction_id": tx_id}, {"_id": 0})
     return result
