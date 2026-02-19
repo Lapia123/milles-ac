@@ -1928,6 +1928,52 @@ async def seed_demo_data():
             }
             await db.psps.insert_one(psp_doc)
     
+    # Create sample vendors
+    vendor_data = [
+        {"vendor_name": "MoneyExchange Pro", "email": "vendor1@fxbroker.com", "password": "vendor123", "deposit_commission": 1.5, "withdrawal_commission": 2.0, "bank_settlement_commission": 0.5, "cash_settlement_commission": 1.0, "description": "Premium exchange vendor"},
+        {"vendor_name": "FastPay Solutions", "email": "vendor2@fxbroker.com", "password": "vendor123", "deposit_commission": 2.0, "withdrawal_commission": 2.5, "bank_settlement_commission": 0.3, "cash_settlement_commission": 0.8, "description": "Fast payment processing"},
+    ]
+    
+    for v in vendor_data:
+        existing = await db.vendors.find_one({"vendor_name": v["vendor_name"]}, {"_id": 0})
+        if not existing and treasury_ids:
+            vendor_id = f"vendor_{uuid.uuid4().hex[:12]}"
+            user_id = f"user_{uuid.uuid4().hex[:12]}"
+            
+            # Create user account for vendor
+            user_doc = {
+                "user_id": user_id,
+                "email": v["email"],
+                "password_hash": hash_password(v["password"]),
+                "name": v["vendor_name"],
+                "role": UserRole.VENDOR,
+                "vendor_id": vendor_id,
+                "picture": None,
+                "is_active": True,
+                "created_at": now.isoformat()
+            }
+            await db.users.insert_one(user_doc)
+            
+            vendor_doc = {
+                "vendor_id": vendor_id,
+                "user_id": user_id,
+                "vendor_name": v["vendor_name"],
+                "email": v["email"],
+                "deposit_commission": v["deposit_commission"],
+                "withdrawal_commission": v["withdrawal_commission"],
+                "bank_settlement_commission": v["bank_settlement_commission"],
+                "cash_settlement_commission": v["cash_settlement_commission"],
+                "settlement_destination_id": treasury_ids[0],
+                "description": v["description"],
+                "total_volume": 0.0,
+                "total_commission": 0.0,
+                "pending_settlement": 0.0,
+                "status": VendorStatus.ACTIVE,
+                "created_at": now.isoformat(),
+                "updated_at": now.isoformat()
+            }
+            await db.vendors.insert_one(vendor_doc)
+    
     return {"message": "Demo data seeded successfully"}
 
 # Include router
