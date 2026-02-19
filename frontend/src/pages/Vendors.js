@@ -712,8 +712,8 @@ export default function Vendors() {
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">ID</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Type</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Gross</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Commission</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Net</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Deductions</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Settled</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Date</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -727,8 +727,21 @@ export default function Vendors() {
                                 </Badge>
                               </TableCell>
                               <TableCell className="font-mono text-white">${settlement.gross_amount?.toLocaleString()}</TableCell>
-                              <TableCell className="font-mono text-red-400">-${settlement.commission_amount?.toLocaleString()}</TableCell>
-                              <TableCell className="font-mono text-green-400">${settlement.net_amount?.toLocaleString()}</TableCell>
+                              <TableCell className="font-mono text-red-400">
+                                <div className="text-xs">
+                                  <div>Comm: -${settlement.commission_amount?.toLocaleString()}</div>
+                                  {settlement.charges_amount > 0 && (
+                                    <div>Charges: -${settlement.charges_amount?.toLocaleString()}</div>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-mono text-green-400">
+                                {settlement.destination_currency && settlement.destination_currency !== 'USD' ? (
+                                  <span>{settlement.destination_currency} {settlement.settlement_amount?.toLocaleString()}</span>
+                                ) : (
+                                  <span>${settlement.settlement_amount?.toLocaleString()}</span>
+                                )}
+                              </TableCell>
                               <TableCell className="text-[#C5C6C7]">{formatDate(settlement.settled_at)}</TableCell>
                             </TableRow>
                           ))}
