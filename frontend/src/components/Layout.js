@@ -24,6 +24,7 @@ import {
   ChevronDown,
   ClipboardCheck,
   CreditCard,
+  Store,
 } from 'lucide-react';
 
 export default function Layout() {
