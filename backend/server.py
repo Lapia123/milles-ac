@@ -901,6 +901,80 @@ async def get_psp_summary(user: dict = Depends(get_current_user)):
     
     return result
 
+# Mark single PSP transaction as settled
+@api_router.post("/psp/transactions/{transaction_id}/settle")
+async def settle_psp_transaction(
+    transaction_id: str, 
+    destination_account_id: Optional[str] = None,
+    user: dict = Depends(require_admin)
+):
+    """Mark a single PSP transaction as settled and transfer to treasury"""
+    tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if tx.get("destination_type") != "psp":
+        raise HTTPException(status_code=400, detail="Transaction is not a PSP transaction")
+    
+    if tx.get("settled"):
+        raise HTTPException(status_code=400, detail="Transaction already settled")
+    
+    if tx.get("status") not in [TransactionStatus.APPROVED, TransactionStatus.COMPLETED, TransactionStatus.PENDING]:
+        raise HTTPException(status_code=400, detail="Transaction cannot be settled in current status")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Get PSP info for destination
+    psp = await db.psps.find_one({"psp_id": tx.get("psp_id")}, {"_id": 0})
+    dest_account_id = destination_account_id or (psp.get("settlement_destination_id") if psp else None)
+    
+    if not dest_account_id:
+        raise HTTPException(status_code=400, detail="No destination account specified")
+    
+    # Get destination account
+    dest = await db.treasury_accounts.find_one({"account_id": dest_account_id}, {"_id": 0})
+    if not dest:
+        raise HTTPException(status_code=404, detail="Destination treasury account not found")
+    
+    # Amount to settle (net amount after commission)
+    settle_amount = tx.get("psp_net_amount", tx.get("amount", 0))
+    
+    # Update treasury balance
+    await db.treasury_accounts.update_one(
+        {"account_id": dest_account_id},
+        {"$inc": {"balance": settle_amount}, "$set": {"updated_at": now.isoformat()}}
+    )
+    
+    # Mark transaction as settled
+    await db.transactions.update_one(
+        {"transaction_id": transaction_id},
+        {"$set": {
+            "settled": True,
+            "settlement_status": "completed",
+            "settled_at": now.isoformat(),
+            "settled_by": user["user_id"],
+            "settled_by_name": user["name"],
+            "settlement_destination_id": dest_account_id,
+            "settlement_destination_name": dest["account_name"]
+        }}
+    )
+    
+    # Update PSP stats
+    if psp:
+        commission_amount = tx.get("psp_commission_amount", 0)
+        await db.psps.update_one(
+            {"psp_id": tx.get("psp_id")},
+            {
+                "$inc": {
+                    "total_volume": tx.get("amount", 0),
+                    "total_commission": commission_amount,
+                    "pending_settlement": -settle_amount
+                }
+            }
+        )
+    
+    return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+
 # ============== TRANSACTIONS ROUTES ==============
 
 @api_router.get("/transactions")
