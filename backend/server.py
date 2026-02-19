@@ -1274,9 +1274,15 @@ async def seed_demo_data():
                 "transaction_type": TransactionType.DEPOSIT,
                 "amount": [5000, 10000, 3000][i],
                 "currency": "USD",
+                "base_currency": "USD",
+                "base_amount": None,
+                "destination_type": "treasury",
                 "destination_account_id": treasury_ids[0] if treasury_ids else None,
                 "destination_account_name": "Main Operating Account",
                 "destination_bank_name": "Chase Bank",
+                "psp_id": None,
+                "psp_name": None,
+                "psp_commission_rate": None,
                 "status": TransactionStatus.PENDING,
                 "description": "Initial deposit",
                 "reference": f"DEP{uuid.uuid4().hex[:8].upper()}",
@@ -1286,10 +1292,41 @@ async def seed_demo_data():
                 "processed_by": None,
                 "processed_by_name": None,
                 "rejection_reason": None,
+                "settled": False,
+                "settlement_id": None,
+                "settlement_status": None,
                 "created_at": (now - timedelta(days=i+1)).isoformat(),
                 "processed_at": None
             }
             await db.transactions.insert_one(tx_doc)
+    
+    # Create sample PSPs
+    psp_data = [
+        {"psp_name": "Stripe", "commission_rate": 2.9, "settlement_days": 2, "description": "Credit card payments"},
+        {"psp_name": "PayPal", "commission_rate": 3.5, "settlement_days": 3, "description": "PayPal payments"},
+        {"psp_name": "Skrill", "commission_rate": 2.5, "settlement_days": 1, "description": "E-wallet payments"},
+    ]
+    
+    for psp in psp_data:
+        existing = await db.psps.find_one({"psp_name": psp["psp_name"]}, {"_id": 0})
+        if not existing and treasury_ids:
+            psp_id = f"psp_{uuid.uuid4().hex[:12]}"
+            psp_doc = {
+                "psp_id": psp_id,
+                "psp_name": psp["psp_name"],
+                "commission_rate": psp["commission_rate"],
+                "settlement_days": psp["settlement_days"],
+                "settlement_destination_id": treasury_ids[0],  # Main Operating Account
+                "min_settlement_amount": 100,
+                "description": psp["description"],
+                "total_volume": 0.0,
+                "total_commission": 0.0,
+                "pending_settlement": 0.0,
+                "status": PSPStatus.ACTIVE,
+                "created_at": now.isoformat(),
+                "updated_at": now.isoformat()
+            }
+            await db.psps.insert_one(psp_doc)
     
     return {"message": "Demo data seeded successfully"}
 
