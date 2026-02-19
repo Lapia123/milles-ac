@@ -558,6 +558,9 @@ async def delete_client(client_id: str, user: dict = Depends(get_current_user)):
 @api_router.get("/treasury")
 async def get_treasury_accounts(user: dict = Depends(get_current_user)):
     accounts = await db.treasury_accounts.find({}, {"_id": 0}).to_list(1000)
+    # Add USD equivalent for each account
+    for acc in accounts:
+        acc["balance_usd"] = convert_to_usd(acc.get("balance", 0), acc.get("currency", "USD"))
     return accounts
 
 @api_router.get("/treasury/{account_id}")
