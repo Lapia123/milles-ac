@@ -5,40 +5,36 @@ Build account software for FX broker - a back-office accounting system with admi
 
 ## Latest Update (2026-02-19)
 
-### New Transaction Destination Types & USDT Support - COMPLETED
+### Enhanced Approvals & Client Bank Management - COMPLETED
 
-1. **New Destination Types**
-   - Treasury/Bank Account (existing)
-   - **Client Bank (Withdrawal)** - Shows client bank details form instead of treasury selector
-   - **USDT** - For both deposit and withdrawal
-   - PSP (existing)
-   - Vendor (existing)
+1. **Approvals Page Filters**
+   - Filter by Type (All, Deposit, Withdrawal, Transfer)
+   - Filter by Destination (All, Treasury, Client Bank, USDT, PSP, Vendor)
+   - Search by Client name
+   - Clear Filters button
 
-2. **Client Bank Withdrawal**
-   - Bank Name, Account Name, Account Number, SWIFT/IBAN, Currency
-   - NO treasury account selector shown for this type
-   - Details stored with transaction and shown in Approvals
+2. **Withdrawal Approval Flow (Enhanced)**
+   - Dialog shows transaction details and destination (bank/USDT info)
+   - **Mandatory**: Select Source Treasury/USDT Account (where funds come from)
+   - **Mandatory**: Upload Proof of Payment Screenshot
+   - Continue button disabled until both requirements met
+   - Deducts balance from source account upon approval
 
-3. **USDT Transactions**
-   - Deposit: Select USDT treasury account
-   - Withdrawal: Enter client USDT address + Network (TRC20/ERC20/BEP20)
-   - Details shown in Pending Approvals
+3. **Client Bank Accounts Management**
+   - Bank details saved to client profile when creating withdrawal
+   - Saved Bank Accounts dropdown in Transaction form
+   - "Add New Bank Account" option for new entries
+   - Backend CRUD: GET/POST/PUT/DELETE /api/clients/{id}/bank-accounts
 
-4. **USDT Treasury Accounts**
-   - New account type: USDT Wallet
-   - Fields: Wallet Address, Network, Private Notes/Labels, Balance
-
-5. **Pending Approvals Enhancements**
-   - Shows client bank/USDT details for withdrawal transactions
-   - Upload Proof button for accountants to upload payment screenshot
-   - Proof stored as `accountant_proof_image` in transaction
+4. **USDT Currency Added**
+   - USDT option in all currency dropdowns
+   - Full list: USD, EUR, GBP, AED, SAR, INR, JPY, USDT
 
 ### Previous Updates
+- **2026-02-19**: New destination types (Client Bank, USDT), USDT Treasury
 - **2026-02-19**: Settlement Approval Workflow & Treasury History
 - **2026-02-19**: Vendor Settlement with manual commission & multi-currency
-- **2026-02-19**: Vendor Portal feature
-- **2026-02-19**: PSP Management with commission tracking
-- **2026-02-18**: Math captcha, MT5 Number, CRM Customer ID, Multi-currency
+- **2026-02-19**: Vendor Portal, PSP Management
 
 ## User Roles
 1. **Admin** - Full access, manage vendors/PSPs, manual settlements
