@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Transactions from "./pages/Transactions";
 import Treasury from "./pages/Treasury";
+import PSPs from "./pages/PSPs";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import AccountantDashboard from "./pages/AccountantDashboard";
