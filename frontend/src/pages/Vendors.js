@@ -618,10 +618,48 @@ export default function Vendors() {
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Withdrawal Commission</p>
                   <p className="text-xl font-mono text-white">{viewVendor.withdrawal_commission}%</p>
                 </div>
-                <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Pending Amount</p>
-                  <p className="text-xl font-mono text-yellow-400">${(viewVendor.pending_amount || 0).toLocaleString()}</p>
-                </div>
+              </div>
+              
+              {/* Settlement Balance by Currency */}
+              <div className="p-4 bg-[#0B0C10] rounded-sm border-l-4 border-l-[#66FCF1]">
+                <p className="text-xs text-[#66FCF1] uppercase tracking-wider mb-3">Settlement Balance by Currency</p>
+                {viewVendor.settlement_by_currency && viewVendor.settlement_by_currency.length > 0 ? (
+                  <div className="space-y-2">
+                    {viewVendor.settlement_by_currency.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge className={`${
+                            item.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
+                            item.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                            item.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
+                            item.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                            item.currency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
+                            'bg-gray-500/20 text-gray-400'
+                          }`}>
+                            {item.currency}
+                          </Badge>
+                          <span className="text-xs text-[#C5C6C7]">({item.transaction_count} txns)</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-lg font-bold font-mono text-[#66FCF1]">
+                            {item.amount?.toLocaleString()}
+                          </span>
+                          {item.currency !== 'USD' && (
+                            <span className="text-xs text-[#C5C6C7] block">≈ ${item.usd_equivalent?.toLocaleString()} USD</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <div className="border-t border-white/10 pt-2 mt-2 flex justify-between">
+                      <span className="text-[#C5C6C7] text-sm">Total USD Equivalent:</span>
+                      <span className="text-lg font-bold font-mono text-white">
+                        ${viewVendor.settlement_by_currency.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[#C5C6C7]">No pending settlement</p>
+                )}
               </div>
 
               {/* Settle Button */}
