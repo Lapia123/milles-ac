@@ -659,6 +659,9 @@ export default function VendorDashboard() {
                   {actionType === 'complete' && <><Upload className="w-4 h-4 mr-2" /> Complete</>}
                 </Button>
               </div>
+              </>
+                );
+              })()}
             </div>
           )}
         </DialogContent>
