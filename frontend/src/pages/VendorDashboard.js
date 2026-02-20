@@ -428,6 +428,11 @@ export default function VendorDashboard() {
           </DialogHeader>
           {viewTransaction && (
             <div className="space-y-4">
+              {(() => {
+                const displayCurrency = viewTransaction.base_currency || viewTransaction.currency || 'USD';
+                const displayAmount = viewTransaction.base_amount || viewTransaction.amount;
+                return (
+              <>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reference</p>
@@ -450,21 +455,28 @@ export default function VendorDashboard() {
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Amount</p>
                   <p className={`font-mono text-xl ${viewTransaction.transaction_type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
-                    {viewTransaction.transaction_type === 'deposit' ? '+' : '-'}{viewTransaction.amount?.toLocaleString()} {viewTransaction.currency || 'USD'}
+                    {viewTransaction.transaction_type === 'deposit' ? '+' : '-'}{displayAmount?.toLocaleString()} {displayCurrency}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Currency</p>
                   <Badge className={`${
-                    viewTransaction.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
-                    viewTransaction.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
-                    viewTransaction.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
-                    viewTransaction.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                    displayCurrency === 'USD' ? 'bg-green-500/20 text-green-400' :
+                    displayCurrency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                    displayCurrency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
+                    displayCurrency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                    displayCurrency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
                     'bg-gray-500/20 text-gray-400'
                   }`}>
-                    {viewTransaction.currency || 'USD'}
+                    {displayCurrency}
                   </Badge>
                 </div>
+                {viewTransaction.base_currency && viewTransaction.base_currency !== viewTransaction.currency && (
+                  <div className="col-span-2">
+                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">USD Equivalent</p>
+                    <p className="text-white font-mono">${viewTransaction.amount?.toLocaleString()} USD</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created</p>
                   <p className="text-white text-sm">{formatDate(viewTransaction.created_at)}</p>
