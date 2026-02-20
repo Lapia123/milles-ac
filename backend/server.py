@@ -290,6 +290,13 @@ def convert_to_usd(amount: float, currency: str) -> float:
     rate = EXCHANGE_RATES_TO_USD.get(currency.upper(), 1.0)
     return round(amount * rate, 2)
 
+def convert_from_usd(amount: float, target_currency: str) -> float:
+    """Convert USD amount to target currency"""
+    rate = EXCHANGE_RATES_TO_USD.get(target_currency.upper(), 1.0)
+    if rate == 0:
+        return amount
+    return round(amount / rate, 2)
+
 class TreasuryAccountCreate(BaseModel):
     account_name: str
     account_type: str = TreasuryAccountType.BANK
