@@ -1694,6 +1694,41 @@ async def vendor_reject_transaction(
     return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
 
 # Vendor complete withdrawal with screenshot upload
+@api_router.post("/vendor/transactions/{transaction_id}/upload-proof")
+async def vendor_upload_proof(
+    transaction_id: str,
+    proof_image: UploadFile = File(...),
+    user: dict = Depends(require_vendor)
+):
+    """Vendor uploads proof of payment for withdrawal transactions"""
+    vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if tx.get("vendor_id") != vendor["vendor_id"]:
+        raise HTTPException(status_code=403, detail="Transaction does not belong to this vendor")
+    
+    content = await proof_image.read()
+    proof_image_data = base64.b64encode(content).decode('utf-8')
+    
+    now = datetime.now(timezone.utc)
+    await db.transactions.update_one(
+        {"transaction_id": transaction_id},
+        {"$set": {
+            "vendor_proof_image": proof_image_data,
+            "vendor_proof_uploaded_at": now.isoformat(),
+            "vendor_proof_uploaded_by": user["user_id"],
+            "vendor_proof_uploaded_by_name": user["name"]
+        }}
+    )
+    
+    return {"message": "Proof uploaded successfully", "transaction_id": transaction_id}
+
+# Vendor complete withdrawal with screenshot upload
 @api_router.post("/vendor/transactions/{transaction_id}/complete")
 async def vendor_complete_withdrawal(
     transaction_id: str,
