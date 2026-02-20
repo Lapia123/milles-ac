@@ -589,6 +589,50 @@ export default function VendorDashboard() {
                   <p className="text-white">{viewTransaction.description}</p>
                 </div>
               )}
+              {/* Client Bank Details for Withdrawals */}
+              {viewTransaction.transaction_type === 'withdrawal' && viewTransaction.client_bank_name && (
+                <div className="pt-4 border-t border-white/10">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Building2 className="w-4 h-4 text-[#66FCF1]" />
+                    <p className="text-xs text-[#66FCF1] uppercase tracking-wider font-bold">Client Bank Details (Send To)</p>
+                  </div>
+                  <div className="bg-[#0B0C10] p-4 rounded-sm space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-[#C5C6C7] text-sm">Bank Name:</span>
+                      <span className="text-white font-medium">{viewTransaction.client_bank_name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#C5C6C7] text-sm">Account Name:</span>
+                      <span className="text-white font-medium">{viewTransaction.client_bank_account_name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#C5C6C7] text-sm">Account Number:</span>
+                      <span className="text-white font-mono">{viewTransaction.client_bank_account_number}</span>
+                    </div>
+                    {viewTransaction.client_bank_swift_iban && (
+                      <div className="flex justify-between">
+                        <span className="text-[#C5C6C7] text-sm">SWIFT/BIC:</span>
+                        <span className="text-white font-mono">{viewTransaction.client_bank_swift_iban}</span>
+                      </div>
+                    )}
+                    {viewTransaction.client_bank_currency && (
+                      <div className="flex justify-between">
+                        <span className="text-[#C5C6C7] text-sm">Currency:</span>
+                        <Badge className={`${
+                          viewTransaction.client_bank_currency === 'USD' ? 'bg-green-500/20 text-green-400' :
+                          viewTransaction.client_bank_currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                          viewTransaction.client_bank_currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
+                          viewTransaction.client_bank_currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                          viewTransaction.client_bank_currency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
+                          'bg-gray-500/20 text-gray-400'
+                        }`}>
+                          {viewTransaction.client_bank_currency}
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               {viewTransaction.proof_image && (
                 <div className="pt-4 border-t border-white/10">
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Proof of Payment</p>
