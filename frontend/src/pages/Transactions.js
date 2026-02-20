@@ -783,7 +783,7 @@ export default function Transactions() {
                       </div>
                       
                       {/* Select from saved client banks */}
-                      {clientBanks.length > 0 && (
+                      {clientBankAccounts.length > 0 && (
                         <div className="space-y-2">
                           <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Select Saved Bank Account</Label>
                           <Select
@@ -798,7 +798,7 @@ export default function Transactions() {
                                   client_bank_currency: 'USD'
                                 });
                               } else {
-                                const bank = clientBanks.find(b => b.bank_account_id === value);
+                                const bank = clientBankAccounts.find(b => b.bank_account_id === value);
                                 if (bank) {
                                   setFormData({ 
                                     ...formData, 
@@ -817,7 +817,7 @@ export default function Transactions() {
                             </SelectTrigger>
                             <SelectContent className="bg-[#1F2833] border-white/10">
                               <SelectItem value="new" className="text-white hover:bg-white/5">+ Enter New Bank Details</SelectItem>
-                              {clientBanks.map((bank) => (
+                              {clientBankAccounts.map((bank) => (
                                 <SelectItem key={bank.bank_account_id} value={bank.bank_account_id} className="text-white hover:bg-white/5">
                                   {bank.bank_name} - {bank.account_number} ({bank.currency})
                                 </SelectItem>
