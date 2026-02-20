@@ -1427,7 +1427,7 @@ export default function AccountantDashboard() {
                 </Button>
               </div>
             </div>
-          )}}
+          )}
         </DialogContent>
       </Dialog>
     </div>
