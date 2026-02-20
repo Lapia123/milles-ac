@@ -383,7 +383,7 @@ class TestPendingTransactionsAPI:
         
         # Get pending transactions
         pending_response = requests.get(
-            f"{BASE_URL}/api/pending-transactions",
+            f"{BASE_URL}/api/transactions/pending",
             headers=headers
         )
         
