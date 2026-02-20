@@ -410,7 +410,7 @@ export default function VendorDashboard() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
+                  )})
                 )}
               </TableBody>
             </Table>
