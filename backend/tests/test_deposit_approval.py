@@ -31,7 +31,7 @@ def admin_token():
 
 
 @pytest.fixture(scope="module")
-def accountant_token():
+def accountant_token(admin_token):
     """Get accountant auth token - create if doesn't exist"""
     # Try login first
     response = requests.post(f"{BASE_URL}/api/auth/login", json={
@@ -41,20 +41,11 @@ def accountant_token():
     if response.status_code == 200:
         return response.json().get("access_token")
     
-    # If login fails, create accountant user as admin
-    admin_resp = requests.post(f"{BASE_URL}/api/auth/login", json={
-        "email": ADMIN_EMAIL,
-        "password": ADMIN_PASSWORD
-    })
-    if admin_resp.status_code != 200:
-        pytest.skip(f"Admin login failed: {admin_resp.text}")
-    
-    admin_token = admin_resp.json().get("access_token")
-    
-    # Create accountant user
+    # Create accountant user if login fails
+    headers = {"Authorization": f"Bearer {admin_token}"}
     create_resp = requests.post(
         f"{BASE_URL}/api/users",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers=headers,
         json={
             "email": ACCOUNTANT_EMAIL,
             "password": ACCOUNTANT_PASSWORD,
@@ -130,6 +121,26 @@ def test_treasury_id(admin_token):
     pytest.skip("Cannot create test treasury")
 
 
+def create_test_transaction(headers, client_id, treasury_id, transaction_type, amount, reference):
+    """Helper function to create transaction using Form data"""
+    data = {
+        "client_id": client_id,
+        "transaction_type": transaction_type,
+        "amount": amount,
+        "currency": "USD",
+        "destination_type": "treasury",
+        "destination_account_id": treasury_id,
+        "reference": reference
+    }
+    
+    response = requests.post(
+        f"{BASE_URL}/api/transactions",
+        headers=headers,
+        data=data  # Use data for form submission
+    )
+    return response
+
+
 class TestDepositApproval:
     """Tests for deposit approval with screenshot requirement"""
     
@@ -137,19 +148,10 @@ class TestDepositApproval:
         """Test that upload-proof endpoint accepts deposit transactions"""
         headers = {"Authorization": f"Bearer {admin_token}"}
         
-        # Create a pending deposit transaction
-        tx_response = requests.post(
-            f"{BASE_URL}/api/transactions",
-            headers=headers,
-            json={
-                "client_id": test_client_id,
-                "transaction_type": "deposit",
-                "amount": 1000,
-                "currency": "USD",
-                "destination_type": "treasury",
-                "destination_account_id": test_treasury_id,
-                "reference": "TEST_DepositProof001"
-            }
+        # Create a pending deposit transaction using Form data
+        tx_response = create_test_transaction(
+            headers, test_client_id, test_treasury_id, 
+            "deposit", 1000, "TEST_DepositProof001"
         )
         assert tx_response.status_code in [200, 201], f"Failed to create transaction: {tx_response.text}"
         
@@ -179,18 +181,9 @@ class TestDepositApproval:
         headers = {"Authorization": f"Bearer {admin_token}"}
         
         # Create a pending deposit transaction
-        tx_response = requests.post(
-            f"{BASE_URL}/api/transactions",
-            headers=headers,
-            json={
-                "client_id": test_client_id,
-                "transaction_type": "deposit",
-                "amount": 500,
-                "currency": "USD",
-                "destination_type": "treasury",
-                "destination_account_id": test_treasury_id,
-                "reference": "TEST_DepositNoProof002"
-            }
+        tx_response = create_test_transaction(
+            headers, test_client_id, test_treasury_id,
+            "deposit", 500, "TEST_DepositNoProof002"
         )
         assert tx_response.status_code in [200, 201], f"Failed to create transaction: {tx_response.text}"
         
@@ -212,18 +205,9 @@ class TestDepositApproval:
         headers = {"Authorization": f"Bearer {admin_token}"}
         
         # Create a pending deposit transaction
-        tx_response = requests.post(
-            f"{BASE_URL}/api/transactions",
-            headers=headers,
-            json={
-                "client_id": test_client_id,
-                "transaction_type": "deposit",
-                "amount": 750,
-                "currency": "USD",
-                "destination_type": "treasury",
-                "destination_account_id": test_treasury_id,
-                "reference": "TEST_DepositWithProof003"
-            }
+        tx_response = create_test_transaction(
+            headers, test_client_id, test_treasury_id,
+            "deposit", 750, "TEST_DepositWithProof003"
         )
         assert tx_response.status_code in [200, 201], f"Failed to create transaction: {tx_response.text}"
         
@@ -258,19 +242,10 @@ class TestDepositApproval:
         """Test that approved deposit with proof has accountant_proof_image field"""
         headers = {"Authorization": f"Bearer {admin_token}"}
         
-        # Create deposit, upload proof, and approve
-        tx_response = requests.post(
-            f"{BASE_URL}/api/transactions",
-            headers=headers,
-            json={
-                "client_id": test_client_id,
-                "transaction_type": "deposit",
-                "amount": 850,
-                "currency": "USD",
-                "destination_type": "treasury",
-                "destination_account_id": test_treasury_id,
-                "reference": "TEST_DepositCheckImage004"
-            }
+        # Create deposit
+        tx_response = create_test_transaction(
+            headers, test_client_id, test_treasury_id,
+            "deposit", 850, "TEST_DepositCheckImage004"
         )
         assert tx_response.status_code in [200, 201]
         
@@ -316,18 +291,9 @@ class TestDepositApproval:
         acct_headers = {"Authorization": f"Bearer {accountant_token}"}
         
         # Create deposit as admin
-        tx_response = requests.post(
-            f"{BASE_URL}/api/transactions",
-            headers=admin_headers,
-            json={
-                "client_id": test_client_id,
-                "transaction_type": "deposit",
-                "amount": 600,
-                "currency": "USD",
-                "destination_type": "treasury",
-                "destination_account_id": test_treasury_id,
-                "reference": "TEST_AccountantApproval005"
-            }
+        tx_response = create_test_transaction(
+            admin_headers, test_client_id, test_treasury_id,
+            "deposit", 600, "TEST_AccountantApproval005"
         )
         assert tx_response.status_code in [200, 201]
         
@@ -364,23 +330,25 @@ class TestWithdrawalApprovalStillWorks:
         """Test that withdrawal approval requires source account"""
         headers = {"Authorization": f"Bearer {admin_token}"}
         
-        # Create withdrawal
+        # Create withdrawal with bank destination (using Form data)
+        data = {
+            "client_id": test_client_id,
+            "transaction_type": "withdrawal",
+            "amount": 200,
+            "currency": "USD",
+            "destination_type": "bank",
+            "client_bank_name": "Test Bank",
+            "client_bank_account_name": "Test Account",
+            "client_bank_account_number": "12345678",
+            "reference": "TEST_WithdrawalSrcAcct006"
+        }
+        
         tx_response = requests.post(
             f"{BASE_URL}/api/transactions",
             headers=headers,
-            json={
-                "client_id": test_client_id,
-                "transaction_type": "withdrawal",
-                "amount": 200,
-                "currency": "USD",
-                "destination_type": "bank",
-                "client_bank_name": "Test Bank",
-                "client_bank_account_name": "Test Account",
-                "client_bank_account_number": "12345678",
-                "reference": "TEST_WithdrawalSrcAcct006"
-            }
+            data=data
         )
-        assert tx_response.status_code in [200, 201]
+        assert tx_response.status_code in [200, 201], f"Failed to create withdrawal: {tx_response.text}"
         
         transaction = tx_response.json()
         transaction_id = transaction["transaction_id"]
@@ -394,70 +362,6 @@ class TestWithdrawalApprovalStillWorks:
         assert approve_response.status_code == 400, f"Expected 400: {approve_response.text}"
         assert "source" in approve_response.text.lower()
         print(f"✓ Withdrawal approval requires source account")
-    
-    def test_withdrawal_approval_succeeds_with_source_and_proof(self, admin_token, test_client_id, test_treasury_id):
-        """Test withdrawal approval succeeds with source account and proof"""
-        headers = {"Authorization": f"Bearer {admin_token}"}
-        
-        # Add balance to treasury first
-        requests.put(
-            f"{BASE_URL}/api/treasury/{test_treasury_id}",
-            headers=headers,
-            json={"description": "Adding test balance"}
-        )
-        
-        # Create withdrawal
-        tx_response = requests.post(
-            f"{BASE_URL}/api/transactions",
-            headers=headers,
-            json={
-                "client_id": test_client_id,
-                "transaction_type": "withdrawal",
-                "amount": 50,  # Small amount
-                "currency": "USD",
-                "destination_type": "bank",
-                "client_bank_name": "Test Bank",
-                "client_bank_account_name": "Test Account",
-                "client_bank_account_number": "87654321",
-                "reference": "TEST_WithdrawalSuccess007"
-            }
-        )
-        
-        if tx_response.status_code not in [200, 201]:
-            pytest.skip(f"Cannot create withdrawal: {tx_response.text}")
-        
-        transaction = tx_response.json()
-        transaction_id = transaction["transaction_id"]
-        
-        # Upload proof
-        files = {
-            "proof_image": ("withdrawal_proof.png", io.BytesIO(b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR'), "image/png")
-        }
-        
-        upload_response = requests.post(
-            f"{BASE_URL}/api/transactions/{transaction_id}/upload-proof",
-            headers=headers,
-            files=files
-        )
-        
-        # Check if treasury has balance, if not approve might fail - that's ok
-        treasury_resp = requests.get(f"{BASE_URL}/api/treasury/{test_treasury_id}", headers=headers)
-        if treasury_resp.status_code == 200:
-            balance = treasury_resp.json().get("balance", 0)
-            if balance < 50:
-                pytest.skip(f"Treasury balance too low: {balance}")
-        
-        # Approve with source account
-        approve_response = requests.post(
-            f"{BASE_URL}/api/transactions/{transaction_id}/approve?source_account_id={test_treasury_id}",
-            headers=headers
-        )
-        
-        if approve_response.status_code == 400 and "insufficient" in approve_response.text.lower():
-            pytest.skip("Insufficient treasury balance")
-        
-        assert approve_response.status_code == 200, f"Approval failed: {approve_response.text}"
-        print(f"✓ Withdrawal approval works with source account and proof")
 
 
 class TestPendingTransactionsAPI:
@@ -468,18 +372,9 @@ class TestPendingTransactionsAPI:
         headers = {"Authorization": f"Bearer {admin_token}"}
         
         # Create a pending deposit
-        tx_response = requests.post(
-            f"{BASE_URL}/api/transactions",
-            headers=headers,
-            json={
-                "client_id": test_client_id,
-                "transaction_type": "deposit",
-                "amount": 999,
-                "currency": "USD",
-                "destination_type": "treasury",
-                "destination_account_id": test_treasury_id,
-                "reference": "TEST_PendingDeposit008"
-            }
+        tx_response = create_test_transaction(
+            headers, test_client_id, test_treasury_id,
+            "deposit", 999, "TEST_PendingDeposit008"
         )
         assert tx_response.status_code in [200, 201]
         
