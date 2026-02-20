@@ -322,7 +322,7 @@ export default function VendorDashboard() {
               <TableBody>
                 {transactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-[#C5C6C7]">
+                    <TableCell colSpan={8} className="text-center py-8 text-[#C5C6C7]">
                       No transactions assigned to you
                     </TableCell>
                   </TableRow>
@@ -343,7 +343,18 @@ export default function VendorDashboard() {
                       </TableCell>
                       <TableCell className="text-white">{tx.client_name}</TableCell>
                       <TableCell className={`font-mono font-medium ${tx.transaction_type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
-                        ${tx.amount?.toLocaleString()}
+                        {tx.transaction_type === 'deposit' ? '+' : '-'}{tx.amount?.toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${
+                          tx.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
+                          tx.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                          tx.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
+                          tx.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                          'bg-gray-500/20 text-gray-400'
+                        }`}>
+                          {tx.currency || 'USD'}
+                        </Badge>
                       </TableCell>
                       <TableCell>{getStatusBadge(tx.status)}</TableCell>
                       <TableCell className="text-[#C5C6C7] text-sm">{formatDate(tx.created_at)}</TableCell>
