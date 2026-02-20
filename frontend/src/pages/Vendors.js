@@ -146,6 +146,23 @@ export default function Vendors() {
     }
   };
 
+  const fetchVendorDetails = async (vendorId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/vendors/${vendorId}`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        const vendorData = await response.json();
+        setViewVendor(vendorData);
+      }
+    } catch (error) {
+      console.error('Error fetching vendor details:', error);
+    }
+  };
+
+  const openVendorView = (vendor) => {
+    setViewVendor(vendor); // Set initial data
+    fetchVendorDetails(vendor.vendor_id); // Fetch full details including settlement_by_currency
+  };
+
   useEffect(() => {
     fetchVendors();
     fetchTreasuryAccounts();
@@ -156,7 +173,7 @@ export default function Vendors() {
       fetchVendorTransactions(viewVendor.vendor_id);
       fetchVendorSettlements(viewVendor.vendor_id);
     }
-  }, [viewVendor]);
+  }, [viewVendor?.vendor_id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
