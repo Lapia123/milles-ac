@@ -218,7 +218,8 @@ export default function VendorDashboard() {
         toast.error(error.detail || 'Action failed');
       }
     } catch (error) {
-      toast.error('Action failed');
+      console.error('Action error:', error);
+      toast.error(error.message || 'Action failed - please try again');
     }
   };
 
