@@ -299,6 +299,11 @@ export default function VendorDashboard() {
                       <span className="text-green-400">+{item.deposit_amount?.toLocaleString()} deposits ({item.deposit_count})</span>
                       <span className="text-red-400">-{item.withdrawal_amount?.toLocaleString()} withdrawals ({item.withdrawal_count})</span>
                     </div>
+                    {item.commission_earned > 0 && (
+                      <div className="text-xs text-yellow-400 pl-2">
+                        Commission earned: ${item.commission_earned?.toLocaleString()} USD
+                      </div>
+                    )}
                   </div>
                 ))}
                 <div className="border-t border-white/10 pt-3 mt-3 flex justify-between items-center">
