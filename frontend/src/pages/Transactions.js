@@ -992,7 +992,16 @@ export default function Transactions() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-white">{tx.reference}</span>
-                          {tx.proof_image && <ImageIcon className="w-4 h-4 text-[#66FCF1]" />}
+                          {tx.proof_image && (
+                            <span title="Client Proof">
+                              <ImageIcon className="w-4 h-4 text-[#C5C6C7]" />
+                            </span>
+                          )}
+                          {tx.accountant_proof_image && (
+                            <span title="Accountant Approval Proof" className="flex items-center">
+                              <ImageIcon className="w-4 h-4 text-[#66FCF1]" />
+                            </span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-white">{tx.client_name || getClientName(tx.client_id)}</TableCell>
