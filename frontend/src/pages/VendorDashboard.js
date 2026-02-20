@@ -149,12 +149,12 @@ export default function VendorDashboard() {
           return;
         }
         
-        // If withdrawal with proof, upload proof first
+        // If withdrawal with proof, upload proof first using vendor-specific endpoint
         if (selectedTransaction.transaction_type === 'withdrawal' && proofImage) {
           const formData = new FormData();
           formData.append('proof_image', proofImage);
           
-          const uploadResponse = await fetch(`${API_URL}/api/transactions/${selectedTransaction.transaction_id}/upload-proof`, {
+          const uploadResponse = await fetch(`${API_URL}/api/vendor/transactions/${selectedTransaction.transaction_id}/upload-proof`, {
             method: 'POST',
             headers: getAuthHeaders(),
             credentials: 'include',
