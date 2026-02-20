@@ -444,8 +444,20 @@ export default function VendorDashboard() {
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Amount</p>
                   <p className={`font-mono text-xl ${viewTransaction.transaction_type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
-                    ${viewTransaction.amount?.toLocaleString()}
+                    {viewTransaction.transaction_type === 'deposit' ? '+' : '-'}{viewTransaction.amount?.toLocaleString()} {viewTransaction.currency || 'USD'}
                   </p>
+                </div>
+                <div>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Currency</p>
+                  <Badge className={`${
+                    viewTransaction.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
+                    viewTransaction.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                    viewTransaction.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
+                    viewTransaction.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-gray-500/20 text-gray-400'
+                  }`}>
+                    {viewTransaction.currency || 'USD'}
+                  </Badge>
                 </div>
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created</p>
