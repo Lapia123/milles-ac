@@ -2207,27 +2207,50 @@ async def approve_transaction(
     
     # Update treasury balance for deposits going to treasury
     if tx.get("destination_account_id") and tx["transaction_type"] == TransactionType.DEPOSIT:
-        await db.treasury_accounts.update_one(
-            {"account_id": tx["destination_account_id"]},
-            {"$inc": {"balance": tx["amount"]}, "$set": {"updated_at": now.isoformat()}}
-        )
+        # Get the destination account to check its currency
+        dest_account = await db.treasury_accounts.find_one({"account_id": tx["destination_account_id"]}, {"_id": 0})
         
-        # Record treasury transaction for deposit
-        treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
-        treasury_tx_doc = {
-            "treasury_transaction_id": treasury_tx_id,
-            "account_id": tx["destination_account_id"],
-            "transaction_type": "deposit",
-            "amount": tx["amount"],
-            "currency": "USD",
-            "reference": f"Deposit: {tx.get('client_name', 'Client')} - {tx.get('reference', '')}",
-            "transaction_id": transaction_id,
-            "client_id": tx.get("client_id"),
-            "created_at": now.isoformat(),
-            "created_by": user["user_id"],
-            "created_by_name": user["name"]
-        }
-        await db.treasury_transactions.insert_one(treasury_tx_doc)
+        if dest_account:
+            dest_currency = dest_account.get("currency", "USD")
+            tx_currency = tx.get("currency", "USD")
+            deposit_amount = tx["amount"]
+            
+            # Convert if currencies are different
+            if tx_currency == "USD" and dest_currency != "USD":
+                # Convert from USD to destination currency
+                deposit_amount = convert_from_usd(tx["amount"], dest_currency)
+            elif tx_currency != "USD" and dest_currency == "USD":
+                # Convert from source currency to USD
+                deposit_amount = convert_to_usd(tx["amount"], tx_currency)
+            elif tx_currency != dest_currency:
+                # Convert via USD as intermediate
+                usd_amount = convert_to_usd(tx["amount"], tx_currency)
+                deposit_amount = convert_from_usd(usd_amount, dest_currency)
+            
+            await db.treasury_accounts.update_one(
+                {"account_id": tx["destination_account_id"]},
+                {"$inc": {"balance": deposit_amount}, "$set": {"updated_at": now.isoformat()}}
+            )
+            
+            # Record treasury transaction for deposit
+            treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+            treasury_tx_doc = {
+                "treasury_transaction_id": treasury_tx_id,
+                "account_id": tx["destination_account_id"],
+                "transaction_type": "deposit",
+                "amount": deposit_amount,
+                "currency": dest_currency,
+                "original_amount": tx["amount"],
+                "original_currency": tx_currency,
+                "exchange_rate": deposit_amount / tx["amount"] if tx["amount"] > 0 else 1,
+                "reference": f"Deposit: {tx.get('client_name', 'Client')} - {tx.get('reference', '')}",
+                "transaction_id": transaction_id,
+                "client_id": tx.get("client_id"),
+                "created_at": now.isoformat(),
+                "created_by": user["user_id"],
+                "created_by_name": user["name"]
+            }
+            await db.treasury_transactions.insert_one(treasury_tx_doc)
     
     await db.transactions.update_one({"transaction_id": transaction_id}, {"$set": updates})
     
