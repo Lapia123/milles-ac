@@ -48,6 +48,10 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 - ✅ Separate vendor login
 - ✅ Assigned transaction management
 - ✅ Settlement requests
+- ✅ **NEW (Feb 20, 2026)**: Commission calculation on transaction approval
+- ✅ **NEW (Feb 20, 2026)**: Commission column in transactions table
+- ✅ **NEW (Feb 20, 2026)**: Total Commission Earned card
+- ✅ **NEW (Feb 20, 2026)**: Settlement formula: (Deposits - Withdrawals - Commission)
 
 ### Income & Expenses Ledger
 - ✅ Track company income/expenses
@@ -61,6 +65,23 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 - ✅ Treasury integration
 
 ## Recent Updates
+
+### February 20, 2026 - Vendor Commission Calculation
+**Implemented:**
+1. **Commission Calculation on Approval**:
+   - Deposit approval: Uses vendor's `deposit_commission` rate (e.g., 1.5%)
+   - Withdrawal approval: Uses vendor's `withdrawal_commission` rate (e.g., 2.0%)
+   - Formula: `commission_amount = amount * (commission_rate / 100)`
+   - Stored as `vendor_commission_amount` and `vendor_commission_rate` on transaction
+
+2. **Settlement Balance Formula**:
+   - Updated to: **(Deposits - Withdrawals) - Commission**
+   - Commission is deducted from the settlement balance
+   - Both `/api/vendor/me` and `/api/vendors/{id}` return correct calculations
+
+3. **Frontend Updates**:
+   - **Vendor Portal**: Settlement card shows formula in title, commission earned breakdown, Total Commission Earned card, Commission column in transactions table
+   - **Admin Vendors Page**: Same commission details visible when viewing vendor
 
 ### February 20, 2026 - Deposit Approval Screenshot Feature
 **Implemented:**
@@ -103,6 +124,9 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 - `/api/treasury/transfer` - Inter-treasury transfer
 - `/api/income-expenses/*` - Income/Expense tracking
 - `/api/loans/*` - Loan management
+- `/api/vendor/me` - Vendor portal info (includes settlement_by_currency with commission_earned)
+- `/api/vendor/transactions/{id}/approve` - Vendor approves transaction (calculates commission)
+- `/api/vendors/{id}` - Admin view vendor details (includes commission data)
 
 ## Test Credentials
 - **Admin**: admin@fxbroker.com / password
