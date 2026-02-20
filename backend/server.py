@@ -2133,6 +2133,7 @@ async def update_transaction(transaction_id: str, update_data: TransactionUpdate
 async def approve_transaction(
     transaction_id: str, 
     source_account_id: Optional[str] = None,
+    require_proof: bool = True,
     user: dict = Depends(require_accountant_or_admin)
 ):
     """Approve a pending transaction"""
@@ -2151,6 +2152,11 @@ async def approve_transaction(
         "processed_by_name": user["name"],
         "processed_at": now.isoformat()
     }
+    
+    # For deposits, require proof of payment screenshot
+    if tx["transaction_type"] == TransactionType.DEPOSIT:
+        if require_proof and not tx.get("accountant_proof_image"):
+            raise HTTPException(status_code=400, detail="Proof of payment screenshot is required for deposit approvals")
     
     # For withdrawals with bank/usdt destination, require source account
     if tx["transaction_type"] == TransactionType.WITHDRAWAL:
