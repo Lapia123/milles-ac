@@ -1507,7 +1507,8 @@ async def get_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
             },
             "withdrawal_count": {
                 "$sum": {"$cond": [{"$eq": ["$transaction_type", "withdrawal"]}, 1, 0]}
-            }
+            },
+            "total_commission": {"$sum": {"$ifNull": ["$vendor_commission_amount", 0]}}
         }}
     ]
     
@@ -1516,9 +1517,10 @@ async def get_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
         {
             "currency": item["_id"] or "USD",
             "amount": item["deposit_amount"] - item["withdrawal_amount"],
-            "usd_equivalent": item["deposit_usd"] - item["withdrawal_usd"],
+            "usd_equivalent": (item["deposit_usd"] - item["withdrawal_usd"]) - item["total_commission"],
             "deposit_amount": item["deposit_amount"],
             "withdrawal_amount": item["withdrawal_amount"],
+            "commission_earned": item["total_commission"],
             "deposit_count": item["deposit_count"],
             "withdrawal_count": item["withdrawal_count"],
             "transaction_count": item["deposit_count"] + item["withdrawal_count"]
