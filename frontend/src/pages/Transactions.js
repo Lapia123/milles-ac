@@ -1129,6 +1129,11 @@ export default function Transactions() {
                               <ImageIcon className="w-4 h-4 text-[#66FCF1]" />
                             </span>
                           )}
+                          {tx.vendor_proof_image && (
+                            <span title="Vendor Proof" className="flex items-center">
+                              <ImageIcon className="w-4 h-4 text-orange-400" />
+                            </span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-white">{tx.client_name || getClientName(tx.client_id)}</TableCell>
