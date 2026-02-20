@@ -482,7 +482,14 @@ export default function VendorDashboard() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {tx.vendor_commission_amount ? (
+                        {tx.vendor_commission_base_amount ? (
+                          <div className="font-mono text-yellow-400">
+                            <span>{tx.vendor_commission_base_amount?.toLocaleString()} {tx.vendor_commission_base_currency || displayCurrency}</span>
+                            {tx.vendor_commission_base_currency !== 'USD' && tx.vendor_commission_amount && (
+                              <span className="text-[#C5C6C7] text-xs block">(${tx.vendor_commission_amount?.toLocaleString()})</span>
+                            )}
+                          </div>
+                        ) : tx.vendor_commission_amount ? (
                           <span className="font-mono text-yellow-400">${tx.vendor_commission_amount?.toLocaleString()}</span>
                         ) : (
                           <span className="text-[#C5C6C7] text-xs">-</span>
