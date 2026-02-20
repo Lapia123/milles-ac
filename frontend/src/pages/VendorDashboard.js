@@ -401,7 +401,7 @@ export default function VendorDashboard() {
               <div>
                 <p className="text-xs text-yellow-400 uppercase tracking-wider mb-1">Total Commission Earned</p>
                 <p className="text-2xl font-bold font-mono text-yellow-400">
-                  ${vendorInfo?.settlement_by_currency?.reduce((sum, item) => sum + (item.commission_earned || 0), 0).toLocaleString() || '0'}
+                  ${vendorInfo?.settlement_by_currency?.reduce((sum, item) => sum + (item.commission_earned_usd || 0), 0).toLocaleString() || '0'}
                 </p>
                 <p className="text-xs text-[#C5C6C7] mt-1">
                   Rates: {vendorInfo?.deposit_commission || 0}% / {vendorInfo?.withdrawal_commission || 0}%
