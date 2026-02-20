@@ -550,7 +550,7 @@ export default function Vendors() {
             <Card 
               key={vendor.vendor_id} 
               className="bg-[#1F2833] border-white/5 card-hover cursor-pointer"
-              onClick={() => setViewVendor(vendor)}
+              onClick={() => openVendorView(vendor)}
             >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
