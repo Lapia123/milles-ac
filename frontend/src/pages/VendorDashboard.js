@@ -238,7 +238,25 @@ export default function VendorDashboard() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Settlement Balance - Highlighted */}
+        <Card className="bg-[#1F2833] border-white/5 border-l-4 border-l-[#66FCF1]">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-[#66FCF1] uppercase tracking-wider mb-1">Settlement Balance</p>
+                <p className="text-3xl font-bold font-mono text-[#66FCF1]">
+                  ${vendorInfo?.pending_settlement?.toLocaleString() || '0'}
+                </p>
+                <p className="text-xs text-[#C5C6C7] mt-1">Pending settlement</p>
+              </div>
+              <div className="p-3 bg-[#66FCF1]/10 rounded-sm">
+                <DollarSign className="w-6 h-6 text-[#66FCF1]" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="bg-[#1F2833] border-white/5">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -291,6 +309,51 @@ export default function VendorDashboard() {
               </div>
               <div className="p-3 bg-orange-500/10 rounded-sm">
                 <Upload className="w-6 h-6 text-orange-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Volume & Commission Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-[#1F2833] border-white/5">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Total Volume</p>
+                <p className="text-2xl font-bold font-mono text-white">
+                  ${vendorInfo?.total_volume?.toLocaleString() || '0'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-[#1F2833] border-white/5">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Total Commission Earned</p>
+                <p className="text-2xl font-bold font-mono text-green-400">
+                  ${vendorInfo?.total_commission?.toLocaleString() || '0'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-[#1F2833] border-white/5">
+          <CardContent className="p-6">
+            <div className="space-y-2">
+              <p className="text-xs text-[#C5C6C7] uppercase tracking-wider">Commission Rates</p>
+              <div className="flex justify-between text-sm">
+                <span className="text-[#C5C6C7]">Deposit:</span>
+                <span className="text-white font-mono">{vendorInfo?.deposit_commission || 0}%</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[#C5C6C7]">Withdrawal:</span>
+                <span className="text-white font-mono">{vendorInfo?.withdrawal_commission || 0}%</span>
               </div>
             </div>
           </CardContent>
