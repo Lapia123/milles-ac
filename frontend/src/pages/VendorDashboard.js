@@ -398,51 +398,6 @@ export default function VendorDashboard() {
         </Card>
       </div>
 
-      {/* Volume & Commission Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-[#1F2833] border-white/5">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Total Volume</p>
-                <p className="text-2xl font-bold font-mono text-white">
-                  ${vendorInfo?.total_volume?.toLocaleString() || '0'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-[#1F2833] border-white/5">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Total Commission Earned</p>
-                <p className="text-2xl font-bold font-mono text-green-400">
-                  ${vendorInfo?.total_commission?.toLocaleString() || '0'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-[#1F2833] border-white/5">
-          <CardContent className="p-6">
-            <div className="space-y-2">
-              <p className="text-xs text-[#C5C6C7] uppercase tracking-wider">Commission Rates</p>
-              <div className="flex justify-between text-sm">
-                <span className="text-[#C5C6C7]">Deposit:</span>
-                <span className="text-white font-mono">{vendorInfo?.deposit_commission || 0}%</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[#C5C6C7]">Withdrawal:</span>
-                <span className="text-white font-mono">{vendorInfo?.withdrawal_commission || 0}%</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Transactions Table */}
       <Card className="bg-[#1F2833] border-white/5">
         <CardHeader>
