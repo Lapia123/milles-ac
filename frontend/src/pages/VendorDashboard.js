@@ -327,7 +327,12 @@ export default function VendorDashboard() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  transactions.map((tx) => (
+                  transactions.map((tx) => {
+                    // Use base currency/amount if available, otherwise use converted values
+                    const displayCurrency = tx.base_currency || tx.currency || 'USD';
+                    const displayAmount = tx.base_amount || tx.amount;
+                    
+                    return (
                     <TableRow key={tx.transaction_id} className="border-white/5 hover:bg-white/5">
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -343,17 +348,18 @@ export default function VendorDashboard() {
                       </TableCell>
                       <TableCell className="text-white">{tx.client_name}</TableCell>
                       <TableCell className={`font-mono font-medium ${tx.transaction_type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
-                        {tx.transaction_type === 'deposit' ? '+' : '-'}{tx.amount?.toLocaleString()}
+                        {tx.transaction_type === 'deposit' ? '+' : '-'}{displayAmount?.toLocaleString()}
                       </TableCell>
                       <TableCell>
                         <Badge className={`${
-                          tx.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
-                          tx.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
-                          tx.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
-                          tx.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                          displayCurrency === 'USD' ? 'bg-green-500/20 text-green-400' :
+                          displayCurrency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                          displayCurrency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
+                          displayCurrency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                          displayCurrency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
                           'bg-gray-500/20 text-gray-400'
                         }`}>
-                          {tx.currency || 'USD'}
+                          {displayCurrency}
                         </Badge>
                       </TableCell>
                       <TableCell>{getStatusBadge(tx.status)}</TableCell>
