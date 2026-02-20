@@ -693,9 +693,12 @@ export default function VendorDashboard() {
                 </div>
               )}
 
-              {actionType === 'complete' && (
+              {/* Screenshot upload for withdrawal approval or complete */}
+              {(actionType === 'complete' || (actionType === 'approve' && selectedTransaction.transaction_type === 'withdrawal')) && (
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Upload Proof of Payment *</Label>
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                    Upload Proof of Payment {actionType === 'approve' ? '(Required for Withdrawal)' : ''} *
+                  </Label>
                   <div className="border-2 border-dashed border-white/10 rounded-sm p-4 text-center hover:border-[#66FCF1]/50 transition-colors">
                     <input
                       type="file"
