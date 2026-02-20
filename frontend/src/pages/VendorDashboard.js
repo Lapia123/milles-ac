@@ -392,17 +392,20 @@ export default function VendorDashboard() {
           </CardContent>
         </Card>
         
-        <Card className="bg-[#1F2833] border-white/5">
+        <Card className="bg-[#1F2833] border-white/5 border-l-2 border-l-yellow-500">
           <CardContent className="p-6">
-            <div className="space-y-2">
-              <p className="text-xs text-[#C5C6C7] uppercase tracking-wider">Commission Rates</p>
-              <div className="flex justify-between text-sm">
-                <span className="text-[#C5C6C7]">Deposit:</span>
-                <span className="text-white font-mono">{vendorInfo?.deposit_commission || 0}%</span>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-yellow-400 uppercase tracking-wider mb-1">Total Commission Earned</p>
+                <p className="text-2xl font-bold font-mono text-yellow-400">
+                  ${vendorInfo?.settlement_by_currency?.reduce((sum, item) => sum + (item.commission_earned || 0), 0).toLocaleString() || '0'}
+                </p>
+                <p className="text-xs text-[#C5C6C7] mt-1">
+                  Rates: {vendorInfo?.deposit_commission || 0}% / {vendorInfo?.withdrawal_commission || 0}%
+                </p>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[#C5C6C7]">Withdrawal:</span>
-                <span className="text-white font-mono">{vendorInfo?.withdrawal_commission || 0}%</span>
+              <div className="p-3 bg-yellow-500/10 rounded-sm">
+                <DollarSign className="w-6 h-6 text-yellow-500" />
               </div>
             </div>
           </CardContent>
