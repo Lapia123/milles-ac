@@ -15,7 +15,7 @@ BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 ACCOUNTANT_EMAIL = "accountant@fxbroker.com"
 ACCOUNTANT_PASSWORD = "password"
 ADMIN_EMAIL = "admin@fxbroker.com"
-ADMIN_PASSWORD = "admin123"
+ADMIN_PASSWORD = "password"
 
 
 @pytest.fixture(scope="module")
