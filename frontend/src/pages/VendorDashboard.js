@@ -397,26 +397,6 @@ export default function VendorDashboard() {
           </CardContent>
         </Card>
       </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className={`bg-[#1F2833] border-white/5 ${approvedWithdrawals.length > 0 ? 'border-l-2 border-l-orange-500' : ''}`}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Awaiting Proof</p>
-                <p className="text-3xl font-bold font-mono text-orange-400">{approvedWithdrawals.length}</p>
-                <p className="text-xs text-orange-400 mt-1">Withdrawals to complete</p>
-              </div>
-              <div className="p-3 bg-orange-500/10 rounded-sm">
-                <Upload className="w-6 h-6 text-orange-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Volume & Commission Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
