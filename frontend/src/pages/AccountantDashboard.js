@@ -264,22 +264,27 @@ export default function AccountantDashboard() {
     }
   };
 
-  const handleWithdrawalApproval = () => {
-    // Validate source account and proof
-    if (!approvalSourceAccount) {
+  const handleTransactionApproval = () => {
+    const isWithdrawal = showApprovalDialog.transaction_type === 'withdrawal';
+    
+    // For withdrawals, validate source account
+    if (isWithdrawal && !approvalSourceAccount) {
       toast.error('Please select a source treasury/USDT account');
       return;
     }
+    
+    // For both deposits and withdrawals, require proof (mandatory)
     if (!approvalProof) {
-      toast.error('Please upload proof of payment');
+      toast.error('Please upload proof of payment screenshot');
       return;
     }
+    
     // Proceed to captcha
     setCaptchaAction({ 
       type: 'approve', 
       transactionId: showApprovalDialog.transaction_id, 
       isSettlement: false,
-      sourceAccount: approvalSourceAccount,
+      sourceAccount: isWithdrawal ? approvalSourceAccount : null,
       proofFile: approvalProof
     });
     setShowApprovalDialog(null);
