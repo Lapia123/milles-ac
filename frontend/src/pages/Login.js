@@ -47,7 +47,7 @@ export default function Login() {
           <div className="flex items-center gap-3 mb-6">
             <TrendingUp className="w-12 h-12 text-[#66FCF1]" />
             <span className="text-4xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
-              FX Broker
+              Miles Capitals
             </span>
           </div>
           <h1 className="text-5xl font-bold uppercase tracking-tight text-white mb-4" style={{ fontFamily: 'Barlow Condensed' }}>
@@ -66,7 +66,7 @@ export default function Login() {
           <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
             <TrendingUp className="w-10 h-10 text-[#66FCF1]" />
             <span className="text-3xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
-              FX Broker
+              Miles Capitals
             </span>
           </div>
 
