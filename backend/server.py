@@ -1735,14 +1735,38 @@ async def vendor_approve_transaction(transaction_id: str, user: dict = Depends(r
     
     now = datetime.now(timezone.utc)
     
+    # Calculate commission based on transaction type
+    commission_rate = 0.0
+    if tx["transaction_type"] == TransactionType.DEPOSIT:
+        commission_rate = vendor.get("deposit_commission", 0) / 100
+    elif tx["transaction_type"] == TransactionType.WITHDRAWAL:
+        commission_rate = vendor.get("withdrawal_commission", 0) / 100
+    
+    # Calculate commission on the USD amount
+    commission_amount = round(tx["amount"] * commission_rate, 2)
+    
     updates = {
         "status": TransactionStatus.APPROVED,
         "processed_by": user["user_id"],
         "processed_by_name": user["name"],
-        "processed_at": now.isoformat()
+        "processed_at": now.isoformat(),
+        "vendor_commission_rate": commission_rate * 100,  # Store as percentage
+        "vendor_commission_amount": commission_amount
     }
     
     await db.transactions.update_one({"transaction_id": transaction_id}, {"$set": updates})
+    
+    # Update vendor's total commission and volume
+    await db.vendors.update_one(
+        {"vendor_id": vendor["vendor_id"]},
+        {
+            "$inc": {
+                "total_commission": commission_amount,
+                "total_volume": tx["amount"]
+            },
+            "$set": {"updated_at": now.isoformat()}
+        }
+    )
     
     return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
 
