@@ -2176,17 +2176,36 @@ async def approve_transaction(
             if not source_account:
                 raise HTTPException(status_code=404, detail="Source account not found")
             
-            if source_account.get("balance", 0) < tx["amount"]:
-                raise HTTPException(status_code=400, detail="Insufficient balance in source account")
+            # Calculate withdrawal amount in source account's currency
+            source_currency = source_account.get("currency", "USD")
+            tx_currency = tx.get("currency", "USD")
+            withdrawal_amount = tx["amount"]
+            
+            # Convert if currencies are different
+            if tx_currency == "USD" and source_currency != "USD":
+                # Convert from USD to source account currency
+                withdrawal_amount = convert_from_usd(tx["amount"], source_currency)
+            elif tx_currency != "USD" and source_currency == "USD":
+                # Convert from transaction currency to USD
+                withdrawal_amount = convert_to_usd(tx["amount"], tx_currency)
+            elif tx_currency != source_currency:
+                # Convert via USD as intermediate
+                usd_amount = convert_to_usd(tx["amount"], tx_currency)
+                withdrawal_amount = convert_from_usd(usd_amount, source_currency)
+            
+            if source_account.get("balance", 0) < withdrawal_amount:
+                raise HTTPException(status_code=400, detail=f"Insufficient balance in source account. Required: {withdrawal_amount:,.2f} {source_currency}, Available: {source_account.get('balance', 0):,.2f} {source_currency}")
             
             # Deduct from source account
             await db.treasury_accounts.update_one(
                 {"account_id": source_account_id},
-                {"$inc": {"balance": -tx["amount"]}, "$set": {"updated_at": now.isoformat()}}
+                {"$inc": {"balance": -withdrawal_amount}, "$set": {"updated_at": now.isoformat()}}
             )
             
             updates["source_account_id"] = source_account_id
             updates["source_account_name"] = source_account.get("account_name")
+            updates["withdrawal_amount_in_source_currency"] = withdrawal_amount
+            updates["source_currency"] = source_currency
             
             # Record treasury transaction
             treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
@@ -2194,8 +2213,11 @@ async def approve_transaction(
                 "treasury_transaction_id": treasury_tx_id,
                 "account_id": source_account_id,
                 "transaction_type": "withdrawal",
-                "amount": -tx["amount"],
-                "currency": source_account.get("currency", "USD"),
+                "amount": -withdrawal_amount,
+                "currency": source_currency,
+                "original_amount": tx["amount"],
+                "original_currency": tx_currency,
+                "exchange_rate": withdrawal_amount / tx["amount"] if tx["amount"] > 0 else 1,
                 "reference": f"Withdrawal: {tx.get('client_name', 'Client')} - {tx.get('reference', '')}",
                 "transaction_id": transaction_id,
                 "client_id": tx.get("client_id"),
