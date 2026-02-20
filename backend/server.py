@@ -1601,6 +1601,7 @@ async def get_my_vendor_info(user: dict = Depends(require_vendor)):
     vendor["pending_count"] = len(pending_txs)
     
     # Calculate settlement balance by currency (unsettled approved/completed transactions)
+    # Settlement = Total Deposits - Total Withdrawals
     settlement_pipeline = [
         {"$match": {
             "vendor_id": vendor["vendor_id"],
@@ -1609,9 +1610,48 @@ async def get_my_vendor_info(user: dict = Depends(require_vendor)):
         }},
         {"$group": {
             "_id": {"$ifNull": ["$base_currency", "$currency"]},
-            "total_amount": {"$sum": {"$ifNull": ["$base_amount", "$amount"]}},
-            "usd_equivalent": {"$sum": "$amount"},
-            "count": {"$sum": 1}
+            "deposit_amount": {
+                "$sum": {
+                    "$cond": [
+                        {"$eq": ["$transaction_type", "deposit"]},
+                        {"$ifNull": ["$base_amount", "$amount"]},
+                        0
+                    ]
+                }
+            },
+            "withdrawal_amount": {
+                "$sum": {
+                    "$cond": [
+                        {"$eq": ["$transaction_type", "withdrawal"]},
+                        {"$ifNull": ["$base_amount", "$amount"]},
+                        0
+                    ]
+                }
+            },
+            "deposit_usd": {
+                "$sum": {
+                    "$cond": [
+                        {"$eq": ["$transaction_type", "deposit"]},
+                        "$amount",
+                        0
+                    ]
+                }
+            },
+            "withdrawal_usd": {
+                "$sum": {
+                    "$cond": [
+                        {"$eq": ["$transaction_type", "withdrawal"]},
+                        "$amount",
+                        0
+                    ]
+                }
+            },
+            "deposit_count": {
+                "$sum": {"$cond": [{"$eq": ["$transaction_type", "deposit"]}, 1, 0]}
+            },
+            "withdrawal_count": {
+                "$sum": {"$cond": [{"$eq": ["$transaction_type", "withdrawal"]}, 1, 0]}
+            }
         }}
     ]
     
@@ -1619,9 +1659,13 @@ async def get_my_vendor_info(user: dict = Depends(require_vendor)):
     vendor["settlement_by_currency"] = [
         {
             "currency": item["_id"] or "USD",
-            "amount": item["total_amount"],
-            "usd_equivalent": item["usd_equivalent"],
-            "transaction_count": item["count"]
+            "amount": item["deposit_amount"] - item["withdrawal_amount"],
+            "usd_equivalent": item["deposit_usd"] - item["withdrawal_usd"],
+            "deposit_amount": item["deposit_amount"],
+            "withdrawal_amount": item["withdrawal_amount"],
+            "deposit_count": item["deposit_count"],
+            "withdrawal_count": item["withdrawal_count"],
+            "transaction_count": item["deposit_count"] + item["withdrawal_count"]
         }
         for item in settlement_by_currency
     ]
