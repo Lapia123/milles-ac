@@ -1455,6 +1455,33 @@ async def get_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
     vendor = await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    # Calculate settlement balance by currency (unsettled approved/completed transactions)
+    settlement_pipeline = [
+        {"$match": {
+            "vendor_id": vendor_id,
+            "status": {"$in": ["approved", "completed"]},
+            "settled": {"$ne": True}
+        }},
+        {"$group": {
+            "_id": {"$ifNull": ["$base_currency", "$currency"]},
+            "total_amount": {"$sum": {"$ifNull": ["$base_amount", "$amount"]}},
+            "usd_equivalent": {"$sum": "$amount"},
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    settlement_by_currency = await db.transactions.aggregate(settlement_pipeline).to_list(100)
+    vendor["settlement_by_currency"] = [
+        {
+            "currency": item["_id"] or "USD",
+            "amount": item["total_amount"],
+            "usd_equivalent": item["usd_equivalent"],
+            "transaction_count": item["count"]
+        }
+        for item in settlement_by_currency
+    ]
+    
     return vendor
 
 @api_router.post("/vendors")
