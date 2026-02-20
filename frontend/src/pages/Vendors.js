@@ -671,9 +671,12 @@ export default function Vendors() {
                           <span className="text-green-400">+{item.deposit_amount?.toLocaleString()} deposits ({item.deposit_count})</span>
                           <span className="text-red-400">-{item.withdrawal_amount?.toLocaleString()} withdrawals ({item.withdrawal_count})</span>
                         </div>
-                        {item.commission_earned > 0 && (
+                        {(item.commission_earned_base > 0 || item.commission_earned_usd > 0) && (
                           <div className="text-xs text-yellow-400 pl-2">
-                            Commission earned: ${item.commission_earned?.toLocaleString()} USD
+                            Commission earned: {item.commission_earned_base?.toLocaleString()} {item.currency}
+                            {item.currency !== 'USD' && item.commission_earned_usd > 0 && (
+                              <span className="text-[#C5C6C7]"> (${item.commission_earned_usd?.toLocaleString()} USD)</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -682,7 +685,7 @@ export default function Vendors() {
                       <div className="flex justify-between mb-1">
                         <span className="text-[#C5C6C7] text-sm">Total Commission Earned:</span>
                         <span className="text-sm font-bold font-mono text-yellow-400">
-                          ${viewVendor.settlement_by_currency.reduce((sum, item) => sum + (item.commission_earned || 0), 0).toLocaleString()}
+                          ${viewVendor.settlement_by_currency.reduce((sum, item) => sum + (item.commission_earned_usd || 0), 0).toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between">
