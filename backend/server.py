@@ -1573,6 +1573,32 @@ async def get_my_vendor_info(user: dict = Depends(require_vendor)):
     vendor["pending_transactions"] = pending_txs
     vendor["pending_count"] = len(pending_txs)
     
+    # Calculate settlement balance by currency (unsettled approved/completed transactions)
+    settlement_pipeline = [
+        {"$match": {
+            "vendor_id": vendor["vendor_id"],
+            "status": {"$in": ["approved", "completed"]},
+            "settled": {"$ne": True}
+        }},
+        {"$group": {
+            "_id": {"$ifNull": ["$base_currency", "$currency"]},
+            "total_amount": {"$sum": {"$ifNull": ["$base_amount", "$amount"]}},
+            "usd_equivalent": {"$sum": "$amount"},
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    settlement_by_currency = await db.transactions.aggregate(settlement_pipeline).to_list(100)
+    vendor["settlement_by_currency"] = [
+        {
+            "currency": item["_id"] or "USD",
+            "amount": item["total_amount"],
+            "usd_equivalent": item["usd_equivalent"],
+            "transaction_count": item["count"]
+        }
+        for item in settlement_by_currency
+    ]
+    
     return vendor
 
 # Vendor approve transaction
