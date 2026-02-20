@@ -1253,6 +1253,32 @@ export default function Transactions() {
                   )}
                 </div>
               )}
+              {/* Vendor Proof - For Withdrawals */}
+              {viewTransaction.vendor_proof_image && (
+                <div className="pt-4 border-t border-white/10">
+                  <p className="text-xs text-orange-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4" />
+                    Vendor Payment Proof
+                  </p>
+                  <div className="relative group">
+                    <img 
+                      src={`data:image/png;base64,${viewTransaction.vendor_proof_image}`} 
+                      alt="Vendor payment proof" 
+                      className="w-full max-h-48 object-contain rounded border border-orange-400/30 bg-[#0B0C10] cursor-pointer hover:border-orange-400"
+                      onClick={() => window.open(`data:image/png;base64,${viewTransaction.vendor_proof_image}`, '_blank')}
+                      data-testid="vendor-proof-thumbnail"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded">
+                      <span className="text-white text-sm">Click to view full size</span>
+                    </div>
+                  </div>
+                  {viewTransaction.vendor_proof_uploaded_at && (
+                    <p className="text-xs text-[#C5C6C7] mt-2">
+                      Uploaded: {formatDate(viewTransaction.vendor_proof_uploaded_at)} by {viewTransaction.vendor_proof_uploaded_by_name}
+                    </p>
+                  )}
+                </div>
+              )}
               {viewTransaction.rejection_reason && (
                 <div className="pt-4 border-t border-white/10">
                   <p className="text-xs text-red-400 uppercase tracking-wider mb-1">Rejection Reason</p>
