@@ -746,23 +746,142 @@ export default function Transactions() {
               
               {/* Vendor Destination */}
               {formData.destination_type === 'vendor' && (
-                <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Select Vendor *</Label>
-                  <Select
-                    value={formData.vendor_id}
-                    onValueChange={(value) => setFormData({ ...formData, vendor_id: value })}
-                  >
-                    <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-vendor">
-                      <SelectValue placeholder="Select vendor" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#1F2833] border-white/10">
-                      {vendors.filter(v => v.status === 'active').map((vendor) => (
-                        <SelectItem key={vendor.vendor_id} value={vendor.vendor_id} className="text-white hover:bg-white/5">
-                          {vendor.vendor_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Select Vendor *</Label>
+                    <Select
+                      value={formData.vendor_id}
+                      onValueChange={(value) => setFormData({ ...formData, vendor_id: value })}
+                    >
+                      <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-vendor">
+                        <SelectValue placeholder="Select vendor" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#1F2833] border-white/10">
+                        {vendors.filter(v => v.status === 'active').map((vendor) => (
+                          <SelectItem key={vendor.vendor_id} value={vendor.vendor_id} className="text-white hover:bg-white/5">
+                            {vendor.vendor_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* For withdrawals via vendor - enter client bank details */}
+                  {formData.transaction_type === 'withdrawal' && (
+                    <div className="space-y-4 p-4 bg-[#0B0C10] rounded-sm border border-white/10">
+                      <div className="flex items-center gap-2 text-[#66FCF1] mb-2">
+                        <Building2 className="w-4 h-4" />
+                        <span className="text-xs uppercase tracking-wider font-bold">Client Bank Details (Destination)</span>
+                      </div>
+                      
+                      {/* Select from saved client banks */}
+                      {clientBanks.length > 0 && (
+                        <div className="space-y-2">
+                          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Select Saved Bank Account</Label>
+                          <Select
+                            onValueChange={(value) => {
+                              if (value === 'new') {
+                                setFormData({ 
+                                  ...formData, 
+                                  client_bank_name: '', 
+                                  client_bank_account_name: '', 
+                                  client_bank_account_number: '',
+                                  client_bank_swift_iban: '',
+                                  client_bank_currency: 'USD'
+                                });
+                              } else {
+                                const bank = clientBanks.find(b => b.bank_account_id === value);
+                                if (bank) {
+                                  setFormData({ 
+                                    ...formData, 
+                                    client_bank_name: bank.bank_name,
+                                    client_bank_account_name: bank.account_name,
+                                    client_bank_account_number: bank.account_number,
+                                    client_bank_swift_iban: bank.swift_iban || '',
+                                    client_bank_currency: bank.currency || 'USD'
+                                  });
+                                }
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="bg-[#1F2833] border-white/10 text-white">
+                              <SelectValue placeholder="Select saved bank or enter new" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#1F2833] border-white/10">
+                              <SelectItem value="new" className="text-white hover:bg-white/5">+ Enter New Bank Details</SelectItem>
+                              {clientBanks.map((bank) => (
+                                <SelectItem key={bank.bank_account_id} value={bank.bank_account_id} className="text-white hover:bg-white/5">
+                                  {bank.bank_name} - {bank.account_number} ({bank.currency})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Bank Name *</Label>
+                          <Input
+                            value={formData.client_bank_name}
+                            onChange={(e) => setFormData({ ...formData, client_bank_name: e.target.value })}
+                            className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1]"
+                            placeholder="Bank name"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Name *</Label>
+                          <Input
+                            value={formData.client_bank_account_name}
+                            onChange={(e) => setFormData({ ...formData, client_bank_account_name: e.target.value })}
+                            className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1]"
+                            placeholder="Account holder name"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Number *</Label>
+                          <Input
+                            value={formData.client_bank_account_number}
+                            onChange={(e) => setFormData({ ...formData, client_bank_account_number: e.target.value })}
+                            className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                            placeholder="Account number / IBAN"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">SWIFT/BIC Code</Label>
+                          <Input
+                            value={formData.client_bank_swift_iban}
+                            onChange={(e) => setFormData({ ...formData, client_bank_swift_iban: e.target.value })}
+                            className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                            placeholder="SWIFT code (optional)"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Currency *</Label>
+                        <Select
+                          value={formData.client_bank_currency}
+                          onValueChange={(value) => setFormData({ ...formData, client_bank_currency: value })}
+                        >
+                          <SelectTrigger className="bg-[#1F2833] border-white/10 text-white">
+                            <SelectValue placeholder="Select currency" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#1F2833] border-white/10">
+                            <SelectItem value="USD" className="text-white hover:bg-white/5">USD - US Dollar</SelectItem>
+                            <SelectItem value="EUR" className="text-white hover:bg-white/5">EUR - Euro</SelectItem>
+                            <SelectItem value="GBP" className="text-white hover:bg-white/5">GBP - British Pound</SelectItem>
+                            <SelectItem value="AED" className="text-white hover:bg-white/5">AED - UAE Dirham</SelectItem>
+                            <SelectItem value="INR" className="text-white hover:bg-white/5">INR - Indian Rupee</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               
