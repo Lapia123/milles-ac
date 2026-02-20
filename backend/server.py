@@ -909,11 +909,21 @@ async def get_treasury_history(
     if transaction_type:
         query["transaction_type"] = transaction_type
     
-    # Get treasury-specific transactions
+    # Get treasury-specific transactions (these are the canonical records with proper currency conversion)
     treasury_txs = await db.treasury_transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
     
-    # Also get regular transactions that affected this treasury account
-    tx_query = {"destination_account_id": account_id}
+    # Get transaction IDs that already have treasury transaction records
+    existing_tx_ids = set()
+    for ttx in treasury_txs:
+        if ttx.get("transaction_id"):
+            existing_tx_ids.add(ttx.get("transaction_id"))
+    
+    # Only get regular transactions that DON'T have treasury transaction records yet
+    # (for backwards compatibility with old data that might not have treasury_transactions)
+    tx_query = {
+        "destination_account_id": account_id,
+        "status": {"$in": ["approved", "completed"]}
+    }
     if start_date:
         tx_query["created_at"] = {"$gte": start_date}
     if end_date:
@@ -922,26 +932,24 @@ async def get_treasury_history(
         else:
             tx_query["created_at"] = {"$lte": end_date}
     
-    regular_txs = await db.transactions.find(
-        {**tx_query, "status": {"$in": ["approved", "completed"]}}, 
-        {"_id": 0}
-    ).sort("created_at", -1).to_list(limit)
+    regular_txs = await db.transactions.find(tx_query, {"_id": 0}).sort("created_at", -1).to_list(limit)
     
-    # Convert regular transactions to history format
+    # Convert regular transactions to history format ONLY if they don't already have a treasury_transaction
     for tx in regular_txs:
-        treasury_txs.append({
-            "treasury_transaction_id": tx.get("transaction_id"),
-            "account_id": account_id,
-            "transaction_type": tx.get("transaction_type"),
-            "amount": tx.get("amount") if tx.get("transaction_type") == "deposit" else -tx.get("amount", 0),
-            "currency": account.get("currency", "USD"),
-            "reference": f"{tx.get('transaction_type', '').capitalize()}: {tx.get('client_name', 'Unknown')} - {tx.get('reference', '')}",
-            "client_id": tx.get("client_id"),
-            "client_name": tx.get("client_name"),
-            "created_at": tx.get("processed_at") or tx.get("created_at"),
-            "created_by": tx.get("processed_by"),
-            "created_by_name": tx.get("processed_by_name")
-        })
+        if tx.get("transaction_id") not in existing_tx_ids:
+            treasury_txs.append({
+                "treasury_transaction_id": tx.get("transaction_id"),
+                "account_id": account_id,
+                "transaction_type": tx.get("transaction_type"),
+                "amount": tx.get("amount") if tx.get("transaction_type") == "deposit" else -tx.get("amount", 0),
+                "currency": account.get("currency", "USD"),
+                "reference": f"{tx.get('transaction_type', '').capitalize()}: {tx.get('client_name', 'Unknown')} - {tx.get('reference', '')}",
+                "client_id": tx.get("client_id"),
+                "client_name": tx.get("client_name"),
+                "created_at": tx.get("processed_at") or tx.get("created_at"),
+                "created_by": tx.get("processed_by"),
+                "created_by_name": tx.get("processed_by_name")
+            })
     
     # Sort combined list by date
     treasury_txs.sort(key=lambda x: x.get("created_at", ""), reverse=True)
