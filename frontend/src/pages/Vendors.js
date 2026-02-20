@@ -661,12 +661,16 @@ export default function Vendors() {
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Type</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Client</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Amount</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Currency</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Settled</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {pendingTransactions.map((tx) => (
+                          {pendingTransactions.map((tx) => {
+                            const displayCurrency = tx.base_currency || tx.currency || 'USD';
+                            const displayAmount = tx.base_amount || tx.amount;
+                            return (
                             <TableRow key={tx.transaction_id} className="border-white/5 hover:bg-white/5">
                               <TableCell className="font-mono text-white">{tx.reference}</TableCell>
                               <TableCell>
@@ -676,7 +680,24 @@ export default function Vendors() {
                                 </span>
                               </TableCell>
                               <TableCell className="text-white">{tx.client_name}</TableCell>
-                              <TableCell className="font-mono text-white">${tx.amount?.toLocaleString()}</TableCell>
+                              <TableCell className="font-mono text-white">
+                                {displayAmount?.toLocaleString()}
+                                {tx.base_currency && tx.base_currency !== tx.currency && (
+                                  <span className="text-xs text-[#C5C6C7] block">(${tx.amount?.toLocaleString()} USD)</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={`${
+                                  displayCurrency === 'USD' ? 'bg-green-500/20 text-green-400' :
+                                  displayCurrency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                                  displayCurrency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
+                                  displayCurrency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                                  displayCurrency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
+                                  'bg-gray-500/20 text-gray-400'
+                                }`}>
+                                  {displayCurrency}
+                                </Badge>
+                              </TableCell>
                               <TableCell>{getStatusBadge(tx.status)}</TableCell>
                               <TableCell>
                                 {tx.settled ? (
@@ -686,7 +707,7 @@ export default function Vendors() {
                                 )}
                               </TableCell>
                             </TableRow>
-                          ))}
+                          )})}
                         </TableBody>
                       </Table>
                     )}
