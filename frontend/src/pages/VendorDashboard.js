@@ -208,14 +208,20 @@ export default function VendorDashboard() {
         });
       }
 
-      if (response.ok) {
+      if (response && response.ok) {
         toast.success(`Transaction ${actionType === 'complete' ? 'completed' : actionType + 'd'} successfully`);
         setActionDialogOpen(false);
         fetchTransactions();
         fetchVendorInfo();
-      } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Action failed');
+      } else if (response) {
+        let errorMessage = 'Action failed';
+        try {
+          const error = await response.json();
+          errorMessage = error.detail || errorMessage;
+        } catch (e) {
+          errorMessage = `Failed with status ${response.status}`;
+        }
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error('Action error:', error);
