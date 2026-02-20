@@ -220,9 +220,9 @@ export default function Transactions() {
     fetchVendors();
   }, [typeFilter, statusFilter]);
 
-  // Fetch client bank accounts when client changes
+  // Fetch client bank accounts when client changes and destination is bank or vendor
   useEffect(() => {
-    if (formData.client_id && formData.destination_type === 'bank') {
+    if (formData.client_id && (formData.destination_type === 'bank' || formData.destination_type === 'vendor')) {
       fetchClientBankAccounts(formData.client_id);
     }
   }, [formData.client_id, formData.destination_type]);
