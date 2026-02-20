@@ -571,7 +571,7 @@ export default function Vendors() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-[#1F2833] border-white/10">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setViewVendor(vendor); }} className="text-white hover:bg-white/5 cursor-pointer">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openVendorView(vendor); }} className="text-white hover:bg-white/5 cursor-pointer">
                           <Eye className="w-4 h-4 mr-2" /> View Details
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(vendor); }} className="text-white hover:bg-white/5 cursor-pointer">
