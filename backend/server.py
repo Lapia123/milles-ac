@@ -2227,19 +2227,19 @@ async def approve_transaction(
     return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
 
 @api_router.post("/transactions/{transaction_id}/upload-proof")
-async def upload_withdrawal_proof(
+async def upload_transaction_proof(
     transaction_id: str,
     proof_image: UploadFile = File(...),
     user: dict = Depends(require_accountant_or_admin)
 ):
-    """Upload proof of payment for withdrawal transactions"""
+    """Upload proof of payment for deposit and withdrawal transactions"""
     tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
     
-    # Allow uploading proof for pending withdrawals
-    if tx["transaction_type"] != TransactionType.WITHDRAWAL:
-        raise HTTPException(status_code=400, detail="Proof upload is only for withdrawal transactions")
+    # Allow uploading proof for pending deposits and withdrawals
+    if tx["transaction_type"] not in [TransactionType.WITHDRAWAL, TransactionType.DEPOSIT]:
+        raise HTTPException(status_code=400, detail="Proof upload is only for deposit and withdrawal transactions")
     
     content = await proof_image.read()
     proof_image_data = base64.b64encode(content).decode('utf-8')
