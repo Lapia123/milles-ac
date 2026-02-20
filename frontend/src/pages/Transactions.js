@@ -1078,12 +1078,38 @@ export default function Transactions() {
               )}
               {viewTransaction.proof_image && (
                 <div className="pt-4 border-t border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Proof of Payment</p>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Client Proof of Payment</p>
                   <img 
                     src={`data:image/png;base64,${viewTransaction.proof_image}`} 
-                    alt="Proof of payment" 
+                    alt="Client proof of payment" 
                     className="max-w-full rounded border border-white/10"
                   />
+                </div>
+              )}
+              {/* Accountant Approval Proof - Thumbnail Preview */}
+              {viewTransaction.accountant_proof_image && (
+                <div className="pt-4 border-t border-white/10">
+                  <p className="text-xs text-[#66FCF1] uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4" />
+                    Accountant Approval Proof
+                  </p>
+                  <div className="relative group">
+                    <img 
+                      src={`data:image/png;base64,${viewTransaction.accountant_proof_image}`} 
+                      alt="Accountant approval proof" 
+                      className="w-full max-h-48 object-contain rounded border border-[#66FCF1]/30 bg-[#0B0C10] cursor-pointer hover:border-[#66FCF1]"
+                      onClick={() => window.open(`data:image/png;base64,${viewTransaction.accountant_proof_image}`, '_blank')}
+                      data-testid="accountant-proof-thumbnail"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded">
+                      <span className="text-white text-sm">Click to view full size</span>
+                    </div>
+                  </div>
+                  {viewTransaction.proof_uploaded_at && (
+                    <p className="text-xs text-[#C5C6C7] mt-2">
+                      Uploaded: {formatDate(viewTransaction.proof_uploaded_at)} by {viewTransaction.proof_uploaded_by_name}
+                    </p>
+                  )}
                 </div>
               )}
               {viewTransaction.rejection_reason && (
