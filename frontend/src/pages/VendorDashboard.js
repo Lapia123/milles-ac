@@ -438,7 +438,7 @@ export default function VendorDashboard() {
               <TableBody>
                 {transactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-[#C5C6C7]">
+                    <TableCell colSpan={9} className="text-center py-8 text-[#C5C6C7]">
                       No transactions assigned to you
                     </TableCell>
                   </TableRow>
