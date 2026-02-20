@@ -1692,7 +1692,8 @@ async def get_my_vendor_info(user: dict = Depends(require_vendor)):
                     ]
                 }
             },
-            "total_commission": {"$sum": {"$ifNull": ["$vendor_commission_amount", 0]}},
+            "total_commission_usd": {"$sum": {"$ifNull": ["$vendor_commission_amount", 0]}},
+            "total_commission_base": {"$sum": {"$ifNull": ["$vendor_commission_base_amount", 0]}},
             "deposit_count": {
                 "$sum": {"$cond": [{"$eq": ["$transaction_type", "deposit"]}, 1, 0]}
             },
@@ -1707,10 +1708,11 @@ async def get_my_vendor_info(user: dict = Depends(require_vendor)):
         {
             "currency": item["_id"] or "USD",
             "amount": item["deposit_amount"] - item["withdrawal_amount"],
-            "usd_equivalent": (item["deposit_usd"] - item["withdrawal_usd"]) - item["total_commission"],
+            "usd_equivalent": (item["deposit_usd"] - item["withdrawal_usd"]) - item["total_commission_usd"],
             "deposit_amount": item["deposit_amount"],
             "withdrawal_amount": item["withdrawal_amount"],
-            "commission_earned": item["total_commission"],
+            "commission_earned_usd": item["total_commission_usd"],
+            "commission_earned_base": item["total_commission_base"],
             "deposit_count": item["deposit_count"],
             "withdrawal_count": item["withdrawal_count"],
             "transaction_count": item["deposit_count"] + item["withdrawal_count"]
