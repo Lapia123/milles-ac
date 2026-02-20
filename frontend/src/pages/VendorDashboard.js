@@ -240,15 +240,48 @@ export default function VendorDashboard() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Settlement Balance - Highlighted */}
-        <Card className="bg-[#1F2833] border-white/5 border-l-4 border-l-[#66FCF1]">
+        <Card className="bg-[#1F2833] border-white/5 border-l-4 border-l-[#66FCF1] md:col-span-2">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[#66FCF1] uppercase tracking-wider mb-1">Settlement Balance</p>
-                <p className="text-3xl font-bold font-mono text-[#66FCF1]">
-                  ${vendorInfo?.pending_settlement?.toLocaleString() || '0'}
-                </p>
-                <p className="text-xs text-[#C5C6C7] mt-1">Pending settlement</p>
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-xs text-[#66FCF1] uppercase tracking-wider mb-2">Settlement Balance</p>
+                {vendorInfo?.settlement_by_currency && vendorInfo.settlement_by_currency.length > 0 ? (
+                  <div className="space-y-2">
+                    {vendorInfo.settlement_by_currency.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge className={`${
+                            item.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
+                            item.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                            item.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
+                            item.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                            item.currency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
+                            'bg-gray-500/20 text-gray-400'
+                          }`}>
+                            {item.currency}
+                          </Badge>
+                          <span className="text-xs text-[#C5C6C7]">({item.transaction_count} txns)</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xl font-bold font-mono text-[#66FCF1]">
+                            {item.amount?.toLocaleString()}
+                          </span>
+                          {item.currency !== 'USD' && (
+                            <span className="text-xs text-[#C5C6C7] block">≈ ${item.usd_equivalent?.toLocaleString()} USD</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <div className="border-t border-white/10 pt-2 mt-2 flex justify-between">
+                      <span className="text-[#C5C6C7] text-sm">Total USD Equivalent:</span>
+                      <span className="text-xl font-bold font-mono text-white">
+                        ${vendorInfo.settlement_by_currency.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-2xl font-bold font-mono text-[#66FCF1]">$0</p>
+                )}
               </div>
               <div className="p-3 bg-[#66FCF1]/10 rounded-sm">
                 <DollarSign className="w-6 h-6 text-[#66FCF1]" />
@@ -280,20 +313,6 @@ export default function VendorDashboard() {
               </div>
               <div className="p-3 bg-green-500/10 rounded-sm">
                 <ArrowDownRight className="w-6 h-6 text-green-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-[#1F2833] border-white/5">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Pending Withdrawals</p>
-                <p className="text-3xl font-bold font-mono text-red-400">{pendingWithdrawals.length}</p>
-              </div>
-              <div className="p-3 bg-red-500/10 rounded-sm">
-                <ArrowUpRight className="w-6 h-6 text-red-500" />
               </div>
             </div>
           </CardContent>
