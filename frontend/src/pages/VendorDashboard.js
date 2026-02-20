@@ -154,16 +154,25 @@ export default function VendorDashboard() {
           const formData = new FormData();
           formData.append('proof_image', proofImage);
           
+          const token = localStorage.getItem('auth_token');
           const uploadResponse = await fetch(`${API_URL}/api/vendor/transactions/${selectedTransaction.transaction_id}/upload-proof`, {
             method: 'POST',
-            headers: getAuthHeaders(),
+            headers: {
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            },
             credentials: 'include',
             body: formData,
           });
           
           if (!uploadResponse.ok) {
-            const error = await uploadResponse.json();
-            toast.error(error.detail || 'Failed to upload proof');
+            let errorMessage = 'Failed to upload proof';
+            try {
+              const error = await uploadResponse.json();
+              errorMessage = error.detail || errorMessage;
+            } catch (e) {
+              errorMessage = `Upload failed with status ${uploadResponse.status}`;
+            }
+            toast.error(errorMessage);
             return;
           }
         }
