@@ -142,6 +142,31 @@ export default function VendorDashboard() {
       let response;
       
       if (actionType === 'approve') {
+        // For withdrawal approval - must upload proof
+        if (selectedTransaction.transaction_type === 'withdrawal' && !proofImage) {
+          toast.error('Please upload proof of payment screenshot for withdrawal approval');
+          return;
+        }
+        
+        // If withdrawal with proof, upload proof first
+        if (selectedTransaction.transaction_type === 'withdrawal' && proofImage) {
+          const formData = new FormData();
+          formData.append('proof_image', proofImage);
+          
+          const uploadResponse = await fetch(`${API_URL}/api/transactions/${selectedTransaction.transaction_id}/upload-proof`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            credentials: 'include',
+            body: formData,
+          });
+          
+          if (!uploadResponse.ok) {
+            const error = await uploadResponse.json();
+            toast.error(error.detail || 'Failed to upload proof');
+            return;
+          }
+        }
+        
         response = await fetch(`${API_URL}/api/vendor/transactions/${selectedTransaction.transaction_id}/approve`, {
           method: 'POST',
           headers: getAuthHeaders(),
