@@ -231,10 +231,10 @@ export default function AccountantDashboard() {
   }, []);
 
   const initiateApprove = (transactionId, isSettlement = false) => {
-    // For withdrawals, show approval dialog with source account and screenshot
+    // For withdrawals and deposits, show approval dialog with screenshot requirement
     if (!isSettlement) {
       const tx = pendingTransactions.find(t => t.transaction_id === transactionId);
-      if (tx && tx.transaction_type === 'withdrawal') {
+      if (tx && (tx.transaction_type === 'withdrawal' || tx.transaction_type === 'deposit')) {
         setShowApprovalDialog(tx);
         return;
       }
