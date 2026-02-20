@@ -478,6 +478,13 @@ export default function VendorDashboard() {
                           {displayCurrency}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        {tx.vendor_commission_amount ? (
+                          <span className="font-mono text-yellow-400">${tx.vendor_commission_amount?.toLocaleString()}</span>
+                        ) : (
+                          <span className="text-[#C5C6C7] text-xs">-</span>
+                        )}
+                      </TableCell>
                       <TableCell>{getStatusBadge(tx.status)}</TableCell>
                       <TableCell className="text-[#C5C6C7] text-sm">{formatDate(tx.created_at)}</TableCell>
                       <TableCell className="text-right">
