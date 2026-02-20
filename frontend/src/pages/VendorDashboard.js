@@ -524,7 +524,19 @@ export default function VendorDashboard() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[#C5C6C7]">Amount</span>
-                  <span className="text-white font-mono">${selectedTransaction.amount?.toLocaleString()}</span>
+                  <span className="text-white font-mono">{selectedTransaction.amount?.toLocaleString()} {selectedTransaction.currency || 'USD'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#C5C6C7]">Currency</span>
+                  <Badge className={`${
+                    selectedTransaction.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
+                    selectedTransaction.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                    selectedTransaction.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
+                    selectedTransaction.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-gray-500/20 text-gray-400'
+                  }`}>
+                    {selectedTransaction.currency || 'USD'}
+                  </Badge>
                 </div>
               </div>
 
