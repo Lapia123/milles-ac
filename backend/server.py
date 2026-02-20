@@ -1707,7 +1707,7 @@ async def get_my_vendor_info(user: dict = Depends(require_vendor)):
         {
             "currency": item["_id"] or "USD",
             "amount": item["deposit_amount"] - item["withdrawal_amount"],
-            "usd_equivalent": item["deposit_usd"] - item["withdrawal_usd"],
+            "usd_equivalent": (item["deposit_usd"] - item["withdrawal_usd"]) - item["total_commission"],
             "deposit_amount": item["deposit_amount"],
             "withdrawal_amount": item["withdrawal_amount"],
             "commission_earned": item["total_commission"],
