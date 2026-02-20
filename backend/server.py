@@ -1747,7 +1747,12 @@ async def vendor_approve_transaction(transaction_id: str, user: dict = Depends(r
         commission_rate = vendor.get("withdrawal_commission", 0) / 100
     
     # Calculate commission on the USD amount
-    commission_amount = round(tx["amount"] * commission_rate, 2)
+    commission_amount_usd = round(tx["amount"] * commission_rate, 2)
+    
+    # Calculate commission in base currency (original currency)
+    base_amount = tx.get("base_amount") or tx["amount"]
+    base_currency = tx.get("base_currency") or tx.get("currency", "USD")
+    commission_amount_base = round(base_amount * commission_rate, 2)
     
     updates = {
         "status": TransactionStatus.APPROVED,
@@ -1755,7 +1760,9 @@ async def vendor_approve_transaction(transaction_id: str, user: dict = Depends(r
         "processed_by_name": user["name"],
         "processed_at": now.isoformat(),
         "vendor_commission_rate": commission_rate * 100,  # Store as percentage
-        "vendor_commission_amount": commission_amount
+        "vendor_commission_amount": commission_amount_usd,  # USD amount
+        "vendor_commission_base_amount": commission_amount_base,  # Base currency amount
+        "vendor_commission_base_currency": base_currency  # Base currency code
     }
     
     await db.transactions.update_one({"transaction_id": transaction_id}, {"$set": updates})
@@ -1765,7 +1772,7 @@ async def vendor_approve_transaction(transaction_id: str, user: dict = Depends(r
         {"vendor_id": vendor["vendor_id"]},
         {
             "$inc": {
-                "total_commission": commission_amount,
+                "total_commission": commission_amount_usd,
                 "total_volume": tx["amount"]
             },
             "$set": {"updated_at": now.isoformat()}
