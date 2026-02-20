@@ -268,37 +268,42 @@ export default function VendorDashboard() {
         {/* Settlement Balance - Highlighted */}
         <Card className="bg-[#1F2833] border-white/5 border-l-4 border-l-[#66FCF1] lg:col-span-2">
           <CardContent className="p-6">
-            <p className="text-xs text-[#66FCF1] uppercase tracking-wider mb-3">Settlement Balance</p>
+            <p className="text-xs text-[#66FCF1] uppercase tracking-wider mb-3">Settlement Balance (Deposits - Withdrawals)</p>
             {vendorInfo?.settlement_by_currency && vendorInfo.settlement_by_currency.length > 0 ? (
               <div className="space-y-3">
                 {vendorInfo.settlement_by_currency.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge className={`${
-                        item.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
-                        item.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
-                        item.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
-                        item.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
-                        item.currency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
-                        'bg-gray-500/20 text-gray-400'
-                      }`}>
-                        {item.currency}
-                      </Badge>
-                      <span className="text-xs text-[#C5C6C7]">({item.transaction_count} txns)</span>
+                  <div key={idx} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge className={`${
+                          item.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
+                          item.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                          item.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
+                          item.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                          item.currency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
+                          'bg-gray-500/20 text-gray-400'
+                        }`}>
+                          {item.currency}
+                        </Badge>
+                      </div>
+                      <div className="text-right">
+                        <span className={`text-2xl font-bold font-mono ${item.amount >= 0 ? 'text-[#66FCF1]' : 'text-red-400'}`}>
+                          {item.amount >= 0 ? '+' : ''}{item.amount?.toLocaleString()}
+                        </span>
+                        {item.currency !== 'USD' && (
+                          <span className="text-xs text-[#C5C6C7] block">≈ ${item.usd_equivalent?.toLocaleString()} USD</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-2xl font-bold font-mono text-[#66FCF1]">
-                        {item.amount?.toLocaleString()}
-                      </span>
-                      {item.currency !== 'USD' && (
-                        <span className="text-xs text-[#C5C6C7] block">≈ ${item.usd_equivalent?.toLocaleString()} USD</span>
-                      )}
+                    <div className="flex justify-between text-xs text-[#C5C6C7] pl-2">
+                      <span className="text-green-400">+{item.deposit_amount?.toLocaleString()} deposits ({item.deposit_count})</span>
+                      <span className="text-red-400">-{item.withdrawal_amount?.toLocaleString()} withdrawals ({item.withdrawal_count})</span>
                     </div>
                   </div>
                 ))}
                 <div className="border-t border-white/10 pt-3 mt-3 flex justify-between items-center">
                   <span className="text-[#C5C6C7] text-sm">Total USD Equivalent:</span>
-                  <span className="text-2xl font-bold font-mono text-white">
+                  <span className={`text-2xl font-bold font-mono ${vendorInfo.settlement_by_currency.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0) >= 0 ? 'text-white' : 'text-red-400'}`}>
                     ${vendorInfo.settlement_by_currency.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString()}
                   </span>
                 </div>
