@@ -736,6 +736,7 @@ export default function Vendors() {
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Client</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Amount</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Currency</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Commission</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Settled</TableHead>
                           </TableRow>
@@ -771,6 +772,13 @@ export default function Vendors() {
                                 }`}>
                                   {displayCurrency}
                                 </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {tx.vendor_commission_amount ? (
+                                  <span className="font-mono text-yellow-400">${tx.vendor_commission_amount?.toLocaleString()}</span>
+                                ) : (
+                                  <span className="text-[#C5C6C7] text-xs">-</span>
+                                )}
                               </TableCell>
                               <TableCell>{getStatusBadge(tx.status)}</TableCell>
                               <TableCell>
