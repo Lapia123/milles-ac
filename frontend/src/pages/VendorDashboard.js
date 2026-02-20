@@ -528,6 +528,11 @@ export default function VendorDashboard() {
           </DialogHeader>
           {selectedTransaction && (
             <div className="space-y-4">
+              {(() => {
+                const displayCurrency = selectedTransaction.base_currency || selectedTransaction.currency || 'USD';
+                const displayAmount = selectedTransaction.base_amount || selectedTransaction.amount;
+                return (
+              <>
               <div className="p-4 bg-[#0B0C10] rounded-sm space-y-2">
                 <div className="flex justify-between">
                   <span className="text-[#C5C6C7]">Reference</span>
@@ -545,20 +550,27 @@ export default function VendorDashboard() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[#C5C6C7]">Amount</span>
-                  <span className="text-white font-mono">{selectedTransaction.amount?.toLocaleString()} {selectedTransaction.currency || 'USD'}</span>
+                  <span className="text-white font-mono">{displayAmount?.toLocaleString()} {displayCurrency}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[#C5C6C7]">Currency</span>
                   <Badge className={`${
-                    selectedTransaction.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
-                    selectedTransaction.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
-                    selectedTransaction.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
-                    selectedTransaction.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                    displayCurrency === 'USD' ? 'bg-green-500/20 text-green-400' :
+                    displayCurrency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                    displayCurrency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
+                    displayCurrency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                    displayCurrency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
                     'bg-gray-500/20 text-gray-400'
                   }`}>
-                    {selectedTransaction.currency || 'USD'}
+                    {displayCurrency}
                   </Badge>
                 </div>
+                {selectedTransaction.base_currency && selectedTransaction.base_currency !== selectedTransaction.currency && (
+                  <div className="flex justify-between border-t border-white/10 pt-2 mt-2">
+                    <span className="text-[#C5C6C7]">USD Equivalent</span>
+                    <span className="text-[#66FCF1] font-mono">${selectedTransaction.amount?.toLocaleString()}</span>
+                  </div>
+                )}
               </div>
 
               {actionType === 'reject' && (
