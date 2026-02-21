@@ -44,6 +44,11 @@ import {
   Trash2,
   Eye,
   Filter,
+  ArrowDownRight,
+  ArrowUpRight,
+  Wallet,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
