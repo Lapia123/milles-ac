@@ -1009,8 +1009,8 @@ export default function Vendors() {
                         </div>
                       )}
                       <div className="flex justify-between pt-2 border-t border-white/10">
-                        <span className="text-[#C5C6C7]">Net Amount (USD)</span>
-                        <span className="text-white font-mono">${netSource.toFixed(2)}</span>
+                        <span className="text-[#66FCF1] font-semibold">Final Amount to Pay (USD)</span>
+                        <span className="text-[#66FCF1] font-mono font-bold">${finalAmount.toFixed(2)}</span>
                       </div>
                       {destAccount && destAccount.currency !== 'USD' && (
                         <div className="pt-3 border-t border-white/10 space-y-2">
