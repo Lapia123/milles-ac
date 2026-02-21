@@ -126,6 +126,15 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 
 ## Recent Updates
 
+### February 21, 2026 - Debt Management Module
+**Implemented:**
+- Full CRUD for debts (Receivables & Payables)
+- Party types: Client, Vendor, Other (external parties)
+- Interest calculation on overdue debts
+- Payment recording with treasury integration
+- Aging summary dashboard
+- Auto-status calculation
+
 ### February 21, 2026 - Comprehensive Reports Module
 **Implemented:**
 - 7 report tabs with full data visualization
