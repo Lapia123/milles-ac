@@ -201,6 +201,9 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 - ✅ All reports include base currency breakdown
 - ✅ CSV export for all report types
 - ✅ Date filtering on reports
+- ✅ Debt Management module (Receivables & Payables)
+- ✅ Interest calculation on overdue debts
+- ✅ Payment recording with treasury integration
 
 ## Future/Backlog
 - P2: Advanced Reporting (additional custom reports)
