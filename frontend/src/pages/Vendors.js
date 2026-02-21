@@ -600,8 +600,8 @@ export default function Vendors() {
                     <span className="text-white font-mono">{vendor.withdrawal_commission}%</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[#C5C6C7] text-sm">Pending</span>
-                    <span className="text-yellow-400 font-mono">${(vendor.pending_amount || 0).toLocaleString()}</span>
+                    <span className="text-[#C5C6C7] text-sm">Net Settlement</span>
+                    <span className="text-[#66FCF1] font-mono">${(vendor.pending_amount || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t border-white/5">
                     <span className="text-[#C5C6C7] text-sm">Status</span>
