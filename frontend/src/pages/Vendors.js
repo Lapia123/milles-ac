@@ -709,7 +709,7 @@ export default function Vendors() {
                   data-testid="settle-vendor-btn"
                 >
                   <Wallet className="w-4 h-4 mr-2" />
-                  Settle Vendor Balance (${pendingTransactions.filter(t => (t.status === 'approved' || t.status === 'completed') && !t.settled).reduce((s, t) => s + t.amount, 0).toLocaleString()})
+                  Settle Vendor Balance (${viewVendor?.settlement_by_currency?.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString() || '0'})
                 </Button>
               )}
 
