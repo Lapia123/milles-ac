@@ -34,6 +34,7 @@ import {
 } from '../components/ui/dropdown-menu';
 import { Textarea } from '../components/ui/textarea';
 import { ScrollArea } from '../components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { toast } from 'sonner';
 import {
   Users,
@@ -48,6 +49,9 @@ import {
   ArrowUpRight,
   Wallet,
   TrendingUp,
+  Download,
+  FileSpreadsheet,
+  Calendar,
   TrendingDown,
 } from 'lucide-react';
 
