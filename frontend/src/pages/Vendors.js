@@ -1104,15 +1104,6 @@ export default function Vendors() {
                           )}
                         </div>
                       )}
-                          </div>
-                          {settlementAmountInDestCurrency && (
-                            <div className="flex justify-between pt-2">
-                              <span className="text-[#C5C6C7]">Amount to Transfer</span>
-                              <span className="text-green-400 font-mono text-lg">{destAccount.currency} {parseFloat(settlementAmountInDestCurrency).toLocaleString()}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
