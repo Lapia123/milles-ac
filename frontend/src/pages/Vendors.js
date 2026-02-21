@@ -1035,22 +1035,21 @@ export default function Vendors() {
               {/* Settlement Preview */}
               {settlementDestination && (() => {
                 const destAccount = treasuryAccounts.find(a => a.account_id === settlementDestination);
-                const netSettlementUSD = viewVendor?.settlement_by_currency?.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0) || 0;
-                const additionalChargesUSD = parseFloat(settlementCharges) || 0;
-                const finalAmountUSD = netSettlementUSD - additionalChargesUSD;
+                const destCurrency = destAccount?.currency || 'USD';
                 
-                // Get base currency info (assume first currency for now)
+                // Get base currency info (transaction currency)
                 const baseCurrencyData = viewVendor?.settlement_by_currency?.[0];
                 const baseCurrency = baseCurrencyData?.currency || 'USD';
                 const netSettlementBase = baseCurrencyData?.amount || 0;
-                const commissionBase = baseCurrencyData?.commission_earned_base || 0;
                 
-                // Calculate charges in base currency using exchange rate
-                const exchangeRate = baseCurrency !== 'USD' && netSettlementBase !== 0 && netSettlementUSD !== 0 
-                  ? netSettlementBase / netSettlementUSD 
-                  : 1;
-                const additionalChargesBase = additionalChargesUSD * exchangeRate;
-                const finalAmountBase = netSettlementBase - additionalChargesBase;
+                // Charges are entered in destination currency
+                const additionalChargesDest = parseFloat(settlementCharges) || 0;
+                
+                // Calculate final in destination currency
+                // If destination = base currency, simple subtraction
+                // If different, we need the final amount input
+                const isSameCurrency = destCurrency === baseCurrency;
+                const finalAmountDest = isSameCurrency ? (netSettlementBase - additionalChargesDest) : null;
                 
                 return (
                   <div className="p-3 bg-[#0B0C10] rounded-sm border border-white/10 space-y-3">
@@ -1058,56 +1057,53 @@ export default function Vendors() {
                       <Receipt className="w-3 h-3" /> Settlement Preview
                     </p>
                     <div className="space-y-2 text-sm">
-                      {/* Base Currency Section */}
-                      {baseCurrency !== 'USD' && (
-                        <>
-                          <div className="flex justify-between items-center">
-                            <Badge className="bg-purple-500/20 text-purple-400">{baseCurrency}</Badge>
-                            <span className="text-white font-mono">{netSettlementBase.toLocaleString()} {baseCurrency}</span>
-                          </div>
-                          {additionalChargesUSD > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-[#C5C6C7]">Additional Charges</span>
-                              <span className="text-red-400 font-mono">-{additionalChargesBase.toFixed(2)} {baseCurrency}</span>
-                            </div>
-                          )}
-                          <div className="flex justify-between border-b border-white/10 pb-2">
-                            <span className="text-[#66FCF1] font-semibold">Final ({baseCurrency})</span>
-                            <span className="text-[#66FCF1] font-mono font-bold">{finalAmountBase.toFixed(2)} {baseCurrency}</span>
-                          </div>
-                        </>
-                      )}
-                      
-                      {/* USD Section */}
-                      <div className="flex justify-between">
-                        <span className="text-[#C5C6C7]">Net Settlement (USD)</span>
-                        <span className="text-white font-mono">${netSettlementUSD.toLocaleString()}</span>
+                      {/* Base/Transaction Currency */}
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#C5C6C7]">Net Settlement</span>
+                        <span className="text-white font-mono">{netSettlementBase.toLocaleString()} {baseCurrency}</span>
                       </div>
-                      {additionalChargesUSD > 0 && (
+                      
+                      {/* Charges in destination currency */}
+                      {additionalChargesDest > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-[#C5C6C7]">Additional Charges (USD)</span>
-                          <span className="text-red-400 font-mono">-${additionalChargesUSD.toFixed(2)}</span>
+                          <span className="text-[#C5C6C7]">Additional Charges</span>
+                          <span className="text-red-400 font-mono">-{additionalChargesDest.toLocaleString()} {destCurrency}</span>
                         </div>
                       )}
-                      <div className="flex justify-between pt-2 border-t border-white/10">
-                        <span className="text-[#66FCF1] font-semibold">Final Amount (USD)</span>
-                        <span className="text-[#66FCF1] font-mono font-bold">${finalAmountUSD.toFixed(2)}</span>
-                      </div>
                       
-                      {destAccount && destAccount.currency !== 'USD' && (
+                      {/* Final amount */}
+                      {isSameCurrency ? (
+                        <div className="flex justify-between pt-2 border-t border-white/10">
+                          <span className="text-[#66FCF1] font-semibold">Final Amount to Pay</span>
+                          <span className="text-[#66FCF1] font-mono font-bold">{finalAmountDest?.toLocaleString()} {destCurrency}</span>
+                        </div>
+                      ) : (
                         <div className="pt-3 border-t border-white/10 space-y-2">
-                          <p className="text-xs text-yellow-400">Destination account: {destAccount.currency}</p>
+                          <p className="text-xs text-yellow-400">
+                            Destination: {destCurrency} (different from {baseCurrency})
+                          </p>
                           <div className="space-y-1">
-                            <Label className="text-[#C5C6C7] text-xs">Final Settlement Amount in {destAccount.currency} *</Label>
+                            <Label className="text-[#C5C6C7] text-xs">Final Settlement Amount in {destCurrency} *</Label>
                             <Input
                               type="number"
                               step="0.01"
                               value={settlementAmountInDestCurrency}
                               onChange={(e) => setSettlementAmountInDestCurrency(e.target.value)}
                               className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono"
-                              placeholder={`Enter final amount in ${destAccount.currency}`}
+                              placeholder={`Enter final amount in ${destCurrency}`}
                               data-testid="settlement-dest-amount"
                             />
+                          </div>
+                          {settlementAmountInDestCurrency && (
+                            <div className="flex justify-between pt-2">
+                              <span className="text-[#66FCF1] font-semibold">Amount to Transfer</span>
+                              <span className="text-green-400 font-mono text-lg">
+                                {parseFloat(settlementAmountInDestCurrency).toLocaleString()} {destCurrency}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                           </div>
                           {settlementAmountInDestCurrency && (
                             <div className="flex justify-between pt-2">
