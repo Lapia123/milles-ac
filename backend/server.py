@@ -1517,7 +1517,7 @@ async def get_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
     vendor["settlement_by_currency"] = [
         {
             "currency": item["_id"] or "USD",
-            "amount": item["deposit_amount"] - item["withdrawal_amount"],
+            "amount": (item["deposit_amount"] - item["withdrawal_amount"]) - item["total_commission_base"],
             "usd_equivalent": (item["deposit_usd"] - item["withdrawal_usd"]) - item["total_commission_usd"],
             "deposit_amount": item["deposit_amount"],
             "withdrawal_amount": item["withdrawal_amount"],
