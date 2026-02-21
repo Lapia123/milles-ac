@@ -683,6 +683,44 @@ async def get_clients(
         ]
     
     clients = await db.clients.find(query, {"_id": 0}).to_list(1000)
+    
+    # Get transaction summaries for all clients
+    tx_pipeline = [
+        {"$group": {
+            "_id": {
+                "client_id": "$client_id",
+                "type": "$transaction_type"
+            },
+            "total_amount": {"$sum": "$amount"},
+            "count": {"$sum": 1}
+        }}
+    ]
+    tx_summaries = await db.transactions.aggregate(tx_pipeline).to_list(10000)
+    
+    # Build lookup dict
+    client_tx_map = {}
+    for summary in tx_summaries:
+        client_id = summary["_id"]["client_id"]
+        tx_type = summary["_id"]["type"]
+        if client_id not in client_tx_map:
+            client_tx_map[client_id] = {"deposits": 0, "withdrawals": 0, "deposit_count": 0, "withdrawal_count": 0}
+        if tx_type == "deposit":
+            client_tx_map[client_id]["deposits"] = summary["total_amount"]
+            client_tx_map[client_id]["deposit_count"] = summary["count"]
+        elif tx_type == "withdrawal":
+            client_tx_map[client_id]["withdrawals"] = summary["total_amount"]
+            client_tx_map[client_id]["withdrawal_count"] = summary["count"]
+    
+    # Add summaries to clients
+    for client in clients:
+        tx_data = client_tx_map.get(client["client_id"], {})
+        client["total_deposits"] = tx_data.get("deposits", 0)
+        client["total_withdrawals"] = tx_data.get("withdrawals", 0)
+        client["deposit_count"] = tx_data.get("deposit_count", 0)
+        client["withdrawal_count"] = tx_data.get("withdrawal_count", 0)
+        client["net_balance"] = client["total_deposits"] - client["total_withdrawals"]
+        client["transaction_count"] = client["deposit_count"] + client["withdrawal_count"]
+    
     return clients
 
 @api_router.get("/clients/{client_id}")
