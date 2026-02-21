@@ -72,6 +72,15 @@ export default function Clients() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [viewClient, setViewClient] = useState(null);
+  
+  // Transaction filter states
+  const [txTypeFilter, setTxTypeFilter] = useState('all');
+  const [txStatusFilter, setTxStatusFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [minBalance, setMinBalance] = useState('');
+  const [maxBalance, setMaxBalance] = useState('');
+  
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
