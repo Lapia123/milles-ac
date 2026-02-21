@@ -1447,14 +1447,51 @@ async def get_vendors(user: dict = Depends(get_current_user)):
         pending_txs = pending_by_vendor.get(vendor["vendor_id"], [])
         vendor["pending_transactions_count"] = len(pending_txs)
         
-        # Calculate net pending amount (gross - commission)
-        gross_amount = sum(tx.get("amount", 0) for tx in pending_txs)
-        total_commission = sum(tx.get("vendor_commission_amount", 0) for tx in pending_txs)
+        # Calculate net pending amount by currency
+        currency_breakdown = {}
+        for tx in pending_txs:
+            currency = tx.get("base_currency") or tx.get("currency", "USD")
+            if currency not in currency_breakdown:
+                currency_breakdown[currency] = {
+                    "deposits_base": 0,
+                    "withdrawals_base": 0,
+                    "deposits_usd": 0,
+                    "withdrawals_usd": 0,
+                    "commission_base": 0,
+                    "commission_usd": 0
+                }
+            
+            base_amount = tx.get("base_amount") or tx.get("amount", 0)
+            usd_amount = tx.get("amount", 0)
+            commission_base = tx.get("vendor_commission_base_amount", 0)
+            commission_usd = tx.get("vendor_commission_amount", 0)
+            
+            if tx.get("transaction_type") == "deposit":
+                currency_breakdown[currency]["deposits_base"] += base_amount
+                currency_breakdown[currency]["deposits_usd"] += usd_amount
+            else:
+                currency_breakdown[currency]["withdrawals_base"] += base_amount
+                currency_breakdown[currency]["withdrawals_usd"] += usd_amount
+            
+            currency_breakdown[currency]["commission_base"] += commission_base
+            currency_breakdown[currency]["commission_usd"] += commission_usd
         
-        # Net = (deposits - withdrawals) - commission
-        deposit_amount = sum(tx.get("amount", 0) for tx in pending_txs if tx.get("transaction_type") == "deposit")
-        withdrawal_amount = sum(tx.get("amount", 0) for tx in pending_txs if tx.get("transaction_type") == "withdrawal")
-        vendor["pending_amount"] = (deposit_amount - withdrawal_amount) - total_commission
+        # Build settlement by currency for list view
+        settlement_by_currency = []
+        total_net_usd = 0
+        for currency, data in currency_breakdown.items():
+            net_base = (data["deposits_base"] - data["withdrawals_base"]) - data["commission_base"]
+            net_usd = (data["deposits_usd"] - data["withdrawals_usd"]) - data["commission_usd"]
+            total_net_usd += net_usd
+            settlement_by_currency.append({
+                "currency": currency,
+                "amount": net_base,
+                "usd_equivalent": net_usd,
+                "commission_base": data["commission_base"]
+            })
+        
+        vendor["settlement_by_currency"] = settlement_by_currency
+        vendor["pending_amount"] = total_net_usd
     
     return vendors
 
