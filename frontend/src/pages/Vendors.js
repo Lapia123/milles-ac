@@ -997,18 +997,27 @@ export default function Vendors() {
                 </Select>
               </div>
               
-              <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Additional Charges (Optional)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={settlementCharges}
-                  onChange={(e) => setSettlementCharges(e.target.value)}
-                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
-                  placeholder="0.00"
-                  data-testid="settlement-charges"
-                />
-              </div>
+              {/* Additional Charges - shows after destination is selected */}
+              {settlementDestination && (() => {
+                const destAccount = treasuryAccounts.find(a => a.account_id === settlementDestination);
+                const destCurrency = destAccount?.currency || 'USD';
+                return (
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                      Additional Charges in {destCurrency} (Optional)
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={settlementCharges}
+                      onChange={(e) => setSettlementCharges(e.target.value)}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      placeholder={`0.00 ${destCurrency}`}
+                      data-testid="settlement-charges"
+                    />
+                  </div>
+                );
+              })()}
               
               {settlementCharges && parseFloat(settlementCharges) > 0 && (
                 <div className="space-y-2">
@@ -1023,7 +1032,7 @@ export default function Vendors() {
                 </div>
               )}
               
-              {/* Multi-Currency Settlement */}
+              {/* Settlement Preview */}
               {settlementDestination && (() => {
                 const destAccount = treasuryAccounts.find(a => a.account_id === settlementDestination);
                 const netSettlementUSD = viewVendor?.settlement_by_currency?.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0) || 0;
