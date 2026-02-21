@@ -983,10 +983,10 @@ export default function Vendors() {
               {/* Multi-Currency Settlement */}
               {settlementDestination && (() => {
                 const destAccount = treasuryAccounts.find(a => a.account_id === settlementDestination);
-                const grossAmount = pendingTransactions.filter(t => (t.status === 'approved' || t.status === 'completed') && !t.settled).reduce((s, t) => s + t.amount, 0);
-                const commission = parseFloat(settlementCommission) || 0;
-                const charges = parseFloat(settlementCharges) || 0;
-                const netSource = grossAmount - commission - charges;
+                const netSettlement = viewVendor?.settlement_by_currency?.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0) || 0;
+                const totalCommission = viewVendor?.settlement_by_currency?.reduce((sum, item) => sum + (item.commission_earned_usd || 0), 0) || 0;
+                const additionalCharges = parseFloat(settlementCharges) || 0;
+                const finalAmount = netSettlement - additionalCharges;
                 
                 return (
                   <div className="p-3 bg-[#0B0C10] rounded-sm border border-white/10 space-y-3">
@@ -995,17 +995,17 @@ export default function Vendors() {
                     </p>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-[#C5C6C7]">Gross Amount (USD)</span>
-                        <span className="text-white font-mono">${grossAmount.toLocaleString()}</span>
+                        <span className="text-[#C5C6C7]">Net Settlement (USD)</span>
+                        <span className="text-white font-mono">${netSettlement.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-[#C5C6C7]">Commission</span>
-                        <span className="text-red-400 font-mono">-${commission.toFixed(2)}</span>
+                        <span className="text-[#C5C6C7]">Commission Already Deducted</span>
+                        <span className="text-yellow-400 font-mono">${totalCommission.toLocaleString()}</span>
                       </div>
-                      {charges > 0 && (
+                      {additionalCharges > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-[#C5C6C7]">Charges</span>
-                          <span className="text-red-400 font-mono">-${charges.toFixed(2)}</span>
+                          <span className="text-[#C5C6C7]">Additional Charges</span>
+                          <span className="text-red-400 font-mono">-${additionalCharges.toFixed(2)}</span>
                         </div>
                       )}
                       <div className="flex justify-between pt-2 border-t border-white/10">
