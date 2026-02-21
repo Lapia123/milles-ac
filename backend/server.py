@@ -1446,7 +1446,15 @@ async def get_vendors(user: dict = Depends(get_current_user)):
         
         pending_txs = pending_by_vendor.get(vendor["vendor_id"], [])
         vendor["pending_transactions_count"] = len(pending_txs)
-        vendor["pending_amount"] = sum(tx.get("amount", 0) for tx in pending_txs)
+        
+        # Calculate net pending amount (gross - commission)
+        gross_amount = sum(tx.get("amount", 0) for tx in pending_txs)
+        total_commission = sum(tx.get("vendor_commission_amount", 0) for tx in pending_txs)
+        
+        # Net = (deposits - withdrawals) - commission
+        deposit_amount = sum(tx.get("amount", 0) for tx in pending_txs if tx.get("transaction_type") == "deposit")
+        withdrawal_amount = sum(tx.get("amount", 0) for tx in pending_txs if tx.get("transaction_type") == "withdrawal")
+        vendor["pending_amount"] = (deposit_amount - withdrawal_amount) - total_commission
     
     return vendors
 
