@@ -459,7 +459,7 @@ export default function Clients() {
 
       {/* View Client Dialog */}
       <Dialog open={!!viewClient} onOpenChange={() => setViewClient(null)}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg">
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
               Client Details
@@ -478,6 +478,38 @@ export default function Clients() {
                   <p className="text-[#C5C6C7] font-mono text-sm">{viewClient.client_id}</p>
                 </div>
               </div>
+              
+              {/* Transaction Summary Cards */}
+              <div className="grid grid-cols-3 gap-3 pt-4 border-t border-white/10">
+                <div className="bg-[#0B0C10] p-3 rounded-sm border-l-2 border-l-green-500">
+                  <div className="flex items-center gap-2 mb-1">
+                    <ArrowDownRight className="w-4 h-4 text-green-400" />
+                    <span className="text-xs text-[#C5C6C7] uppercase">Deposits</span>
+                  </div>
+                  <p className="text-lg font-mono text-green-400">${(viewClient.total_deposits || 0).toLocaleString()}</p>
+                  <p className="text-xs text-[#C5C6C7]">{viewClient.deposit_count || 0} transactions</p>
+                </div>
+                <div className="bg-[#0B0C10] p-3 rounded-sm border-l-2 border-l-red-500">
+                  <div className="flex items-center gap-2 mb-1">
+                    <ArrowUpRight className="w-4 h-4 text-red-400" />
+                    <span className="text-xs text-[#C5C6C7] uppercase">Withdrawals</span>
+                  </div>
+                  <p className="text-lg font-mono text-red-400">${(viewClient.total_withdrawals || 0).toLocaleString()}</p>
+                  <p className="text-xs text-[#C5C6C7]">{viewClient.withdrawal_count || 0} transactions</p>
+                </div>
+                <div className="bg-[#0B0C10] p-3 rounded-sm border-l-2 border-l-[#66FCF1]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Wallet className="w-4 h-4 text-[#66FCF1]" />
+                    <span className="text-xs text-[#C5C6C7] uppercase">Net Balance</span>
+                  </div>
+                  <p className={`text-lg font-mono ${(viewClient.net_balance || 0) >= 0 ? 'text-[#66FCF1]' : 'text-red-400'}`}>
+                    ${(viewClient.net_balance || 0).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-[#C5C6C7]">{viewClient.transaction_count || 0} total</p>
+                </div>
+              </div>
+              
+              {/* Client Info */}
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Email</p>
@@ -496,6 +528,37 @@ export default function Clients() {
                   {getStatusBadge(viewClient.kyc_status)}
                 </div>
               </div>
+              
+              {/* Recent Transactions */}
+              {viewClient.recent_transactions && viewClient.recent_transactions.length > 0 && (
+                <div className="pt-4 border-t border-white/10">
+                  <p className="text-xs text-[#66FCF1] uppercase tracking-wider mb-3">Recent Transactions</p>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {viewClient.recent_transactions.map((tx) => (
+                      <div key={tx.transaction_id} className="flex items-center justify-between p-2 bg-[#0B0C10] rounded">
+                        <div className="flex items-center gap-2">
+                          {tx.transaction_type === 'deposit' ? (
+                            <ArrowDownRight className="w-4 h-4 text-green-400" />
+                          ) : (
+                            <ArrowUpRight className="w-4 h-4 text-red-400" />
+                          )}
+                          <div>
+                            <p className="text-white text-sm font-mono">{tx.reference}</p>
+                            <p className="text-[#C5C6C7] text-xs">{tx.transaction_type}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`font-mono ${tx.transaction_type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
+                            {tx.transaction_type === 'deposit' ? '+' : '-'}${tx.amount?.toLocaleString()}
+                          </p>
+                          <p className="text-[#C5C6C7] text-xs">{tx.status}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               {viewClient.notes && (
                 <div className="pt-4 border-t border-white/10">
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Notes</p>
