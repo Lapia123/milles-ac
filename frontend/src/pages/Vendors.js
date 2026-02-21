@@ -1026,10 +1026,22 @@ export default function Vendors() {
               {/* Multi-Currency Settlement */}
               {settlementDestination && (() => {
                 const destAccount = treasuryAccounts.find(a => a.account_id === settlementDestination);
-                const netSettlement = viewVendor?.settlement_by_currency?.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0) || 0;
-                const totalCommission = viewVendor?.settlement_by_currency?.reduce((sum, item) => sum + (item.commission_earned_usd || 0), 0) || 0;
-                const additionalCharges = parseFloat(settlementCharges) || 0;
-                const finalAmount = netSettlement - additionalCharges;
+                const netSettlementUSD = viewVendor?.settlement_by_currency?.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0) || 0;
+                const additionalChargesUSD = parseFloat(settlementCharges) || 0;
+                const finalAmountUSD = netSettlementUSD - additionalChargesUSD;
+                
+                // Get base currency info (assume first currency for now)
+                const baseCurrencyData = viewVendor?.settlement_by_currency?.[0];
+                const baseCurrency = baseCurrencyData?.currency || 'USD';
+                const netSettlementBase = baseCurrencyData?.amount || 0;
+                const commissionBase = baseCurrencyData?.commission_earned_base || 0;
+                
+                // Calculate charges in base currency using exchange rate
+                const exchangeRate = baseCurrency !== 'USD' && netSettlementBase !== 0 && netSettlementUSD !== 0 
+                  ? netSettlementBase / netSettlementUSD 
+                  : 1;
+                const additionalChargesBase = additionalChargesUSD * exchangeRate;
+                const finalAmountBase = netSettlementBase - additionalChargesBase;
                 
                 return (
                   <div className="p-3 bg-[#0B0C10] rounded-sm border border-white/10 space-y-3">
@@ -1037,42 +1049,60 @@ export default function Vendors() {
                       <Receipt className="w-3 h-3" /> Settlement Preview
                     </p>
                     <div className="space-y-2 text-sm">
+                      {/* Base Currency Section */}
+                      {baseCurrency !== 'USD' && (
+                        <>
+                          <div className="flex justify-between items-center">
+                            <Badge className="bg-purple-500/20 text-purple-400">{baseCurrency}</Badge>
+                            <span className="text-white font-mono">{netSettlementBase.toLocaleString()} {baseCurrency}</span>
+                          </div>
+                          {additionalChargesUSD > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-[#C5C6C7]">Additional Charges</span>
+                              <span className="text-red-400 font-mono">-{additionalChargesBase.toFixed(2)} {baseCurrency}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between border-b border-white/10 pb-2">
+                            <span className="text-[#66FCF1] font-semibold">Final ({baseCurrency})</span>
+                            <span className="text-[#66FCF1] font-mono font-bold">{finalAmountBase.toFixed(2)} {baseCurrency}</span>
+                          </div>
+                        </>
+                      )}
+                      
+                      {/* USD Section */}
                       <div className="flex justify-between">
                         <span className="text-[#C5C6C7]">Net Settlement (USD)</span>
-                        <span className="text-white font-mono">${netSettlement.toLocaleString()}</span>
+                        <span className="text-white font-mono">${netSettlementUSD.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#C5C6C7]">Commission Already Deducted</span>
-                        <span className="text-yellow-400 font-mono">${totalCommission.toLocaleString()}</span>
-                      </div>
-                      {additionalCharges > 0 && (
+                      {additionalChargesUSD > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-[#C5C6C7]">Additional Charges</span>
-                          <span className="text-red-400 font-mono">-${additionalCharges.toFixed(2)}</span>
+                          <span className="text-[#C5C6C7]">Additional Charges (USD)</span>
+                          <span className="text-red-400 font-mono">-${additionalChargesUSD.toFixed(2)}</span>
                         </div>
                       )}
                       <div className="flex justify-between pt-2 border-t border-white/10">
-                        <span className="text-[#66FCF1] font-semibold">Final Amount to Pay (USD)</span>
-                        <span className="text-[#66FCF1] font-mono font-bold">${finalAmount.toFixed(2)}</span>
+                        <span className="text-[#66FCF1] font-semibold">Final Amount (USD)</span>
+                        <span className="text-[#66FCF1] font-mono font-bold">${finalAmountUSD.toFixed(2)}</span>
                       </div>
+                      
                       {destAccount && destAccount.currency !== 'USD' && (
                         <div className="pt-3 border-t border-white/10 space-y-2">
-                          <p className="text-xs text-yellow-400">Destination currency: {destAccount.currency}</p>
+                          <p className="text-xs text-yellow-400">Destination account: {destAccount.currency}</p>
                           <div className="space-y-1">
-                            <Label className="text-[#C5C6C7] text-xs">Settlement Amount in {destAccount.currency} *</Label>
+                            <Label className="text-[#C5C6C7] text-xs">Final Settlement Amount in {destAccount.currency} *</Label>
                             <Input
                               type="number"
                               step="0.01"
                               value={settlementAmountInDestCurrency}
                               onChange={(e) => setSettlementAmountInDestCurrency(e.target.value)}
                               className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono"
-                              placeholder={`Enter amount in ${destAccount.currency}`}
+                              placeholder={`Enter final amount in ${destAccount.currency}`}
                               data-testid="settlement-dest-amount"
                             />
                           </div>
                           {settlementAmountInDestCurrency && (
                             <div className="flex justify-between pt-2">
-                              <span className="text-[#C5C6C7]">Final Settlement</span>
+                              <span className="text-[#C5C6C7]">Amount to Transfer</span>
                               <span className="text-green-400 font-mono text-lg">{destAccount.currency} {parseFloat(settlementAmountInDestCurrency).toLocaleString()}</span>
                             </div>
                           )}
