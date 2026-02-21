@@ -473,7 +473,7 @@ export default function Clients() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-[#1F2833] border-white/10">
-                            <DropdownMenuItem onClick={() => setViewClient(client)} className="text-white hover:bg-white/5 cursor-pointer">
+                            <DropdownMenuItem onClick={() => fetchClientDetails(client.client_id)} className="text-white hover:bg-white/5 cursor-pointer">
                               <Eye className="w-4 h-4 mr-2" /> View
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleEdit(client)} className="text-white hover:bg-white/5 cursor-pointer">
