@@ -95,6 +95,14 @@ function AppRouter() {
             </ProtectedRoute>
           } 
         />
+        <Route 
+          path="/debts" 
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'accountant']}>
+              <Debts />
+            </ProtectedRoute>
+          } 
+        />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
