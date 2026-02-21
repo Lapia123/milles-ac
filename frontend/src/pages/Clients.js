@@ -140,6 +140,88 @@ export default function Clients() {
     fetchClients();
   }, [searchTerm, statusFilter]);
 
+  // Filter clients based on transaction filters
+  const filteredClients = clients.filter(client => {
+    // Balance filter
+    if (minBalance && client.net_balance < parseFloat(minBalance)) return false;
+    if (maxBalance && client.net_balance > parseFloat(maxBalance)) return false;
+    
+    // Transaction type filter
+    if (txTypeFilter === 'deposits_only' && (client.deposit_count || 0) === 0) return false;
+    if (txTypeFilter === 'withdrawals_only' && (client.withdrawal_count || 0) === 0) return false;
+    if (txTypeFilter === 'no_transactions' && (client.transaction_count || 0) > 0) return false;
+    
+    return true;
+  });
+
+  // Download functions
+  const downloadCSV = () => {
+    const headers = ['Client ID', 'Name', 'Email', 'Phone', 'Country', 'KYC Status', 'Total Deposits', 'Deposit Count', 'Total Withdrawals', 'Withdrawal Count', 'Net Balance'];
+    const rows = filteredClients.map(c => [
+      c.client_id,
+      `${c.first_name} ${c.last_name}`,
+      c.email,
+      c.phone || '',
+      c.country || '',
+      c.kyc_status,
+      c.total_deposits || 0,
+      c.deposit_count || 0,
+      c.total_withdrawals || 0,
+      c.withdrawal_count || 0,
+      c.net_balance || 0
+    ]);
+    
+    const csvContent = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `clients_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success('Clients exported to CSV');
+  };
+
+  const downloadTransactionsCSV = async () => {
+    try {
+      toast.loading('Preparing transactions export...');
+      const response = await fetch(`${API_URL}/api/transactions`, {
+        headers: getAuthHeaders(),
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const transactions = await response.json();
+        const headers = ['Transaction ID', 'Reference', 'Client', 'Type', 'Amount (USD)', 'Base Amount', 'Base Currency', 'Status', 'Vendor', 'Created At'];
+        const rows = transactions.map(tx => [
+          tx.transaction_id,
+          tx.reference,
+          tx.client_name,
+          tx.transaction_type,
+          tx.amount || 0,
+          tx.base_amount || tx.amount || 0,
+          tx.base_currency || 'USD',
+          tx.status,
+          tx.vendor_name || '',
+          tx.created_at
+        ]);
+        
+        const csvContent = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `transactions_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+        toast.dismiss();
+        toast.success('Transactions exported to CSV');
+      }
+    } catch (error) {
+      toast.dismiss();
+      toast.error('Failed to export transactions');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
