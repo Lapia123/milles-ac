@@ -12,133 +12,184 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 ## Core Features (Implemented)
 
 ### Authentication
-- ✅ JWT (email/password)
-- ✅ Google Social Login (Emergent-managed)
+- JWT (email/password)
+- Google Social Login (Emergent-managed)
 
 ### Client Management
-- ✅ Full CRUD for clients
-- ✅ KYC status tracking
-- ✅ MT5 Number, CRM Customer ID
-- ✅ Saved bank account details
+- Full CRUD for clients
+- KYC status tracking
+- MT5 Number, CRM Customer ID
+- Saved bank account details
+- **NEW (Feb 21, 2026)**: Enhanced filters (transaction type, balance range) and CSV export
 
 ### Transaction Management
-- ✅ Track deposits, withdrawals, transfers
-- ✅ Multiple currencies support
-- ✅ Destinations: Treasury, PSP, Vendor, Client Bank, USDT
-- ✅ Proof of payment uploads
+- Track deposits, withdrawals, transfers
+- Multiple currencies support
+- Destinations: Treasury, PSP, Vendor, Client Bank, USDT
+- Proof of payment uploads
 
 ### Treasury Management
-- ✅ Bank/USDT accounts
-- ✅ Total balance in USD
-- ✅ Transaction history
-- ✅ Inter-treasury transfers
+- Bank/USDT accounts
+- Total balance in USD
+- Transaction history
+- Inter-treasury transfers
 
 ### Accountant Dashboard
-- ✅ Approve/reject pending transactions
-- ✅ Math captcha protection
-- ✅ Settlement approvals
-- ✅ **NEW (Feb 20, 2026)**: Deposit approval with mandatory screenshot upload
+- Approve/reject pending transactions
+- Math captcha protection
+- Settlement approvals
+- Deposit approval with mandatory screenshot upload
 
 ### PSP Management
-- ✅ Manual ledger for Payment Service Providers
-- ✅ Commission tracking
-- ✅ Settlement management
+- Manual ledger for Payment Service Providers
+- Commission tracking
+- Settlement management
 
 ### Vendor Portal
-- ✅ Separate vendor login
-- ✅ Assigned transaction management
-- ✅ Settlement requests
-- ✅ **NEW (Feb 20, 2026)**: Commission calculation on transaction approval
-- ✅ **NEW (Feb 20, 2026)**: Commission column in transactions table
-- ✅ **NEW (Feb 20, 2026)**: Total Commission Earned card
-- ✅ **NEW (Feb 20, 2026)**: Settlement formula: (Deposits - Withdrawals - Commission)
+- Separate vendor login
+- Assigned transaction management
+- Settlement requests
+- Commission calculation on transaction approval
+- Commission column in transactions table
+- Total Commission Earned card
+- Settlement formula: (Deposits - Withdrawals - Commission)
 
 ### Income & Expenses Ledger
-- ✅ Track company income/expenses
-- ✅ Custom categories
-- ✅ Treasury account integration
+- Track company income/expenses
+- Custom categories
+- Treasury account integration
 
 ### Loan Management
-- ✅ Track loans to other companies
-- ✅ Borrower, amount, interest rate, dates
-- ✅ Repayment tracking
-- ✅ Treasury integration
+- Track loans to other companies
+- Borrower, amount, interest rate, dates
+- Repayment tracking
+- Treasury integration
+
+### Comprehensive Reports Module (NEW - Feb 21, 2026)
+**7 Report Tabs with CSV Export:**
+
+1. **Transaction Reports**
+   - Total Deposits/Withdrawals with USD amounts
+   - Deposits by Currency (base amount + USD equivalent)
+   - Withdrawals by Currency (base amount + USD equivalent)
+   - Transaction Volume chart (30 days)
+   - CSV export per currency table
+
+2. **Vendor Reports**
+   - Vendor Settlement Summary
+   - Net Settlement = Deposits - Withdrawals - Commission
+   - Commission rates displayed
+   - Currency breakdown per vendor
+   - CSV export
+
+3. **Commission Reports**
+   - Total Commission Paid
+   - Commission by Vendor (deposit vs withdrawal split)
+   - Commission by Currency (base + USD)
+   - CSV export
+
+4. **Client Reports**
+   - Total/Active Clients
+   - Client Balance Report
+   - Net balance per client
+   - Transaction counts
+   - CSV export
+
+5. **Treasury Reports**
+   - Total Balance in USD
+   - Balance by Currency
+   - Account list with USD equivalents
+   - Recent transfers
+   - CSV export
+
+6. **PSP Reports**
+   - Volume, Commission, Net amounts
+   - Settled vs Pending counts
+   - CSV export
+
+7. **Financial Reports**
+   - P&L Summary (Income - Expenses)
+   - Income by Category (pie chart)
+   - Expenses by Category (pie chart)
+   - Loan Summary
+   - Vendor Commission Summary
+   - Treasury Balance
 
 ## Recent Updates
 
-### February 20, 2026 - Vendor Commission Calculation
+### February 21, 2026 - Comprehensive Reports Module
 **Implemented:**
-1. **Commission Calculation on Approval**:
-   - Deposit approval: Uses vendor's `deposit_commission` rate (e.g., 1.5%)
-   - Withdrawal approval: Uses vendor's `withdrawal_commission` rate (e.g., 2.0%)
-   - Formula: `commission_amount = amount * (commission_rate / 100)`
-   - Stored as `vendor_commission_amount` and `vendor_commission_rate` on transaction
+- 7 report tabs with full data visualization
+- All reports include base currency with USD equivalents
+- Date range filters on all reports
+- CSV export functionality for each report type
+- Charts: Area charts, Bar charts, Pie charts using Recharts
+- Responsive design with proper loading states
 
-2. **Settlement Balance Formula**:
-   - Updated to: **(Deposits - Withdrawals) - Commission**
-   - Commission is deducted from the settlement balance
-   - Both `/api/vendor/me` and `/api/vendors/{id}` return correct calculations
-
-3. **Frontend Updates**:
-   - **Vendor Portal**: Settlement card shows formula in title, commission earned breakdown, Total Commission Earned card, Commission column in transactions table
-   - **Admin Vendors Page**: Same commission details visible when viewing vendor
-
-### February 20, 2026 - Deposit Approval Screenshot Feature
+### February 21, 2026 - Enhanced Clients Page
 **Implemented:**
-1. **Deposit Approval Dialog** - When approving a deposit:
-   - Shows transaction details (reference, amount, client)
-   - Shows deposit destination (treasury account)
-   - **Mandatory screenshot upload** before approval
-   - "Continue to Approve" button disabled until screenshot uploaded
-
-2. **Transaction Approval Proof Display**:
-   - Transactions page shows teal icon indicator for transactions with accountant proof
-   - View dialog shows "Accountant Approval Proof" section
-   - Thumbnail preview with click-to-view-fullsize
-   - Upload metadata (date, uploaded by)
-
-3. **Backend Changes**:
-   - `/api/transactions/{id}/upload-proof` - Works for both deposits AND withdrawals
-   - `/api/transactions/{id}/approve` - Requires `accountant_proof_image` for deposits
-
-### Previously Completed
-- Inter-Treasury Transfer Feature
-- Income & Expenses Ledger
-- Loan Management Module
-- Deployment Readiness (N+1 query fixes, JWT secret handling)
-- Rebranding to "Miles Capitals"
+- Transaction type filter (All, Deposits Only, Withdrawals Only, No Transactions)
+- Balance range filters (Min/Max)
+- Export dropdown (Clients CSV, All Transactions CSV)
+- "Showing X of Y clients" counter
+- Clear filters button
+- All filters work with existing search and KYC status filter
 
 ## Technical Stack
-- **Frontend**: React, Tailwind CSS, Shadcn/UI, lucide-react
+- **Frontend**: React, Tailwind CSS, Shadcn/UI, lucide-react, Recharts
 - **Backend**: FastAPI, Motor (async MongoDB), Pydantic
 - **Database**: MongoDB
 - **Authentication**: JWT & Google OAuth
 
 ## Key API Endpoints
+
+### Reports Endpoints
+- `/api/reports/transactions-detailed` - Transactions with currency breakdown
+- `/api/reports/vendor-summary` - Vendor settlements with commission
+- `/api/reports/vendor-commissions` - Detailed commission report
+- `/api/reports/client-balances` - Client balance summaries
+- `/api/reports/treasury-summary` - Treasury accounts and balances
+- `/api/reports/psp-summary` - PSP volumes and commissions
+- `/api/reports/financial-summary` - P&L and financial overview
+- `/api/reports/transactions-summary` - Chart data (existing)
+- `/api/reports/dashboard` - Dashboard stats (existing)
+- `/api/reports/client-analytics` - Client analytics (existing)
+
+### Other Key Endpoints
 - `/api/auth/*` - Authentication
 - `/api/clients/*` - Client management
 - `/api/transactions/*` - Transaction management
-- `/api/transactions/{id}/upload-proof` - Upload approval proof
-- `/api/transactions/{id}/approve` - Approve transaction
 - `/api/treasury/*` - Treasury management
-- `/api/treasury/transfer` - Inter-treasury transfer
 - `/api/income-expenses/*` - Income/Expense tracking
 - `/api/loans/*` - Loan management
-- `/api/vendor/me` - Vendor portal info (includes settlement_by_currency with commission_earned)
-- `/api/vendor/transactions/{id}/approve` - Vendor approves transaction (calculates commission)
-- `/api/vendors/{id}` - Admin view vendor details (includes commission data)
+- `/api/vendor/me` - Vendor portal info
+- `/api/vendors/{id}` - Admin view vendor details
 
 ## Test Credentials
 - **Admin**: admin@fxbroker.com / password
-- **Accountant**: accountant@fxbroker.com / password
-- **Vendor**: vendor1@fxbroker.com / password
 
 ## Known Issues
 - P2: Minor session management redirect issue (not started)
 
+## Completed Tasks
+- ✅ Client page filters and CSV download
+- ✅ Comprehensive Reports module (7 tabs)
+- ✅ All reports include base currency breakdown
+- ✅ CSV export for all report types
+- ✅ Date filtering on reports
+
 ## Future/Backlog
-- P2: Advanced Reporting (commission reports, client analytics)
+- P2: Advanced Reporting (additional custom reports)
 - P2: Refactor server.py monolith into APIRouter modules
+- P3: Real-time currency exchange rates (currently hardcoded)
 
 ## Mocked/Placeholder
-- Currency exchange rates are hardcoded in backend/server.py
+- Currency exchange rates are hardcoded in backend/server.py (EXCHANGE_RATES_TO_USD dictionary)
+
+## Current Data State
+- 1 client: safvan kappilakath
+- 3 deposits: $60,750 USD (225,000 AED)
+- 2 withdrawals: $22,950 USD (85,000 AED)
+- Net balance: $37,800
+- 1 vendor: kenway with $459 commission
+- 2 treasury accounts: ENBD (AED), ICIC (INR) = $37,969.53 total
