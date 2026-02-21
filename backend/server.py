@@ -690,6 +690,37 @@ async def get_client(client_id: str, user: dict = Depends(get_current_user)):
     client = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Get transaction summary
+    pipeline = [
+        {"$match": {"client_id": client_id}},
+        {"$group": {
+            "_id": "$transaction_type",
+            "total_amount": {"$sum": "$amount"},
+            "total_base_amount": {"$sum": {"$ifNull": ["$base_amount", "$amount"]}},
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    tx_summary = await db.transactions.aggregate(pipeline).to_list(10)
+    
+    deposits = next((x for x in tx_summary if x["_id"] == "deposit"), {"total_amount": 0, "count": 0})
+    withdrawals = next((x for x in tx_summary if x["_id"] == "withdrawal"), {"total_amount": 0, "count": 0})
+    
+    client["total_deposits"] = deposits.get("total_amount", 0)
+    client["total_withdrawals"] = withdrawals.get("total_amount", 0)
+    client["deposit_count"] = deposits.get("count", 0)
+    client["withdrawal_count"] = withdrawals.get("count", 0)
+    client["net_balance"] = deposits.get("total_amount", 0) - withdrawals.get("total_amount", 0)
+    client["transaction_count"] = deposits.get("count", 0) + withdrawals.get("count", 0)
+    
+    # Get recent transactions
+    recent_txs = await db.transactions.find(
+        {"client_id": client_id},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(10).to_list(10)
+    client["recent_transactions"] = recent_txs
+    
     return client
 
 @api_router.post("/clients")
