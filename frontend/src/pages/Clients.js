@@ -107,6 +107,22 @@ export default function Clients() {
     }
   };
 
+  const fetchClientDetails = async (clientId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/clients/${clientId}`, {
+        headers: getAuthHeaders(),
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setViewClient(data);
+      }
+    } catch (error) {
+      console.error('Error fetching client details:', error);
+      toast.error('Failed to load client details');
+    }
+  };
+
   useEffect(() => {
     fetchClients();
   }, [searchTerm, statusFilter]);
