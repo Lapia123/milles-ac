@@ -65,6 +65,15 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 - Repayment tracking
 - Treasury integration
 
+### Debt Management (NEW - Feb 21, 2026)
+- **Debtors (Receivables)**: Track money owed TO the company
+- **Creditors (Payables)**: Track money owed BY the company
+- Party linking: Can link to existing Clients, Vendors, or standalone parties
+- Interest calculation on overdue debts (simple interest formula)
+- Payment recording with treasury integration
+- Aging summary (Current, 1-30, 31-60, 61-90, 90+ days)
+- Status auto-calculation: pending, partially_paid, fully_paid, overdue
+
 ### Comprehensive Reports Module (NEW - Feb 21, 2026)
 **7 Report Tabs with CSV Export:**
 
