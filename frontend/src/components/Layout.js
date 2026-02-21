@@ -27,6 +27,7 @@ import {
   Store,
   Wallet,
   Banknote,
+  Receipt,
 } from 'lucide-react';
 
 export default function Layout() {
