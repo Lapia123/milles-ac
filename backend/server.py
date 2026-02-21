@@ -3691,6 +3691,599 @@ async def get_loans_summary(user: dict = Depends(get_current_user)):
         "by_borrower": {k: {**v, "disbursed": round(v["disbursed"], 2), "outstanding": round(v["outstanding"], 2)} for k, v in by_borrower.items()}
     }
 
+# ============== COMPREHENSIVE REPORTS ==============
+
+@api_router.get("/reports/transactions-detailed")
+async def get_transactions_detailed_report(
+    user: dict = Depends(get_current_user),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    transaction_type: Optional[str] = None,
+    currency: Optional[str] = None
+):
+    """Detailed transaction report with base currency breakdown"""
+    query = {"status": {"$in": ["approved", "completed"]}}
+    
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = end_date
+        else:
+            query["created_at"] = {"$lte": end_date}
+    if transaction_type:
+        query["transaction_type"] = transaction_type
+    if currency:
+        query["$or"] = [{"currency": currency}, {"base_currency": currency}]
+    
+    # Aggregation for summary by currency
+    currency_pipeline = [
+        {"$match": query},
+        {"$group": {
+            "_id": {
+                "type": "$transaction_type",
+                "currency": {"$ifNull": ["$base_currency", "$currency"]}
+            },
+            "total_base_amount": {"$sum": {"$ifNull": ["$base_amount", "$amount"]}},
+            "total_usd_amount": {"$sum": "$amount"},
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    currency_summary = await db.transactions.aggregate(currency_pipeline).to_list(100)
+    
+    # Build response
+    deposits_by_currency = []
+    withdrawals_by_currency = []
+    total_deposits_usd = 0
+    total_withdrawals_usd = 0
+    deposit_count = 0
+    withdrawal_count = 0
+    
+    for item in currency_summary:
+        entry = {
+            "currency": item["_id"]["currency"] or "USD",
+            "amount": item["total_base_amount"],
+            "usd_equivalent": item["total_usd_amount"],
+            "count": item["count"]
+        }
+        if item["_id"]["type"] == "deposit":
+            deposits_by_currency.append(entry)
+            total_deposits_usd += item["total_usd_amount"]
+            deposit_count += item["count"]
+        elif item["_id"]["type"] == "withdrawal":
+            withdrawals_by_currency.append(entry)
+            total_withdrawals_usd += item["total_usd_amount"]
+            withdrawal_count += item["count"]
+    
+    # Get recent transactions for the table
+    transactions = await db.transactions.find(query, {"_id": 0}).sort("created_at", -1).limit(500).to_list(500)
+    
+    return {
+        "summary": {
+            "total_deposits_usd": total_deposits_usd,
+            "total_withdrawals_usd": total_withdrawals_usd,
+            "net_flow_usd": total_deposits_usd - total_withdrawals_usd,
+            "deposit_count": deposit_count,
+            "withdrawal_count": withdrawal_count,
+            "total_count": deposit_count + withdrawal_count
+        },
+        "deposits_by_currency": deposits_by_currency,
+        "withdrawals_by_currency": withdrawals_by_currency,
+        "transactions": transactions
+    }
+
+@api_router.get("/reports/vendor-summary")
+async def get_vendor_summary_report(
+    user: dict = Depends(get_current_user),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    vendor_id: Optional[str] = None
+):
+    """Vendor settlement and commission report with base currency"""
+    query = {
+        "vendor_id": {"$exists": True, "$ne": None},
+        "status": {"$in": ["approved", "completed"]}
+    }
+    
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = end_date
+        else:
+            query["created_at"] = {"$lte": end_date}
+    if vendor_id:
+        query["vendor_id"] = vendor_id
+    
+    # Get all vendors
+    vendors = await db.vendors.find({}, {"_id": 0}).to_list(1000)
+    vendor_map = {v["vendor_id"]: v for v in vendors}
+    
+    # Aggregation by vendor and currency
+    pipeline = [
+        {"$match": query},
+        {"$group": {
+            "_id": {
+                "vendor_id": "$vendor_id",
+                "type": "$transaction_type",
+                "currency": {"$ifNull": ["$base_currency", "$currency"]}
+            },
+            "total_base_amount": {"$sum": {"$ifNull": ["$base_amount", "$amount"]}},
+            "total_usd_amount": {"$sum": "$amount"},
+            "total_commission_base": {"$sum": {"$ifNull": ["$vendor_commission_base_amount", 0]}},
+            "total_commission_usd": {"$sum": {"$ifNull": ["$vendor_commission_amount", 0]}},
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    results = await db.transactions.aggregate(pipeline).to_list(1000)
+    
+    # Organize by vendor
+    vendor_reports = {}
+    for r in results:
+        vid = r["_id"]["vendor_id"]
+        if vid not in vendor_reports:
+            vendor_info = vendor_map.get(vid, {})
+            vendor_reports[vid] = {
+                "vendor_id": vid,
+                "vendor_name": vendor_info.get("vendor_name", "Unknown"),
+                "deposit_commission_rate": vendor_info.get("deposit_commission", 0),
+                "withdrawal_commission_rate": vendor_info.get("withdrawal_commission", 0),
+                "currencies": {},
+                "totals": {
+                    "deposits_usd": 0,
+                    "withdrawals_usd": 0,
+                    "commission_usd": 0,
+                    "net_settlement_usd": 0,
+                    "deposit_count": 0,
+                    "withdrawal_count": 0
+                }
+            }
+        
+        currency = r["_id"]["currency"] or "USD"
+        tx_type = r["_id"]["type"]
+        
+        if currency not in vendor_reports[vid]["currencies"]:
+            vendor_reports[vid]["currencies"][currency] = {
+                "deposits_base": 0,
+                "withdrawals_base": 0,
+                "commission_base": 0,
+                "net_settlement_base": 0,
+                "deposits_usd": 0,
+                "withdrawals_usd": 0,
+                "commission_usd": 0,
+                "net_settlement_usd": 0
+            }
+        
+        curr_data = vendor_reports[vid]["currencies"][currency]
+        
+        if tx_type == "deposit":
+            curr_data["deposits_base"] += r["total_base_amount"]
+            curr_data["deposits_usd"] += r["total_usd_amount"]
+            vendor_reports[vid]["totals"]["deposits_usd"] += r["total_usd_amount"]
+            vendor_reports[vid]["totals"]["deposit_count"] += r["count"]
+        elif tx_type == "withdrawal":
+            curr_data["withdrawals_base"] += r["total_base_amount"]
+            curr_data["withdrawals_usd"] += r["total_usd_amount"]
+            vendor_reports[vid]["totals"]["withdrawals_usd"] += r["total_usd_amount"]
+            vendor_reports[vid]["totals"]["withdrawal_count"] += r["count"]
+        
+        curr_data["commission_base"] += r["total_commission_base"]
+        curr_data["commission_usd"] += r["total_commission_usd"]
+        vendor_reports[vid]["totals"]["commission_usd"] += r["total_commission_usd"]
+    
+    # Calculate net settlements
+    for vid, data in vendor_reports.items():
+        for currency, curr_data in data["currencies"].items():
+            curr_data["net_settlement_base"] = (curr_data["deposits_base"] - curr_data["withdrawals_base"]) - curr_data["commission_base"]
+            curr_data["net_settlement_usd"] = (curr_data["deposits_usd"] - curr_data["withdrawals_usd"]) - curr_data["commission_usd"]
+        data["totals"]["net_settlement_usd"] = (data["totals"]["deposits_usd"] - data["totals"]["withdrawals_usd"]) - data["totals"]["commission_usd"]
+    
+    # Grand totals
+    grand_totals = {
+        "total_deposits_usd": sum(v["totals"]["deposits_usd"] for v in vendor_reports.values()),
+        "total_withdrawals_usd": sum(v["totals"]["withdrawals_usd"] for v in vendor_reports.values()),
+        "total_commission_usd": sum(v["totals"]["commission_usd"] for v in vendor_reports.values()),
+        "total_net_settlement_usd": sum(v["totals"]["net_settlement_usd"] for v in vendor_reports.values()),
+        "total_vendors": len(vendor_reports)
+    }
+    
+    return {
+        "vendors": list(vendor_reports.values()),
+        "grand_totals": grand_totals
+    }
+
+@api_router.get("/reports/vendor-commissions")
+async def get_vendor_commissions_report(
+    user: dict = Depends(get_current_user),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """Detailed vendor commission report"""
+    query = {
+        "vendor_id": {"$exists": True, "$ne": None},
+        "vendor_commission_amount": {"$gt": 0},
+        "status": {"$in": ["approved", "completed"]}
+    }
+    
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = end_date
+        else:
+            query["created_at"] = {"$lte": end_date}
+    
+    # Get all vendors
+    vendors = await db.vendors.find({}, {"_id": 0}).to_list(1000)
+    vendor_map = {v["vendor_id"]: v for v in vendors}
+    
+    # Get commission transactions
+    transactions = await db.transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Aggregate by vendor
+    vendor_commissions = {}
+    for tx in transactions:
+        vid = tx.get("vendor_id")
+        if vid not in vendor_commissions:
+            vendor_info = vendor_map.get(vid, {})
+            vendor_commissions[vid] = {
+                "vendor_id": vid,
+                "vendor_name": vendor_info.get("vendor_name", "Unknown"),
+                "total_commission_usd": 0,
+                "commission_by_currency": {},
+                "deposit_commissions": 0,
+                "withdrawal_commissions": 0,
+                "transaction_count": 0
+            }
+        
+        comm_usd = tx.get("vendor_commission_amount", 0)
+        comm_base = tx.get("vendor_commission_base_amount", 0)
+        currency = tx.get("base_currency") or tx.get("currency", "USD")
+        
+        vendor_commissions[vid]["total_commission_usd"] += comm_usd
+        vendor_commissions[vid]["transaction_count"] += 1
+        
+        if tx.get("transaction_type") == "deposit":
+            vendor_commissions[vid]["deposit_commissions"] += comm_usd
+        else:
+            vendor_commissions[vid]["withdrawal_commissions"] += comm_usd
+        
+        if currency not in vendor_commissions[vid]["commission_by_currency"]:
+            vendor_commissions[vid]["commission_by_currency"][currency] = {"base": 0, "usd": 0}
+        vendor_commissions[vid]["commission_by_currency"][currency]["base"] += comm_base
+        vendor_commissions[vid]["commission_by_currency"][currency]["usd"] += comm_usd
+    
+    return {
+        "vendors": list(vendor_commissions.values()),
+        "total_commission_usd": sum(v["total_commission_usd"] for v in vendor_commissions.values()),
+        "transactions": transactions[:100]  # Return last 100 commission transactions
+    }
+
+@api_router.get("/reports/client-balances")
+async def get_client_balances_report(
+    user: dict = Depends(get_current_user),
+    min_balance: Optional[float] = None,
+    max_balance: Optional[float] = None,
+    sort_by: str = "net_balance",
+    sort_order: str = "desc"
+):
+    """Client balance summary report"""
+    clients = await db.clients.find({}, {"_id": 0}).to_list(10000)
+    
+    # Get transaction summaries for all clients
+    pipeline = [
+        {"$match": {"status": {"$in": ["approved", "completed"]}}},
+        {"$group": {
+            "_id": {
+                "client_id": "$client_id",
+                "type": "$transaction_type",
+                "currency": {"$ifNull": ["$base_currency", "$currency"]}
+            },
+            "total_base": {"$sum": {"$ifNull": ["$base_amount", "$amount"]}},
+            "total_usd": {"$sum": "$amount"},
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    tx_data = await db.transactions.aggregate(pipeline).to_list(100000)
+    
+    # Build client map
+    client_tx_map = {}
+    for item in tx_data:
+        cid = item["_id"]["client_id"]
+        if cid not in client_tx_map:
+            client_tx_map[cid] = {
+                "deposits_usd": 0,
+                "withdrawals_usd": 0,
+                "deposit_count": 0,
+                "withdrawal_count": 0,
+                "by_currency": {}
+            }
+        
+        tx_type = item["_id"]["type"]
+        currency = item["_id"]["currency"] or "USD"
+        
+        if currency not in client_tx_map[cid]["by_currency"]:
+            client_tx_map[cid]["by_currency"][currency] = {"deposits": 0, "withdrawals": 0}
+        
+        if tx_type == "deposit":
+            client_tx_map[cid]["deposits_usd"] += item["total_usd"]
+            client_tx_map[cid]["deposit_count"] += item["count"]
+            client_tx_map[cid]["by_currency"][currency]["deposits"] += item["total_base"]
+        elif tx_type == "withdrawal":
+            client_tx_map[cid]["withdrawals_usd"] += item["total_usd"]
+            client_tx_map[cid]["withdrawal_count"] += item["count"]
+            client_tx_map[cid]["by_currency"][currency]["withdrawals"] += item["total_base"]
+    
+    # Enrich clients with transaction data
+    results = []
+    for client in clients:
+        cid = client["client_id"]
+        tx_info = client_tx_map.get(cid, {
+            "deposits_usd": 0, "withdrawals_usd": 0,
+            "deposit_count": 0, "withdrawal_count": 0, "by_currency": {}
+        })
+        
+        net_balance = tx_info["deposits_usd"] - tx_info["withdrawals_usd"]
+        
+        # Apply filters
+        if min_balance is not None and net_balance < min_balance:
+            continue
+        if max_balance is not None and net_balance > max_balance:
+            continue
+        
+        results.append({
+            "client_id": cid,
+            "name": f"{client.get('first_name', '')} {client.get('last_name', '')}".strip(),
+            "email": client.get("email"),
+            "country": client.get("country"),
+            "kyc_status": client.get("kyc_status"),
+            "total_deposits_usd": tx_info["deposits_usd"],
+            "total_withdrawals_usd": tx_info["withdrawals_usd"],
+            "net_balance": net_balance,
+            "deposit_count": tx_info["deposit_count"],
+            "withdrawal_count": tx_info["withdrawal_count"],
+            "transaction_count": tx_info["deposit_count"] + tx_info["withdrawal_count"],
+            "by_currency": tx_info["by_currency"]
+        })
+    
+    # Sort
+    reverse = sort_order == "desc"
+    results.sort(key=lambda x: x.get(sort_by, 0) or 0, reverse=reverse)
+    
+    # Summary stats
+    total_deposits = sum(r["total_deposits_usd"] for r in results)
+    total_withdrawals = sum(r["total_withdrawals_usd"] for r in results)
+    
+    return {
+        "clients": results,
+        "summary": {
+            "total_clients": len(results),
+            "total_deposits_usd": total_deposits,
+            "total_withdrawals_usd": total_withdrawals,
+            "total_net_balance": total_deposits - total_withdrawals,
+            "active_clients": len([r for r in results if r["transaction_count"] > 0])
+        }
+    }
+
+@api_router.get("/reports/treasury-summary")
+async def get_treasury_summary_report(
+    user: dict = Depends(get_current_user),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """Treasury balances and transaction summary"""
+    # Get all treasury accounts
+    accounts = await db.treasury_accounts.find({}, {"_id": 0}).to_list(1000)
+    
+    # Calculate USD equivalents
+    total_balance_usd = 0
+    accounts_summary = []
+    
+    for acc in accounts:
+        balance = acc.get("balance", 0)
+        currency = acc.get("currency", "USD")
+        balance_usd = convert_to_usd(balance, currency)
+        total_balance_usd += balance_usd
+        
+        accounts_summary.append({
+            "account_id": acc["account_id"],
+            "account_name": acc.get("account_name"),
+            "account_type": acc.get("account_type"),
+            "bank_name": acc.get("bank_name"),
+            "currency": currency,
+            "balance": balance,
+            "balance_usd": balance_usd,
+            "status": acc.get("status")
+        })
+    
+    # Group by currency
+    balance_by_currency = {}
+    for acc in accounts:
+        currency = acc.get("currency", "USD")
+        if currency not in balance_by_currency:
+            balance_by_currency[currency] = {"total": 0, "count": 0}
+        balance_by_currency[currency]["total"] += acc.get("balance", 0)
+        balance_by_currency[currency]["count"] += 1
+    
+    # Get transfer history
+    query = {}
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = end_date
+        else:
+            query["created_at"] = {"$lte": end_date}
+    
+    transfers = await db.treasury_transactions.find(
+        {**query, "transaction_type": {"$in": ["transfer_in", "transfer_out"]}},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(100).to_list(100)
+    
+    return {
+        "accounts": accounts_summary,
+        "total_balance_usd": total_balance_usd,
+        "balance_by_currency": [
+            {"currency": k, "total": v["total"], "account_count": v["count"]}
+            for k, v in balance_by_currency.items()
+        ],
+        "recent_transfers": transfers
+    }
+
+@api_router.get("/reports/psp-summary")
+async def get_psp_summary_report(
+    user: dict = Depends(get_current_user),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """PSP transaction and settlement summary"""
+    # Get all PSPs
+    psps = await db.psps.find({}, {"_id": 0}).to_list(1000)
+    
+    # Build query for transactions
+    query = {"destination_type": "psp"}
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = end_date
+        else:
+            query["created_at"] = {"$lte": end_date}
+    
+    # Aggregate by PSP
+    pipeline = [
+        {"$match": query},
+        {"$group": {
+            "_id": "$psp_id",
+            "total_volume": {"$sum": "$amount"},
+            "total_commission": {"$sum": {"$ifNull": ["$psp_commission_amount", 0]}},
+            "total_net": {"$sum": {"$ifNull": ["$psp_net_amount", "$amount"]}},
+            "settled_count": {"$sum": {"$cond": [{"$eq": ["$settled", True]}, 1, 0]}},
+            "pending_count": {"$sum": {"$cond": [{"$ne": ["$settled", True]}, 1, 0]}},
+            "transaction_count": {"$sum": 1}
+        }}
+    ]
+    
+    psp_stats = await db.transactions.aggregate(pipeline).to_list(100)
+    psp_map = {p["psp_id"]: p for p in psps}
+    
+    results = []
+    for stat in psp_stats:
+        psp_id = stat["_id"]
+        psp_info = psp_map.get(psp_id, {})
+        
+        results.append({
+            "psp_id": psp_id,
+            "psp_name": psp_info.get("psp_name", "Unknown"),
+            "commission_rate": psp_info.get("commission_rate", 0),
+            "total_volume": stat["total_volume"],
+            "total_commission": stat["total_commission"],
+            "total_net": stat["total_net"],
+            "settled_count": stat["settled_count"],
+            "pending_count": stat["pending_count"],
+            "transaction_count": stat["transaction_count"]
+        })
+    
+    return {
+        "psps": results,
+        "grand_totals": {
+            "total_volume": sum(r["total_volume"] for r in results),
+            "total_commission": sum(r["total_commission"] for r in results),
+            "total_net": sum(r["total_net"] for r in results),
+            "total_transactions": sum(r["transaction_count"] for r in results)
+        }
+    }
+
+@api_router.get("/reports/financial-summary")
+async def get_financial_summary_report(
+    user: dict = Depends(get_current_user),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """P&L and financial summary combining all data sources"""
+    query = {}
+    if start_date:
+        query["date"] = {"$gte": start_date}
+    if end_date:
+        if "date" in query:
+            query["date"]["$lte"] = end_date
+        else:
+            query["date"] = {"$lte": end_date}
+    
+    # Get income/expense summary
+    ie_pipeline = [
+        {"$match": query} if query else {"$match": {}},
+        {"$group": {
+            "_id": {"type": "$entry_type", "category": "$category"},
+            "total": {"$sum": "$amount"},
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    ie_data = await db.income_expenses.aggregate(ie_pipeline).to_list(100)
+    
+    income_by_category = {}
+    expense_by_category = {}
+    total_income = 0
+    total_expense = 0
+    
+    for item in ie_data:
+        category = item["_id"]["category"]
+        entry_type = item["_id"]["type"]
+        
+        if entry_type == "income":
+            income_by_category[category] = item["total"]
+            total_income += item["total"]
+        else:
+            expense_by_category[category] = item["total"]
+            total_expense += item["total"]
+    
+    # Get loan summary
+    loans = await db.loans.find({}, {"_id": 0}).to_list(1000)
+    total_loan_disbursed = sum(l.get("amount", 0) for l in loans)
+    total_loan_outstanding = sum(l.get("outstanding_balance", l.get("amount", 0)) for l in loans)
+    total_loan_repaid = sum(l.get("total_repaid", 0) for l in loans)
+    
+    # Get treasury total
+    accounts = await db.treasury_accounts.find({"status": "active"}, {"_id": 0}).to_list(1000)
+    total_treasury_usd = sum(convert_to_usd(a.get("balance", 0), a.get("currency", "USD")) for a in accounts)
+    
+    # Get vendor commission totals
+    vendor_comm_pipeline = [
+        {"$match": {"vendor_commission_amount": {"$gt": 0}}},
+        {"$group": {"_id": None, "total": {"$sum": "$vendor_commission_amount"}}}
+    ]
+    vendor_comm = await db.transactions.aggregate(vendor_comm_pipeline).to_list(1)
+    total_vendor_commission = vendor_comm[0]["total"] if vendor_comm else 0
+    
+    return {
+        "income": {
+            "total": total_income,
+            "by_category": [{"category": k, "amount": v} for k, v in income_by_category.items()]
+        },
+        "expenses": {
+            "total": total_expense,
+            "by_category": [{"category": k, "amount": v} for k, v in expense_by_category.items()]
+        },
+        "net_profit_loss": total_income - total_expense,
+        "loans": {
+            "total_disbursed": total_loan_disbursed,
+            "total_outstanding": total_loan_outstanding,
+            "total_repaid": total_loan_repaid,
+            "active_loans": len([l for l in loans if l.get("status") != "fully_paid"])
+        },
+        "treasury": {
+            "total_balance_usd": total_treasury_usd,
+            "account_count": len(accounts)
+        },
+        "vendor_commissions": {
+            "total_paid": total_vendor_commission
+        }
+    }
+
 # Include router
 app.include_router(api_router)
 
