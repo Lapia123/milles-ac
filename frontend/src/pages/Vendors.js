@@ -940,7 +940,6 @@ export default function Vendors() {
                 </Select>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Additional Charges (Optional)</Label>
                 <Input
