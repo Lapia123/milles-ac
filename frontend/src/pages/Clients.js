@@ -389,6 +389,8 @@ export default function Clients() {
                   <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Client</TableHead>
                   <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Contact</TableHead>
                   <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Country</TableHead>
+                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Transactions</TableHead>
+                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Net Balance</TableHead>
                   <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">KYC Status</TableHead>
                   <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
                 </TableRow>
@@ -396,13 +398,13 @@ export default function Clients() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : clients.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-[#C5C6C7]">
+                    <TableCell colSpan={7} className="text-center py-8 text-[#C5C6C7]">
                       No clients found
                     </TableCell>
                   </TableRow>
@@ -427,6 +429,25 @@ export default function Clients() {
                         <p className="text-xs text-[#C5C6C7] font-mono">{client.phone || '-'}</p>
                       </TableCell>
                       <TableCell className="text-white">{client.country || '-'}</TableCell>
+                      <TableCell>
+                        <div className="text-xs space-y-1">
+                          <div className="flex items-center gap-1 text-green-400">
+                            <ArrowDownRight className="w-3 h-3" />
+                            <span className="font-mono">${(client.total_deposits || 0).toLocaleString()}</span>
+                            <span className="text-[#C5C6C7]">({client.deposit_count || 0})</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-red-400">
+                            <ArrowUpRight className="w-3 h-3" />
+                            <span className="font-mono">${(client.total_withdrawals || 0).toLocaleString()}</span>
+                            <span className="text-[#C5C6C7]">({client.withdrawal_count || 0})</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`font-mono font-bold ${(client.net_balance || 0) >= 0 ? 'text-[#66FCF1]' : 'text-red-400'}`}>
+                          ${(client.net_balance || 0).toLocaleString()}
+                        </span>
+                      </TableCell>
                       <TableCell>{getStatusBadge(client.kyc_status)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
