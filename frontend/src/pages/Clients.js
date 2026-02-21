@@ -463,32 +463,109 @@ export default function Clients() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C5C6C7]" />
-          <Input
-            placeholder="Search clients..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-[#1F2833] border-white/10 text-white placeholder:text-white/30 focus:border-[#66FCF1]"
-            data-testid="search-clients"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-48 bg-[#1F2833] border-white/10 text-white" data-testid="filter-status">
-            <Filter className="w-4 h-4 mr-2 text-[#C5C6C7]" />
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent className="bg-[#1F2833] border-white/10">
-            <SelectItem value="all" className="text-white hover:bg-white/5">All Status</SelectItem>
-            {statusOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value} className="text-white hover:bg-white/5">
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <Card className="bg-[#1F2833] border-white/5">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="relative flex-1 min-w-48">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C5C6C7]" />
+              <Input
+                placeholder="Search clients..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-[#0B0C10] border-white/10 text-white placeholder:text-white/30 focus:border-[#66FCF1]"
+                data-testid="search-clients"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40 bg-[#0B0C10] border-white/10 text-white" data-testid="filter-status">
+                <Filter className="w-4 h-4 mr-2 text-[#C5C6C7]" />
+                <SelectValue placeholder="KYC Status" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#1F2833] border-white/10">
+                <SelectItem value="all" className="text-white hover:bg-white/5">All Status</SelectItem>
+                {statusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value} className="text-white hover:bg-white/5">
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={txTypeFilter} onValueChange={setTxTypeFilter}>
+              <SelectTrigger className="w-44 bg-[#0B0C10] border-white/10 text-white" data-testid="filter-tx-type">
+                <SelectValue placeholder="Transaction Type" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#1F2833] border-white/10">
+                <SelectItem value="all" className="text-white hover:bg-white/5">All Transactions</SelectItem>
+                <SelectItem value="deposits_only" className="text-white hover:bg-white/5">Deposits Only</SelectItem>
+                <SelectItem value="withdrawals_only" className="text-white hover:bg-white/5">Withdrawals Only</SelectItem>
+                <SelectItem value="no_transactions" className="text-white hover:bg-white/5">No Transactions</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="border-[#66FCF1]/30 text-[#66FCF1] hover:bg-[#66FCF1]/10 font-bold uppercase tracking-wider rounded-sm"
+                    data-testid="download-btn"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-[#1F2833] border-white/10">
+                  <DropdownMenuItem onClick={downloadCSV} className="text-white hover:bg-white/5 cursor-pointer">
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Export Clients (CSV)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={downloadTransactionsCSV} className="text-white hover:bg-white/5 cursor-pointer">
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Export All Transactions (CSV)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+          {/* Balance Filter Row */}
+          <div className="flex flex-wrap items-end gap-4 mt-3 pt-3 border-t border-white/5">
+            <div className="space-y-1">
+              <Label className="text-xs text-[#C5C6C7] uppercase">Min Balance</Label>
+              <Input
+                type="number"
+                placeholder="0"
+                value={minBalance}
+                onChange={(e) => setMinBalance(e.target.value)}
+                className="w-32 bg-[#0B0C10] border-white/10 text-white font-mono"
+                data-testid="min-balance"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-[#C5C6C7] uppercase">Max Balance</Label>
+              <Input
+                type="number"
+                placeholder="Any"
+                value={maxBalance}
+                onChange={(e) => setMaxBalance(e.target.value)}
+                className="w-32 bg-[#0B0C10] border-white/10 text-white font-mono"
+                data-testid="max-balance"
+              />
+            </div>
+            {(minBalance || maxBalance || txTypeFilter !== 'all') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setMinBalance(''); setMaxBalance(''); setTxTypeFilter('all'); }}
+                className="text-[#C5C6C7] hover:text-white"
+              >
+                Clear Filters
+              </Button>
+            )}
+            <div className="flex-1 text-right text-sm text-[#C5C6C7]">
+              Showing {filteredClients.length} of {clients.length} clients
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Table */}
       <Card className="bg-[#1F2833] border-white/5">
