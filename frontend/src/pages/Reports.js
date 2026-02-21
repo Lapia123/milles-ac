@@ -38,6 +38,7 @@ import {
   PieChart,
   ArrowDownRight,
   ArrowUpRight,
+  ArrowLeftRight,
   Percent,
   RefreshCw,
   Filter,
