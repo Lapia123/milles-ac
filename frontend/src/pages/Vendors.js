@@ -891,8 +891,12 @@ export default function Vendors() {
                   <span className="text-white">{pendingTransactions.filter(t => (t.status === 'approved' || t.status === 'completed') && !t.settled).length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#C5C6C7]">Gross Amount (Source)</span>
-                  <span className="text-white font-mono">${pendingTransactions.filter(t => (t.status === 'approved' || t.status === 'completed') && !t.settled).reduce((s, t) => s + t.amount, 0).toLocaleString()}</span>
+                  <span className="text-[#C5C6C7]">Total Commission</span>
+                  <span className="text-yellow-400 font-mono">-${viewVendor?.settlement_by_currency?.reduce((sum, item) => sum + (item.commission_earned_usd || 0), 0).toLocaleString() || '0'}</span>
+                </div>
+                <div className="flex justify-between border-t border-white/10 pt-2">
+                  <span className="text-[#66FCF1] font-semibold">Net Settlement Amount</span>
+                  <span className="text-[#66FCF1] font-mono font-bold">${viewVendor?.settlement_by_currency?.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString() || '0'}</span>
                 </div>
               </div>
               
