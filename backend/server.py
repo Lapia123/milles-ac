@@ -3691,6 +3691,431 @@ async def get_loans_summary(user: dict = Depends(get_current_user)):
         "by_borrower": {k: {**v, "disbursed": round(v["disbursed"], 2), "outstanding": round(v["outstanding"], 2)} for k, v in by_borrower.items()}
     }
 
+# ============== DEBT MANAGEMENT ==============
+
+class DebtType:
+    RECEIVABLE = "receivable"  # Money owed TO us (Debtors)
+    PAYABLE = "payable"  # Money owed BY us (Creditors)
+
+class DebtStatus:
+    PENDING = "pending"
+    PARTIALLY_PAID = "partially_paid"
+    FULLY_PAID = "fully_paid"
+    OVERDUE = "overdue"
+
+class DebtPartyType:
+    CLIENT = "client"
+    VENDOR = "vendor"
+    OTHER = "other"
+
+class DebtCreate(BaseModel):
+    debt_type: str  # receivable or payable
+    party_type: str  # client, vendor, or other
+    party_id: Optional[str] = None  # client_id or vendor_id if linked
+    party_name: str  # Name (auto-filled if linked, manual if other)
+    amount: float
+    currency: str = "USD"
+    due_date: str  # ISO date
+    interest_rate: float = 0  # Annual interest rate for overdue
+    description: Optional[str] = None
+    reference: Optional[str] = None
+    treasury_account_id: Optional[str] = None  # For tracking payments
+
+class DebtUpdate(BaseModel):
+    party_name: Optional[str] = None
+    amount: Optional[float] = None
+    due_date: Optional[str] = None
+    interest_rate: Optional[float] = None
+    description: Optional[str] = None
+    reference: Optional[str] = None
+    status: Optional[str] = None
+
+class DebtPaymentCreate(BaseModel):
+    amount: float
+    currency: str = "USD"
+    payment_date: Optional[str] = None
+    treasury_account_id: str
+    reference: Optional[str] = None
+    notes: Optional[str] = None
+
+def calculate_debt_interest(principal: float, annual_rate: float, days_overdue: int) -> float:
+    """Calculate simple interest on overdue debt"""
+    if days_overdue <= 0 or annual_rate <= 0:
+        return 0
+    daily_rate = annual_rate / 100 / 365
+    return round(principal * daily_rate * days_overdue, 2)
+
+def get_debt_status(debt: dict) -> str:
+    """Calculate current debt status based on payments and due date"""
+    total_paid = debt.get("total_paid", 0)
+    amount = debt.get("amount", 0)
+    due_date_str = debt.get("due_date")
+    
+    if total_paid >= amount:
+        return DebtStatus.FULLY_PAID
+    
+    if due_date_str:
+        try:
+            due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
+            if due_date.tzinfo is None:
+                due_date = due_date.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) > due_date and total_paid < amount:
+                return DebtStatus.OVERDUE
+        except:
+            pass
+    
+    if total_paid > 0:
+        return DebtStatus.PARTIALLY_PAID
+    
+    return DebtStatus.PENDING
+
+@api_router.get("/debts")
+async def get_debts(
+    user: dict = Depends(get_current_user),
+    debt_type: Optional[str] = None,
+    status: Optional[str] = None,
+    party_type: Optional[str] = None
+):
+    """Get all debts with calculated interest and status"""
+    query = {}
+    if debt_type:
+        query["debt_type"] = debt_type
+    if party_type:
+        query["party_type"] = party_type
+    
+    debts = await db.debts.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    now = datetime.now(timezone.utc)
+    
+    for debt in debts:
+        # Calculate current status
+        debt["calculated_status"] = get_debt_status(debt)
+        
+        # Calculate days overdue and interest
+        due_date_str = debt.get("due_date")
+        if due_date_str:
+            try:
+                due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
+                if due_date.tzinfo is None:
+                    due_date = due_date.replace(tzinfo=timezone.utc)
+                
+                if now > due_date:
+                    debt["days_overdue"] = (now - due_date).days
+                    outstanding = debt.get("amount", 0) - debt.get("total_paid", 0)
+                    debt["accrued_interest"] = calculate_debt_interest(
+                        outstanding,
+                        debt.get("interest_rate", 0),
+                        debt["days_overdue"]
+                    )
+                else:
+                    debt["days_overdue"] = 0
+                    debt["accrued_interest"] = 0
+                    debt["days_until_due"] = (due_date - now).days
+            except:
+                debt["days_overdue"] = 0
+                debt["accrued_interest"] = 0
+        
+        # Calculate outstanding balance
+        debt["outstanding_balance"] = debt.get("amount", 0) - debt.get("total_paid", 0)
+        debt["total_due"] = debt["outstanding_balance"] + debt.get("accrued_interest", 0)
+    
+    # Filter by status if requested (after calculation)
+    if status:
+        debts = [d for d in debts if d.get("calculated_status") == status]
+    
+    return debts
+
+@api_router.get("/debts/{debt_id}")
+async def get_debt(debt_id: str, user: dict = Depends(get_current_user)):
+    """Get single debt with full details and payment history"""
+    debt = await db.debts.find_one({"debt_id": debt_id}, {"_id": 0})
+    if not debt:
+        raise HTTPException(status_code=404, detail="Debt not found")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Calculate status and interest
+    debt["calculated_status"] = get_debt_status(debt)
+    
+    due_date_str = debt.get("due_date")
+    if due_date_str:
+        try:
+            due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
+            if due_date.tzinfo is None:
+                due_date = due_date.replace(tzinfo=timezone.utc)
+            
+            if now > due_date:
+                debt["days_overdue"] = (now - due_date).days
+                outstanding = debt.get("amount", 0) - debt.get("total_paid", 0)
+                debt["accrued_interest"] = calculate_debt_interest(
+                    outstanding,
+                    debt.get("interest_rate", 0),
+                    debt["days_overdue"]
+                )
+            else:
+                debt["days_overdue"] = 0
+                debt["accrued_interest"] = 0
+                debt["days_until_due"] = (due_date - now).days
+        except:
+            debt["days_overdue"] = 0
+            debt["accrued_interest"] = 0
+    
+    debt["outstanding_balance"] = debt.get("amount", 0) - debt.get("total_paid", 0)
+    debt["total_due"] = debt["outstanding_balance"] + debt.get("accrued_interest", 0)
+    
+    # Get payment history
+    payments = await db.debt_payments.find({"debt_id": debt_id}, {"_id": 0}).sort("payment_date", -1).to_list(100)
+    debt["payments"] = payments
+    
+    return debt
+
+@api_router.post("/debts")
+async def create_debt(debt_data: DebtCreate, user: dict = Depends(get_current_user)):
+    """Create a new debt record"""
+    debt_id = f"debt_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    
+    # If linked to client/vendor, verify and get name
+    party_name = debt_data.party_name
+    if debt_data.party_type == DebtPartyType.CLIENT and debt_data.party_id:
+        client = await db.clients.find_one({"client_id": debt_data.party_id}, {"_id": 0})
+        if client:
+            party_name = f"{client.get('first_name', '')} {client.get('last_name', '')}".strip()
+    elif debt_data.party_type == DebtPartyType.VENDOR and debt_data.party_id:
+        vendor = await db.vendors.find_one({"vendor_id": debt_data.party_id}, {"_id": 0})
+        if vendor:
+            party_name = vendor.get("vendor_name", party_name)
+    
+    debt_doc = {
+        "debt_id": debt_id,
+        "debt_type": debt_data.debt_type,
+        "party_type": debt_data.party_type,
+        "party_id": debt_data.party_id,
+        "party_name": party_name,
+        "amount": debt_data.amount,
+        "currency": debt_data.currency,
+        "amount_usd": convert_to_usd(debt_data.amount, debt_data.currency),
+        "due_date": debt_data.due_date,
+        "interest_rate": debt_data.interest_rate,
+        "description": debt_data.description,
+        "reference": debt_data.reference,
+        "treasury_account_id": debt_data.treasury_account_id,
+        "total_paid": 0,
+        "total_paid_usd": 0,
+        "payment_count": 0,
+        "status": DebtStatus.PENDING,
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    
+    await db.debts.insert_one(debt_doc)
+    return await db.debts.find_one({"debt_id": debt_id}, {"_id": 0})
+
+@api_router.put("/debts/{debt_id}")
+async def update_debt(debt_id: str, update_data: DebtUpdate, user: dict = Depends(get_current_user)):
+    """Update a debt record"""
+    debt = await db.debts.find_one({"debt_id": debt_id}, {"_id": 0})
+    if not debt:
+        raise HTTPException(status_code=404, detail="Debt not found")
+    
+    updates = {k: v for k, v in update_data.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No updates provided")
+    
+    # Recalculate USD if amount changed
+    if "amount" in updates:
+        updates["amount_usd"] = convert_to_usd(updates["amount"], debt.get("currency", "USD"))
+    
+    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.debts.update_one({"debt_id": debt_id}, {"$set": updates})
+    return await db.debts.find_one({"debt_id": debt_id}, {"_id": 0})
+
+@api_router.delete("/debts/{debt_id}")
+async def delete_debt(debt_id: str, user: dict = Depends(require_admin)):
+    """Delete a debt record (admin only)"""
+    debt = await db.debts.find_one({"debt_id": debt_id}, {"_id": 0})
+    if not debt:
+        raise HTTPException(status_code=404, detail="Debt not found")
+    
+    if debt.get("total_paid", 0) > 0:
+        raise HTTPException(status_code=400, detail="Cannot delete debt with payments. Mark as cancelled instead.")
+    
+    await db.debts.delete_one({"debt_id": debt_id})
+    return {"message": "Debt deleted"}
+
+@api_router.post("/debts/{debt_id}/payments")
+async def record_debt_payment(
+    debt_id: str,
+    payment_data: DebtPaymentCreate,
+    user: dict = Depends(get_current_user)
+):
+    """Record a payment against a debt"""
+    debt = await db.debts.find_one({"debt_id": debt_id}, {"_id": 0})
+    if not debt:
+        raise HTTPException(status_code=404, detail="Debt not found")
+    
+    # Verify treasury account
+    treasury = await db.treasury_accounts.find_one({"account_id": payment_data.treasury_account_id}, {"_id": 0})
+    if not treasury:
+        raise HTTPException(status_code=404, detail="Treasury account not found")
+    
+    payment_id = f"dpay_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    payment_date = payment_data.payment_date or now.isoformat()
+    
+    # Convert payment to USD
+    payment_usd = convert_to_usd(payment_data.amount, payment_data.currency)
+    
+    payment_doc = {
+        "payment_id": payment_id,
+        "debt_id": debt_id,
+        "amount": payment_data.amount,
+        "currency": payment_data.currency,
+        "amount_usd": payment_usd,
+        "payment_date": payment_date,
+        "treasury_account_id": payment_data.treasury_account_id,
+        "treasury_account_name": treasury.get("account_name"),
+        "reference": payment_data.reference,
+        "notes": payment_data.notes,
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    
+    await db.debt_payments.insert_one(payment_doc)
+    
+    # Update treasury balance based on debt type
+    balance_change = payment_data.amount
+    if debt["debt_type"] == DebtType.RECEIVABLE:
+        # We received money - increase treasury
+        pass  # positive
+    else:
+        # We paid money - decrease treasury
+        balance_change = -balance_change
+    
+    # Only update if treasury currency matches payment currency
+    if treasury.get("currency", "USD") == payment_data.currency:
+        await db.treasury_accounts.update_one(
+            {"account_id": payment_data.treasury_account_id},
+            {"$inc": {"balance": balance_change}, "$set": {"updated_at": now.isoformat()}}
+        )
+    
+    # Update debt totals
+    new_total_paid = debt.get("total_paid", 0) + payment_data.amount
+    new_total_paid_usd = debt.get("total_paid_usd", 0) + payment_usd
+    new_payment_count = debt.get("payment_count", 0) + 1
+    
+    # Determine new status
+    new_status = DebtStatus.PARTIALLY_PAID
+    if new_total_paid >= debt["amount"]:
+        new_status = DebtStatus.FULLY_PAID
+    
+    await db.debts.update_one(
+        {"debt_id": debt_id},
+        {"$set": {
+            "total_paid": new_total_paid,
+            "total_paid_usd": new_total_paid_usd,
+            "payment_count": new_payment_count,
+            "status": new_status,
+            "updated_at": now.isoformat(),
+            "last_payment_date": payment_date
+        }}
+    )
+    
+    return await db.debts.find_one({"debt_id": debt_id}, {"_id": 0})
+
+@api_router.get("/debts/{debt_id}/payments")
+async def get_debt_payments(debt_id: str, user: dict = Depends(get_current_user)):
+    """Get all payments for a debt"""
+    payments = await db.debt_payments.find({"debt_id": debt_id}, {"_id": 0}).sort("payment_date", -1).to_list(100)
+    return payments
+
+@api_router.get("/debts/summary/overview")
+async def get_debts_summary(user: dict = Depends(get_current_user)):
+    """Get summary of all debts"""
+    now = datetime.now(timezone.utc)
+    
+    # Get all debts
+    debts = await db.debts.find({}, {"_id": 0}).to_list(10000)
+    
+    summary = {
+        "receivables": {
+            "total_amount": 0,
+            "total_paid": 0,
+            "outstanding": 0,
+            "overdue_amount": 0,
+            "accrued_interest": 0,
+            "count": 0,
+            "overdue_count": 0
+        },
+        "payables": {
+            "total_amount": 0,
+            "total_paid": 0,
+            "outstanding": 0,
+            "overdue_amount": 0,
+            "accrued_interest": 0,
+            "count": 0,
+            "overdue_count": 0
+        },
+        "aging": {
+            "current": 0,
+            "days_1_30": 0,
+            "days_31_60": 0,
+            "days_61_90": 0,
+            "days_over_90": 0
+        }
+    }
+    
+    for debt in debts:
+        debt_type = debt.get("debt_type", "receivable")
+        category = "receivables" if debt_type == "receivable" else "payables"
+        amount_usd = debt.get("amount_usd", convert_to_usd(debt.get("amount", 0), debt.get("currency", "USD")))
+        paid_usd = debt.get("total_paid_usd", 0)
+        outstanding = amount_usd - paid_usd
+        
+        summary[category]["total_amount"] += amount_usd
+        summary[category]["total_paid"] += paid_usd
+        summary[category]["outstanding"] += outstanding
+        summary[category]["count"] += 1
+        
+        # Check if overdue
+        due_date_str = debt.get("due_date")
+        if due_date_str and outstanding > 0:
+            try:
+                due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
+                if due_date.tzinfo is None:
+                    due_date = due_date.replace(tzinfo=timezone.utc)
+                
+                if now > due_date:
+                    days_overdue = (now - due_date).days
+                    summary[category]["overdue_amount"] += outstanding
+                    summary[category]["overdue_count"] += 1
+                    
+                    # Calculate interest
+                    interest = calculate_debt_interest(outstanding, debt.get("interest_rate", 0), days_overdue)
+                    summary[category]["accrued_interest"] += interest
+                    
+                    # Aging buckets
+                    if days_overdue <= 30:
+                        summary["aging"]["days_1_30"] += outstanding
+                    elif days_overdue <= 60:
+                        summary["aging"]["days_31_60"] += outstanding
+                    elif days_overdue <= 90:
+                        summary["aging"]["days_61_90"] += outstanding
+                    else:
+                        summary["aging"]["days_over_90"] += outstanding
+                else:
+                    summary["aging"]["current"] += outstanding
+            except:
+                summary["aging"]["current"] += outstanding
+    
+    # Net position
+    summary["net_position"] = summary["receivables"]["outstanding"] - summary["payables"]["outstanding"]
+    
+    return summary
+
 # ============== COMPREHENSIVE REPORTS ==============
 
 @api_router.get("/reports/transactions-detailed")
