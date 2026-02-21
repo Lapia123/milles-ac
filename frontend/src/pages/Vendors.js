@@ -599,9 +599,38 @@ export default function Vendors() {
                     </span>
                     <span className="text-white font-mono">{vendor.withdrawal_commission}%</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#C5C6C7] text-sm">Net Settlement</span>
-                    <span className="text-[#66FCF1] font-mono">${(vendor.pending_amount || 0).toLocaleString()}</span>
+                  <div className="pt-2 border-t border-white/5">
+                    <span className="text-[#C5C6C7] text-xs uppercase tracking-wider">Net Settlement</span>
+                    {vendor.settlement_by_currency && vendor.settlement_by_currency.length > 0 ? (
+                      <div className="mt-1 space-y-1">
+                        {vendor.settlement_by_currency.map((item, idx) => (
+                          <div key={idx} className="flex justify-between items-center">
+                            <Badge className={`text-xs ${
+                              item.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
+                              item.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                              item.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
+                              item.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                              item.currency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
+                              'bg-gray-500/20 text-gray-400'
+                            }`}>
+                              {item.currency}
+                            </Badge>
+                            <span className="text-[#66FCF1] font-mono">
+                              {item.amount?.toLocaleString()}
+                              {item.currency !== 'USD' && (
+                                <span className="text-[#C5C6C7] text-xs ml-1">(${item.usd_equivalent?.toLocaleString()})</span>
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between items-center pt-1 border-t border-white/10">
+                          <span className="text-[#C5C6C7] text-xs">Total USD</span>
+                          <span className="text-[#66FCF1] font-mono font-bold">${(vendor.pending_amount || 0).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[#C5C6C7] text-sm mt-1">No pending settlement</p>
+                    )}
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t border-white/5">
                     <span className="text-[#C5C6C7] text-sm">Status</span>
