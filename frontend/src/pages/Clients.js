@@ -590,14 +590,14 @@ export default function Clients() {
                       <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
-                ) : clients.length === 0 ? (
+                ) : filteredClients.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-[#C5C6C7]">
                       No clients found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  clients.map((client) => (
+                  filteredClients.map((client) => (
                     <TableRow key={client.client_id} className="border-white/5 hover:bg-white/5">
                       <TableCell>
                         <div className="flex items-center gap-3">
