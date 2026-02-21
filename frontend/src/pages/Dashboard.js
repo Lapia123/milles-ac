@@ -81,9 +81,6 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Seed demo data first
-        await fetch(`${API_URL}/api/seed`, { method: 'POST' });
-
         const [statsRes, chartRes, activityRes, analyticsRes] = await Promise.all([
           fetch(`${API_URL}/api/reports/dashboard`, { headers: getAuthHeaders(), credentials: 'include' }),
           fetch(`${API_URL}/api/reports/transactions-summary?days=30`, { headers: getAuthHeaders(), credentials: 'include' }),
