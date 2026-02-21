@@ -508,8 +508,8 @@ export default function Vendors() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Pending Settlement</p>
-                <p className="text-3xl font-bold font-mono text-white">${totalPendingAmount.toLocaleString()}</p>
+                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Net Settlement</p>
+                <p className="text-3xl font-bold font-mono text-[#66FCF1]">${totalPendingAmount.toLocaleString()}</p>
               </div>
               <div className="p-3 bg-yellow-500/10 rounded-sm">
                 <DollarSign className="w-6 h-6 text-yellow-500" />
