@@ -161,6 +161,12 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 
 ## Key API Endpoints
 
+### Debt Management Endpoints
+- `/api/debts` - List/Create debts
+- `/api/debts/{debt_id}` - Get/Update/Delete debt
+- `/api/debts/{debt_id}/payments` - Record/List payments
+- `/api/debts/summary/overview` - Summary with aging
+
 ### Reports Endpoints
 - `/api/reports/transactions-detailed` - Transactions with currency breakdown
 - `/api/reports/vendor-summary` - Vendor settlements with commission
