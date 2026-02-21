@@ -919,12 +919,40 @@ export default function Vendors() {
                   <span className="text-[#C5C6C7]">Transactions to Settle</span>
                   <span className="text-white">{pendingTransactions.filter(t => (t.status === 'approved' || t.status === 'completed') && !t.settled).length}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[#C5C6C7]">Total Commission</span>
-                  <span className="text-yellow-400 font-mono">-${viewVendor?.settlement_by_currency?.reduce((sum, item) => sum + (item.commission_earned_usd || 0), 0).toLocaleString() || '0'}</span>
-                </div>
+                
+                {/* Show breakdown by currency */}
+                {viewVendor?.settlement_by_currency?.map((item, idx) => (
+                  <div key={idx} className="border-t border-white/10 pt-2 space-y-1">
+                    <div className="flex justify-between items-center">
+                      <Badge className={`text-xs ${
+                        item.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
+                        item.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                        item.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
+                        item.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                        item.currency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
+                        'bg-gray-500/20 text-gray-400'
+                      }`}>
+                        {item.currency}
+                      </Badge>
+                      <span className="text-white font-mono">
+                        {item.amount?.toLocaleString()} {item.currency}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-[#C5C6C7]">Commission</span>
+                      <span className="text-yellow-400">-{item.commission_earned_base?.toLocaleString()} {item.currency}</span>
+                    </div>
+                    {item.currency !== 'USD' && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#C5C6C7]">USD Equivalent</span>
+                        <span className="text-[#C5C6C7]">${item.usd_equivalent?.toLocaleString()}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
                 <div className="flex justify-between border-t border-white/10 pt-2">
-                  <span className="text-[#66FCF1] font-semibold">Net Settlement Amount</span>
+                  <span className="text-[#66FCF1] font-semibold">Total Net (USD)</span>
                   <span className="text-[#66FCF1] font-mono font-bold">${viewVendor?.settlement_by_currency?.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString() || '0'}</span>
                 </div>
               </div>
