@@ -122,10 +122,12 @@ export default function Reports() {
         treasury: `${API_URL}/api/reports/treasury-summary${queryStr ? `?${queryStr}` : ''}`,
         psp: `${API_URL}/api/reports/psp-summary${queryStr ? `?${queryStr}` : ''}`,
         financial: `${API_URL}/api/reports/financial-summary${queryStr ? `?${queryStr}` : ''}`,
+        outstanding: `${API_URL}/api/debts/summary/overview`,
+        debts: `${API_URL}/api/debts`,
         chart: `${API_URL}/api/reports/transactions-summary?days=30`,
       };
 
-      const [txRes, vendorRes, commRes, clientRes, treasuryRes, pspRes, financialRes, chartRes] = await Promise.all([
+      const [txRes, vendorRes, commRes, clientRes, treasuryRes, pspRes, financialRes, outstandingRes, debtsRes, chartRes] = await Promise.all([
         fetch(endpoints.transactions, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.vendors, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.commissions, { headers: getAuthHeaders(), credentials: 'include' }),
@@ -133,6 +135,8 @@ export default function Reports() {
         fetch(endpoints.treasury, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.psp, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.financial, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.outstanding, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.debts, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.chart, { headers: getAuthHeaders(), credentials: 'include' }),
       ]);
 
@@ -143,6 +147,8 @@ export default function Reports() {
       if (treasuryRes.ok) setTreasuryReport(await treasuryRes.json());
       if (pspRes.ok) setPspReport(await pspRes.json());
       if (financialRes.ok) setFinancialReport(await financialRes.json());
+      if (outstandingRes.ok) setOutstandingReport(await outstandingRes.json());
+      if (debtsRes.ok) setDebtsData(await debtsRes.json());
       if (chartRes.ok) setChartData(await chartRes.json());
     } catch (error) {
       console.error('Error fetching reports:', error);
