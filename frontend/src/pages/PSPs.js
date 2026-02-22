@@ -77,11 +77,21 @@ export default function PSPs() {
   const [formData, setFormData] = useState({
     psp_name: '',
     commission_rate: '',
+    chargeback_rate: '0',
+    holding_days: '0',
     settlement_days: '1',
     settlement_destination_id: '',
     min_settlement_amount: '0',
     description: '',
     status: 'active',
+  });
+
+  // State for recording charges on transactions
+  const [chargesDialogOpen, setChargesDialogOpen] = useState(false);
+  const [chargesForm, setChargesForm] = useState({
+    chargeback_amount: '0',
+    extra_charges: '0',
+    charges_description: '',
   });
 
   const isAdmin = user?.role === 'admin';
