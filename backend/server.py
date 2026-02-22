@@ -1265,9 +1265,25 @@ async def create_settlement(psp_id: str, user: dict = Depends(require_admin)):
     
     # Calculate totals
     gross_amount = sum(tx["amount"] for tx in pending_txs)
+    
+    # Commission
     commission_rate = psp.get("commission_rate", 0) / 100
     commission_amount = round(gross_amount * commission_rate, 2)
-    net_amount = gross_amount - commission_amount
+    
+    # Chargeback (from PSP default rate)
+    chargeback_rate = psp.get("chargeback_rate", 0) / 100
+    chargeback_amount = round(gross_amount * chargeback_rate, 2)
+    
+    # Extra charges (sum from individual transactions)
+    total_extra_charges = sum(tx.get("psp_extra_charges", 0) for tx in pending_txs)
+    
+    # Individual transaction chargebacks (override PSP rate if set per transaction)
+    total_tx_chargebacks = sum(tx.get("psp_chargeback_amount", 0) for tx in pending_txs)
+    # Use transaction-level chargebacks if any, otherwise use PSP rate
+    final_chargeback = total_tx_chargebacks if total_tx_chargebacks > 0 else chargeback_amount
+    
+    # Net amount = Gross - Commission - Chargeback - Extra Charges
+    net_amount = gross_amount - commission_amount - final_chargeback - total_extra_charges
     
     settlement_id = f"stl_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
@@ -1280,7 +1296,12 @@ async def create_settlement(psp_id: str, user: dict = Depends(require_admin)):
         "gross_amount": gross_amount,
         "commission_rate": psp.get("commission_rate", 0),
         "commission_amount": commission_amount,
+        "chargeback_rate": psp.get("chargeback_rate", 0),
+        "chargeback_amount": final_chargeback,
+        "extra_charges": total_extra_charges,
+        "total_deductions": commission_amount + final_chargeback + total_extra_charges,
         "net_amount": net_amount,
+        "holding_days": psp.get("holding_days", 0),
         "transaction_count": len(pending_txs),
         "transaction_ids": [tx["transaction_id"] for tx in pending_txs],
         "settlement_destination_id": psp["settlement_destination_id"],
