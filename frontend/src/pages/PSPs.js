@@ -1132,6 +1132,147 @@ export default function PSPs() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Record Payment Received Dialog */}
+      <Dialog open={recordPaymentDialogOpen} onOpenChange={(open) => { if (!open) { setRecordPaymentDialogOpen(false); setSelectedTransaction(null); } }}>
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+              <Wallet className="w-5 h-5 text-green-400" />
+              Record Payment Received
+            </DialogTitle>
+          </DialogHeader>
+          {selectedTransaction && (
+            <div className="space-y-4">
+              {/* Transaction Summary */}
+              <div className="p-4 bg-[#0B0C10] rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#C5C6C7]">Reference</span>
+                  <span className="text-white font-mono">{selectedTransaction.reference}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#C5C6C7]">Client</span>
+                  <span className="text-white">{selectedTransaction.client_name}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#C5C6C7]">PSP</span>
+                  <span className="text-white">{selectedTransaction.psp_name}</span>
+                </div>
+                <div className="border-t border-white/10 pt-2 mt-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#C5C6C7]">Gross Amount</span>
+                    <span className="text-white font-mono">${(selectedTransaction.amount || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#C5C6C7]">Commission</span>
+                    <span className="text-yellow-400 font-mono">-${(selectedTransaction.psp_commission_amount || 0).toLocaleString()}</span>
+                  </div>
+                  {selectedTransaction.psp_chargeback_amount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[#C5C6C7]">Chargeback</span>
+                      <span className="text-red-400 font-mono">-${selectedTransaction.psp_chargeback_amount.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {selectedTransaction.psp_extra_charges > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[#C5C6C7]">Extra Charges</span>
+                      <span className="text-red-400 font-mono">-${selectedTransaction.psp_extra_charges.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm pt-2 border-t border-white/10 mt-2">
+                    <span className="text-white font-bold">Expected Net</span>
+                    <span className="text-[#66FCF1] font-mono font-bold">
+                      ${((selectedTransaction.amount || 0) - (selectedTransaction.psp_commission_amount || 0) - (selectedTransaction.psp_chargeback_amount || 0) - (selectedTransaction.psp_extra_charges || 0)).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Holding Info */}
+              {selectedTransaction.psp_holding_days > 0 && (
+                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-blue-400 text-sm">
+                    <Timer className="w-4 h-4" />
+                    <span>Holding Period: {selectedTransaction.psp_holding_days} days</span>
+                  </div>
+                  {selectedTransaction.psp_holding_release_date && (
+                    <p className="text-xs text-[#C5C6C7] mt-1 ml-6">
+                      Release Date: {formatDate(selectedTransaction.psp_holding_release_date)}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Actual Amount Received */}
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Actual Amount Received (USD)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={paymentForm.actual_amount_received}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, actual_amount_received: e.target.value })}
+                  className="bg-[#0B0C10] border-white/10 text-white font-mono text-lg"
+                  placeholder="Enter actual amount received"
+                  data-testid="actual-amount-received"
+                />
+                <p className="text-xs text-[#C5C6C7]">Leave as-is if the amount matches the expected net settlement</p>
+              </div>
+
+              {/* Settlement Destination */}
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Credit to Treasury Account</Label>
+                <Select
+                  value={paymentForm.destination_account_id || (psps.find(p => p.psp_id === selectedTransaction.psp_id)?.settlement_destination_id || '')}
+                  onValueChange={(value) => setPaymentForm({ ...paymentForm, destination_account_id: value })}
+                >
+                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white">
+                    <SelectValue placeholder="Select treasury account" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1F2833] border-white/10">
+                    {treasuryAccounts.map((account) => (
+                      <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
+                        {account.account_name} - {account.bank_name} ({account.currency})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Variance Warning */}
+              {paymentForm.actual_amount_received && parseFloat(paymentForm.actual_amount_received) !== ((selectedTransaction.amount || 0) - (selectedTransaction.psp_commission_amount || 0) - (selectedTransaction.psp_chargeback_amount || 0) - (selectedTransaction.psp_extra_charges || 0)) && (
+                <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-yellow-400 text-sm">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>
+                      Variance: ${(parseFloat(paymentForm.actual_amount_received) - ((selectedTransaction.amount || 0) - (selectedTransaction.psp_commission_amount || 0) - (selectedTransaction.psp_chargeback_amount || 0) - (selectedTransaction.psp_extra_charges || 0))).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { setRecordPaymentDialogOpen(false); setSelectedTransaction(null); }}
+                  className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleRecordPayment}
+                  className="bg-green-500 text-white hover:bg-green-600 font-bold uppercase tracking-wider"
+                  data-testid="confirm-record-payment-btn"
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Record Payment
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
