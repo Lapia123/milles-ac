@@ -303,7 +303,7 @@ export default function Debts() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
-            Debt Management
+            Outstanding Accounts
           </h1>
           <p className="text-[#94A3B8]">Track receivables (debtors) and payables (creditors)</p>
         </div>
