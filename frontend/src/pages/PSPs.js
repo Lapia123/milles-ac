@@ -915,6 +915,100 @@ export default function PSPs() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Record Charges Dialog */}
+      <Dialog open={chargesDialogOpen} onOpenChange={(open) => { if (!open) { setChargesDialogOpen(false); setSelectedTransaction(null); } }}>
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+              Record Charges
+            </DialogTitle>
+          </DialogHeader>
+          {selectedTransaction && (
+            <form onSubmit={handleRecordCharges} className="space-y-4">
+              <div className="p-3 bg-[#0B0C10] rounded-lg">
+                <p className="text-sm text-[#C5C6C7]">Transaction: <span className="text-white font-mono">{selectedTransaction.transaction_id}</span></p>
+                <p className="text-sm text-[#C5C6C7]">Amount: <span className="text-white font-mono">${selectedTransaction.amount?.toLocaleString()}</span></p>
+                <p className="text-sm text-[#C5C6C7]">Commission: <span className="text-yellow-400 font-mono">-${(selectedTransaction.psp_commission_amount || 0).toLocaleString()}</span></p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Chargeback Amount (USD)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={chargesForm.chargeback_amount}
+                  onChange={(e) => setChargesForm({ ...chargesForm, chargeback_amount: e.target.value })}
+                  className="bg-[#0B0C10] border-white/10 text-white font-mono"
+                  placeholder="0.00"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Extra Charges (USD)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={chargesForm.extra_charges}
+                  onChange={(e) => setChargesForm({ ...chargesForm, extra_charges: e.target.value })}
+                  className="bg-[#0B0C10] border-white/10 text-white font-mono"
+                  placeholder="0.00"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Description</Label>
+                <Input
+                  value={chargesForm.charges_description}
+                  onChange={(e) => setChargesForm({ ...chargesForm, charges_description: e.target.value })}
+                  className="bg-[#0B0C10] border-white/10 text-white"
+                  placeholder="Reason for charges..."
+                />
+              </div>
+              
+              {/* Settlement Preview */}
+              <div className="p-3 bg-[#0B0C10] rounded-lg border border-white/10">
+                <p className="text-xs text-[#C5C6C7] uppercase mb-2">Settlement Preview</p>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-[#C5C6C7]">Gross Amount</span>
+                    <span className="text-white font-mono">${(selectedTransaction.amount || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#C5C6C7]">Commission</span>
+                    <span className="text-red-400 font-mono">-${(selectedTransaction.psp_commission_amount || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#C5C6C7]">Chargeback</span>
+                    <span className="text-red-400 font-mono">-${parseFloat(chargesForm.chargeback_amount || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#C5C6C7]">Extra Charges</span>
+                    <span className="text-red-400 font-mono">-${parseFloat(chargesForm.extra_charges || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-white/10">
+                    <span className="text-white font-bold">Net Settlement</span>
+                    <span className="text-[#66FCF1] font-mono font-bold">
+                      ${((selectedTransaction.amount || 0) - (selectedTransaction.psp_commission_amount || 0) - parseFloat(chargesForm.chargeback_amount || 0) - parseFloat(chargesForm.extra_charges || 0)).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3">
+                <Button type="button" variant="outline" onClick={() => setChargesDialogOpen(false)} className="border-white/10 text-[#C5C6C7]">
+                  Cancel
+                </Button>
+                <Button type="submit" className="bg-[#66FCF1] hover:bg-[#66FCF1]/90 text-[#0B0C10] font-bold uppercase">
+                  Save Charges
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
