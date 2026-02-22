@@ -1,0 +1,105 @@
+{
+  "summary": "Complete testing of PSP Enhanced Features (chargeback_rate, holding_days, record charges, record payment). All 12 backend API tests passed (100%). Frontend UI fully functional with all features verified.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Login Page",
+        "issues": ["Demo credentials shown as admin@fxbroker.com / admin123 but actual password is 'password'"]
+      }
+    ]
+  },
+  "passed_tests": {
+    "backend": [
+      "GET /api/psp/{psp_id} - Returns chargeback_rate and holding_days fields",
+      "GET /api/psp-summary - PSP summary includes chargeback_rate and holding_days",
+      "POST /api/psp - Create PSP with chargeback_rate and holding_days",
+      "PUT /api/psp/{psp_id} - Update chargeback_rate and holding_days",
+      "POST /api/transactions - PSP transaction gets psp_holding_days, psp_holding_release_date, psp_chargeback_rate from PSP",
+      "PUT /api/psp/transactions/{id}/charges - Record chargeback_amount and extra_charges on transaction",
+      "PUT /api/psp/transactions/{id}/charges - Calculates psp_net_amount correctly (Gross - Commission - Chargeback - Extra)",
+      "PUT /api/psp/transactions/{id}/charges - Updates psp_total_deductions correctly",
+      "POST /api/psp/transactions/{id}/record-payment - Records actual payment received and updates treasury balance",
+      "POST /api/psp/transactions/{id}/record-payment - Records variance when actual != expected",
+      "POST /api/psp/transactions/{id}/record-payment - Creates treasury transaction record with psp_settlement type",
+      "GET /api/psp/{psp_id}/pending-transactions - Returns transactions with holding_days, release_date, chargeback_rate"
+    ],
+    "frontend": [
+      "PSP page loads with data-testid='psp-page'",
+      "PSP card shows Commission, Chargeback %, Holding days, Settlement time",
+      "Add PSP dialog has Chargeback % field (data-testid='psp-chargeback')",
+      "Add PSP dialog has Holding Days field (data-testid='psp-holding-days')",
+      "PSP details view shows Commission Rate, Chargeback Rate, Holding Time, Settlement Time",
+      "Pending Settlements table shows Holding, Release Date, Status columns",
+      "Status badges: Holding (blue), Ready (green) based on release date",
+      "Deductions column shows Comm, CB (Chargeback), Extra breakdown",
+      "Record Charges dialog opens with correct transaction info",
+      "Record Charges dialog has Chargeback Amount, Extra Charges, Description fields",
+      "Record Charges dialog shows Settlement Preview with net calculation",
+      "Record Payment Received dialog opens with transaction summary",
+      "Record Payment Received dialog shows Gross, Commission, Chargeback, Extra Charges, Expected Net",
+      "Record Payment Received dialog shows Holding Period and Release Date info",
+      "Record Payment Received dialog has Actual Amount Received field pre-filled with expected net",
+      "Record Payment Received dialog has Treasury Account dropdown",
+      "Record Payment button triggers treasury update"
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_psp_enhanced_features.py",
+    "/app/test_reports/pytest/psp_enhanced_tests.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Login page shows wrong demo password (admin123 vs actual 'password') - minor UX issue"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_psp_enhanced_features.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 tests passed)",
+    "frontend": "100% (all UI features working)"
+  },
+  "test_credentials": {
+    "admin": "admin@fxbroker.com / password"
+  },
+  "seed_data_creation": "Backend tests created several TEST_ prefixed transactions for PSP psp_1f22117d21a5 (PayPal). Some transactions were settled during testing to verify treasury updates.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "PSP Enhanced Features fully tested. Key new fields: 1) PSP model has chargeback_rate (%) and holding_days. 2) Transactions get psp_holding_days, psp_holding_release_date, psp_chargeback_rate from PSP on creation. 3) PUT /api/psp/transactions/{id}/charges allows recording chargeback_amount, extra_charges, charges_description per transaction. 4) POST /api/psp/transactions/{id}/record-payment settles transaction, credits treasury, records variance. 5) Net calculation: Gross - Commission - Chargeback - Extra Charges. 6) Frontend PSPs.js has Record Charges and Record Payment Received dialogs with all fields.",
+  "features_verified": {
+    "psp_settings": {
+      "chargeback_rate": "Stored as percentage (e.g., 3 for 3%), displayed on PSP card and details view",
+      "holding_days": "Days PSP holds funds before release, shown in details and pending transactions table"
+    },
+    "transaction_charges": {
+      "chargeback_amount": "Per-transaction chargeback amount in USD",
+      "extra_charges": "Per-transaction extra charges in USD",
+      "charges_description": "Optional description for charges",
+      "net_calculation": "Gross - Commission - Chargeback - Extra Charges"
+    },
+    "holding_release": {
+      "psp_holding_days": "Copied from PSP to transaction on creation",
+      "psp_holding_release_date": "Calculated as transaction date + holding_days",
+      "status_badges": "Holding (in holding period), Ready (past release date)"
+    },
+    "record_payment": {
+      "actual_amount_received": "Actual payment from PSP, can differ from expected net",
+      "settlement_variance": "Difference between actual and expected amounts",
+      "treasury_update": "Credits selected treasury account with actual amount",
+      "treasury_transaction": "Creates treasury_transaction record with type 'psp_settlement'"
+    }
+  },
+  "test_data_ids": {
+    "test_psp": "psp_1f22117d21a5 (PayPal - 10% commission, 3% chargeback, 2 days holding)",
+    "test_treasury": "treasury_d812e38f2a7a (ENBD - AED)",
+    "test_client": "client_e9792d8531d1 (safvan kappilakath)"
+  },
+  "mocked_api": {
+    "currency_exchange_rates": "EXCHANGE_RATES_TO_USD in backend/server.py - hardcoded rates"
+  }
+}
