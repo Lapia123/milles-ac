@@ -414,6 +414,34 @@ export default function PSPs() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Chargeback % *</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.chargeback_rate}
+                      onChange={(e) => setFormData({ ...formData, chargeback_rate: e.target.value })}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      placeholder="0"
+                      data-testid="psp-chargeback"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Holding Days</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={formData.holding_days}
+                      onChange={(e) => setFormData({ ...formData, holding_days: e.target.value })}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      placeholder="0"
+                      data-testid="psp-holding-days"
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Settlement Days *</Label>
                     <Input
                       type="number"
