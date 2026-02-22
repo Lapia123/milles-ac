@@ -294,6 +294,56 @@ export default function PSPs() {
     setIsDialogOpen(true);
   };
 
+  // Handle recording payment received from PSP
+  const handleRecordPayment = async () => {
+    if (!selectedTransaction) return;
+    
+    try {
+      const psp = psps.find(p => p.psp_id === selectedTransaction.psp_id);
+      const destId = paymentForm.destination_account_id || psp?.settlement_destination_id;
+      
+      let url = `${API_URL}/api/psp/transactions/${selectedTransaction.transaction_id}/record-payment`;
+      const params = new URLSearchParams();
+      if (destId) params.append('destination_account_id', destId);
+      if (paymentForm.actual_amount_received) params.append('actual_amount_received', paymentForm.actual_amount_received);
+      if (params.toString()) url += `?${params.toString()}`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        toast.success('Payment recorded successfully! Treasury updated.');
+        setRecordPaymentDialogOpen(false);
+        setSelectedTransaction(null);
+        setPaymentForm({ actual_amount_received: '', destination_account_id: '' });
+        if (viewPsp) {
+          fetchPendingTransactions(viewPsp.psp_id);
+          fetchSettlements(viewPsp.psp_id);
+        }
+        fetchPsps();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Recording payment failed');
+      }
+    } catch (error) {
+      toast.error('Recording payment failed');
+    }
+  };
+  
+  // Open record payment dialog
+  const openRecordPaymentDialog = (tx) => {
+    setSelectedTransaction(tx);
+    const netAmount = (tx.amount || 0) - (tx.psp_commission_amount || 0) - (tx.psp_chargeback_amount || 0) - (tx.psp_extra_charges || 0);
+    setPaymentForm({
+      actual_amount_received: netAmount.toString(),
+      destination_account_id: '',
+    });
+    setRecordPaymentDialogOpen(true);
+  };
+
   const handleSettleTransaction = async () => {
     if (!selectedTransaction) return;
     
