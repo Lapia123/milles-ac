@@ -58,7 +58,7 @@ export default function Layout() {
     { to: '/treasury', icon: Landmark, label: 'Treasury' },
     ...(isAccountantOrAdmin ? [{ to: '/income-expenses', icon: Wallet, label: 'Income & Expenses' }] : []),
     ...(isAccountantOrAdmin ? [{ to: '/loans', icon: Banknote, label: 'Loans' }] : []),
-    ...(isAccountantOrAdmin ? [{ to: '/debts', icon: Receipt, label: 'Debts' }] : []),
+    ...(isAccountantOrAdmin ? [{ to: '/debts', icon: Receipt, label: 'Outstanding Accounts' }] : []),
     { to: '/psp', icon: CreditCard, label: 'PSP' },
     ...(isAdmin ? [{ to: '/vendors', icon: Store, label: 'Vendors' }] : []),
     { to: '/reports', icon: BarChart3, label: 'Reports' },
