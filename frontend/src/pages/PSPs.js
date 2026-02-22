@@ -323,6 +323,8 @@ export default function PSPs() {
     setFormData({
       psp_name: '',
       commission_rate: '',
+      chargeback_rate: '0',
+      holding_days: '0',
       settlement_days: '1',
       settlement_destination_id: '',
       min_settlement_amount: '0',
