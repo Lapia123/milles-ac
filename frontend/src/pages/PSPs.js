@@ -94,6 +94,13 @@ export default function PSPs() {
     extra_charges: '0',
     charges_description: '',
   });
+  
+  // State for recording payment received
+  const [recordPaymentDialogOpen, setRecordPaymentDialogOpen] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    actual_amount_received: '',
+    destination_account_id: '',
+  });
 
   const isAdmin = user?.role === 'admin';
 
