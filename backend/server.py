@@ -3968,12 +3968,24 @@ async def record_debt_payment(
     # Convert payment to USD
     payment_usd = convert_to_usd(payment_data.amount, payment_data.currency)
     
+    # Convert payment amount to treasury currency for balance update
+    treasury_currency = treasury.get("currency", "USD")
+    if payment_data.currency == treasury_currency:
+        amount_in_treasury_currency = payment_data.amount
+    else:
+        # Convert payment to treasury currency via USD
+        amount_in_treasury_currency = convert_from_usd(payment_usd, treasury_currency)
+    
     payment_doc = {
         "payment_id": payment_id,
         "debt_id": debt_id,
+        "debt_type": debt["debt_type"],
+        "party_name": debt.get("party_name"),
         "amount": payment_data.amount,
         "currency": payment_data.currency,
         "amount_usd": payment_usd,
+        "amount_in_treasury_currency": amount_in_treasury_currency,
+        "treasury_currency": treasury_currency,
         "payment_date": payment_date,
         "treasury_account_id": payment_data.treasury_account_id,
         "treasury_account_name": treasury.get("account_name"),
@@ -3986,21 +3998,44 @@ async def record_debt_payment(
     
     await db.debt_payments.insert_one(payment_doc)
     
-    # Update treasury balance based on debt type
-    balance_change = payment_data.amount
+    # Determine balance change direction
     if debt["debt_type"] == DebtType.RECEIVABLE:
-        # We received money - increase treasury
-        pass  # positive
+        # We received money - increase treasury (positive)
+        balance_change = amount_in_treasury_currency
+        tx_type = "debt_collection"
+        tx_description = f"Debt collection from {debt.get('party_name', 'Unknown')}"
     else:
-        # We paid money - decrease treasury
-        balance_change = -balance_change
+        # We paid money (creditor/payable) - decrease treasury (negative)
+        balance_change = -amount_in_treasury_currency
+        tx_type = "debt_payment"
+        tx_description = f"Debt payment to {debt.get('party_name', 'Unknown')}"
     
-    # Only update if treasury currency matches payment currency
-    if treasury.get("currency", "USD") == payment_data.currency:
-        await db.treasury_accounts.update_one(
-            {"account_id": payment_data.treasury_account_id},
-            {"$inc": {"balance": balance_change}, "$set": {"updated_at": now.isoformat()}}
-        )
+    # Update treasury balance
+    await db.treasury_accounts.update_one(
+        {"account_id": payment_data.treasury_account_id},
+        {"$inc": {"balance": balance_change}, "$set": {"updated_at": now.isoformat()}}
+    )
+    
+    # Record treasury transaction for history
+    treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+    treasury_tx = {
+        "transaction_id": treasury_tx_id,
+        "account_id": payment_data.treasury_account_id,
+        "account_name": treasury.get("account_name"),
+        "transaction_type": tx_type,
+        "amount": abs(amount_in_treasury_currency),
+        "currency": treasury_currency,
+        "amount_usd": payment_usd,
+        "balance_after": treasury.get("balance", 0) + balance_change,
+        "description": tx_description,
+        "reference": payment_data.reference or payment_id,
+        "related_debt_id": debt_id,
+        "related_payment_id": payment_id,
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    await db.treasury_transactions.insert_one(treasury_tx)
     
     # Update debt totals
     new_total_paid = debt.get("total_paid", 0) + payment_data.amount
