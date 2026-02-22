@@ -802,7 +802,7 @@ export default function PSPs() {
                 </TabsList>
                 
                 <TabsContent value="pending" className="mt-4">
-                  <ScrollArea className="h-[300px]">
+                  <ScrollArea className="h-[350px]">
                     {pendingTransactions.length === 0 ? (
                       <div className="text-center py-8 text-[#C5C6C7]">
                         <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
@@ -813,40 +813,77 @@ export default function PSPs() {
                         <TableHeader>
                           <TableRow className="border-white/10 hover:bg-transparent">
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Reference</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Client</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Gross</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Commission</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Chargeback</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Extra</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Deductions</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Net</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Expected</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Holding</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Release Date</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {pendingTransactions.map((tx) => {
                             const overdue = isOverdue(tx.psp_expected_settlement_date);
+                            const holdingReleaseOverdue = isOverdue(tx.psp_holding_release_date);
                             const netAmount = (tx.amount || 0) - (tx.psp_commission_amount || 0) - (tx.psp_chargeback_amount || 0) - (tx.psp_extra_charges || 0);
+                            const totalDeductions = (tx.psp_commission_amount || 0) + (tx.psp_chargeback_amount || 0) + (tx.psp_extra_charges || 0);
+                            const holdingDays = tx.psp_holding_days || viewPsp?.holding_days || 0;
+                            const isReleased = tx.psp_holding_release_date && new Date(tx.psp_holding_release_date) <= new Date();
                             return (
                               <TableRow key={tx.transaction_id} className={`border-white/5 hover:bg-white/5 ${overdue ? 'bg-red-500/5' : ''}`}>
-                                <TableCell className="font-mono text-white text-xs">{tx.reference}</TableCell>
-                                <TableCell className="text-white text-sm">{tx.client_name}</TableCell>
+                                <TableCell>
+                                  <div>
+                                    <span className="font-mono text-white text-xs">{tx.reference}</span>
+                                    <p className="text-[10px] text-[#C5C6C7]">{tx.client_name}</p>
+                                  </div>
+                                </TableCell>
                                 <TableCell className="font-mono text-white">${tx.amount?.toLocaleString()}</TableCell>
-                                <TableCell className="font-mono text-yellow-400">
-                                  -${(tx.psp_commission_amount || 0).toLocaleString()}
-                                </TableCell>
-                                <TableCell className="font-mono text-red-400">
-                                  {tx.psp_chargeback_amount ? `-$${tx.psp_chargeback_amount.toLocaleString()}` : '-'}
-                                </TableCell>
-                                <TableCell className="font-mono text-red-400">
-                                  {tx.psp_extra_charges ? `-$${tx.psp_extra_charges.toLocaleString()}` : '-'}
+                                <TableCell>
+                                  <div className="text-xs">
+                                    <div className="flex justify-between">
+                                      <span className="text-[#C5C6C7]">Comm:</span>
+                                      <span className="font-mono text-yellow-400">-${(tx.psp_commission_amount || 0).toLocaleString()}</span>
+                                    </div>
+                                    {tx.psp_chargeback_amount > 0 && (
+                                      <div className="flex justify-between">
+                                        <span className="text-[#C5C6C7]">CB:</span>
+                                        <span className="font-mono text-red-400">-${tx.psp_chargeback_amount.toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    {tx.psp_extra_charges > 0 && (
+                                      <div className="flex justify-between">
+                                        <span className="text-[#C5C6C7]">Extra:</span>
+                                        <span className="font-mono text-red-400">-${tx.psp_extra_charges.toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                  </div>
                                 </TableCell>
                                 <TableCell className="font-mono text-[#66FCF1] font-bold">${netAmount.toLocaleString()}</TableCell>
                                 <TableCell>
-                                  <span className={`flex items-center gap-1 text-xs ${overdue ? 'text-red-400' : 'text-[#C5C6C7]'}`}>
-                                    {overdue && <AlertTriangle className="w-3 h-3" />}
-                                    {formatDate(tx.psp_expected_settlement_date)}
-                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <Timer className="w-3 h-3 text-[#C5C6C7]" />
+                                    <span className="text-white font-mono text-xs">{holdingDays} days</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  {tx.psp_holding_release_date ? (
+                                    <span className={`flex items-center gap-1 text-xs ${isReleased ? 'text-green-400' : 'text-[#C5C6C7]'}`}>
+                                      {isReleased ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                                      {formatDate(tx.psp_holding_release_date)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[#C5C6C7] text-xs">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {tx.settlement_status === 'awaiting' ? (
+                                    <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-xs">Awaiting</Badge>
+                                  ) : isReleased ? (
+                                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">Ready</Badge>
+                                  ) : (
+                                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs">Holding</Badge>
+                                  )}
                                 </TableCell>
                                 <TableCell className="text-right">
                                   <div className="flex items-center justify-end gap-1">
@@ -855,18 +892,19 @@ export default function PSPs() {
                                       variant="ghost"
                                       onClick={() => openChargesDialog(tx)}
                                       className="text-[#C5C6C7] hover:text-white hover:bg-white/10 px-2"
-                                      title="Record Charges"
+                                      title="Record Charges (Chargeback/Extra)"
                                     >
                                       <Receipt className="w-3 h-3" />
                                     </Button>
                                     {isAdmin && (
                                       <Button
                                         size="sm"
-                                        onClick={() => { setSelectedTransaction(tx); setSettleDialogOpen(true); }}
+                                        onClick={() => openRecordPaymentDialog(tx)}
                                         className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 px-2"
-                                        data-testid={`settle-${tx.transaction_id}`}
+                                        data-testid={`record-payment-${tx.transaction_id}`}
+                                        title="Record Payment Received"
                                       >
-                                        <CheckCircle2 className="w-3 h-3" />
+                                        <Wallet className="w-3 h-3" />
                                       </Button>
                                     )}
                                   </div>
