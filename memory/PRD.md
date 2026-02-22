@@ -40,10 +40,25 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 - Settlement approvals
 - Deposit approval with mandatory screenshot upload
 
-### PSP Management
+### PSP Management (Enhanced Feb 22, 2026)
 - Manual ledger for Payment Service Providers
-- Commission tracking
-- Settlement management
+- Commission tracking with per-PSP commission rate
+- **Chargeback Rate %**: Per-PSP chargeback percentage
+- **Holding Days**: Days PSP holds funds before release
+- **Settlement Days**: T+N settlement period
+- Settlement management with treasury destination
+- **Per-Transaction Charges**:
+  - Record chargeback_amount (actual chargeback on specific transaction)
+  - Record extra_charges (additional fees like processing fees)
+  - Net Settlement = Gross - Commission - Chargeback - Extra Charges
+- **Holding & Release Tracking**:
+  - psp_holding_release_date calculated on transaction creation
+  - Status badges: "Holding" (in holding period), "Ready" (past release date)
+- **Record Payment Received**:
+  - Record actual amount received from PSP
+  - Track variance between expected and actual
+  - Treasury balance auto-updated
+  - Treasury transaction record created with type 'psp_settlement'
 
 ### Vendor Portal
 - Separate vendor login
