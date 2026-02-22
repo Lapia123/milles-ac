@@ -2451,6 +2451,10 @@ async def create_transaction(
         # Calculate expected settlement date
         settlement_days = psp_info.get("settlement_days", 1)
         expected_settlement_date = (now + timedelta(days=settlement_days)).isoformat()
+        
+        # Calculate holding release date (when funds will be released from PSP holding)
+        holding_days = psp_info.get("holding_days", 0)
+        holding_release_date = (now + timedelta(days=holding_days)).isoformat() if holding_days > 0 else None
     
     tx_doc = {
         "transaction_id": tx_id,
