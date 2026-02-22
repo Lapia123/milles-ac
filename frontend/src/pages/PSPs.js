@@ -174,6 +174,8 @@ export default function PSPs() {
       const payload = {
         psp_name: formData.psp_name,
         commission_rate: parseFloat(formData.commission_rate),
+        chargeback_rate: parseFloat(formData.chargeback_rate) || 0,
+        holding_days: parseInt(formData.holding_days) || 0,
         settlement_days: parseInt(formData.settlement_days),
         settlement_destination_id: formData.settlement_destination_id,
         min_settlement_amount: parseFloat(formData.min_settlement_amount) || 0,
@@ -203,6 +205,47 @@ export default function PSPs() {
     } catch (error) {
       toast.error('Operation failed');
     }
+  };
+
+  // Handle recording charges on a transaction
+  const handleRecordCharges = async (e) => {
+    e.preventDefault();
+    if (!selectedTransaction) return;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/psp/transactions/${selectedTransaction.transaction_id}/charges`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          chargeback_amount: parseFloat(chargesForm.chargeback_amount) || 0,
+          extra_charges: parseFloat(chargesForm.extra_charges) || 0,
+          charges_description: chargesForm.charges_description || null,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success('Charges recorded successfully');
+        setChargesDialogOpen(false);
+        setChargesForm({ chargeback_amount: '0', extra_charges: '0', charges_description: '' });
+        if (viewPsp) fetchPendingTransactions(viewPsp.psp_id);
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to record charges');
+      }
+    } catch (error) {
+      toast.error('Failed to record charges');
+    }
+  };
+
+  const openChargesDialog = (transaction) => {
+    setSelectedTransaction(transaction);
+    setChargesForm({
+      chargeback_amount: (transaction.psp_chargeback_amount || 0).toString(),
+      extra_charges: (transaction.psp_extra_charges || 0).toString(),
+      charges_description: transaction.psp_charges_description || '',
+    });
+    setChargesDialogOpen(true);
   };
 
   const handleDelete = async (pspId) => {
