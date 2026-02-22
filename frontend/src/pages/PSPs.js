@@ -273,6 +273,8 @@ export default function PSPs() {
     setFormData({
       psp_name: psp.psp_name,
       commission_rate: psp.commission_rate.toString(),
+      chargeback_rate: (psp.chargeback_rate || 0).toString(),
+      holding_days: (psp.holding_days || 0).toString(),
       settlement_days: psp.settlement_days.toString(),
       settlement_destination_id: psp.settlement_destination_id,
       min_settlement_amount: (psp.min_settlement_amount || 0).toString(),
