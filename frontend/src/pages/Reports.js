@@ -320,6 +320,10 @@ export default function Reports() {
             <Wallet className="w-4 h-4 mr-2" />
             Financial
           </TabsTrigger>
+          <TabsTrigger value="outstanding" className="data-[state=active]:bg-blue-600/20 data-[state=active]:text-blue-400">
+            <Receipt className="w-4 h-4 mr-2" />
+            O/S Accounts
+          </TabsTrigger>
         </TabsList>
 
         {/* ========== TRANSACTIONS REPORT ========== */}
