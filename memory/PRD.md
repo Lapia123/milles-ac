@@ -205,6 +205,16 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 - `/api/reports/dashboard` - Dashboard stats (existing)
 - `/api/reports/client-analytics` - Client analytics (existing)
 
+### PSP Management Endpoints (Enhanced)
+- `/api/psp` - List/Create PSPs (includes chargeback_rate, holding_days)
+- `/api/psp/{psp_id}` - Get/Update/Delete PSP
+- `/api/psp-summary` - PSP summary with pending amounts
+- `/api/psp/{psp_id}/pending-transactions` - Pending transactions for a PSP
+- `/api/psp/{psp_id}/settlements` - Settlement history
+- `/api/psp/transactions/{id}/charges` - PUT: Record chargeback_amount, extra_charges
+- `/api/psp/transactions/{id}/record-payment` - POST: Record payment received (credits treasury)
+- `/api/psp/transactions/{id}/settle` - POST: Legacy immediate settlement
+
 ### Other Key Endpoints
 - `/api/auth/*` - Authentication
 - `/api/clients/*` - Client management
