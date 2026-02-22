@@ -4043,6 +4043,51 @@ async def record_debt_payment(
     }
     await db.treasury_transactions.insert_one(treasury_tx)
     
+    # AUTO-CREATE INCOME/EXPENSE ENTRY
+    # Receivable payment → Income entry
+    # Payable payment → Expense entry
+    ie_entry_id = f"ie_{uuid.uuid4().hex[:12]}"
+    if debt["debt_type"] == DebtType.RECEIVABLE:
+        # Create Income entry when collecting receivable
+        income_entry = {
+            "entry_id": ie_entry_id,
+            "entry_type": "income",
+            "category": "Debt Collection",
+            "amount": payment_usd,  # Store in USD
+            "currency": "USD",
+            "date": payment_date.split('T')[0] if 'T' in str(payment_date) else payment_date,
+            "description": f"Collection from {debt.get('party_name', 'Unknown')} - {debt.get('description', '')}".strip(),
+            "reference": payment_data.reference or payment_id,
+            "treasury_account_id": payment_data.treasury_account_id,
+            "related_debt_id": debt_id,
+            "related_payment_id": payment_id,
+            "auto_generated": True,
+            "created_at": now.isoformat(),
+            "created_by": user["user_id"],
+            "created_by_name": user["name"]
+        }
+        await db.income_expenses.insert_one(income_entry)
+    else:
+        # Create Expense entry when paying payable
+        expense_entry = {
+            "entry_id": ie_entry_id,
+            "entry_type": "expense",
+            "category": "Debt Payment",
+            "amount": payment_usd,  # Store in USD
+            "currency": "USD",
+            "date": payment_date.split('T')[0] if 'T' in str(payment_date) else payment_date,
+            "description": f"Payment to {debt.get('party_name', 'Unknown')} - {debt.get('description', '')}".strip(),
+            "reference": payment_data.reference or payment_id,
+            "treasury_account_id": payment_data.treasury_account_id,
+            "related_debt_id": debt_id,
+            "related_payment_id": payment_id,
+            "auto_generated": True,
+            "created_at": now.isoformat(),
+            "created_by": user["user_id"],
+            "created_by_name": user["name"]
+        }
+        await db.income_expenses.insert_one(expense_entry)
+    
     # Update debt totals
     new_total_paid = debt.get("total_paid", 0) + payment_data.amount
     new_total_paid_usd = debt.get("total_paid_usd", 0) + payment_usd
