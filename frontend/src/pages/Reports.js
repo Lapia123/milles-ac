@@ -93,6 +93,8 @@ export default function Reports() {
   const [treasuryReport, setTreasuryReport] = useState(null);
   const [pspReport, setPspReport] = useState(null);
   const [financialReport, setFinancialReport] = useState(null);
+  const [outstandingReport, setOutstandingReport] = useState(null);
+  const [debtsData, setDebtsData] = useState([]);
   const [chartData, setChartData] = useState([]);
 
   const getAuthHeaders = () => {
