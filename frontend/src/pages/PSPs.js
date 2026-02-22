@@ -702,10 +702,18 @@ export default function PSPs() {
           {viewPsp && (
             <div className="space-y-4">
               {/* PSP Info */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-[#0B0C10] rounded-sm">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-[#0B0C10] rounded-sm">
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Commission Rate</p>
                   <p className="text-xl font-mono text-white">{viewPsp.commission_rate}%</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Chargeback Rate</p>
+                  <p className="text-xl font-mono text-white">{viewPsp.chargeback_rate || 0}%</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Holding Time</p>
+                  <p className="text-xl font-mono text-white">{viewPsp.holding_days || 0} days</p>
                 </div>
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Settlement Time</p>
