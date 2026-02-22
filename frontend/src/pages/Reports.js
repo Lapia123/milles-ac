@@ -1175,6 +1175,281 @@ export default function Reports() {
             </>
           )}
         </TabsContent>
+
+        {/* ========== OUTSTANDING ACCOUNTS REPORT ========== */}
+        <TabsContent value="outstanding" className="space-y-4">
+          {outstandingReport && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard
+                  title="Total Receivables"
+                  value={`$${(outstandingReport.receivables?.outstanding || 0).toLocaleString()}`}
+                  subtitle={`${outstandingReport.receivables?.count || 0} records`}
+                  icon={ArrowDownRight}
+                  color="green"
+                />
+                <StatCard
+                  title="Total Payables"
+                  value={`$${(outstandingReport.payables?.outstanding || 0).toLocaleString()}`}
+                  subtitle={`${outstandingReport.payables?.count || 0} records`}
+                  icon={ArrowUpRight}
+                  color="red"
+                />
+                <StatCard
+                  title="Net Position"
+                  value={`$${Math.abs(outstandingReport.net_position || 0).toLocaleString()}`}
+                  subtitle={outstandingReport.net_position >= 0 ? 'Net Receivable' : 'Net Payable'}
+                  icon={DollarSign}
+                  color={outstandingReport.net_position >= 0 ? 'green' : 'red'}
+                />
+                <StatCard
+                  title="Total Overdue"
+                  value={`$${((outstandingReport.receivables?.overdue_amount || 0) + (outstandingReport.payables?.overdue_amount || 0)).toLocaleString()}`}
+                  subtitle={`${(outstandingReport.receivables?.overdue_count || 0) + (outstandingReport.payables?.overdue_count || 0)} overdue items`}
+                  icon={AlertTriangle}
+                  color="yellow"
+                />
+              </div>
+
+              {/* Aging Summary */}
+              {outstandingReport.aging && (
+                <Card className="bg-[#1E293B] border-white/5">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-amber-400" />
+                      Aging Summary (Outstanding Amounts)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-5 gap-4">
+                      <div className="p-4 bg-[#0F172A] rounded-lg text-center">
+                        <p className="text-xs text-[#94A3B8] mb-2">Current</p>
+                        <p className="text-2xl font-mono text-emerald-400 font-bold">${(outstandingReport.aging.current || 0).toLocaleString()}</p>
+                      </div>
+                      <div className="p-4 bg-[#0F172A] rounded-lg text-center">
+                        <p className="text-xs text-[#94A3B8] mb-2">1-30 Days</p>
+                        <p className="text-2xl font-mono text-amber-400 font-bold">${(outstandingReport.aging.days_1_30 || 0).toLocaleString()}</p>
+                      </div>
+                      <div className="p-4 bg-[#0F172A] rounded-lg text-center">
+                        <p className="text-xs text-[#94A3B8] mb-2">31-60 Days</p>
+                        <p className="text-2xl font-mono text-orange-400 font-bold">${(outstandingReport.aging.days_31_60 || 0).toLocaleString()}</p>
+                      </div>
+                      <div className="p-4 bg-[#0F172A] rounded-lg text-center">
+                        <p className="text-xs text-[#94A3B8] mb-2">61-90 Days</p>
+                        <p className="text-2xl font-mono text-red-400 font-bold">${(outstandingReport.aging.days_61_90 || 0).toLocaleString()}</p>
+                      </div>
+                      <div className="p-4 bg-[#0F172A] rounded-lg text-center">
+                        <p className="text-xs text-[#94A3B8] mb-2">90+ Days</p>
+                        <p className="text-2xl font-mono text-red-500 font-bold">${(outstandingReport.aging.days_over_90 || 0).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Receivables & Payables Breakdown */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Receivables Details */}
+                <Card className="bg-[#1E293B] border-white/5">
+                  <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                    <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                      <ArrowDownRight className="w-5 h-5 text-emerald-400" />
+                      Receivables (Debtors)
+                    </CardTitle>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-[#94A3B8] hover:text-white"
+                      onClick={() => downloadCSV(
+                        debtsData.filter(d => d.debt_type === 'receivable').map(d => ({
+                          party_name: d.party_name,
+                          party_type: d.party_type,
+                          amount: d.amount,
+                          currency: d.currency,
+                          total_paid: d.total_paid || 0,
+                          outstanding: d.outstanding_balance || (d.amount - (d.total_paid || 0)),
+                          due_date: d.due_date?.split('T')[0],
+                          status: d.calculated_status || d.status
+                        })),
+                        'receivables_report',
+                        [
+                          { key: 'party_name', label: 'Party' },
+                          { key: 'party_type', label: 'Type' },
+                          { key: 'amount', label: 'Amount' },
+                          { key: 'currency', label: 'Currency' },
+                          { key: 'total_paid', label: 'Paid' },
+                          { key: 'outstanding', label: 'Outstanding' },
+                          { key: 'due_date', label: 'Due Date' },
+                          { key: 'status', label: 'Status' }
+                        ]
+                      )}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      CSV
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3 mb-4">
+                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-lg">
+                        <span className="text-[#94A3B8]">Total Amount</span>
+                        <span className="text-white font-mono">${(outstandingReport.receivables?.total_amount || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-lg">
+                        <span className="text-[#94A3B8]">Total Collected</span>
+                        <span className="text-emerald-400 font-mono">${(outstandingReport.receivables?.total_paid || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-lg">
+                        <span className="text-[#94A3B8]">Outstanding</span>
+                        <span className="text-white font-mono font-bold">${(outstandingReport.receivables?.outstanding || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-amber-500/10 rounded-lg">
+                        <span className="text-amber-400">Overdue</span>
+                        <span className="text-amber-400 font-mono">${(outstandingReport.receivables?.overdue_amount || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-purple-500/10 rounded-lg">
+                        <span className="text-purple-400">Accrued Interest</span>
+                        <span className="text-purple-400 font-mono">${(outstandingReport.receivables?.accrued_interest || 0).toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <ScrollArea className="h-48">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-white/10">
+                            <TableHead className="text-[#94A3B8] text-xs">Party</TableHead>
+                            <TableHead className="text-[#94A3B8] text-xs text-right">Outstanding</TableHead>
+                            <TableHead className="text-[#94A3B8] text-xs">Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {debtsData.filter(d => d.debt_type === 'receivable').slice(0, 10).map((debt, i) => (
+                            <TableRow key={i} className="border-white/5">
+                              <TableCell className="text-white text-sm">{debt.party_name}</TableCell>
+                              <TableCell className="text-emerald-400 font-mono text-right text-sm">
+                                ${(debt.outstanding_balance || (debt.amount - (debt.total_paid || 0))).toLocaleString()}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={`text-xs ${
+                                  debt.calculated_status === 'overdue' ? 'bg-red-500/20 text-red-400' :
+                                  debt.calculated_status === 'fully_paid' ? 'bg-emerald-500/20 text-emerald-400' :
+                                  debt.calculated_status === 'partially_paid' ? 'bg-blue-500/20 text-blue-400' :
+                                  'bg-amber-500/20 text-amber-400'
+                                }`}>
+                                  {debt.calculated_status?.replace('_', ' ')}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {debtsData.filter(d => d.debt_type === 'receivable').length === 0 && (
+                            <TableRow><TableCell colSpan={3} className="text-center text-[#94A3B8]">No receivables</TableCell></TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+
+                {/* Payables Details */}
+                <Card className="bg-[#1E293B] border-white/5">
+                  <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                    <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                      <ArrowUpRight className="w-5 h-5 text-red-400" />
+                      Payables (Creditors)
+                    </CardTitle>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-[#94A3B8] hover:text-white"
+                      onClick={() => downloadCSV(
+                        debtsData.filter(d => d.debt_type === 'payable').map(d => ({
+                          party_name: d.party_name,
+                          party_type: d.party_type,
+                          amount: d.amount,
+                          currency: d.currency,
+                          total_paid: d.total_paid || 0,
+                          outstanding: d.outstanding_balance || (d.amount - (d.total_paid || 0)),
+                          due_date: d.due_date?.split('T')[0],
+                          status: d.calculated_status || d.status
+                        })),
+                        'payables_report',
+                        [
+                          { key: 'party_name', label: 'Party' },
+                          { key: 'party_type', label: 'Type' },
+                          { key: 'amount', label: 'Amount' },
+                          { key: 'currency', label: 'Currency' },
+                          { key: 'total_paid', label: 'Paid' },
+                          { key: 'outstanding', label: 'Outstanding' },
+                          { key: 'due_date', label: 'Due Date' },
+                          { key: 'status', label: 'Status' }
+                        ]
+                      )}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      CSV
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3 mb-4">
+                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-lg">
+                        <span className="text-[#94A3B8]">Total Amount</span>
+                        <span className="text-white font-mono">${(outstandingReport.payables?.total_amount || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-lg">
+                        <span className="text-[#94A3B8]">Total Paid</span>
+                        <span className="text-emerald-400 font-mono">${(outstandingReport.payables?.total_paid || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-lg">
+                        <span className="text-[#94A3B8]">Outstanding</span>
+                        <span className="text-white font-mono font-bold">${(outstandingReport.payables?.outstanding || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-amber-500/10 rounded-lg">
+                        <span className="text-amber-400">Overdue</span>
+                        <span className="text-amber-400 font-mono">${(outstandingReport.payables?.overdue_amount || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-purple-500/10 rounded-lg">
+                        <span className="text-purple-400">Accrued Interest</span>
+                        <span className="text-purple-400 font-mono">${(outstandingReport.payables?.accrued_interest || 0).toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <ScrollArea className="h-48">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-white/10">
+                            <TableHead className="text-[#94A3B8] text-xs">Party</TableHead>
+                            <TableHead className="text-[#94A3B8] text-xs text-right">Outstanding</TableHead>
+                            <TableHead className="text-[#94A3B8] text-xs">Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {debtsData.filter(d => d.debt_type === 'payable').slice(0, 10).map((debt, i) => (
+                            <TableRow key={i} className="border-white/5">
+                              <TableCell className="text-white text-sm">{debt.party_name}</TableCell>
+                              <TableCell className="text-red-400 font-mono text-right text-sm">
+                                ${(debt.outstanding_balance || (debt.amount - (debt.total_paid || 0))).toLocaleString()}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={`text-xs ${
+                                  debt.calculated_status === 'overdue' ? 'bg-red-500/20 text-red-400' :
+                                  debt.calculated_status === 'fully_paid' ? 'bg-emerald-500/20 text-emerald-400' :
+                                  debt.calculated_status === 'partially_paid' ? 'bg-blue-500/20 text-blue-400' :
+                                  'bg-amber-500/20 text-amber-400'
+                                }`}>
+                                  {debt.calculated_status?.replace('_', ' ')}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {debtsData.filter(d => d.debt_type === 'payable').length === 0 && (
+                            <TableRow><TableCell colSpan={3} className="text-center text-[#94A3B8]">No payables</TableCell></TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
+        </TabsContent>
       </Tabs>
     </div>
   );
