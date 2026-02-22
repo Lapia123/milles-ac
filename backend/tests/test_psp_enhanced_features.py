@@ -42,6 +42,14 @@ def auth_headers(auth_token):
         "Content-Type": "application/json"
     }
 
+@pytest.fixture(scope="module")
+def form_headers(auth_token):
+    """Get headers for form data requests (no content-type, let requests set it)"""
+    return {
+        "Authorization": f"Bearer {auth_token}"
+    }
+
+
 class TestPSPSettings:
     """Test PSP settings with chargeback_rate and holding_days"""
     
@@ -152,12 +160,13 @@ class TestPSPSettings:
 class TestPSPTransactionCharges:
     """Test recording chargeback and extra charges on transactions"""
     
-    def test_create_transaction_with_psp_holding_and_release_date(self, auth_headers):
+    def test_create_transaction_with_psp_holding_and_release_date(self, form_headers):
         """New PSP transactions should have holding_days and holding_release_date"""
+        # Use form data for transaction creation
         tx_data = {
             "client_id": TEST_CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": 1000,
+            "amount": "1000",
             "currency": "USD",
             "destination_type": "psp",
             "psp_id": TEST_PSP_ID,
@@ -166,8 +175,8 @@ class TestPSPTransactionCharges:
         
         response = requests.post(
             f"{BASE_URL}/api/transactions",
-            headers=auth_headers,
-            json=tx_data
+            headers=form_headers,
+            data=tx_data
         )
         assert response.status_code == 200, f"Failed to create transaction: {response.text}"
         tx = response.json()
@@ -178,29 +187,33 @@ class TestPSPTransactionCharges:
         
         assert "psp_holding_release_date" in tx, "Transaction missing psp_holding_release_date"
         assert tx["psp_holding_release_date"], "psp_holding_release_date should not be null"
+        
+        assert "psp_chargeback_rate" in tx, "Transaction missing psp_chargeback_rate"
+        assert tx["psp_chargeback_rate"] == 3, f"Expected chargeback_rate=3, got {tx['psp_chargeback_rate']}"
+        
         print(f"Transaction has holding_days={tx['psp_holding_days']}, release_date={tx['psp_holding_release_date']}")
         
-        # Store for later tests
         return tx["transaction_id"]
     
-    def test_record_charges_on_transaction(self, auth_headers):
+    def test_record_charges_on_transaction(self, auth_headers, form_headers):
         """Record chargeback and extra charges on a PSP transaction"""
-        # First create a test transaction
+        # First create a test transaction using form data
         tx_data = {
             "client_id": TEST_CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": 2000,
+            "amount": "2000",
             "currency": "USD",
             "destination_type": "psp",
             "psp_id": TEST_PSP_ID,
             "reference": f"TEST_CHARGES_{uuid.uuid4().hex[:8]}"
         }
         
-        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=auth_headers, json=tx_data)
+        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=form_headers, data=tx_data)
         assert create_resp.status_code == 200, f"Create failed: {create_resp.text}"
         tx_id = create_resp.json()["transaction_id"]
+        commission = create_resp.json().get("psp_commission_amount", 200)  # 10% of 2000
         
-        # Record charges
+        # Record charges using JSON
         charges_data = {
             "chargeback_amount": 50.00,
             "extra_charges": 25.00,
@@ -231,11 +244,8 @@ class TestPSPTransactionCharges:
         return tx_id
     
     def test_cannot_update_charges_on_settled_transaction(self, auth_headers):
-        """Should not be able to update charges on settled transaction"""
-        # This test depends on having a settled transaction
-        # We'll create a transaction, settle it, then try to update charges
-        
-        # First get pending transactions
+        """Should verify charges update works on pending transactions"""
+        # Get pending transactions
         pending_resp = requests.get(
             f"{BASE_URL}/api/psp/{TEST_PSP_ID}/pending-transactions",
             headers=auth_headers
@@ -243,48 +253,50 @@ class TestPSPTransactionCharges:
         pending = pending_resp.json()
         
         if pending:
-            # Get an existing pending transaction to test with
+            # Get an existing pending transaction
             tx_id = pending[0]["transaction_id"]
             
-            # Verify it's not settled (shouldn't fail)
+            # Verify we can update charges on pending transaction
             charges_data = {
                 "chargeback_amount": 10.00,
                 "extra_charges": 5.00
             }
             
-            # This should work since it's not settled
             response = requests.put(
                 f"{BASE_URL}/api/psp/transactions/{tx_id}/charges",
                 headers=auth_headers,
                 json=charges_data
             )
-            # Reset charges if succeeded
-            if response.status_code == 200:
-                requests.put(
-                    f"{BASE_URL}/api/psp/transactions/{tx_id}/charges",
-                    headers=auth_headers,
-                    json={"chargeback_amount": 0, "extra_charges": 0}
-                )
+            
+            # Should work since it's not settled
+            assert response.status_code == 200, f"Should be able to update charges: {response.text}"
+            
+            # Reset charges
+            requests.put(
+                f"{BASE_URL}/api/psp/transactions/{tx_id}/charges",
+                headers=auth_headers,
+                json={"chargeback_amount": 0, "extra_charges": 0}
+            )
             print(f"Verified charges can be updated on pending transaction")
 
 
 class TestRecordPaymentReceived:
     """Test record payment received functionality"""
     
-    def test_record_payment_updates_treasury(self, auth_headers):
+    def test_record_payment_updates_treasury(self, auth_headers, form_headers):
         """Recording payment should update treasury balance"""
         # Create a test transaction
         tx_data = {
             "client_id": TEST_CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": 1500,
+            "amount": "1500",
             "currency": "USD",
             "destination_type": "psp",
             "psp_id": TEST_PSP_ID,
             "reference": f"TEST_PAYMENT_{uuid.uuid4().hex[:8]}"
         }
         
-        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=auth_headers, json=tx_data)
+        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=form_headers, data=tx_data)
         assert create_resp.status_code == 200, f"Create failed: {create_resp.text}"
         tx = create_resp.json()
         tx_id = tx["transaction_id"]
@@ -320,31 +332,29 @@ class TestRecordPaymentReceived:
         ).json()
         balance_after = treasury_after["balance"]
         
-        # ENBD is AED currency, so amount is in AED
-        # The balance increase should be the actual_amount_received
+        # Treasury balance should increase
         balance_increase = balance_after - balance_before
         assert balance_increase > 0, f"Treasury balance should increase, but diff={balance_increase}"
         print(f"Treasury balance increased by {balance_increase} (currency: {treasury_after['currency']})")
     
-    def test_record_payment_with_variance(self, auth_headers):
+    def test_record_payment_with_variance(self, auth_headers, form_headers):
         """Record payment with variance (actual != expected)"""
         # Create a test transaction
         tx_data = {
             "client_id": TEST_CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": 1000,
+            "amount": "1000",
             "currency": "USD",
             "destination_type": "psp",
             "psp_id": TEST_PSP_ID,
             "reference": f"TEST_VARIANCE_{uuid.uuid4().hex[:8]}"
         }
         
-        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=auth_headers, json=tx_data)
+        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=form_headers, data=tx_data)
         assert create_resp.status_code == 200
         tx_id = create_resp.json()["transaction_id"]
+        net_amount = create_resp.json().get("psp_net_amount", 900)  # Should be 1000 - 10% = 900
         
-        # Expected net is 900 (1000 - 10% commission)
-        expected_net = 900
         # Record with different actual amount
         actual_received = 880  # $20 less than expected
         
@@ -358,27 +368,28 @@ class TestRecordPaymentReceived:
         # Verify variance recorded
         assert tx.get("psp_actual_amount_received") == actual_received
         variance = tx.get("psp_settlement_variance")
-        assert variance == actual_received - expected_net, f"Expected variance={actual_received - expected_net}, got {variance}"
+        expected_variance = actual_received - net_amount
+        assert variance == expected_variance, f"Expected variance={expected_variance}, got {variance}"
         print(f"Variance recorded: ${variance}")
 
 
 class TestNetSettlementCalculation:
     """Test net settlement calculation: Gross - Commission - Chargeback - Extra Charges"""
     
-    def test_net_calculation_with_all_deductions(self, auth_headers):
+    def test_net_calculation_with_all_deductions(self, auth_headers, form_headers):
         """Verify net = Gross - Commission - Chargeback - Extra"""
         # Create transaction
         tx_data = {
             "client_id": TEST_CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": 5000,
+            "amount": "5000",
             "currency": "USD",
             "destination_type": "psp",
             "psp_id": TEST_PSP_ID,
             "reference": f"TEST_NET_{uuid.uuid4().hex[:8]}"
         }
         
-        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=auth_headers, json=tx_data)
+        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=form_headers, data=tx_data)
         assert create_resp.status_code == 200
         tx_id = create_resp.json()["transaction_id"]
         commission = create_resp.json().get("psp_commission_amount", 500)  # 10% of 5000
@@ -424,20 +435,20 @@ class TestNetSettlementCalculation:
 class TestTreasuryTransactionRecord:
     """Test treasury transaction record created on payment"""
     
-    def test_treasury_transaction_created_on_payment(self, auth_headers):
+    def test_treasury_transaction_created_on_payment(self, auth_headers, form_headers):
         """Verify treasury transaction is created when payment is recorded"""
         # Create transaction
         tx_data = {
             "client_id": TEST_CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": 800,
+            "amount": "800",
             "currency": "USD",
             "destination_type": "psp",
             "psp_id": TEST_PSP_ID,
             "reference": f"TEST_TREASURY_TX_{uuid.uuid4().hex[:8]}"
         }
         
-        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=auth_headers, json=tx_data)
+        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=form_headers, data=tx_data)
         assert create_resp.status_code == 200
         tx_id = create_resp.json()["transaction_id"]
         
