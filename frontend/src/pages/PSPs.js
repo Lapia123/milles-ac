@@ -754,43 +754,62 @@ export default function PSPs() {
                           <TableRow className="border-white/10 hover:bg-transparent">
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Reference</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Client</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Amount</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Gross</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Commission</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Net Amount</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Chargeback</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Extra</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Net</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Expected</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Action</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {pendingTransactions.map((tx) => {
                             const overdue = isOverdue(tx.psp_expected_settlement_date);
+                            const netAmount = (tx.amount || 0) - (tx.psp_commission_amount || 0) - (tx.psp_chargeback_amount || 0) - (tx.psp_extra_charges || 0);
                             return (
                               <TableRow key={tx.transaction_id} className={`border-white/5 hover:bg-white/5 ${overdue ? 'bg-red-500/5' : ''}`}>
-                                <TableCell className="font-mono text-white">{tx.reference}</TableCell>
-                                <TableCell className="text-white">{tx.client_name}</TableCell>
+                                <TableCell className="font-mono text-white text-xs">{tx.reference}</TableCell>
+                                <TableCell className="text-white text-sm">{tx.client_name}</TableCell>
                                 <TableCell className="font-mono text-white">${tx.amount?.toLocaleString()}</TableCell>
-                                <TableCell className="font-mono text-[#C5C6C7]">
-                                  ${tx.psp_commission_amount?.toLocaleString()} 
-                                  <span className="text-xs ml-1">({tx.psp_commission_paid_by === 'client' ? 'Client' : 'Broker'})</span>
+                                <TableCell className="font-mono text-yellow-400">
+                                  -${(tx.psp_commission_amount || 0).toLocaleString()}
                                 </TableCell>
-                                <TableCell className="font-mono text-green-400">${tx.psp_net_amount?.toLocaleString()}</TableCell>
+                                <TableCell className="font-mono text-red-400">
+                                  {tx.psp_chargeback_amount ? `-$${tx.psp_chargeback_amount.toLocaleString()}` : '-'}
+                                </TableCell>
+                                <TableCell className="font-mono text-red-400">
+                                  {tx.psp_extra_charges ? `-$${tx.psp_extra_charges.toLocaleString()}` : '-'}
+                                </TableCell>
+                                <TableCell className="font-mono text-[#66FCF1] font-bold">${netAmount.toLocaleString()}</TableCell>
                                 <TableCell>
-                                  <span className={`flex items-center gap-1 ${overdue ? 'text-red-400' : 'text-[#C5C6C7]'}`}>
+                                  <span className={`flex items-center gap-1 text-xs ${overdue ? 'text-red-400' : 'text-[#C5C6C7]'}`}>
                                     {overdue && <AlertTriangle className="w-3 h-3" />}
                                     {formatDate(tx.psp_expected_settlement_date)}
                                   </span>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  {isAdmin && (
+                                  <div className="flex items-center justify-end gap-1">
                                     <Button
                                       size="sm"
-                                      onClick={() => { setSelectedTransaction(tx); setSettleDialogOpen(true); }}
-                                      className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
-                                      data-testid={`settle-${tx.transaction_id}`}
+                                      variant="ghost"
+                                      onClick={() => openChargesDialog(tx)}
+                                      className="text-[#C5C6C7] hover:text-white hover:bg-white/10 px-2"
+                                      title="Record Charges"
                                     >
-                                      <CheckCircle2 className="w-3 h-3 mr-1" /> Settle
+                                      <Receipt className="w-3 h-3" />
                                     </Button>
-                                  )}
+                                    {isAdmin && (
+                                      <Button
+                                        size="sm"
+                                        onClick={() => { setSelectedTransaction(tx); setSettleDialogOpen(true); }}
+                                        className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 px-2"
+                                        data-testid={`settle-${tx.transaction_id}`}
+                                      >
+                                        <CheckCircle2 className="w-3 h-3" />
+                                      </Button>
+                                    )}
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             );
