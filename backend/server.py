@@ -981,6 +981,12 @@ async def get_treasury_history(
     # Get treasury-specific transactions (these are the canonical records with proper currency conversion)
     treasury_txs = await db.treasury_transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
     
+    # Adjust amounts for display - outflows should be negative
+    outflow_types = ["debt_payment", "withdrawal", "transfer_out", "expense"]
+    for ttx in treasury_txs:
+        if ttx.get("transaction_type") in outflow_types:
+            ttx["amount"] = -abs(ttx.get("amount", 0))
+    
     # Get transaction IDs that already have treasury transaction records
     existing_tx_ids = set()
     for ttx in treasury_txs:
