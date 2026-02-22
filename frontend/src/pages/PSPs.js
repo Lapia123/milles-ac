@@ -651,6 +651,18 @@ export default function PSPs() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[#C5C6C7] text-sm flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" /> Chargeback
+                    </span>
+                    <span className="text-white font-mono">{psp.chargeback_rate || 0}%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#C5C6C7] text-sm flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> Holding
+                    </span>
+                    <span className="text-white font-mono">{psp.holding_days || 0} days</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#C5C6C7] text-sm flex items-center gap-1">
                       <Calendar className="w-3 h-3" /> Settlement
                     </span>
                     <span className="text-white font-mono">T+{psp.settlement_days}</span>
