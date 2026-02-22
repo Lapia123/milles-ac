@@ -1435,6 +1435,54 @@ async def get_psp_summary(user: dict = Depends(get_current_user)):
     
     return result
 
+# Model for PSP transaction charges
+class PSPTransactionCharges(BaseModel):
+    chargeback_amount: float = 0  # Chargeback amount for this transaction
+    extra_charges: float = 0  # Extra charges for this transaction
+    charges_description: Optional[str] = None  # Description of charges
+
+@api_router.put("/psp/transactions/{transaction_id}/charges")
+async def update_psp_transaction_charges(
+    transaction_id: str,
+    charges: PSPTransactionCharges,
+    user: dict = Depends(get_current_user)
+):
+    """Record chargeback and extra charges on a PSP transaction"""
+    tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if tx.get("destination_type") != "psp":
+        raise HTTPException(status_code=400, detail="Transaction is not a PSP transaction")
+    
+    if tx.get("settled"):
+        raise HTTPException(status_code=400, detail="Cannot update charges on settled transaction")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Calculate new net amount
+    gross_amount = tx.get("amount", 0)
+    commission = tx.get("psp_commission_amount", 0)
+    new_net = gross_amount - commission - charges.chargeback_amount - charges.extra_charges
+    
+    updates = {
+        "psp_chargeback_amount": charges.chargeback_amount,
+        "psp_extra_charges": charges.extra_charges,
+        "psp_charges_description": charges.charges_description,
+        "psp_total_deductions": commission + charges.chargeback_amount + charges.extra_charges,
+        "psp_net_amount": new_net,
+        "charges_updated_at": now.isoformat(),
+        "charges_updated_by": user["user_id"],
+        "charges_updated_by_name": user["name"]
+    }
+    
+    await db.transactions.update_one(
+        {"transaction_id": transaction_id},
+        {"$set": updates}
+    )
+    
+    return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+
 # Mark single PSP transaction as settled
 @api_router.post("/psp/transactions/{transaction_id}/settle")
 async def settle_psp_transaction(
