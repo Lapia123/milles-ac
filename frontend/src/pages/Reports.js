@@ -43,6 +43,9 @@ import {
   RefreshCw,
   Filter,
   Banknote,
+  Receipt,
+  Clock,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   AreaChart,
