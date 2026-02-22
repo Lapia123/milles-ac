@@ -1483,14 +1483,150 @@ async def update_psp_transaction_charges(
     
     return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
 
-# Mark single PSP transaction as settled
+# Mark single PSP transaction as awaiting settlement (holding period)
+@api_router.post("/psp/transactions/{transaction_id}/mark-awaiting")
+async def mark_psp_transaction_awaiting(
+    transaction_id: str, 
+    user: dict = Depends(require_admin)
+):
+    """Mark a PSP transaction as awaiting settlement (in holding period)"""
+    tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if tx.get("destination_type") != "psp":
+        raise HTTPException(status_code=400, detail="Transaction is not a PSP transaction")
+    
+    if tx.get("settled"):
+        raise HTTPException(status_code=400, detail="Transaction already settled")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Get PSP info for holding days
+    psp = await db.psps.find_one({"psp_id": tx.get("psp_id")}, {"_id": 0})
+    holding_days = psp.get("holding_days", 0) if psp else 0
+    release_date = (now + timedelta(days=holding_days)).isoformat() if holding_days > 0 else now.isoformat()
+    
+    # Mark transaction as awaiting settlement
+    await db.transactions.update_one(
+        {"transaction_id": transaction_id},
+        {"$set": {
+            "settlement_status": "awaiting",
+            "psp_holding_release_date": release_date,
+            "awaiting_marked_at": now.isoformat(),
+            "awaiting_marked_by": user["user_id"],
+            "awaiting_marked_by_name": user["name"]
+        }}
+    )
+    
+    return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+
+
+# Record actual payment received from PSP (completes settlement)
+@api_router.post("/psp/transactions/{transaction_id}/record-payment")
+async def record_psp_payment(
+    transaction_id: str, 
+    destination_account_id: Optional[str] = None,
+    actual_amount_received: Optional[float] = None,
+    user: dict = Depends(require_admin)
+):
+    """Record actual payment received from PSP and transfer to treasury"""
+    tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if tx.get("destination_type") != "psp":
+        raise HTTPException(status_code=400, detail="Transaction is not a PSP transaction")
+    
+    if tx.get("settled"):
+        raise HTTPException(status_code=400, detail="Transaction already settled")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Get PSP info for destination
+    psp = await db.psps.find_one({"psp_id": tx.get("psp_id")}, {"_id": 0})
+    dest_account_id = destination_account_id or (psp.get("settlement_destination_id") if psp else None)
+    
+    if not dest_account_id:
+        raise HTTPException(status_code=400, detail="No destination account specified")
+    
+    # Get destination account
+    dest = await db.treasury_accounts.find_one({"account_id": dest_account_id}, {"_id": 0})
+    if not dest:
+        raise HTTPException(status_code=404, detail="Destination treasury account not found")
+    
+    # Amount to settle - use actual amount if provided, otherwise calculated net
+    expected_amount = tx.get("psp_net_amount", tx.get("amount", 0))
+    settle_amount = actual_amount_received if actual_amount_received is not None else expected_amount
+    variance = settle_amount - expected_amount if actual_amount_received is not None else 0
+    
+    # Update treasury balance
+    await db.treasury_accounts.update_one(
+        {"account_id": dest_account_id},
+        {"$inc": {"balance": settle_amount}, "$set": {"updated_at": now.isoformat()}}
+    )
+    
+    # Add treasury transaction record
+    treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+    treasury_tx = {
+        "treasury_transaction_id": treasury_tx_id,
+        "account_id": dest_account_id,
+        "account_name": dest["account_name"],
+        "transaction_type": "psp_settlement",
+        "amount": settle_amount,
+        "currency": dest.get("currency", "USD"),
+        "reference": f"PSP Settlement - {tx.get('reference', transaction_id)}",
+        "description": f"Settlement from {tx.get('psp_name', 'PSP')} - Expected: ${expected_amount}, Received: ${settle_amount}",
+        "related_transaction_id": transaction_id,
+        "psp_id": tx.get("psp_id"),
+        "psp_name": tx.get("psp_name"),
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    await db.treasury_transactions.insert_one(treasury_tx)
+    
+    # Mark transaction as settled
+    await db.transactions.update_one(
+        {"transaction_id": transaction_id},
+        {"$set": {
+            "settled": True,
+            "settlement_status": "completed",
+            "settled_at": now.isoformat(),
+            "settled_by": user["user_id"],
+            "settled_by_name": user["name"],
+            "settlement_destination_id": dest_account_id,
+            "settlement_destination_name": dest["account_name"],
+            "psp_actual_amount_received": settle_amount,
+            "psp_settlement_variance": variance
+        }}
+    )
+    
+    # Update PSP stats
+    if psp:
+        commission_amount = tx.get("psp_commission_amount", 0)
+        await db.psps.update_one(
+            {"psp_id": tx.get("psp_id")},
+            {
+                "$inc": {
+                    "total_volume": tx.get("amount", 0),
+                    "total_commission": commission_amount,
+                    "pending_settlement": -expected_amount
+                }
+            }
+        )
+    
+    return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+
+
+# Legacy endpoint - Mark single PSP transaction as settled (immediate)
 @api_router.post("/psp/transactions/{transaction_id}/settle")
 async def settle_psp_transaction(
     transaction_id: str, 
     destination_account_id: Optional[str] = None,
     user: dict = Depends(require_admin)
 ):
-    """Mark a single PSP transaction as settled and transfer to treasury"""
+    """Mark a single PSP transaction as settled and transfer to treasury (immediate settlement)"""
     tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
@@ -1526,6 +1662,26 @@ async def settle_psp_transaction(
         {"account_id": dest_account_id},
         {"$inc": {"balance": settle_amount}, "$set": {"updated_at": now.isoformat()}}
     )
+    
+    # Add treasury transaction record
+    treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+    treasury_tx = {
+        "treasury_transaction_id": treasury_tx_id,
+        "account_id": dest_account_id,
+        "account_name": dest["account_name"],
+        "transaction_type": "psp_settlement",
+        "amount": settle_amount,
+        "currency": dest.get("currency", "USD"),
+        "reference": f"PSP Settlement - {tx.get('reference', transaction_id)}",
+        "description": f"Settlement from {tx.get('psp_name', 'PSP')}",
+        "related_transaction_id": transaction_id,
+        "psp_id": tx.get("psp_id"),
+        "psp_name": tx.get("psp_name"),
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    await db.treasury_transactions.insert_one(treasury_tx)
     
     # Mark transaction as settled
     await db.transactions.update_one(
