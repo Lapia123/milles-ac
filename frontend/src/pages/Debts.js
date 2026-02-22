@@ -497,80 +497,75 @@ export default function Debts() {
         </Dialog>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Section - Compact Layout */}
       {summary && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatCard
-            title="Total Receivables"
-            value={`$${(summary.receivables?.outstanding || 0).toLocaleString()}`}
-            subtitle={`${summary.receivables?.count || 0} records`}
-            icon={ArrowDownLeft}
-            color="green"
-          />
-          <StatCard
-            title="Total Payables"
-            value={`$${(summary.payables?.outstanding || 0).toLocaleString()}`}
-            subtitle={`${summary.payables?.count || 0} records`}
-            icon={ArrowUpRight}
-            color="red"
-          />
-          <StatCard
-            title="Net Position"
-            value={`$${Math.abs(summary.net_position || 0).toLocaleString()}`}
-            subtitle={summary.net_position >= 0 ? 'Net Receivable' : 'Net Payable'}
-            icon={DollarSign}
-            color={summary.net_position >= 0 ? 'green' : 'red'}
-          />
-          <StatCard
-            title="Overdue Amount"
-            value={`$${((summary.receivables?.overdue_amount || 0) + (summary.payables?.overdue_amount || 0)).toLocaleString()}`}
-            subtitle={`${(summary.receivables?.overdue_count || 0) + (summary.payables?.overdue_count || 0)} overdue`}
-            icon={AlertTriangle}
-            color="yellow"
-          />
-          <StatCard
-            title="Accrued Interest"
-            value={`$${((summary.receivables?.accrued_interest || 0) + (summary.payables?.accrued_interest || 0)).toLocaleString()}`}
-            icon={Percent}
-            color="purple"
-          />
-        </div>
-      )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Main Summary Card */}
+          <Card className="bg-[#1E293B] border-white/5 lg:col-span-2">
+            <CardContent className="p-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="text-center p-3 bg-[#0F172A] rounded-lg">
+                  <p className="text-xs text-[#94A3B8] uppercase mb-1">Receivables</p>
+                  <p className="text-xl font-bold font-mono text-emerald-400">${(summary.receivables?.outstanding || 0).toLocaleString()}</p>
+                  <p className="text-xs text-[#94A3B8]">{summary.receivables?.count || 0} records</p>
+                </div>
+                <div className="text-center p-3 bg-[#0F172A] rounded-lg">
+                  <p className="text-xs text-[#94A3B8] uppercase mb-1">Payables</p>
+                  <p className="text-xl font-bold font-mono text-red-400">${(summary.payables?.outstanding || 0).toLocaleString()}</p>
+                  <p className="text-xs text-[#94A3B8]">{summary.payables?.count || 0} records</p>
+                </div>
+                <div className="text-center p-3 bg-[#0F172A] rounded-lg">
+                  <p className="text-xs text-[#94A3B8] uppercase mb-1">Net Position</p>
+                  <p className={`text-xl font-bold font-mono ${summary.net_position >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    ${Math.abs(summary.net_position || 0).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-[#94A3B8]">{summary.net_position >= 0 ? 'Net Receivable' : 'Net Payable'}</p>
+                </div>
+                <div className="text-center p-3 bg-[#0F172A] rounded-lg">
+                  <p className="text-xs text-[#94A3B8] uppercase mb-1">Overdue</p>
+                  <p className="text-xl font-bold font-mono text-amber-400">
+                    ${((summary.receivables?.overdue_amount || 0) + (summary.payables?.overdue_amount || 0)).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-[#94A3B8]">{(summary.receivables?.overdue_count || 0) + (summary.payables?.overdue_count || 0)} overdue</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Aging Summary */}
-      {summary?.aging && (
-        <Card className="bg-[#1E293B] border-white/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-              <Clock className="w-5 h-5 text-amber-400" />
-              Aging Summary (Outstanding)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-5 gap-4">
-              <div className="p-3 bg-[#0F172A] rounded-lg text-center">
-                <p className="text-xs text-[#94A3B8] mb-1">Current</p>
-                <p className="text-lg font-mono text-emerald-400">${(summary.aging.current || 0).toLocaleString()}</p>
-              </div>
-              <div className="p-3 bg-[#0F172A] rounded-lg text-center">
-                <p className="text-xs text-[#94A3B8] mb-1">1-30 Days</p>
-                <p className="text-lg font-mono text-amber-400">${(summary.aging.days_1_30 || 0).toLocaleString()}</p>
-              </div>
-              <div className="p-3 bg-[#0F172A] rounded-lg text-center">
-                <p className="text-xs text-[#94A3B8] mb-1">31-60 Days</p>
-                <p className="text-lg font-mono text-orange-400">${(summary.aging.days_31_60 || 0).toLocaleString()}</p>
-              </div>
-              <div className="p-3 bg-[#0F172A] rounded-lg text-center">
-                <p className="text-xs text-[#94A3B8] mb-1">61-90 Days</p>
-                <p className="text-lg font-mono text-red-400">${(summary.aging.days_61_90 || 0).toLocaleString()}</p>
-              </div>
-              <div className="p-3 bg-[#0F172A] rounded-lg text-center">
-                <p className="text-xs text-[#94A3B8] mb-1">90+ Days</p>
-                <p className="text-lg font-mono text-red-500 font-bold">${(summary.aging.days_over_90 || 0).toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          {/* Aging Summary - Compact */}
+          {summary?.aging && (
+            <Card className="bg-[#1E293B] border-white/5">
+              <CardContent className="p-4">
+                <p className="text-xs text-[#94A3B8] uppercase mb-3 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-amber-400" />
+                  Aging Summary
+                </p>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-[#94A3B8]">Current</span>
+                    <span className="text-sm font-mono text-emerald-400">${(summary.aging.current || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-[#94A3B8]">1-30 Days</span>
+                    <span className="text-sm font-mono text-amber-400">${(summary.aging.days_1_30 || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-[#94A3B8]">31-60 Days</span>
+                    <span className="text-sm font-mono text-orange-400">${(summary.aging.days_31_60 || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-[#94A3B8]">61-90 Days</span>
+                    <span className="text-sm font-mono text-red-400">${(summary.aging.days_61_90 || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-[#94A3B8]">90+ Days</span>
+                    <span className="text-sm font-mono text-red-500 font-bold">${(summary.aging.days_over_90 || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* Tabs */}
