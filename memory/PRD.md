@@ -141,6 +141,17 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 
 ## Recent Updates
 
+### February 22, 2026 - PSP Enhanced Features
+**Implemented:**
+- PSP Settings: chargeback_rate (%) and holding_days fields
+- Per-transaction charges: chargeback_amount, extra_charges, charges_description
+- Holding release date tracking with status badges (Holding/Ready)
+- Record Payment Received with actual amount and variance tracking
+- Treasury integration: Balance updates on payment receipt
+- Treasury transaction record: Type 'psp_settlement' with full details
+- Net calculation: Gross - Commission - Chargeback - Extra Charges
+- Updated PSP UI with new columns and dialogs
+
 ### February 21, 2026 - Debt Management Module
 **Implemented:**
 - Full CRUD for debts (Receivables & Payables)
