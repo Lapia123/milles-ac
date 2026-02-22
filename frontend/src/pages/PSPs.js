@@ -832,22 +832,28 @@ export default function PSPs() {
                         <TableHeader>
                           <TableRow className="border-white/10 hover:bg-transparent">
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Settlement ID</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Gross Amount</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Gross</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Commission</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Net Amount</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Chargeback</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Extra</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Net</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Settled At</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {settlements.map((settlement) => (
                             <TableRow key={settlement.settlement_id} className="border-white/5 hover:bg-white/5">
-                              <TableCell className="font-mono text-white">{settlement.settlement_id}</TableCell>
+                              <TableCell className="font-mono text-white text-xs">{settlement.settlement_id}</TableCell>
                               <TableCell className="font-mono text-white">${settlement.gross_amount?.toLocaleString()}</TableCell>
-                              <TableCell className="font-mono text-[#C5C6C7]">${settlement.commission_amount?.toLocaleString()}</TableCell>
-                              <TableCell className="font-mono text-green-400">${settlement.net_amount?.toLocaleString()}</TableCell>
+                              <TableCell className="font-mono text-yellow-400">-${(settlement.commission_amount || 0).toLocaleString()}</TableCell>
+                              <TableCell className="font-mono text-red-400">
+                                {settlement.chargeback_amount ? `-$${settlement.chargeback_amount.toLocaleString()}` : '-'}
+                              </TableCell>
+                              <TableCell className="font-mono text-red-400">
+                                {settlement.extra_charges ? `-$${settlement.extra_charges.toLocaleString()}` : '-'}
+                              </TableCell>
+                              <TableCell className="font-mono text-[#66FCF1] font-bold">${settlement.net_amount?.toLocaleString()}</TableCell>
                               <TableCell>{getStatusBadge(settlement.status)}</TableCell>
-                              <TableCell className="text-[#C5C6C7]">{formatDate(settlement.settled_at)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
