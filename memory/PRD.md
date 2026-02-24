@@ -261,6 +261,13 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
   - ✅ 3:00 AM auto-send via APScheduler
   - ✅ Test email and Send Now buttons
   - ✅ Email history/logs
+- ✅ Reconciliation Module:
+  - ✅ Bank/Treasury Reconciliation (CSV/Excel upload)
+  - ✅ PSP Settlement Reconciliation (expected vs actual)
+  - ✅ Client Account Reconciliation (balance verification)
+  - ✅ Vendor Commission Reconciliation
+  - ✅ Summary dashboard with discrepancy alerts
+  - ✅ Detailed transaction drill-down views
 
 ## Future/Backlog
 - P2: Advanced Reporting (additional custom reports)
