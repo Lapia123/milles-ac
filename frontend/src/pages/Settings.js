@@ -358,7 +358,7 @@ export default function Settings() {
         <h1 className="text-4xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
           Settings
         </h1>
-        <p className="text-[#C5C6C7]">System settings and user management</p>
+        <p className="text-[#C5C6C7]">System settings, user management, and email reports</p>
       </div>
 
       {/* Current User Info */}
@@ -389,200 +389,429 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      {/* User Management - Admin Only */}
+      {/* Admin-Only Settings with Tabs */}
       {isCurrentUserAdmin ? (
-        <Card className="bg-[#1F2833] border-white/5">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-                <Users className="w-5 h-5 text-[#66FCF1]" />
-                User Management
-              </CardTitle>
-              <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-                <DialogTrigger asChild>
-                  <Button
-                    className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm text-sm"
-                    data-testid="add-user-btn"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add User
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
-                      {selectedUser ? 'Edit User' : 'Add New User'}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Name</Label>
-                      <Input
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
-                        data-testid="user-name-input"
-                        required
-                      />
-                    </div>
-                    {!selectedUser && (
-                      <>
-                        <div className="space-y-2">
-                          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Email</Label>
-                          <Input
-                            type="email"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
-                            data-testid="user-email-input"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Password</Label>
-                          <Input
-                            type="password"
-                            value={formData.password}
-                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                            className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
-                            data-testid="user-password-input"
-                            required
-                          />
-                        </div>
-                      </>
-                    )}
-                    <div className="space-y-2">
-                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Role</Label>
-                      <Select
-                        value={formData.role}
-                        onValueChange={(value) => setFormData({ ...formData, role: value })}
+        <Tabs defaultValue="users" className="w-full">
+          <TabsList className="bg-[#0B0C10] border border-white/10 mb-4">
+            <TabsTrigger value="users" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+              <Users className="w-4 h-4 mr-2" />
+              Users
+            </TabsTrigger>
+            <TabsTrigger value="email" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+              <Mail className="w-4 h-4 mr-2" />
+              Email Reports
+            </TabsTrigger>
+          </TabsList>
+          
+          {/* Users Tab */}
+          <TabsContent value="users">
+            <Card className="bg-[#1F2833] border-white/5">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Users className="w-5 h-5 text-[#66FCF1]" />
+                    User Management
+                  </CardTitle>
+                  <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+                    <DialogTrigger asChild>
+                      <Button
+                        className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm text-sm"
+                        data-testid="add-user-btn"
                       >
-                        <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="user-role-select">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#1F2833] border-white/10">
-                          {roleOptions.map((role) => (
-                            <SelectItem key={role.value} value={role.value} className="text-white hover:bg-white/5">
-                              {role.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add User
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg">
+                      <DialogHeader>
+                        <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+                          {selectedUser ? 'Edit User' : 'Add New User'}
+                        </DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Name</Label>
+                          <Input
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                            data-testid="user-name-input"
+                            required
+                          />
+                        </div>
+                        {!selectedUser && (
+                          <>
+                            <div className="space-y-2">
+                              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Email</Label>
+                              <Input
+                                type="email"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                                data-testid="user-email-input"
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Password</Label>
+                              <Input
+                                type="password"
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                                data-testid="user-password-input"
+                                required
+                              />
+                            </div>
+                          </>
+                        )}
+                        <div className="space-y-2">
+                          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Role</Label>
+                          <Select
+                            value={formData.role}
+                            onValueChange={(value) => setFormData({ ...formData, role: value })}
+                          >
+                            <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="user-role-select">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#1F2833] border-white/10">
+                              {roleOptions.map((role) => (
+                                <SelectItem key={role.value} value={role.value} className="text-white hover:bg-white/5">
+                                  {role.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {selectedUser && (
+                          <div className="flex items-center justify-between p-3 bg-[#0B0C10] rounded-sm border border-white/5">
+                            <Label className="text-[#C5C6C7]">Active</Label>
+                            <Switch
+                              checked={formData.is_active}
+                              onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                              data-testid="user-active-switch"
+                            />
+                          </div>
+                        )}
+                        <div className="flex justify-end gap-3 pt-4">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => { setIsDialogOpen(false); resetForm(); }}
+                            className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="submit"
+                            className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+                            data-testid="save-user-btn"
+                          >
+                            {selectedUser ? 'Update' : 'Create'}
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ScrollArea className="h-[400px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-white/10 hover:bg-transparent">
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">User</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Email</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Role</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {loading ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8">
+                            <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mx-auto" />
+                          </TableCell>
+                        </TableRow>
+                      ) : users.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-[#C5C6C7]">
+                            No users found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        users.map((userItem) => (
+                          <TableRow key={userItem.user_id} className="border-white/5 hover:bg-white/5">
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-[#66FCF1]/10 rounded-full flex items-center justify-center">
+                                  {userItem.picture ? (
+                                    <img src={userItem.picture} alt={userItem.name} className="w-10 h-10 rounded-full" />
+                                  ) : (
+                                    <span className="text-[#66FCF1] font-bold text-sm">{userItem.name?.charAt(0) || 'U'}</span>
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-white font-medium">{userItem.name}</p>
+                                  <p className="text-xs text-[#C5C6C7] font-mono">{userItem.user_id}</p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-white font-mono">{userItem.email}</TableCell>
+                            <TableCell>{getRoleBadge(userItem.role)}</TableCell>
+                            <TableCell>
+                              <Badge className={`${userItem.is_active !== false ? 'status-approved' : 'status-rejected'} text-xs uppercase`}>
+                                {userItem.is_active !== false ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-[#C5C6C7] hover:text-white hover:bg-white/5" data-testid={`user-actions-${userItem.user_id}`}>
+                                    <MoreVertical className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-[#1F2833] border-white/10">
+                                  <DropdownMenuItem onClick={() => handleEdit(userItem)} className="text-white hover:bg-white/5 cursor-pointer">
+                                    <Edit className="w-4 h-4 mr-2" /> Edit
+                                  </DropdownMenuItem>
+                                  {userItem.user_id !== user?.user_id && (
+                                    <DropdownMenuItem onClick={() => handleDelete(userItem.user_id)} className="text-red-400 hover:bg-white/5 cursor-pointer">
+                                      <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          {/* Email Reports Tab */}
+          <TabsContent value="email">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* SMTP Settings Card */}
+              <Card className="bg-[#1F2833] border-white/5">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-[#66FCF1]" />
+                    Gmail SMTP Settings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Gmail Address</Label>
+                    <Input
+                      type="email"
+                      value={emailSettings.smtp_email}
+                      onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp_email: e.target.value }))}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      placeholder="reports@yourdomain.com"
+                      data-testid="smtp-email"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                      App Password {emailSettings.smtp_password_set && <span className="text-green-400">(Set)</span>}
+                    </Label>
+                    <Input
+                      type="password"
+                      value={emailSettings.smtp_password}
+                      onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp_password: e.target.value }))}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      placeholder={emailSettings.smtp_password_set ? "••••••••••••••••" : "xxxx xxxx xxxx xxxx"}
+                      data-testid="smtp-password"
+                    />
+                    <p className="text-xs text-[#C5C6C7]">
+                      <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-[#66FCF1] hover:underline">
+                        Get App Password from Google
+                      </a>
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleTestEmail}
+                    disabled={sendingTest || !emailSettings.smtp_email || (!emailSettings.smtp_password && !emailSettings.smtp_password_set)}
+                    variant="outline"
+                    className="w-full border-[#66FCF1]/30 text-[#66FCF1] hover:bg-[#66FCF1]/10"
+                    data-testid="test-email-btn"
+                  >
+                    {sendingTest ? (
+                      <div className="w-4 h-4 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mr-2" />
+                    ) : (
+                      <Send className="w-4 h-4 mr-2" />
+                    )}
+                    Send Test Email
+                  </Button>
+                </CardContent>
+              </Card>
+              
+              {/* Director Emails Card */}
+              <Card className="bg-[#1F2833] border-white/5">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Users className="w-5 h-5 text-[#66FCF1]" />
+                    Director Emails
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      type="email"
+                      value={newDirectorEmail}
+                      onChange={(e) => setNewDirectorEmail(e.target.value)}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      placeholder="director@company.com"
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addDirectorEmail())}
+                      data-testid="director-email-input"
+                    />
+                    <Button
+                      onClick={addDirectorEmail}
+                      className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E]"
+                      data-testid="add-director-btn"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    {emailSettings.director_emails.length === 0 ? (
+                      <p className="text-[#C5C6C7] text-sm text-center py-4">No directors added yet</p>
+                    ) : (
+                      emailSettings.director_emails.map((email, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-[#0B0C10] rounded-sm border border-white/5">
+                          <span className="text-white font-mono text-sm">{email}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeDirectorEmail(email)}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-6 w-6 p-0"
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Schedule Settings Card */}
+              <Card className="bg-[#1F2833] border-white/5">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-[#66FCF1]" />
+                    Daily Report Schedule
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-[#0B0C10] rounded-sm border border-white/5">
+                    <div>
+                      <Label className="text-white">Enable Daily Reports</Label>
+                      <p className="text-xs text-[#C5C6C7]">Auto-send reports to directors</p>
                     </div>
-                    {selectedUser && (
-                      <div className="flex items-center justify-between p-3 bg-[#0B0C10] rounded-sm border border-white/5">
-                        <Label className="text-[#C5C6C7]">Active</Label>
-                        <Switch
-                          checked={formData.is_active}
-                          onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                          data-testid="user-active-switch"
-                        />
+                    <Switch
+                      checked={emailSettings.report_enabled}
+                      onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, report_enabled: checked }))}
+                      data-testid="report-enabled-switch"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Report Time (UTC)</Label>
+                    <Input
+                      type="time"
+                      value={emailSettings.report_time}
+                      onChange={(e) => setEmailSettings(prev => ({ ...prev, report_time: e.target.value }))}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                      data-testid="report-time"
+                    />
+                    <p className="text-xs text-[#C5C6C7]">Currently set to: {emailSettings.report_time} UTC</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleSaveEmailSettings}
+                      disabled={savingEmail}
+                      className="flex-1 bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase"
+                      data-testid="save-email-settings-btn"
+                    >
+                      {savingEmail ? (
+                        <div className="w-4 h-4 border-2 border-[#0B0C10] border-t-transparent rounded-full animate-spin mr-2" />
+                      ) : (
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                      )}
+                      Save Settings
+                    </Button>
+                    <Button
+                      onClick={handleSendReportNow}
+                      disabled={sendingReport || emailSettings.director_emails.length === 0}
+                      variant="outline"
+                      className="border-[#66FCF1]/30 text-[#66FCF1] hover:bg-[#66FCF1]/10"
+                      data-testid="send-report-now-btn"
+                    >
+                      {sendingReport ? (
+                        <div className="w-4 h-4 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mr-2" />
+                      ) : (
+                        <FileText className="w-4 h-4 mr-2" />
+                      )}
+                      Send Now
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Email Logs Card */}
+              <Card className="bg-[#1F2833] border-white/5">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-[#66FCF1]" />
+                    Email History
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[250px]">
+                    {emailLogs.length === 0 ? (
+                      <p className="text-[#C5C6C7] text-sm text-center py-8">No emails sent yet</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {emailLogs.map((log, index) => (
+                          <div key={index} className="p-3 bg-[#0B0C10] rounded-sm border border-white/5">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs text-[#C5C6C7] uppercase">{log.type}</span>
+                              {log.status === 'sent' ? (
+                                <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">Sent</Badge>
+                              ) : (
+                                <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">Failed</Badge>
+                              )}
+                            </div>
+                            <p className="text-white text-sm">
+                              {log.recipients?.length > 0 ? `To: ${log.recipients.join(', ')}` : 'No recipients'}
+                            </p>
+                            <p className="text-xs text-[#C5C6C7] mt-1">
+                              {new Date(log.sent_at || log.attempted_at).toLocaleString()}
+                            </p>
+                            {log.error && (
+                              <p className="text-xs text-red-400 mt-1">{log.error}</p>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     )}
-                    <div className="flex justify-end gap-3 pt-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => { setIsDialogOpen(false); resetForm(); }}
-                        className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="submit"
-                        className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
-                        data-testid="save-user-btn"
-                      >
-                        {selectedUser ? 'Update' : 'Create'}
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[400px]">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-white/10 hover:bg-transparent">
-                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">User</TableHead>
-                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Email</TableHead>
-                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Role</TableHead>
-                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8">
-                        <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mx-auto" />
-                      </TableCell>
-                    </TableRow>
-                  ) : users.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-[#C5C6C7]">
-                        No users found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    users.map((userItem) => (
-                      <TableRow key={userItem.user_id} className="border-white/5 hover:bg-white/5">
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-[#66FCF1]/10 rounded-full flex items-center justify-center">
-                              {userItem.picture ? (
-                                <img src={userItem.picture} alt={userItem.name} className="w-10 h-10 rounded-full" />
-                              ) : (
-                                <span className="text-[#66FCF1] font-bold text-sm">{userItem.name?.charAt(0) || 'U'}</span>
-                              )}
-                            </div>
-                            <div>
-                              <p className="text-white font-medium">{userItem.name}</p>
-                              <p className="text-xs text-[#C5C6C7] font-mono">{userItem.user_id}</p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-white font-mono">{userItem.email}</TableCell>
-                        <TableCell>{getRoleBadge(userItem.role)}</TableCell>
-                        <TableCell>
-                          <Badge className={`${userItem.is_active !== false ? 'status-approved' : 'status-rejected'} text-xs uppercase`}>
-                            {userItem.is_active !== false ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-[#C5C6C7] hover:text-white hover:bg-white/5" data-testid={`user-actions-${userItem.user_id}`}>
-                                <MoreVertical className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-[#1F2833] border-white/10">
-                              <DropdownMenuItem onClick={() => handleEdit(userItem)} className="text-white hover:bg-white/5 cursor-pointer">
-                                <Edit className="w-4 h-4 mr-2" /> Edit
-                              </DropdownMenuItem>
-                              {userItem.user_id !== user?.user_id && (
-                                <DropdownMenuItem onClick={() => handleDelete(userItem.user_id)} className="text-red-400 hover:bg-white/5 cursor-pointer">
-                                  <Trash2 className="w-4 h-4 mr-2" /> Delete
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          </CardContent>
-        </Card>
+          </TabsContent>
+        </Tabs>
       ) : (
         <Card className="bg-[#1F2833] border-white/5">
           <CardContent className="p-8 text-center">
             <Shield className="w-12 h-12 text-[#C5C6C7] mx-auto mb-4" />
-            <p className="text-[#C5C6C7]">Admin access required to manage users</p>
+            <p className="text-[#C5C6C7]">Admin access required to manage settings</p>
           </CardContent>
         </Card>
       )}
