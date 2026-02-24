@@ -611,38 +611,68 @@ export default function Settings() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
                     <Mail className="w-5 h-5 text-[#66FCF1]" />
-                    Gmail SMTP Settings
+                    SMTP Settings
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">SMTP Host</Label>
+                      <Input
+                        type="text"
+                        value={emailSettings.smtp_host}
+                        onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp_host: e.target.value }))}
+                        className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono text-sm"
+                        placeholder="smtp.gmail.com"
+                        data-testid="smtp-host"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Port</Label>
+                      <Input
+                        type="number"
+                        value={emailSettings.smtp_port}
+                        onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp_port: e.target.value }))}
+                        className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono text-sm"
+                        placeholder="587"
+                        data-testid="smtp-port"
+                      />
+                    </div>
+                  </div>
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Gmail Address</Label>
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Username (Email)</Label>
                     <Input
                       type="email"
                       value={emailSettings.smtp_email}
                       onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp_email: e.target.value }))}
                       className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
-                      placeholder="reports@yourdomain.com"
+                      placeholder="no-reply@milescapitals.com"
                       data-testid="smtp-email"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
-                      App Password {emailSettings.smtp_password_set && <span className="text-green-400">(Set)</span>}
+                      Password {emailSettings.smtp_password_set && <span className="text-green-400">(Set)</span>}
                     </Label>
                     <Input
                       type="password"
                       value={emailSettings.smtp_password}
                       onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp_password: e.target.value }))}
                       className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
-                      placeholder={emailSettings.smtp_password_set ? "••••••••••••••••" : "xxxx xxxx xxxx xxxx"}
+                      placeholder={emailSettings.smtp_password_set ? "••••••••••••••••" : "Enter SMTP password"}
                       data-testid="smtp-password"
                     />
-                    <p className="text-xs text-[#C5C6C7]">
-                      <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-[#66FCF1] hover:underline">
-                        Get App Password from Google
-                      </a>
-                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Send From Email</Label>
+                    <Input
+                      type="email"
+                      value={emailSettings.smtp_from_email}
+                      onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp_from_email: e.target.value }))}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      placeholder="no-reply@milescapitals.com"
+                      data-testid="smtp-from-email"
+                    />
                   </div>
                   <Button
                     onClick={handleTestEmail}
