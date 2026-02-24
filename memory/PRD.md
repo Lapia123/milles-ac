@@ -251,6 +251,16 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
   - ✅ Holding release date tracking with status badges
   - ✅ Record Payment Received with treasury integration
   - ✅ Net settlement calculation with all deductions
+- ✅ Duplicate Transaction Prevention:
+  - ✅ Unique reference number enforcement
+  - ✅ Time-window duplicate detection (5 minutes)
+- ✅ Daily Email Reports System:
+  - ✅ Gmail SMTP integration
+  - ✅ Settings page (SMTP config, director emails, schedule)
+  - ✅ Comprehensive HTML daily business report
+  - ✅ 3:00 AM auto-send via APScheduler
+  - ✅ Test email and Send Now buttons
+  - ✅ Email history/logs
 
 ## Future/Backlog
 - P2: Advanced Reporting (additional custom reports)
