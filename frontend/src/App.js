@@ -71,6 +71,7 @@ function AppRouter() {
         <Route path="vendors" element={<Vendors />} />
         <Route path="vendor-portal" element={<VendorDashboard />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="reconciliation" element={<Reconciliation />} />
         <Route path="settings" element={<Settings />} />
         <Route 
           path="accountant" 
