@@ -28,6 +28,7 @@ import {
   Wallet,
   Banknote,
   Receipt,
+  ArrowUpDown,
 } from 'lucide-react';
 
 export default function Layout() {
