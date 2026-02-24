@@ -1069,17 +1069,17 @@ export default function AccountantDashboard() {
                 </div>
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Gross Amount</p>
-                  <p className="text-white font-mono text-xl">${viewSettlement.gross_amount?.toLocaleString()}</p>
+                  <p className="text-white font-mono text-xl">{viewSettlement.gross_amount?.toLocaleString()} {viewSettlement.source_currency || 'USD'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Commission</p>
-                  <p className="text-red-400 font-mono">-${viewSettlement.commission_amount?.toLocaleString()}</p>
+                  <p className="text-red-400 font-mono">-{viewSettlement.commission_amount?.toLocaleString()} {viewSettlement.source_currency || 'USD'}</p>
                 </div>
                 {viewSettlement.charges_amount > 0 && (
                   <>
                     <div>
                       <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Charges</p>
-                      <p className="text-red-400 font-mono">-${viewSettlement.charges_amount?.toLocaleString()}</p>
+                      <p className="text-red-400 font-mono">-{viewSettlement.charges_amount?.toLocaleString()} {viewSettlement.source_currency || 'USD'}</p>
                     </div>
                     {viewSettlement.charges_description && (
                       <div>
