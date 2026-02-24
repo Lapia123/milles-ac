@@ -80,6 +80,21 @@ export default function Settings() {
     name: '',
     role: 'sub_admin',
   });
+  
+  // Email Settings State
+  const [emailSettings, setEmailSettings] = useState({
+    smtp_email: '',
+    smtp_password: '',
+    director_emails: [],
+    report_enabled: false,
+    report_time: '03:00',
+  });
+  const [emailLoading, setEmailLoading] = useState(true);
+  const [newDirectorEmail, setNewDirectorEmail] = useState('');
+  const [emailLogs, setEmailLogs] = useState([]);
+  const [sendingTest, setSendingTest] = useState(false);
+  const [sendingReport, setSendingReport] = useState(false);
+  const [savingEmail, setSavingEmail] = useState(false);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -103,9 +118,43 @@ export default function Settings() {
       setLoading(false);
     }
   };
+  
+  const fetchEmailSettings = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/settings/email`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        setEmailSettings({
+          smtp_email: data.smtp_email || '',
+          smtp_password: '',
+          smtp_password_set: data.smtp_password_set,
+          director_emails: data.director_emails || [],
+          report_enabled: data.report_enabled || false,
+          report_time: data.report_time || '03:00',
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching email settings:', error);
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+  
+  const fetchEmailLogs = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/reports/email-logs?limit=10`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setEmailLogs(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching email logs:', error);
+    }
+  };
 
   useEffect(() => {
     fetchUsers();
+    fetchEmailSettings();
+    fetchEmailLogs();
   }, []);
 
   const handleSubmit = async (e) => {
