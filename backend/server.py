@@ -5075,8 +5075,11 @@ async def get_financial_summary_report(
 # ============== EMAIL SETTINGS & DAILY REPORTS ==============
 
 class EmailSettingsUpdate(BaseModel):
-    smtp_email: Optional[str] = None
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = None
+    smtp_email: Optional[str] = None  # username for auth
     smtp_password: Optional[str] = None
+    smtp_from_email: Optional[str] = None  # email to send from
     director_emails: Optional[List[str]] = None
     report_enabled: Optional[bool] = None
     report_time: Optional[str] = None  # Format: "HH:MM"
@@ -5087,14 +5090,20 @@ async def get_email_settings(user: dict = Depends(require_admin)):
     settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
     if not settings:
         return {
+            "smtp_host": "smtp.gmail.com",
+            "smtp_port": 587,
             "smtp_email": "",
+            "smtp_from_email": "",
             "smtp_password_set": False,
             "director_emails": [],
             "report_enabled": False,
             "report_time": "03:00"
         }
     return {
+        "smtp_host": settings.get("smtp_host", "smtp.gmail.com"),
+        "smtp_port": settings.get("smtp_port", 587),
         "smtp_email": settings.get("smtp_email", ""),
+        "smtp_from_email": settings.get("smtp_from_email", settings.get("smtp_email", "")),
         "smtp_password_set": bool(settings.get("smtp_password")),
         "director_emails": settings.get("director_emails", []),
         "report_enabled": settings.get("report_enabled", False),
@@ -5110,8 +5119,14 @@ async def update_email_settings(settings: EmailSettingsUpdate, user: dict = Depe
     
     updates = {"updated_at": now.isoformat(), "updated_by": user["user_id"]}
     
+    if settings.smtp_host is not None:
+        updates["smtp_host"] = settings.smtp_host
+    if settings.smtp_port is not None:
+        updates["smtp_port"] = settings.smtp_port
     if settings.smtp_email is not None:
         updates["smtp_email"] = settings.smtp_email
+    if settings.smtp_from_email is not None:
+        updates["smtp_from_email"] = settings.smtp_from_email
     if settings.smtp_password is not None and settings.smtp_password != "":
         updates["smtp_password"] = settings.smtp_password  # In production, encrypt this
     if settings.director_emails is not None:
