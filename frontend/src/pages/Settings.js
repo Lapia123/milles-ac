@@ -243,7 +243,10 @@ export default function Settings() {
     setSavingEmail(true);
     try {
       const payload = {
+        smtp_host: emailSettings.smtp_host,
+        smtp_port: parseInt(emailSettings.smtp_port) || 587,
         smtp_email: emailSettings.smtp_email,
+        smtp_from_email: emailSettings.smtp_from_email,
         director_emails: emailSettings.director_emails,
         report_enabled: emailSettings.report_enabled,
         report_time: emailSettings.report_time,
