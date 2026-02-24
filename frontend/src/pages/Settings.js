@@ -231,6 +231,114 @@ export default function Settings() {
       role: 'sub_admin',
     });
   };
+  
+  // Email Settings Handlers
+  const handleSaveEmailSettings = async () => {
+    setSavingEmail(true);
+    try {
+      const payload = {
+        smtp_email: emailSettings.smtp_email,
+        director_emails: emailSettings.director_emails,
+        report_enabled: emailSettings.report_enabled,
+        report_time: emailSettings.report_time,
+      };
+      
+      // Only send password if it's been changed
+      if (emailSettings.smtp_password) {
+        payload.smtp_password = emailSettings.smtp_password;
+      }
+      
+      const response = await fetch(`${API_URL}/api/settings/email`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+      
+      if (response.ok) {
+        toast.success('Email settings saved');
+        setEmailSettings(prev => ({ ...prev, smtp_password: '', smtp_password_set: !!prev.smtp_password || prev.smtp_password_set }));
+        fetchEmailSettings();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to save settings');
+      }
+    } catch (error) {
+      toast.error('Failed to save settings');
+    } finally {
+      setSavingEmail(false);
+    }
+  };
+  
+  const handleTestEmail = async () => {
+    setSendingTest(true);
+    try {
+      const response = await fetch(`${API_URL}/api/settings/email/test`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        toast.success('Test email sent! Check your inbox.');
+        fetchEmailLogs();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to send test email');
+      }
+    } catch (error) {
+      toast.error('Failed to send test email');
+    } finally {
+      setSendingTest(false);
+    }
+  };
+  
+  const handleSendReportNow = async () => {
+    setSendingReport(true);
+    try {
+      const response = await fetch(`${API_URL}/api/reports/send-now`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        toast.success('Daily report sent!');
+        fetchEmailLogs();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to send report');
+      }
+    } catch (error) {
+      toast.error('Failed to send report');
+    } finally {
+      setSendingReport(false);
+    }
+  };
+  
+  const addDirectorEmail = () => {
+    if (!newDirectorEmail) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newDirectorEmail)) {
+      toast.error('Invalid email address');
+      return;
+    }
+    if (emailSettings.director_emails.includes(newDirectorEmail)) {
+      toast.error('Email already added');
+      return;
+    }
+    setEmailSettings(prev => ({
+      ...prev,
+      director_emails: [...prev.director_emails, newDirectorEmail],
+    }));
+    setNewDirectorEmail('');
+  };
+  
+  const removeDirectorEmail = (email) => {
+    setEmailSettings(prev => ({
+      ...prev,
+      director_emails: prev.director_emails.filter(e => e !== email),
+    }));
+  };
 
   const getRoleBadge = (role) => {
     const isAdmin = role === 'admin';
