@@ -2292,8 +2292,19 @@ async def settle_vendor_balance(
     if not pending_txs:
         raise HTTPException(status_code=400, detail="No pending transactions to settle")
     
-    # Calculate amounts
-    gross_amount = sum(tx["amount"] for tx in pending_txs)
+    # Calculate amounts - use base_amount if available and matches source currency
+    source_currency = settlement_request.source_currency
+    gross_amount = 0
+    for tx in pending_txs:
+        if tx.get("base_currency") == source_currency and tx.get("base_amount"):
+            # Use base amount in the source currency
+            gross_amount += tx["base_amount"]
+        elif tx.get("currency") == source_currency:
+            # Use main amount if it matches source currency
+            gross_amount += tx["amount"]
+        else:
+            # Default to main amount
+            gross_amount += tx["amount"]
     
     # Manual commission and charges
     commission_amount = settlement_request.commission_amount
