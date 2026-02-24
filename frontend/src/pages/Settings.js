@@ -128,9 +128,12 @@ export default function Settings() {
       if (response.ok) {
         const data = await response.json();
         setEmailSettings({
+          smtp_host: data.smtp_host || 'smtp.gmail.com',
+          smtp_port: data.smtp_port || 587,
           smtp_email: data.smtp_email || '',
           smtp_password: '',
           smtp_password_set: data.smtp_password_set,
+          smtp_from_email: data.smtp_from_email || '',
           director_emails: data.director_emails || [],
           report_enabled: data.report_enabled || false,
           report_time: data.report_time || '03:00',
