@@ -817,13 +817,13 @@ export default function AccountantDashboard() {
                         <div>
                           <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Gross Amount</p>
                           <p className="font-mono text-lg font-bold text-white">
-                            ${settlement.gross_amount?.toLocaleString()} USD
+                            {settlement.source_currency !== 'USD' ? '' : '$'}{settlement.gross_amount?.toLocaleString()} {settlement.source_currency || 'USD'}
                           </p>
                         </div>
                         <div>
                           <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Settlement Amount</p>
                           <p className="font-mono text-lg font-bold text-green-400">
-                            {settlement.destination_currency !== 'USD' ? settlement.destination_currency : '$'} {settlement.settlement_amount?.toLocaleString()}
+                            {settlement.destination_currency !== 'USD' ? '' : '$'}{settlement.settlement_amount?.toLocaleString()} {settlement.destination_currency || 'USD'}
                           </p>
                         </div>
                       </div>
