@@ -5072,6 +5072,528 @@ async def get_financial_summary_report(
         }
     }
 
+# ============== RECONCILIATION MODULE ==============
+
+import csv
+import io
+from openpyxl import load_workbook
+
+class ReconciliationStatus(str, Enum):
+    PENDING = "pending"
+    MATCHED = "matched"
+    PARTIAL = "partial"
+    UNMATCHED = "unmatched"
+    DISCREPANCY = "discrepancy"
+
+class ReconciliationType(str, Enum):
+    BANK = "bank"
+    PSP = "psp"
+    CLIENT = "client"
+    VENDOR = "vendor"
+
+# Bank Statement Upload and Reconciliation
+@api_router.post("/reconciliation/bank/upload")
+async def upload_bank_statement(
+    account_id: str = Form(...),
+    file: UploadFile = File(...),
+    user: dict = Depends(require_admin)
+):
+    """Upload bank statement CSV/Excel for reconciliation"""
+    
+    # Verify treasury account exists
+    account = await db.treasury_accounts.find_one({"account_id": account_id}, {"_id": 0})
+    if not account:
+        raise HTTPException(status_code=404, detail="Treasury account not found")
+    
+    # Read file content
+    content = await file.read()
+    filename = file.filename.lower()
+    
+    parsed_rows = []
+    
+    try:
+        if filename.endswith('.csv'):
+            # Parse CSV
+            decoded = content.decode('utf-8')
+            reader = csv.DictReader(io.StringIO(decoded))
+            for row in reader:
+                parsed_rows.append(dict(row))
+        elif filename.endswith(('.xlsx', '.xls')):
+            # Parse Excel
+            wb = load_workbook(filename=io.BytesIO(content), read_only=True)
+            ws = wb.active
+            headers = [cell.value for cell in ws[1]]
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                row_dict = {headers[i]: row[i] for i in range(len(headers)) if i < len(row)}
+                parsed_rows.append(row_dict)
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file format. Use CSV or Excel.")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to parse file: {str(e)}")
+    
+    if not parsed_rows:
+        raise HTTPException(status_code=400, detail="No data found in file")
+    
+    now = datetime.now(timezone.utc)
+    batch_id = f"recon_{uuid.uuid4().hex[:12]}"
+    
+    # Create reconciliation batch record
+    batch_doc = {
+        "batch_id": batch_id,
+        "type": "bank",
+        "account_id": account_id,
+        "account_name": account["account_name"],
+        "filename": file.filename,
+        "total_rows": len(parsed_rows),
+        "matched": 0,
+        "unmatched": 0,
+        "discrepancies": 0,
+        "status": "processing",
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    await db.reconciliation_batches.insert_one(batch_doc)
+    
+    # Process each row and try to match with treasury transactions
+    matched_count = 0
+    unmatched_count = 0
+    discrepancy_count = 0
+    
+    for idx, row in enumerate(parsed_rows):
+        # Try to extract amount, date, reference from common column names
+        amount = None
+        date = None
+        reference = None
+        description = None
+        
+        for key, value in row.items():
+            key_lower = key.lower() if key else ""
+            if any(x in key_lower for x in ['amount', 'value', 'debit', 'credit', 'sum']):
+                try:
+                    # Clean the amount string
+                    clean_val = str(value).replace(',', '').replace('$', '').replace(' ', '')
+                    amount = float(clean_val) if clean_val and clean_val != 'None' else None
+                except:
+                    pass
+            elif any(x in key_lower for x in ['date', 'time', 'posted']):
+                date = str(value) if value else None
+            elif any(x in key_lower for x in ['reference', 'ref', 'txn', 'transaction', 'id']):
+                reference = str(value) if value else None
+            elif any(x in key_lower for x in ['description', 'desc', 'narration', 'details', 'memo']):
+                description = str(value) if value else None
+        
+        # Create statement entry
+        entry_id = f"stmt_{uuid.uuid4().hex[:12]}"
+        entry_doc = {
+            "entry_id": entry_id,
+            "batch_id": batch_id,
+            "account_id": account_id,
+            "row_number": idx + 1,
+            "raw_data": row,
+            "parsed_amount": amount,
+            "parsed_date": date,
+            "parsed_reference": reference,
+            "parsed_description": description,
+            "status": ReconciliationStatus.PENDING,
+            "matched_transaction_id": None,
+            "variance": None,
+            "created_at": now.isoformat()
+        }
+        
+        # Try to find matching treasury transaction
+        if amount is not None:
+            # Look for matching transaction by amount and optionally reference
+            match_query = {
+                "account_id": account_id,
+                "amount": {"$gte": abs(amount) - 0.01, "$lte": abs(amount) + 0.01}  # Allow small variance
+            }
+            if reference:
+                match_query["$or"] = [
+                    {"reference": {"$regex": reference, "$options": "i"}},
+                    {"treasury_transaction_id": {"$regex": reference, "$options": "i"}}
+                ]
+            
+            potential_match = await db.treasury_transactions.find_one(match_query, {"_id": 0})
+            
+            if potential_match:
+                # Calculate variance
+                variance = abs(amount) - potential_match.get("amount", 0)
+                
+                if abs(variance) < 0.01:
+                    entry_doc["status"] = ReconciliationStatus.MATCHED
+                    entry_doc["matched_transaction_id"] = potential_match["treasury_transaction_id"]
+                    matched_count += 1
+                else:
+                    entry_doc["status"] = ReconciliationStatus.DISCREPANCY
+                    entry_doc["matched_transaction_id"] = potential_match["treasury_transaction_id"]
+                    entry_doc["variance"] = variance
+                    discrepancy_count += 1
+            else:
+                entry_doc["status"] = ReconciliationStatus.UNMATCHED
+                unmatched_count += 1
+        else:
+            entry_doc["status"] = ReconciliationStatus.UNMATCHED
+            unmatched_count += 1
+        
+        await db.reconciliation_entries.insert_one(entry_doc)
+    
+    # Update batch with results
+    await db.reconciliation_batches.update_one(
+        {"batch_id": batch_id},
+        {"$set": {
+            "matched": matched_count,
+            "unmatched": unmatched_count,
+            "discrepancies": discrepancy_count,
+            "status": "completed",
+            "completed_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {
+        "batch_id": batch_id,
+        "total_rows": len(parsed_rows),
+        "matched": matched_count,
+        "unmatched": unmatched_count,
+        "discrepancies": discrepancy_count,
+        "columns_detected": list(parsed_rows[0].keys()) if parsed_rows else []
+    }
+
+@api_router.get("/reconciliation/batches")
+async def get_reconciliation_batches(
+    type: Optional[str] = None,
+    limit: int = 50,
+    user: dict = Depends(get_current_user)
+):
+    """Get reconciliation batch history"""
+    query = {}
+    if type:
+        query["type"] = type
+    
+    batches = await db.reconciliation_batches.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    return batches
+
+@api_router.get("/reconciliation/batch/{batch_id}")
+async def get_reconciliation_batch(batch_id: str, user: dict = Depends(get_current_user)):
+    """Get reconciliation batch details with entries"""
+    batch = await db.reconciliation_batches.find_one({"batch_id": batch_id}, {"_id": 0})
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    
+    entries = await db.reconciliation_entries.find({"batch_id": batch_id}, {"_id": 0}).to_list(10000)
+    
+    return {
+        "batch": batch,
+        "entries": entries
+    }
+
+@api_router.put("/reconciliation/entry/{entry_id}/match")
+async def manually_match_entry(
+    entry_id: str,
+    transaction_id: str,
+    user: dict = Depends(require_admin)
+):
+    """Manually match a reconciliation entry to a transaction"""
+    entry = await db.reconciliation_entries.find_one({"entry_id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    # Verify transaction exists
+    tx = await db.treasury_transactions.find_one({"treasury_transaction_id": transaction_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    variance = (entry.get("parsed_amount") or 0) - tx.get("amount", 0)
+    
+    await db.reconciliation_entries.update_one(
+        {"entry_id": entry_id},
+        {"$set": {
+            "status": ReconciliationStatus.MATCHED if abs(variance) < 0.01 else ReconciliationStatus.DISCREPANCY,
+            "matched_transaction_id": transaction_id,
+            "variance": variance,
+            "matched_by": user["user_id"],
+            "matched_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Update batch counts
+    batch = await db.reconciliation_batches.find_one({"batch_id": entry["batch_id"]}, {"_id": 0})
+    if batch:
+        await db.reconciliation_batches.update_one(
+            {"batch_id": entry["batch_id"]},
+            {"$inc": {"matched": 1, "unmatched": -1}}
+        )
+    
+    return {"message": "Entry matched successfully"}
+
+@api_router.put("/reconciliation/entry/{entry_id}/ignore")
+async def ignore_reconciliation_entry(entry_id: str, reason: str = "", user: dict = Depends(require_admin)):
+    """Mark an entry as ignored/resolved"""
+    await db.reconciliation_entries.update_one(
+        {"entry_id": entry_id},
+        {"$set": {
+            "status": "ignored",
+            "ignore_reason": reason,
+            "ignored_by": user["user_id"],
+            "ignored_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    return {"message": "Entry ignored"}
+
+# PSP Reconciliation
+@api_router.get("/reconciliation/psp")
+async def get_psp_reconciliation(
+    psp_id: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Get PSP reconciliation summary - expected vs actual settlements"""
+    query = {"destination_type": "psp", "settled": True}
+    if psp_id:
+        query["psp_id"] = psp_id
+    
+    settled_txs = await db.transactions.find(query, {"_id": 0}).to_list(10000)
+    
+    # Group by PSP
+    psp_summary = {}
+    for tx in settled_txs:
+        pid = tx.get("psp_id", "unknown")
+        if pid not in psp_summary:
+            psp_summary[pid] = {
+                "psp_id": pid,
+                "psp_name": tx.get("psp_name", "Unknown"),
+                "total_transactions": 0,
+                "expected_amount": 0,
+                "actual_amount": 0,
+                "total_variance": 0,
+                "transactions_with_variance": 0
+            }
+        
+        psp_summary[pid]["total_transactions"] += 1
+        expected = tx.get("psp_net_amount", tx.get("amount", 0))
+        actual = tx.get("psp_actual_amount_received", expected)
+        variance = tx.get("psp_settlement_variance", 0)
+        
+        psp_summary[pid]["expected_amount"] += expected
+        psp_summary[pid]["actual_amount"] += actual
+        psp_summary[pid]["total_variance"] += variance
+        if abs(variance) > 0.01:
+            psp_summary[pid]["transactions_with_variance"] += 1
+    
+    return list(psp_summary.values())
+
+@api_router.get("/reconciliation/psp/{psp_id}/details")
+async def get_psp_reconciliation_details(psp_id: str, user: dict = Depends(get_current_user)):
+    """Get detailed PSP reconciliation with individual transaction variances"""
+    txs = await db.transactions.find({
+        "destination_type": "psp",
+        "psp_id": psp_id,
+        "settled": True
+    }, {"_id": 0}).sort("settled_at", -1).to_list(1000)
+    
+    result = []
+    for tx in txs:
+        expected = tx.get("psp_net_amount", tx.get("amount", 0))
+        actual = tx.get("psp_actual_amount_received", expected)
+        variance = tx.get("psp_settlement_variance", actual - expected)
+        
+        result.append({
+            "transaction_id": tx.get("transaction_id"),
+            "reference": tx.get("reference"),
+            "client_name": tx.get("client_name"),
+            "gross_amount": tx.get("amount"),
+            "commission": tx.get("psp_commission_amount", 0),
+            "chargeback": tx.get("psp_chargeback_amount", 0),
+            "extra_charges": tx.get("psp_extra_charges", 0),
+            "expected_net": expected,
+            "actual_received": actual,
+            "variance": variance,
+            "settled_at": tx.get("settled_at"),
+            "status": "matched" if abs(variance) < 0.01 else "variance"
+        })
+    
+    return result
+
+# Client Account Reconciliation
+@api_router.get("/reconciliation/clients")
+async def get_client_reconciliation(user: dict = Depends(get_current_user)):
+    """Get client account reconciliation - verify balances match transactions"""
+    clients = await db.clients.find({}, {"_id": 0}).to_list(10000)
+    
+    result = []
+    for client in clients:
+        client_id = client.get("client_id")
+        
+        # Get all transactions for this client
+        txs = await db.transactions.find({
+            "client_id": client_id,
+            "status": {"$in": ["approved", "completed"]}
+        }, {"_id": 0}).to_list(10000)
+        
+        # Calculate expected balance from transactions
+        calculated_balance = 0
+        for tx in txs:
+            amount = tx.get("amount", 0)
+            if tx.get("transaction_type") == "deposit":
+                calculated_balance += amount
+            elif tx.get("transaction_type") == "withdrawal":
+                calculated_balance -= amount
+        
+        recorded_balance = client.get("balance", 0)
+        variance = recorded_balance - calculated_balance
+        
+        result.append({
+            "client_id": client_id,
+            "client_name": f"{client.get('first_name', '')} {client.get('last_name', '')}".strip(),
+            "recorded_balance": recorded_balance,
+            "calculated_balance": calculated_balance,
+            "variance": variance,
+            "transaction_count": len(txs),
+            "status": "matched" if abs(variance) < 0.01 else "discrepancy"
+        })
+    
+    # Sort by variance (largest first)
+    result.sort(key=lambda x: abs(x["variance"]), reverse=True)
+    return result
+
+@api_router.get("/reconciliation/client/{client_id}/details")
+async def get_client_reconciliation_details(client_id: str, user: dict = Depends(get_current_user)):
+    """Get detailed transaction history for client reconciliation"""
+    client = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    txs = await db.transactions.find({
+        "client_id": client_id,
+        "status": {"$in": ["approved", "completed"]}
+    }, {"_id": 0}).sort("created_at", 1).to_list(10000)
+    
+    # Build running balance history
+    running_balance = 0
+    history = []
+    for tx in txs:
+        amount = tx.get("amount", 0)
+        if tx.get("transaction_type") == "deposit":
+            running_balance += amount
+        elif tx.get("transaction_type") == "withdrawal":
+            running_balance -= amount
+        
+        history.append({
+            "transaction_id": tx.get("transaction_id"),
+            "date": tx.get("created_at"),
+            "type": tx.get("transaction_type"),
+            "amount": amount,
+            "running_balance": running_balance,
+            "reference": tx.get("reference")
+        })
+    
+    return {
+        "client": {
+            "client_id": client_id,
+            "name": f"{client.get('first_name', '')} {client.get('last_name', '')}".strip(),
+            "recorded_balance": client.get("balance", 0),
+            "calculated_balance": running_balance,
+            "variance": client.get("balance", 0) - running_balance
+        },
+        "transactions": history
+    }
+
+# Vendor Reconciliation
+@api_router.get("/reconciliation/vendors")
+async def get_vendor_reconciliation(user: dict = Depends(get_current_user)):
+    """Get vendor reconciliation - commission calculations vs payments"""
+    vendors = await db.vendors.find({}, {"_id": 0}).to_list(1000)
+    
+    result = []
+    for vendor in vendors:
+        vendor_id = vendor.get("vendor_id")
+        
+        # Get all transactions through this vendor
+        txs = await db.transactions.find({
+            "vendor_id": vendor_id,
+            "status": {"$in": ["approved", "completed"]}
+        }, {"_id": 0}).to_list(10000)
+        
+        # Calculate expected commission
+        total_volume = sum(tx.get("amount", 0) for tx in txs)
+        commission_rate = vendor.get("commission_rate", 0) / 100
+        expected_commission = total_volume * commission_rate
+        
+        # Get recorded commission
+        paid_commission = vendor.get("total_commission_paid", 0)
+        pending_commission = vendor.get("pending_commission", 0)
+        total_recorded = paid_commission + pending_commission
+        
+        variance = expected_commission - total_recorded
+        
+        result.append({
+            "vendor_id": vendor_id,
+            "vendor_name": vendor.get("name", "Unknown"),
+            "commission_rate": vendor.get("commission_rate", 0),
+            "total_volume": total_volume,
+            "transaction_count": len(txs),
+            "expected_commission": expected_commission,
+            "paid_commission": paid_commission,
+            "pending_commission": pending_commission,
+            "total_recorded": total_recorded,
+            "variance": variance,
+            "status": "matched" if abs(variance) < 0.01 else "discrepancy"
+        })
+    
+    result.sort(key=lambda x: abs(x["variance"]), reverse=True)
+    return result
+
+# Reconciliation Dashboard Summary
+@api_router.get("/reconciliation/summary")
+async def get_reconciliation_summary(user: dict = Depends(get_current_user)):
+    """Get overall reconciliation status summary"""
+    
+    # Bank reconciliation status
+    bank_batches = await db.reconciliation_batches.find({"type": "bank"}, {"_id": 0}).sort("created_at", -1).to_list(10)
+    total_unmatched_bank = sum(b.get("unmatched", 0) for b in bank_batches)
+    total_discrepancies_bank = sum(b.get("discrepancies", 0) for b in bank_batches)
+    
+    # PSP reconciliation
+    psp_recon = await get_psp_reconciliation(None, user)
+    total_psp_variance = sum(p.get("total_variance", 0) for p in psp_recon)
+    psp_with_variance = sum(1 for p in psp_recon if abs(p.get("total_variance", 0)) > 0.01)
+    
+    # Client reconciliation
+    client_recon = await get_client_reconciliation(user)
+    clients_with_discrepancy = sum(1 for c in client_recon if c["status"] == "discrepancy")
+    total_client_variance = sum(abs(c["variance"]) for c in client_recon)
+    
+    # Vendor reconciliation
+    vendor_recon = await get_vendor_reconciliation(user)
+    vendors_with_discrepancy = sum(1 for v in vendor_recon if v["status"] == "discrepancy")
+    total_vendor_variance = sum(abs(v["variance"]) for v in vendor_recon)
+    
+    return {
+        "bank": {
+            "recent_batches": len(bank_batches),
+            "unmatched_entries": total_unmatched_bank,
+            "discrepancies": total_discrepancies_bank,
+            "status": "attention" if total_unmatched_bank > 0 or total_discrepancies_bank > 0 else "ok"
+        },
+        "psp": {
+            "total_psps": len(psp_recon),
+            "psps_with_variance": psp_with_variance,
+            "total_variance": total_psp_variance,
+            "status": "attention" if psp_with_variance > 0 else "ok"
+        },
+        "clients": {
+            "total_clients": len(client_recon),
+            "clients_with_discrepancy": clients_with_discrepancy,
+            "total_variance": total_client_variance,
+            "status": "attention" if clients_with_discrepancy > 0 else "ok"
+        },
+        "vendors": {
+            "total_vendors": len(vendor_recon),
+            "vendors_with_discrepancy": vendors_with_discrepancy,
+            "total_variance": total_vendor_variance,
+            "status": "attention" if vendors_with_discrepancy > 0 else "ok"
+        }
+    }
+
 # ============== EMAIL SETTINGS & DAILY REPORTS ==============
 
 class EmailSettingsUpdate(BaseModel):
