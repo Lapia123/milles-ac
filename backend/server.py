@@ -2613,7 +2613,7 @@ async def create_transaction(
             await db.client_bank_accounts.insert_one(bank_doc)
     
     tx_id = f"tx_{uuid.uuid4().hex[:12]}"
-    now = datetime.now(timezone.utc)
+    # now is already defined at the top for duplicate detection
     
     # Handle proof image upload
     proof_image_data = None
