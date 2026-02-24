@@ -15,6 +15,7 @@ import AccountantDashboard from "./pages/AccountantDashboard";
 import IncomeExpenses from "./pages/IncomeExpenses";
 import Loans from "./pages/Loans";
 import Debts from "./pages/Debts";
+import Reconciliation from "./pages/Reconciliation";
 import Layout from "./components/Layout";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
