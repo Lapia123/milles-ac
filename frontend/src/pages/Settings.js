@@ -34,6 +34,12 @@ import {
 } from '../components/ui/dropdown-menu';
 import { Switch } from '../components/ui/switch';
 import { ScrollArea } from '../components/ui/scroll-area';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../components/ui/tabs';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -45,6 +51,13 @@ import {
   Trash2,
   Shield,
   UserCog,
+  Mail,
+  Clock,
+  Send,
+  X,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
