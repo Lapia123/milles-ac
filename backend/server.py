@@ -5175,32 +5175,53 @@ async def test_email_settings(user: dict = Depends(require_admin)):
                 <p style="color: #C5C6C7; font-size: 12px;">Sent at: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
             </div>
             """,
+            smtp_host=settings.get("smtp_host", "smtp.gmail.com"),
+            smtp_port=settings.get("smtp_port", 587),
             smtp_email=settings["smtp_email"],
-            smtp_password=settings["smtp_password"]
+            smtp_password=settings["smtp_password"],
+            smtp_from_email=settings.get("smtp_from_email", settings["smtp_email"])
         )
         return {"message": "Test email sent successfully"}
     except Exception as e:
         logger.error(f"Test email failed: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to send test email: {str(e)}")
 
-async def send_email(to_emails: List[str], subject: str, html_content: str, smtp_email: str, smtp_password: str):
-    """Send email via Gmail SMTP"""
+async def send_email(to_emails: List[str], subject: str, html_content: str, 
+                     smtp_host: str, smtp_port: int, smtp_email: str, smtp_password: str, 
+                     smtp_from_email: str = None):
+    """Send email via SMTP"""
+    from_email = smtp_from_email or smtp_email
+    
     message = MIMEMultipart("alternative")
-    message["From"] = smtp_email
+    message["From"] = from_email
     message["To"] = ", ".join(to_emails)
     message["Subject"] = subject
     
     html_part = MIMEText(html_content, "html")
     message.attach(html_part)
     
-    await aiosmtplib.send(
-        message,
-        hostname="smtp.gmail.com",
-        port=587,
-        start_tls=True,
-        username=smtp_email,
-        password=smtp_password.replace(" ", ""),  # Remove spaces from app password
-    )
+    # Determine TLS settings based on port
+    use_tls = smtp_port in [587, 25]  # STARTTLS ports
+    use_ssl = smtp_port == 465  # Direct SSL port
+    
+    if use_ssl:
+        await aiosmtplib.send(
+            message,
+            hostname=smtp_host,
+            port=smtp_port,
+            use_tls=True,
+            username=smtp_email,
+            password=smtp_password,
+        )
+    else:
+        await aiosmtplib.send(
+            message,
+            hostname=smtp_host,
+            port=smtp_port,
+            start_tls=use_tls,
+            username=smtp_email,
+            password=smtp_password,
+        )
 
 async def generate_daily_report_html():
     """Generate comprehensive daily report HTML"""
