@@ -1091,12 +1091,12 @@ export default function AccountantDashboard() {
                 )}
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Net (Source)</p>
-                  <p className="text-white font-mono">${viewSettlement.net_amount_source?.toLocaleString()}</p>
+                  <p className="text-white font-mono">{viewSettlement.net_amount_source?.toLocaleString()} {viewSettlement.source_currency || 'USD'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Settlement Amount</p>
                   <p className="text-green-400 font-mono text-xl">
-                    {viewSettlement.destination_currency !== 'USD' ? viewSettlement.destination_currency : '$'} {viewSettlement.settlement_amount?.toLocaleString()}
+                    {viewSettlement.settlement_amount?.toLocaleString()} {viewSettlement.destination_currency || 'USD'}
                   </p>
                 </div>
               </div>
