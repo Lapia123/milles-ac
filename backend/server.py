@@ -2526,6 +2526,42 @@ async def create_transaction(
     proof_image: Optional[UploadFile] = File(None),
     user: dict = Depends(get_current_user)
 ):
+    now = datetime.now(timezone.utc)
+    
+    # ===== DUPLICATE DETECTION =====
+    # Check 1: If reference is provided, ensure it's unique
+    if reference:
+        existing_by_ref = await db.transactions.find_one({"reference": reference}, {"_id": 0})
+        if existing_by_ref:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Duplicate transaction: Reference '{reference}' already exists (Transaction ID: {existing_by_ref['transaction_id']})"
+            )
+    
+    # Check 2: Same client, type, amount within 5 minutes (prevents accidental double-submit)
+    five_minutes_ago = (now - timedelta(minutes=5)).isoformat()
+    duplicate_query = {
+        "client_id": client_id,
+        "transaction_type": transaction_type,
+        "amount": amount,
+        "created_at": {"$gte": five_minutes_ago}
+    }
+    # Add destination filters for more precise matching
+    if destination_type == "psp" and psp_id:
+        duplicate_query["psp_id"] = psp_id
+    elif destination_type == "vendor" and vendor_id:
+        duplicate_query["vendor_id"] = vendor_id
+    elif destination_type == "treasury" and destination_account_id:
+        duplicate_query["destination_account_id"] = destination_account_id
+    
+    recent_duplicate = await db.transactions.find_one(duplicate_query, {"_id": 0})
+    if recent_duplicate:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Possible duplicate: Similar transaction created {recent_duplicate.get('created_at', 'recently')} (Transaction ID: {recent_duplicate['transaction_id']}). Wait 5 minutes or use a unique reference."
+        )
+    # ===== END DUPLICATE DETECTION =====
+    
     # Verify client exists
     client = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
     if not client:
