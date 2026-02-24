@@ -260,8 +260,16 @@ export default function Vendors() {
     
     // Get destination account to check currency
     const destAccount = treasuryAccounts.find(a => a.account_id === settlementDestination);
-    if (destAccount && destAccount.currency !== 'USD' && !settlementAmountInDestCurrency) {
-      toast.error(`Please enter the settlement amount in ${destAccount.currency}`);
+    const destCurrency = destAccount?.currency || 'USD';
+    
+    // Get transaction/base currency
+    const baseCurrencyData = viewVendor?.settlement_by_currency?.[0];
+    const baseCurrency = baseCurrencyData?.currency || 'USD';
+    
+    // Only require manual amount entry if currencies are different
+    const isSameCurrency = destCurrency === baseCurrency;
+    if (!isSameCurrency && !settlementAmountInDestCurrency) {
+      toast.error(`Please enter the settlement amount in ${destCurrency}`);
       return;
     }
     
@@ -276,8 +284,8 @@ export default function Vendors() {
           commission_amount: parseFloat(settlementCommission) || 0,
           charges_amount: parseFloat(settlementCharges) || 0,
           charges_description: settlementChargesDescription || null,
-          source_currency: 'USD',
-          destination_currency: destAccount?.currency || 'USD',
+          source_currency: baseCurrency,
+          destination_currency: destCurrency,
           settlement_amount_in_dest_currency: settlementAmountInDestCurrency ? parseFloat(settlementAmountInDestCurrency) : null
         }),
       });
