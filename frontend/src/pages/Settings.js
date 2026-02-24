@@ -83,8 +83,11 @@ export default function Settings() {
   
   // Email Settings State
   const [emailSettings, setEmailSettings] = useState({
+    smtp_host: 'smtp.gmail.com',
+    smtp_port: 587,
     smtp_email: '',
     smtp_password: '',
+    smtp_from_email: '',
     director_emails: [],
     report_enabled: false,
     report_time: '03:00',
