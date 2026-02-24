@@ -5079,6 +5079,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def startup_db_indexes():
+    """Create database indexes for better query performance and uniqueness"""
+    try:
+        # Unique index on transaction reference (sparse to allow null values)
+        await db.transactions.create_index("reference", unique=True, sparse=True)
+        # Index for duplicate detection queries
+        await db.transactions.create_index([
+            ("client_id", 1),
+            ("transaction_type", 1),
+            ("amount", 1),
+            ("created_at", -1)
+        ])
+        logger.info("Database indexes created/verified successfully")
+    except Exception as e:
+        logger.warning(f"Index creation warning (may already exist): {e}")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
