@@ -274,6 +274,10 @@ export default function Vendors() {
     }
     
     try {
+      // Get the commission from settlement_by_currency
+      const baseCurrencyData = viewVendor?.settlement_by_currency?.find(c => c.currency === baseCurrency);
+      const preCalculatedCommission = baseCurrencyData?.commission_earned_base || 0;
+      
       const response = await fetch(`${API_URL}/api/vendors/${viewVendor.vendor_id}/settle`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -281,7 +285,7 @@ export default function Vendors() {
         body: JSON.stringify({
           settlement_type: settlementType,
           destination_account_id: settlementDestination,
-          commission_amount: parseFloat(settlementCommission) || 0,
+          commission_amount: preCalculatedCommission,  // Use pre-calculated commission
           charges_amount: parseFloat(settlementCharges) || 0,
           charges_description: settlementChargesDescription || null,
           source_currency: baseCurrency,
