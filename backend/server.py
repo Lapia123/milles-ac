@@ -5072,6 +5072,422 @@ async def get_financial_summary_report(
         }
     }
 
+# ============== EMAIL SETTINGS & DAILY REPORTS ==============
+
+class EmailSettingsUpdate(BaseModel):
+    smtp_email: Optional[str] = None
+    smtp_password: Optional[str] = None
+    director_emails: Optional[List[str]] = None
+    report_enabled: Optional[bool] = None
+    report_time: Optional[str] = None  # Format: "HH:MM"
+
+@api_router.get("/settings/email")
+async def get_email_settings(user: dict = Depends(require_admin)):
+    """Get email/report settings (password masked)"""
+    settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
+    if not settings:
+        return {
+            "smtp_email": "",
+            "smtp_password_set": False,
+            "director_emails": [],
+            "report_enabled": False,
+            "report_time": "03:00"
+        }
+    return {
+        "smtp_email": settings.get("smtp_email", ""),
+        "smtp_password_set": bool(settings.get("smtp_password")),
+        "director_emails": settings.get("director_emails", []),
+        "report_enabled": settings.get("report_enabled", False),
+        "report_time": settings.get("report_time", "03:00")
+    }
+
+@api_router.put("/settings/email")
+async def update_email_settings(settings: EmailSettingsUpdate, user: dict = Depends(require_admin)):
+    """Update email/report settings"""
+    now = datetime.now(timezone.utc)
+    
+    existing = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
+    
+    updates = {"updated_at": now.isoformat(), "updated_by": user["user_id"]}
+    
+    if settings.smtp_email is not None:
+        updates["smtp_email"] = settings.smtp_email
+    if settings.smtp_password is not None and settings.smtp_password != "":
+        updates["smtp_password"] = settings.smtp_password  # In production, encrypt this
+    if settings.director_emails is not None:
+        updates["director_emails"] = settings.director_emails
+    if settings.report_enabled is not None:
+        updates["report_enabled"] = settings.report_enabled
+    if settings.report_time is not None:
+        updates["report_time"] = settings.report_time
+    
+    if existing:
+        await db.app_settings.update_one(
+            {"setting_type": "email"},
+            {"$set": updates}
+        )
+    else:
+        updates["setting_type"] = "email"
+        updates["created_at"] = now.isoformat()
+        await db.app_settings.insert_one(updates)
+    
+    # Reschedule the daily report if time changed
+    if settings.report_time or settings.report_enabled is not None:
+        await reschedule_daily_report()
+    
+    return {"message": "Email settings updated successfully"}
+
+@api_router.post("/settings/email/test")
+async def test_email_settings(user: dict = Depends(require_admin)):
+    """Send a test email to verify SMTP settings"""
+    settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
+    
+    if not settings or not settings.get("smtp_email") or not settings.get("smtp_password"):
+        raise HTTPException(status_code=400, detail="SMTP settings not configured")
+    
+    if not settings.get("director_emails"):
+        raise HTTPException(status_code=400, detail="No director emails configured")
+    
+    try:
+        await send_email(
+            to_emails=settings["director_emails"],
+            subject="Miles Capitals - Test Email",
+            html_content=f"""
+            <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #0B0C10; color: white;">
+                <h2 style="color: #66FCF1;">Test Email Successful!</h2>
+                <p>This is a test email from Miles Capitals Back Office.</p>
+                <p>If you received this, your email settings are configured correctly.</p>
+                <p style="color: #C5C6C7; font-size: 12px;">Sent at: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
+            </div>
+            """,
+            smtp_email=settings["smtp_email"],
+            smtp_password=settings["smtp_password"]
+        )
+        return {"message": "Test email sent successfully"}
+    except Exception as e:
+        logger.error(f"Test email failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to send test email: {str(e)}")
+
+async def send_email(to_emails: List[str], subject: str, html_content: str, smtp_email: str, smtp_password: str):
+    """Send email via Gmail SMTP"""
+    message = MIMEMultipart("alternative")
+    message["From"] = smtp_email
+    message["To"] = ", ".join(to_emails)
+    message["Subject"] = subject
+    
+    html_part = MIMEText(html_content, "html")
+    message.attach(html_part)
+    
+    await aiosmtplib.send(
+        message,
+        hostname="smtp.gmail.com",
+        port=587,
+        start_tls=True,
+        username=smtp_email,
+        password=smtp_password.replace(" ", ""),  # Remove spaces from app password
+    )
+
+async def generate_daily_report_html():
+    """Generate comprehensive daily report HTML"""
+    now = datetime.now(timezone.utc)
+    yesterday = now - timedelta(days=1)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_start = yesterday.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # Fetch data for report
+    # Today's transactions
+    today_txs = await db.transactions.find({
+        "created_at": {"$gte": today_start.isoformat()}
+    }, {"_id": 0}).to_list(10000)
+    
+    today_deposits = sum(t.get("amount", 0) for t in today_txs if t.get("transaction_type") == "deposit")
+    today_withdrawals = sum(t.get("amount", 0) for t in today_txs if t.get("transaction_type") == "withdrawal")
+    
+    # Treasury balances
+    treasury_accounts = await db.treasury_accounts.find({}, {"_id": 0}).to_list(100)
+    total_treasury = sum(convert_to_usd(a.get("balance", 0), a.get("currency", "USD")) for a in treasury_accounts)
+    
+    # PSP pending
+    psps = await db.psps.find({"status": "active"}, {"_id": 0}).to_list(100)
+    total_psp_pending = sum(p.get("pending_settlement", 0) for p in psps)
+    
+    # Pending PSP transactions
+    psp_pending_txs = await db.transactions.find({
+        "destination_type": "psp",
+        "settled": {"$ne": True}
+    }, {"_id": 0}).to_list(1000)
+    
+    # Outstanding accounts
+    debts = await db.debts.find({"status": {"$ne": "fully_paid"}}, {"_id": 0}).to_list(1000)
+    total_receivables = sum(d.get("amount", 0) - d.get("paid_amount", 0) for d in debts if d.get("debt_type") == "receivable")
+    total_payables = sum(d.get("amount", 0) - d.get("paid_amount", 0) for d in debts if d.get("debt_type") == "payable")
+    
+    # Vendor pending
+    vendors = await db.vendors.find({"status": "active"}, {"_id": 0}).to_list(100)
+    
+    # Pending approvals
+    pending_txs = await db.transactions.find({"status": "pending"}, {"_id": 0}).to_list(1000)
+    
+    # Generate HTML
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body {{ font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }}
+            .container {{ max-width: 700px; margin: 0 auto; background-color: #0B0C10; color: white; }}
+            .header {{ background: linear-gradient(135deg, #1F2833 0%, #0B0C10 100%); padding: 30px; text-align: center; border-bottom: 3px solid #66FCF1; }}
+            .header h1 {{ color: #66FCF1; margin: 0; font-size: 28px; letter-spacing: 2px; }}
+            .header p {{ color: #C5C6C7; margin: 10px 0 0; font-size: 14px; }}
+            .content {{ padding: 30px; }}
+            .section {{ background-color: #1F2833; border-radius: 8px; padding: 20px; margin-bottom: 20px; }}
+            .section-title {{ color: #66FCF1; font-size: 16px; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #66FCF1; padding-bottom: 10px; }}
+            .stat-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }}
+            .stat-box {{ background-color: #0B0C10; border-radius: 6px; padding: 15px; }}
+            .stat-label {{ color: #C5C6C7; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }}
+            .stat-value {{ color: white; font-size: 24px; font-weight: bold; margin-top: 5px; }}
+            .stat-value.green {{ color: #4ade80; }}
+            .stat-value.red {{ color: #f87171; }}
+            .stat-value.cyan {{ color: #66FCF1; }}
+            .stat-value.yellow {{ color: #fbbf24; }}
+            .alert {{ background-color: #7f1d1d; border-left: 4px solid #ef4444; padding: 15px; margin-bottom: 20px; border-radius: 0 8px 8px 0; }}
+            .alert-title {{ color: #fca5a5; font-weight: bold; margin-bottom: 5px; }}
+            .alert-text {{ color: #fecaca; font-size: 14px; }}
+            .footer {{ background-color: #1F2833; padding: 20px; text-align: center; border-top: 1px solid #333; }}
+            .footer p {{ color: #C5C6C7; font-size: 12px; margin: 0; }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
+            th, td {{ padding: 10px; text-align: left; border-bottom: 1px solid #333; }}
+            th {{ color: #66FCF1; font-size: 11px; text-transform: uppercase; }}
+            td {{ color: white; font-size: 13px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>MILES CAPITALS</h1>
+                <p>Daily Business Report - {now.strftime('%B %d, %Y')}</p>
+            </div>
+            
+            <div class="content">
+                <!-- Alerts Section -->
+                {"" if len(pending_txs) == 0 else f'''
+                <div class="alert">
+                    <div class="alert-title">⚠️ Action Required</div>
+                    <div class="alert-text">{len(pending_txs)} transactions pending approval</div>
+                </div>
+                '''}
+                
+                <!-- Today's Activity -->
+                <div class="section">
+                    <div class="section-title">📊 Today's Activity</div>
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">Deposits</div>
+                            <div class="stat-value green">+${today_deposits:,.2f}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Withdrawals</div>
+                            <div class="stat-value red">-${today_withdrawals:,.2f}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Net Flow</div>
+                            <div class="stat-value {'green' if today_deposits - today_withdrawals >= 0 else 'red'}">${today_deposits - today_withdrawals:,.2f}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Transactions</div>
+                            <div class="stat-value cyan">{len(today_txs)}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Treasury Status -->
+                <div class="section">
+                    <div class="section-title">🏦 Treasury Status</div>
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">Total Balance (USD)</div>
+                            <div class="stat-value cyan">${total_treasury:,.2f}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Active Accounts</div>
+                            <div class="stat-value">{len(treasury_accounts)}</div>
+                        </div>
+                    </div>
+                    <table>
+                        <tr><th>Account</th><th>Currency</th><th>Balance</th><th>USD Value</th></tr>
+                        {''.join(f"<tr><td>{a.get('account_name', 'N/A')}</td><td>{a.get('currency', 'USD')}</td><td>{a.get('balance', 0):,.2f}</td><td>${convert_to_usd(a.get('balance', 0), a.get('currency', 'USD')):,.2f}</td></tr>" for a in treasury_accounts[:5])}
+                    </table>
+                </div>
+                
+                <!-- PSP Status -->
+                <div class="section">
+                    <div class="section-title">💳 PSP Status</div>
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">Pending Settlements</div>
+                            <div class="stat-value yellow">${total_psp_pending:,.2f}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Pending Transactions</div>
+                            <div class="stat-value">{len(psp_pending_txs)}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Outstanding Accounts -->
+                <div class="section">
+                    <div class="section-title">📋 Outstanding Accounts</div>
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">Receivables (Owed to us)</div>
+                            <div class="stat-value green">${total_receivables:,.2f}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Payables (We owe)</div>
+                            <div class="stat-value red">${total_payables:,.2f}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pending Actions -->
+                <div class="section">
+                    <div class="section-title">⏳ Pending Actions</div>
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">Pending Approvals</div>
+                            <div class="stat-value yellow">{len(pending_txs)}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Active Vendors</div>
+                            <div class="stat-value">{len(vendors)}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <p>This is an automated report from Miles Capitals Back Office</p>
+                <p>Generated at {now.strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return html
+
+async def send_daily_report():
+    """Send daily report to all directors"""
+    try:
+        settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
+        
+        if not settings or not settings.get("report_enabled"):
+            logger.info("Daily report is disabled or not configured")
+            return
+        
+        if not settings.get("smtp_email") or not settings.get("smtp_password"):
+            logger.warning("SMTP settings not configured - skipping daily report")
+            return
+        
+        if not settings.get("director_emails"):
+            logger.warning("No director emails configured - skipping daily report")
+            return
+        
+        html_content = await generate_daily_report_html()
+        
+        await send_email(
+            to_emails=settings["director_emails"],
+            subject=f"Miles Capitals - Daily Report ({datetime.now(timezone.utc).strftime('%Y-%m-%d')})",
+            html_content=html_content,
+            smtp_email=settings["smtp_email"],
+            smtp_password=settings["smtp_password"]
+        )
+        
+        # Log successful send
+        await db.email_logs.insert_one({
+            "log_id": f"email_{uuid.uuid4().hex[:12]}",
+            "type": "daily_report",
+            "recipients": settings["director_emails"],
+            "status": "sent",
+            "sent_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        logger.info(f"Daily report sent to {len(settings['director_emails'])} directors")
+        
+    except Exception as e:
+        logger.error(f"Failed to send daily report: {e}")
+        await db.email_logs.insert_one({
+            "log_id": f"email_{uuid.uuid4().hex[:12]}",
+            "type": "daily_report",
+            "status": "failed",
+            "error": str(e),
+            "attempted_at": datetime.now(timezone.utc).isoformat()
+        })
+
+@api_router.post("/reports/send-now")
+async def send_report_now(user: dict = Depends(require_admin)):
+    """Manually trigger daily report send"""
+    settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
+    
+    if not settings or not settings.get("smtp_email") or not settings.get("smtp_password"):
+        raise HTTPException(status_code=400, detail="SMTP settings not configured")
+    
+    if not settings.get("director_emails"):
+        raise HTTPException(status_code=400, detail="No director emails configured")
+    
+    try:
+        html_content = await generate_daily_report_html()
+        
+        await send_email(
+            to_emails=settings["director_emails"],
+            subject=f"Miles Capitals - Daily Report ({datetime.now(timezone.utc).strftime('%Y-%m-%d')})",
+            html_content=html_content,
+            smtp_email=settings["smtp_email"],
+            smtp_password=settings["smtp_password"]
+        )
+        
+        return {"message": f"Report sent to {len(settings['director_emails'])} directors"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send report: {str(e)}")
+
+@api_router.get("/reports/email-logs")
+async def get_email_logs(limit: int = 20, user: dict = Depends(require_admin)):
+    """Get email send history"""
+    logs = await db.email_logs.find({}, {"_id": 0}).sort("sent_at", -1).to_list(limit)
+    return logs
+
+# Scheduler instance
+scheduler = AsyncIOScheduler()
+
+async def reschedule_daily_report():
+    """Reschedule the daily report based on current settings"""
+    global scheduler
+    
+    # Remove existing job if any
+    try:
+        scheduler.remove_job("daily_report")
+    except:
+        pass
+    
+    settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
+    
+    if not settings or not settings.get("report_enabled"):
+        logger.info("Daily report scheduling skipped - disabled")
+        return
+    
+    report_time = settings.get("report_time", "03:00")
+    hour, minute = map(int, report_time.split(":"))
+    
+    scheduler.add_job(
+        send_daily_report,
+        CronTrigger(hour=hour, minute=minute),
+        id="daily_report",
+        replace_existing=True
+    )
+    
+    logger.info(f"Daily report scheduled for {report_time}")
+
 # Include router
 app.include_router(api_router)
 
