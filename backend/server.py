@@ -5482,8 +5482,11 @@ async def send_report_now(user: dict = Depends(require_admin)):
             to_emails=settings["director_emails"],
             subject=f"Miles Capitals - Daily Report ({datetime.now(timezone.utc).strftime('%Y-%m-%d')})",
             html_content=html_content,
+            smtp_host=settings.get("smtp_host", "smtp.gmail.com"),
+            smtp_port=settings.get("smtp_port", 587),
             smtp_email=settings["smtp_email"],
-            smtp_password=settings["smtp_password"]
+            smtp_password=settings["smtp_password"],
+            smtp_from_email=settings.get("smtp_from_email", settings["smtp_email"])
         )
         
         return {"message": f"Report sent to {len(settings['director_emails'])} directors"}
