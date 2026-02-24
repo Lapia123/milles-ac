@@ -5502,7 +5502,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_db_indexes():
-    """Create database indexes for better query performance and uniqueness"""
+    """Create database indexes and start scheduler"""
     try:
         # Unique index on transaction reference (sparse to allow null values)
         await db.transactions.create_index("reference", unique=True, sparse=True)
@@ -5516,7 +5516,16 @@ async def startup_db_indexes():
         logger.info("Database indexes created/verified successfully")
     except Exception as e:
         logger.warning(f"Index creation warning (may already exist): {e}")
+    
+    # Start scheduler and schedule daily report
+    try:
+        scheduler.start()
+        await reschedule_daily_report()
+        logger.info("Scheduler started successfully")
+    except Exception as e:
+        logger.error(f"Failed to start scheduler: {e}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    scheduler.shutdown(wait=False)
     client.close()
