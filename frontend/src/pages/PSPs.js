@@ -234,6 +234,7 @@ export default function PSPs() {
   useEffect(() => {
     fetchPsps();
     fetchTreasuryAccounts();
+    fetchGlobalReserveSummary();
   }, []);
 
   useEffect(() => {
