@@ -3022,6 +3022,10 @@ async def create_transaction(
         settlement_days = psp_info.get("settlement_days", 1)
         expected_settlement_date = (now + timedelta(days=settlement_days)).isoformat()
         
+        # Calculate reserve fund amount per-transaction
+        reserve_fund_rate_pct = psp_info.get("reserve_fund_rate", psp_info.get("chargeback_rate", 0))
+        psp_reserve_fund_amount = round(usd_amount * reserve_fund_rate_pct / 100, 2)
+        
         # Calculate holding release date (when funds will be released from PSP holding)
         holding_days = psp_info.get("holding_days", 0)
         holding_release_date = (now + timedelta(days=holding_days)).isoformat() if holding_days > 0 else None
