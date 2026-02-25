@@ -353,6 +353,13 @@ def convert_from_usd(amount: float, target_currency: str) -> float:
         return amount
     return round(amount / rate, 2)
 
+def convert_currency(amount: float, from_currency: str, to_currency: str) -> float:
+    """Convert amount between any two currencies via USD as intermediate."""
+    if from_currency.upper() == to_currency.upper():
+        return amount
+    usd_amount = convert_to_usd(amount, from_currency)
+    return convert_from_usd(usd_amount, to_currency)
+
 class TreasuryAccountCreate(BaseModel):
     account_name: str
     account_type: str = TreasuryAccountType.BANK
