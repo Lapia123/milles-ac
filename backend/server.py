@@ -2658,7 +2658,7 @@ async def create_transaction(
             raise HTTPException(status_code=404, detail="Vendor not found")
     
     # Save bank account to client profile if requested
-    if destination_type == "bank" and save_bank_to_client == "true" and client_bank_name and client_bank_account_number:
+    if destination_type in ["bank", "vendor"] and save_bank_to_client == "true" and client_bank_name and client_bank_account_number:
         existing_bank = await db.client_bank_accounts.find_one({
             "client_id": client_id,
             "account_number": client_bank_account_number,
