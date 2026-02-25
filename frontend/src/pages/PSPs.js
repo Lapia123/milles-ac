@@ -1084,6 +1084,147 @@ export default function PSPs() {
                   </ScrollArea>
                 </TabsContent>
                 
+                {/* Reserve Fund Ledger Tab */}
+                <TabsContent value="reserve-fund" className="mt-4">
+                  {reserveFundLoading ? (
+                    <div className="flex justify-center py-8">
+                      <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : reserveFundLedger ? (
+                    <>
+                      {/* Summary Cards */}
+                      <div className="grid grid-cols-4 gap-3 mb-4">
+                        <div className="p-3 bg-[#0B0C10] rounded-sm border border-white/5 text-center">
+                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider">Total Held</p>
+                          <p className="text-lg font-mono text-orange-400 font-bold">${reserveFundLedger.summary.total_held.toLocaleString()}</p>
+                        </div>
+                        <div className="p-3 bg-[#0B0C10] rounded-sm border border-white/5 text-center">
+                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider">Due This Week</p>
+                          <p className="text-lg font-mono text-yellow-400 font-bold">${reserveFundLedger.summary.due_this_week.toLocaleString()}</p>
+                        </div>
+                        <div className="p-3 bg-[#0B0C10] rounded-sm border border-white/5 text-center">
+                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider">Released</p>
+                          <p className="text-lg font-mono text-green-400 font-bold">${reserveFundLedger.summary.total_released.toLocaleString()}</p>
+                        </div>
+                        <div className="p-3 bg-[#0B0C10] rounded-sm border border-white/5 text-center">
+                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider">Holding Period</p>
+                          <p className="text-lg font-mono text-white font-bold">{reserveFundLedger.summary.holding_days} days</p>
+                        </div>
+                      </div>
+
+                      {/* Bulk Release Button */}
+                      {selectedReleaseIds.length > 0 && (
+                        <div className="flex items-center gap-3 mb-3 p-2 bg-orange-500/10 border border-orange-500/20 rounded-sm">
+                          <span className="text-orange-400 text-sm">{selectedReleaseIds.length} selected</span>
+                          <Button size="sm" onClick={handleBulkRelease} className="bg-green-600 hover:bg-green-700 text-white h-7 text-xs" data-testid="bulk-release-btn">
+                            Release Selected
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setSelectedReleaseIds([])} className="text-[#C5C6C7] h-7 text-xs">
+                            Clear
+                          </Button>
+                        </div>
+                      )}
+
+                      <ScrollArea className="h-[300px]">
+                        {reserveFundLedger.ledger.length === 0 ? (
+                          <div className="text-center py-8 text-[#C5C6C7]">No reserve fund entries</div>
+                        ) : (
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="border-white/10 hover:bg-transparent">
+                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs w-8">
+                                  <input
+                                    type="checkbox"
+                                    className="rounded border-white/20"
+                                    checked={selectedReleaseIds.length === reserveFundLedger.ledger.filter(e => e.status !== 'released').length && reserveFundLedger.ledger.filter(e => e.status !== 'released').length > 0}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedReleaseIds(reserveFundLedger.ledger.filter(en => en.status !== 'released').map(en => en.transaction_id));
+                                      } else {
+                                        setSelectedReleaseIds([]);
+                                      }
+                                    }}
+                                  />
+                                </TableHead>
+                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Client</TableHead>
+                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Tx Amount</TableHead>
+                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Reserve Held</TableHead>
+                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Hold Date</TableHead>
+                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Release Date</TableHead>
+                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Days Left</TableHead>
+                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Action</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {reserveFundLedger.ledger.map((entry) => (
+                                <TableRow key={entry.transaction_id} className={`border-white/5 hover:bg-white/5 ${entry.status === 'due' ? 'bg-yellow-500/5' : ''}`}>
+                                  <TableCell>
+                                    {entry.status !== 'released' && (
+                                      <input
+                                        type="checkbox"
+                                        className="rounded border-white/20"
+                                        checked={selectedReleaseIds.includes(entry.transaction_id)}
+                                        onChange={(e) => {
+                                          if (e.target.checked) {
+                                            setSelectedReleaseIds(prev => [...prev, entry.transaction_id]);
+                                          } else {
+                                            setSelectedReleaseIds(prev => prev.filter(id => id !== entry.transaction_id));
+                                          }
+                                        }}
+                                      />
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="font-mono text-white text-xs">{entry.reference}</TableCell>
+                                  <TableCell className="text-[#C5C6C7] text-xs">{entry.client_name || '-'}</TableCell>
+                                  <TableCell className="font-mono text-white text-xs">${entry.amount?.toLocaleString()}</TableCell>
+                                  <TableCell className="font-mono text-orange-400 font-bold">${entry.reserve_fund_amount.toLocaleString()}</TableCell>
+                                  <TableCell className="text-[#C5C6C7] text-xs">{formatDate(entry.hold_date)}</TableCell>
+                                  <TableCell className="text-[#C5C6C7] text-xs">{formatDate(entry.release_date)}</TableCell>
+                                  <TableCell className="font-mono text-white text-xs">
+                                    {entry.status === 'released' ? '-' : entry.days_remaining === 0 ? (
+                                      <span className="text-yellow-400">Due now</span>
+                                    ) : (
+                                      <span>{entry.days_remaining}d</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge className={
+                                      entry.status === 'released' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                                      entry.status === 'due' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                                      'bg-red-500/20 text-red-400 border-red-500/30'
+                                    } data-testid={`rf-status-${entry.transaction_id}`}>
+                                      {entry.status === 'released' ? 'Released' : entry.status === 'due' ? 'Due' : 'Held'}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {entry.status !== 'released' ? (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleReleaseReserveFund(entry.transaction_id)}
+                                        className="text-green-400 hover:bg-green-500/10 h-7 px-2 text-xs"
+                                        data-testid={`release-rf-${entry.transaction_id}`}
+                                      >
+                                        Release
+                                      </Button>
+                                    ) : (
+                                      <span className="text-xs text-[#C5C6C7]">{entry.released_by_name}</span>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        )}
+                      </ScrollArea>
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-[#C5C6C7]">No data available</div>
+                  )}
+                </TabsContent>
+
                 <TabsContent value="history" className="mt-4">
                   <ScrollArea className="h-[300px]">
                     {settlements.length === 0 ? (
