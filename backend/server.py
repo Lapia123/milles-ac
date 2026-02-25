@@ -2017,17 +2017,30 @@ async def bulk_release_reserve_funds(request: Request, user: dict = Depends(requ
         
         psp = await db.psps.find_one({"psp_id": tx.get("psp_id")}, {"_id": 0})
         if psp and psp.get("settlement_destination_id"):
+            dest = await db.treasury_accounts.find_one({"account_id": psp["settlement_destination_id"]}, {"_id": 0})
+            tx_currency = tx.get("currency", "USD")
+            dest_currency = dest.get("currency", "USD") if dest else "USD"
+            treasury_amount = convert_currency(rf_amount, tx_currency, dest_currency)
+            
             await db.treasury_accounts.update_one(
                 {"account_id": psp["settlement_destination_id"]},
-                {"$inc": {"balance": rf_amount}}
+                {"$inc": {"balance": treasury_amount}, "$set": {"updated_at": now.isoformat()}}
             )
+            conversion_note = f" (Converted: {tx_currency} {rf_amount:,.2f} -> {dest_currency} {treasury_amount:,.2f})" if tx_currency != dest_currency else ""
             await db.treasury_transactions.insert_one({
-                "transaction_id": f"ttx_{uuid.uuid4().hex[:12]}",
+                "treasury_transaction_id": f"ttx_{uuid.uuid4().hex[:12]}",
                 "account_id": psp["settlement_destination_id"],
-                "type": "credit",
-                "amount": rf_amount,
-                "description": f"Reserve fund release - {tx.get('reference', tx_id)} from {psp.get('psp_name', '')}",
+                "account_name": dest["account_name"] if dest else None,
+                "transaction_type": "reserve_fund_release",
+                "amount": treasury_amount,
+                "currency": dest_currency,
+                "original_amount": rf_amount,
+                "original_currency": tx_currency,
+                "description": f"Reserve fund release - {tx.get('reference', tx_id)} from {psp.get('psp_name', '')}{conversion_note}",
                 "reference": f"RF-{tx_id}",
+                "related_transaction_id": tx_id,
+                "psp_id": tx.get("psp_id"),
+                "psp_name": psp.get("psp_name"),
                 "created_at": now.isoformat(),
                 "created_by": user["user_id"],
                 "created_by_name": user["name"],
