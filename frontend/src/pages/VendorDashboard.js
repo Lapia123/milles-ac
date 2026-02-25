@@ -349,8 +349,11 @@ export default function VendorDashboard() {
         method: 'POST', headers: getAuthHeaders(), credentials: 'include',
       });
       if (response.ok) {
-        toast.success('Entry approved');
+        const data = await response.json();
+        toast.success(`Entry approved! Commission: ${data.vendor_commission_rate?.toFixed(2)}% = $${data.vendor_commission_amount?.toFixed(2)}`);
         fetchIeEntries();
+        setIeActionDialog({ open: false, entry: null, type: '' });
+        resetIeActionState();
       } else {
         const err = await response.json();
         toast.error(err.detail || 'Approval failed');
@@ -359,15 +362,15 @@ export default function VendorDashboard() {
   };
 
   const handleIeReject = async (entryId) => {
-    const reason = window.prompt('Rejection reason:');
-    if (reason === null) return;
     try {
-      const response = await fetch(`${API_URL}/api/income-expenses/${entryId}/vendor-reject?reason=${encodeURIComponent(reason)}`, {
+      const response = await fetch(`${API_URL}/api/income-expenses/${entryId}/vendor-reject?reason=${encodeURIComponent(ieRejectionReason)}`, {
         method: 'POST', headers: getAuthHeaders(), credentials: 'include',
       });
       if (response.ok) {
         toast.success('Entry rejected');
         fetchIeEntries();
+        setIeActionDialog({ open: false, entry: null, type: '' });
+        resetIeActionState();
       } else { toast.error('Rejection failed'); }
     } catch { toast.error('Rejection failed'); }
   };
@@ -386,6 +389,41 @@ export default function VendorDashboard() {
         fetchIeEntries();
       } else { toast.error('Upload failed'); }
     } catch { toast.error('Upload failed'); }
+  };
+
+  const openIeAction = (entry, type) => {
+    setIeActionDialog({ open: true, entry, type });
+    setIeCaptcha({ num1: Math.floor(Math.random() * 20) + 1, num2: Math.floor(Math.random() * 20) + 1 });
+    setIeCaptchaAnswer('');
+    setIeProofImage(null);
+    setIeProofPreview(null);
+    setIeRejectionReason('');
+  };
+
+  const resetIeActionState = () => {
+    setIeCaptchaAnswer('');
+    setIeProofImage(null);
+    setIeProofPreview(null);
+    setIeRejectionReason('');
+  };
+
+  const executeIeAction = async () => {
+    if (parseInt(ieCaptchaAnswer) !== ieCaptcha.num1 + ieCaptcha.num2) {
+      toast.error('Incorrect captcha answer');
+      return;
+    }
+    if (ieActionDialog.type === 'approve') {
+      // Upload proof first
+      if (!ieProofImage) {
+        toast.error('Please upload proof screenshot before approving');
+        return;
+      }
+      await handleIeUploadProof(ieActionDialog.entry.entry_id, ieProofImage);
+      // Then approve
+      await handleIeApprove(ieActionDialog.entry.entry_id);
+    } else {
+      await handleIeReject(ieActionDialog.entry.entry_id);
+    }
   };
 
   if (loading) {
