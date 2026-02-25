@@ -959,6 +959,9 @@ export default function PSPs() {
                   <TabsTrigger value="pending" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
                     Pending Settlements ({pendingTransactions.length})
                   </TabsTrigger>
+                  <TabsTrigger value="reserve-fund" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]" data-testid="reserve-fund-tab">
+                    Reserve Fund
+                  </TabsTrigger>
                   <TabsTrigger value="history" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
                     Settlement History
                   </TabsTrigger>
