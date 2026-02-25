@@ -410,13 +410,14 @@ export default function Loans() {
             Export CSV
           </Button>
           <Button
-          onClick={() => setIsLoanDialogOpen(true)}
-          className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
-          data-testid="add-loan-btn"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Loan
-        </Button>
+            onClick={() => setIsLoanDialogOpen(true)}
+            className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
+            data-testid="add-loan-btn"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Loan
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
