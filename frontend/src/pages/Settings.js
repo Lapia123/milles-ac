@@ -490,6 +490,10 @@ export default function Settings() {
               <Mail className="w-4 h-4 mr-2" />
               Email Reports
             </TabsTrigger>
+            <TabsTrigger value="commission" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+              <Percent className="w-4 h-4 mr-2" />
+              Commission & FX
+            </TabsTrigger>
           </TabsList>
           
           {/* Users Tab */}
