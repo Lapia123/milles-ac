@@ -959,6 +959,18 @@ export default function Vendors() {
                                 )}
                               </TableCell>
                               <TableCell className="text-[#C5C6C7]">{formatDate(settlement.settled_at)}</TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openStatement(settlement.settlement_id)}
+                                  className="text-[#66FCF1] hover:bg-[#66FCF1]/10 h-7 px-2"
+                                  data-testid={`view-statement-${settlement.settlement_id}`}
+                                >
+                                  <FileText className="w-3.5 h-3.5 mr-1" />
+                                  <span className="text-xs">Statement</span>
+                                </Button>
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
