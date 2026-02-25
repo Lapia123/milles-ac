@@ -841,6 +841,23 @@ export default function PSPs() {
                   <p className="text-xs text-[#C5C6C7]">{viewPsp.settlement_destination_bank}</p>
                 </div>
               </div>
+              {/* Fee Details Row */}
+              {(viewPsp.gateway_fee > 0 || viewPsp.refund_fee > 0 || viewPsp.monthly_minimum_fee > 0) && (
+                <div className="grid grid-cols-3 gap-4 p-3 bg-[#0B0C10] rounded-sm border border-white/5 mt-3">
+                  <div>
+                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Gateway Fee</p>
+                    <p className="text-lg font-mono text-white">${(viewPsp.gateway_fee || 0).toLocaleString()}<span className="text-xs text-[#C5C6C7]">/tx</span></p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Refund Fee</p>
+                    <p className="text-lg font-mono text-white">${(viewPsp.refund_fee || 0).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Monthly Min Fee</p>
+                    <p className="text-lg font-mono text-white">${(viewPsp.monthly_minimum_fee || 0).toLocaleString()}</p>
+                  </div>
+                </div>
+              )}
 
               {/* Tabs */}
               <Tabs defaultValue="pending" className="w-full">
