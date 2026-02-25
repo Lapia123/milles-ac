@@ -36,9 +36,9 @@ class TestAuth:
     
     @staticmethod
     def get_vendor_token():
-        """Get vendor auth token (vendor1)"""
+        """Get vendor auth token (vendor3)"""
         response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "vendor1@fxbroker.com",
+            "email": "vendor3@fxbroker.com",
             "password": "password"
         })
         assert response.status_code == 200, f"Vendor login failed: {response.text}"
