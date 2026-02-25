@@ -187,11 +187,14 @@ export default function PSPs() {
       const payload = {
         psp_name: formData.psp_name,
         commission_rate: parseFloat(formData.commission_rate),
-        chargeback_rate: parseFloat(formData.chargeback_rate) || 0,
+        reserve_fund_rate: parseFloat(formData.reserve_fund_rate) || 0,
         holding_days: parseInt(formData.holding_days) || 0,
         settlement_days: parseInt(formData.settlement_days),
         settlement_destination_id: formData.settlement_destination_id,
         min_settlement_amount: parseFloat(formData.min_settlement_amount) || 0,
+        gateway_fee: parseFloat(formData.gateway_fee) || 0,
+        refund_fee: parseFloat(formData.refund_fee) || 0,
+        monthly_minimum_fee: parseFloat(formData.monthly_minimum_fee) || 0,
         description: formData.description || null,
       };
 
