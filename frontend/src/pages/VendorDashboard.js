@@ -817,19 +817,18 @@ export default function VendorDashboard() {
                             <TableCell className="text-right">
                               {entry.status === 'pending_vendor' && (
                                 <div className="flex gap-1 justify-end">
-                                  <label className="cursor-pointer">
-                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files[0]) handleIeUploadProof(entry.entry_id, e.target.files[0]); }} />
-                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-400 rounded text-xs hover:bg-blue-500/20"><Upload className="w-3 h-3" />Proof</span>
-                                  </label>
-                                  <Button size="sm" onClick={() => handleIeApprove(entry.entry_id)} className="bg-green-500/10 text-green-400 hover:bg-green-500/20 h-7 px-2 text-xs" data-testid={`ie-approve-${entry.entry_id}`}>
+                                  <Button size="sm" onClick={() => openIeAction(entry, 'approve')} className="bg-green-500/10 text-green-400 hover:bg-green-500/20 h-7 px-2 text-xs" data-testid={`ie-approve-${entry.entry_id}`}>
                                     <CheckCircle2 className="w-3 h-3 mr-1" />Approve
                                   </Button>
-                                  <Button size="sm" onClick={() => handleIeReject(entry.entry_id)} className="bg-red-500/10 text-red-400 hover:bg-red-500/20 h-7 px-2 text-xs" data-testid={`ie-reject-${entry.entry_id}`}>
+                                  <Button size="sm" onClick={() => openIeAction(entry, 'reject')} className="bg-red-500/10 text-red-400 hover:bg-red-500/20 h-7 px-2 text-xs" data-testid={`ie-reject-${entry.entry_id}`}>
                                     <XCircle className="w-3 h-3 mr-1" />Reject
                                   </Button>
                                 </div>
                               )}
-                              {entry.vendor_proof_image && <Badge className="bg-blue-500/10 text-blue-400 text-[10px]"><ImageIcon className="w-2.5 h-2.5 mr-1" />Proof</Badge>}
+                              {entry.status === 'completed' && entry.vendor_commission_amount > 0 && (
+                                <span className="text-[10px] text-[#66FCF1]">Commission: ${entry.vendor_commission_amount?.toFixed(2)}</span>
+                              )}
+                              {entry.vendor_proof_image && <Badge className="bg-blue-500/10 text-blue-400 text-[10px] ml-1"><ImageIcon className="w-2.5 h-2.5 mr-1" />Proof</Badge>}
                             </TableCell>
                           </TableRow>
                         );
