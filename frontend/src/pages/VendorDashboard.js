@@ -880,6 +880,8 @@ export default function VendorDashboard() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* View Transaction Dialog */}
       <Dialog open={!!viewTransaction} onOpenChange={() => setViewTransaction(null)}>
