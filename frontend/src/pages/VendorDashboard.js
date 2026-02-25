@@ -55,6 +55,10 @@ export default function VendorDashboard() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [proofImage, setProofImage] = useState(null);
   const [proofPreview, setProofPreview] = useState(null);
+  const [settlements, setSettlements] = useState([]);
+  const [statementData, setStatementData] = useState(null);
+  const [statementOpen, setStatementOpen] = useState(false);
+  const [statementLoading, setStatementLoading] = useState(false);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
