@@ -3814,8 +3814,9 @@ async def get_income_expense_summary(
     # Get all entries (exclude converted to loan to avoid double-counting)
     entries = await db.income_expenses.find({**query, "converted_to_loan": {"$ne": True}}, {"_id": 0}).to_list(10000)
     
-    total_income = sum(e["amount_usd"] for e in entries if e["entry_type"] == IncomeExpenseType.INCOME)
-    total_expense = sum(e["amount_usd"] for e in entries if e["entry_type"] == IncomeExpenseType.EXPENSE)
+    # Use .get() with fallback to handle entries without amount_usd
+    total_income = sum(e.get("amount_usd", convert_to_usd(e.get("amount", 0), e.get("currency", "USD"))) for e in entries if e["entry_type"] == IncomeExpenseType.INCOME)
+    total_expense = sum(e.get("amount_usd", convert_to_usd(e.get("amount", 0), e.get("currency", "USD"))) for e in entries if e["entry_type"] == IncomeExpenseType.EXPENSE)
     net_profit = total_income - total_expense
     
     # Category breakdown
@@ -3823,8 +3824,8 @@ async def get_income_expense_summary(
     expense_by_category = {}
     
     for entry in entries:
-        cat = entry.get("custom_category") or entry["category"]
-        amount = entry["amount_usd"]
+        cat = entry.get("custom_category") or entry.get("category", "other")
+        amount = entry.get("amount_usd", convert_to_usd(entry.get("amount", 0), entry.get("currency", "USD")))
         if entry["entry_type"] == IncomeExpenseType.INCOME:
             income_by_category[cat] = income_by_category.get(cat, 0) + amount
         else:
