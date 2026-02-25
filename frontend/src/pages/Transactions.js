@@ -50,6 +50,8 @@ import {
   Store,
   Building2,
   Wallet,
+  Check,
+  ChevronsUpDown,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
