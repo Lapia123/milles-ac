@@ -2712,7 +2712,15 @@ async def settle_vendor_balance(
         "settled": {"$ne": True}
     }, {"_id": 0}).to_list(1000)
     
-    if not pending_txs:
+    # Also get approved IE entries for this vendor that haven't been settled
+    pending_ie = await db.income_expenses.find({
+        "vendor_id": vendor_id,
+        "status": "completed",
+        "settled": {"$ne": True},
+        "converted_to_loan": {"$ne": True},
+    }, {"_id": 0}).to_list(1000)
+    
+    if not pending_txs and not pending_ie:
         raise HTTPException(status_code=400, detail="No pending transactions to settle")
     
     # Calculate NET amounts - deposits minus withdrawals, using base_amount for source currency
