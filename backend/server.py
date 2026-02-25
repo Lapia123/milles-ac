@@ -1760,23 +1760,31 @@ async def settle_psp_transaction(
     # Amount to settle (net amount after commission)
     settle_amount = tx.get("psp_net_amount", tx.get("amount", 0))
     
-    # Update treasury balance
+    # Currency conversion: convert from transaction currency to treasury account currency
+    tx_currency = tx.get("currency", "USD")
+    dest_currency = dest.get("currency", "USD")
+    treasury_amount = convert_currency(settle_amount, tx_currency, dest_currency)
+    
+    # Update treasury balance (in treasury account's currency)
     await db.treasury_accounts.update_one(
         {"account_id": dest_account_id},
-        {"$inc": {"balance": settle_amount}, "$set": {"updated_at": now.isoformat()}}
+        {"$inc": {"balance": treasury_amount}, "$set": {"updated_at": now.isoformat()}}
     )
     
     # Add treasury transaction record
     treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+    conversion_note = f" (Converted: {tx_currency} {settle_amount:,.2f} -> {dest_currency} {treasury_amount:,.2f})" if tx_currency != dest_currency else ""
     treasury_tx = {
         "treasury_transaction_id": treasury_tx_id,
         "account_id": dest_account_id,
         "account_name": dest["account_name"],
         "transaction_type": "psp_settlement",
-        "amount": settle_amount,
-        "currency": dest.get("currency", "USD"),
+        "amount": treasury_amount,
+        "currency": dest_currency,
+        "original_amount": settle_amount,
+        "original_currency": tx_currency,
         "reference": f"PSP Settlement - {tx.get('reference', transaction_id)}",
-        "description": f"Settlement from {tx.get('psp_name', 'PSP')}",
+        "description": f"Settlement from {tx.get('psp_name', 'PSP')}{conversion_note}",
         "related_transaction_id": transaction_id,
         "psp_id": tx.get("psp_id"),
         "psp_name": tx.get("psp_name"),
