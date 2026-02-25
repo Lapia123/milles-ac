@@ -72,6 +72,7 @@ export default function Dashboard() {
   const [recentActivity, setRecentActivity] = useState({ recent_transactions: [], recent_clients: [] });
   const [kycData, setKycData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fxRates, setFxRates] = useState(null);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -81,11 +82,12 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, chartRes, activityRes, analyticsRes] = await Promise.all([
+        const [statsRes, chartRes, activityRes, analyticsRes, fxRes] = await Promise.all([
           fetch(`${API_URL}/api/reports/dashboard`, { headers: getAuthHeaders(), credentials: 'include' }),
           fetch(`${API_URL}/api/reports/transactions-summary?days=30`, { headers: getAuthHeaders(), credentials: 'include' }),
           fetch(`${API_URL}/api/reports/recent-activity?limit=5`, { headers: getAuthHeaders(), credentials: 'include' }),
           fetch(`${API_URL}/api/reports/client-analytics`, { headers: getAuthHeaders(), credentials: 'include' }),
+          fetch(`${API_URL}/api/fx-rates`, { headers: getAuthHeaders(), credentials: 'include' }),
         ]);
 
         if (statsRes.ok) setStats(await statsRes.json());
@@ -95,6 +97,7 @@ export default function Dashboard() {
           const analytics = await analyticsRes.json();
           setKycData(analytics.kyc_distribution || []);
         }
+        if (fxRes.ok) setFxRates(await fxRes.json());
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         toast.error('Failed to load dashboard data');
