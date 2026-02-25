@@ -631,6 +631,96 @@ export default function VendorDashboard() {
         </CardContent>
       </Card>
 
+      {/* Settlement History */}
+      <Card className="bg-[#1F2833] border-white/5" data-testid="vendor-settlement-history">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl text-white uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+              <Receipt className="w-5 h-5 text-[#66FCF1]" />
+              Settlement History
+            </CardTitle>
+            <Badge className="bg-[#66FCF1]/10 text-[#66FCF1] border-[#66FCF1]/20">{settlements.length} settlements</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {settlements.length === 0 ? (
+            <div className="text-center py-10 text-[#C5C6C7]">
+              <Receipt className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">No settlements yet</p>
+            </div>
+          ) : (
+            <ScrollArea className="h-[400px]">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-white/10 hover:bg-transparent">
+                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">ID</TableHead>
+                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Type</TableHead>
+                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Gross</TableHead>
+                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Deductions</TableHead>
+                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Net Settled</TableHead>
+                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Statement</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {settlements.map((s) => (
+                    <TableRow key={s.settlement_id} className="border-white/5 hover:bg-white/5">
+                      <TableCell className="font-mono text-white text-xs">{s.settlement_id}</TableCell>
+                      <TableCell>
+                        <Badge className={s.settlement_type === 'bank' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}>
+                          {s.settlement_type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-white">
+                        {s.source_currency && s.source_currency !== 'USD'
+                          ? `${s.source_currency} ${s.gross_amount?.toLocaleString()}`
+                          : `$${s.gross_amount?.toLocaleString()}`}
+                      </TableCell>
+                      <TableCell className="font-mono text-red-400">
+                        <div className="text-xs">
+                          <div>Comm: -{s.source_currency && s.source_currency !== 'USD' ? `${s.source_currency} ` : '$'}{s.commission_amount?.toLocaleString()}</div>
+                          {s.charges_amount > 0 && (
+                            <div>Charges: -{s.source_currency && s.source_currency !== 'USD' ? `${s.source_currency} ` : '$'}{s.charges_amount?.toLocaleString()}</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-green-400 font-bold">
+                        {s.destination_currency && s.destination_currency !== 'USD'
+                          ? `${s.destination_currency} ${s.settlement_amount?.toLocaleString()}`
+                          : `$${s.settlement_amount?.toLocaleString()}`}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={
+                          s.status === 'approved' ? 'bg-green-500/20 text-green-400' :
+                          s.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                          'bg-yellow-500/20 text-yellow-400'
+                        }>
+                          {s.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-[#C5C6C7] text-xs">{formatDate(s.settled_at || s.created_at)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openStatement(s.settlement_id)}
+                          className="text-[#66FCF1] hover:bg-[#66FCF1]/10 h-7 px-2"
+                          data-testid={`vendor-statement-${s.settlement_id}`}
+                        >
+                          <FileText className="w-3.5 h-3.5 mr-1" />
+                          <span className="text-xs">View</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+
       {/* View Transaction Dialog */}
       <Dialog open={!!viewTransaction} onOpenChange={() => setViewTransaction(null)}>
         <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
