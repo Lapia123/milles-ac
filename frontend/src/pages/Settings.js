@@ -103,6 +103,17 @@ export default function Settings() {
   const [sendingReport, setSendingReport] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
 
+  // Commission & FX State
+  const [commissionSettings, setCommissionSettings] = useState({
+    deposit_commission_rate: 0,
+    withdrawal_commission_rate: 0,
+    commission_enabled: false,
+  });
+  const [savingCommission, setSavingCommission] = useState(false);
+  const [fxRates, setFxRates] = useState(null);
+  const [fxLoading, setFxLoading] = useState(true);
+  const [fxRefreshing, setFxRefreshing] = useState(false);
+
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
     return {
