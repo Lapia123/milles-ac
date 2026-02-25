@@ -105,6 +105,62 @@ export default function VendorDashboard() {
     }
   };
 
+  const fetchSettlements = async () => {
+    if (!vendorInfo) return;
+    try {
+      const response = await fetch(`${API_URL}/api/vendors/${vendorInfo.vendor_id}/settlements`, {
+        headers: getAuthHeaders(),
+        credentials: 'include'
+      });
+      if (response.ok) {
+        setSettlements(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching settlements:', error);
+    }
+  };
+
+  const openStatement = async (settlementId) => {
+    setStatementLoading(true);
+    setStatementOpen(true);
+    try {
+      const response = await fetch(`${API_URL}/api/settlements/${settlementId}/statement`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setStatementData(await response.json());
+      } else {
+        toast.error('Failed to load statement');
+      }
+    } catch (error) {
+      toast.error('Error loading statement');
+    } finally {
+      setStatementLoading(false);
+    }
+  };
+
+  const printStatement = () => {
+    const el = document.getElementById('vendor-settlement-statement');
+    if (!el) return;
+    const win = window.open('', '_blank');
+    win.document.write(`<html><head><title>Settlement Statement</title><style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: 'Inter', Arial, sans-serif; color: #1a1a1a; padding: 40px; }
+      table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+      th { background: #0B3D91; color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 12px; text-align: left; }
+      td { padding: 8px 12px; font-size: 12px; border-bottom: 1px solid #e5e5e5; }
+      tr:nth-child(even) td { background: #f9f9f9; }
+      .mono { font-family: 'Courier New', monospace; }
+    </style></head><body>`);
+    win.document.write(el.innerHTML);
+    win.document.write('</body></html>');
+    win.document.close();
+    win.print();
+  };
+
+  const fmtCurrency = (amount, currency) => {
+    if (!currency || currency === 'USD') return `$${(amount || 0).toLocaleString()}`;
+    return `${currency} ${(amount || 0).toLocaleString()}`;
+  };
+
   useEffect(() => {
     fetchVendorInfo();
   }, []);
