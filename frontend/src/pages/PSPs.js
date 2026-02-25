@@ -1156,8 +1156,8 @@ export default function PSPs() {
                     <span className="text-red-400 font-mono">-${(selectedTransaction.psp_commission_amount || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#C5C6C7]">Chargeback</span>
-                    <span className="text-red-400 font-mono">-${parseFloat(chargesForm.chargeback_amount || 0).toLocaleString()}</span>
+                    <span className="text-[#C5C6C7]">Reserve Fund</span>
+                    <span className="text-red-400 font-mono">-${parseFloat(chargesForm.reserve_fund_amount || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#C5C6C7]">Extra Charges</span>
