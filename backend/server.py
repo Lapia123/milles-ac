@@ -1480,6 +1480,33 @@ async def get_psp_summary(user: dict = Depends(get_current_user)):
                 if exp_dt < now:
                     overdue_count += 1
         
+        # Calculate reserve fund held
+        reserve_fund_rate = psp.get("reserve_fund_rate", psp.get("chargeback_rate", 0)) / 100
+        total_reserve_held = 0
+        for tx in pending_txs:
+            rf = tx.get("psp_reserve_fund_amount", tx.get("psp_chargeback_amount", 0))
+            if rf > 0:
+                total_reserve_held += rf
+            else:
+                total_reserve_held += round(tx.get("amount", 0) * reserve_fund_rate, 2)
+
+        # Also count released/unreleased reserve funds from settled transactions
+        settled_with_reserve = await db.transactions.find({
+            "psp_id": psp["psp_id"],
+            "destination_type": "psp",
+            "settled": True,
+            "$or": [
+                {"psp_reserve_fund_amount": {"$gt": 0}},
+                {"psp_chargeback_amount": {"$gt": 0}}
+            ]
+        }, {"_id": 0, "psp_reserve_fund_amount": 1, "psp_chargeback_amount": 1, "reserve_fund_released": 1}).to_list(10000)
+        
+        held_from_settled = sum(
+            tx.get("psp_reserve_fund_amount", tx.get("psp_chargeback_amount", 0))
+            for tx in settled_with_reserve if not tx.get("reserve_fund_released")
+        )
+        total_reserve_held += held_from_settled
+
         # Get settlement destination
         dest = await db.treasury_accounts.find_one({"account_id": psp.get("settlement_destination_id")}, {"_id": 0})
         
@@ -1488,6 +1515,7 @@ async def get_psp_summary(user: dict = Depends(get_current_user)):
             "pending_transactions_count": pending_count,
             "pending_amount": pending_amount,
             "overdue_count": overdue_count,
+            "total_reserve_fund_held": round(total_reserve_held, 2),
             "settlement_destination_name": dest["account_name"] if dest else "Unknown",
             "settlement_destination_bank": dest.get("bank_name") if dest else None
         })
