@@ -2823,6 +2823,13 @@ async def settle_vendor_balance(
         {"$set": {"settlement_id": settlement_id, "settlement_status": "pending_approval"}}
     )
     
+    # Mark IE entries as pending settlement
+    if ie_entry_ids:
+        await db.income_expenses.update_many(
+            {"entry_id": {"$in": ie_entry_ids}},
+            {"$set": {"settlement_id": settlement_id, "settlement_status": "pending_approval"}}
+        )
+    
     return await db.vendor_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
 
 # Get all pending settlements (for approval page)
