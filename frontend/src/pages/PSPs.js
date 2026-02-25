@@ -1191,7 +1191,7 @@ export default function PSPs() {
                   <div className="flex justify-between text-sm pt-2 border-t border-white/10 mt-2">
                     <span className="text-white font-bold">Expected Net</span>
                     <span className="text-[#66FCF1] font-mono font-bold">
-                      ${((selectedTransaction.amount || 0) - (selectedTransaction.psp_commission_amount || 0) - (selectedTransaction.psp_chargeback_amount || 0) - (selectedTransaction.psp_extra_charges || 0)).toLocaleString()}
+                      ${((selectedTransaction.amount || 0) - (selectedTransaction.psp_commission_amount || 0) - (selectedTransaction.psp_reserve_fund_amount || selectedTransaction.psp_chargeback_amount || 0) - (selectedTransaction.psp_extra_charges || 0)).toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -1249,12 +1249,12 @@ export default function PSPs() {
               </div>
 
               {/* Variance Warning */}
-              {paymentForm.actual_amount_received && parseFloat(paymentForm.actual_amount_received) !== ((selectedTransaction.amount || 0) - (selectedTransaction.psp_commission_amount || 0) - (selectedTransaction.psp_chargeback_amount || 0) - (selectedTransaction.psp_extra_charges || 0)) && (
+              {paymentForm.actual_amount_received && parseFloat(paymentForm.actual_amount_received) !== ((selectedTransaction.amount || 0) - (selectedTransaction.psp_commission_amount || 0) - (selectedTransaction.psp_reserve_fund_amount || selectedTransaction.psp_chargeback_amount || 0) - (selectedTransaction.psp_extra_charges || 0)) && (
                 <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                   <div className="flex items-center gap-2 text-yellow-400 text-sm">
                     <AlertTriangle className="w-4 h-4" />
                     <span>
-                      Variance: ${(parseFloat(paymentForm.actual_amount_received) - ((selectedTransaction.amount || 0) - (selectedTransaction.psp_commission_amount || 0) - (selectedTransaction.psp_chargeback_amount || 0) - (selectedTransaction.psp_extra_charges || 0))).toFixed(2)}
+                      Variance: ${(parseFloat(paymentForm.actual_amount_received) - ((selectedTransaction.amount || 0) - (selectedTransaction.psp_commission_amount || 0) - (selectedTransaction.psp_reserve_fund_amount || selectedTransaction.psp_chargeback_amount || 0) - (selectedTransaction.psp_extra_charges || 0))).toFixed(2)}
                     </span>
                   </div>
                 </div>
