@@ -944,7 +944,7 @@ export default function PSPs() {
                                       variant="ghost"
                                       onClick={() => openChargesDialog(tx)}
                                       className="text-[#C5C6C7] hover:text-white hover:bg-white/10 px-2"
-                                      title="Record Charges (Chargeback/Extra)"
+                                      title="Record Charges (Reserve Fund/Extra)"
                                     >
                                       <Receipt className="w-3 h-3" />
                                     </Button>
