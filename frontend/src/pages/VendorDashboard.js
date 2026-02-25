@@ -34,6 +34,9 @@ import {
   DollarSign,
   AlertTriangle,
   Building2,
+  FileText,
+  Printer,
+  Receipt,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
