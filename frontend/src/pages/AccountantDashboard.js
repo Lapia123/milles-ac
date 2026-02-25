@@ -720,34 +720,36 @@ export default function AccountantDashboard() {
                             variant="ghost"
                             size="sm"
                             onClick={() => setUploadingProof(tx)}
-                            className="text-[#66FCF1] hover:text-white hover:bg-[#66FCF1]/10"
+                            className="text-[#66FCF1] hover:text-white hover:bg-[#66FCF1]/10 h-8 w-8 p-0"
                             data-testid={`upload-proof-${tx.transaction_id}`}
                           >
                             <Upload className="w-4 h-4" />
                           </Button>
                         )}
                         {tx.accountant_proof_image && (
-                          <Badge className="bg-green-500/20 text-green-400 text-xs">
-                            <ImageIcon className="w-3 h-3 mr-1" />
+                          <Badge className="bg-green-500/20 text-green-400 text-[10px]">
+                            <ImageIcon className="w-3 h-3 mr-0.5" />
                             Proof
                           </Badge>
                         )}
                         <Button
+                          size="sm"
                           onClick={() => initiateApprove(tx.transaction_id, false)}
                           disabled={processingId === tx.transaction_id}
-                          className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
+                          className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3"
                           data-testid={`approve-tx-${tx.transaction_id}`}
                         >
-                          <CheckCircle className="w-4 h-4 mr-2" />
+                          <CheckCircle className="w-3.5 h-3.5 mr-1" />
                           Approve
                         </Button>
                         <Button
+                          size="sm"
                           onClick={() => initiateReject(tx.transaction_id, false)}
                           disabled={processingId === tx.transaction_id}
-                          className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+                          className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3"
                           data-testid={`reject-tx-${tx.transaction_id}`}
                         >
-                          <XCircle className="w-4 h-4 mr-2" />
+                          <XCircle className="w-3.5 h-3.5 mr-1" />
                           Reject
                         </Button>
                       </div>
