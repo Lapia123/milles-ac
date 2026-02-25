@@ -2298,6 +2298,28 @@ async def get_vendor_settlements(vendor_id: str, user: dict = Depends(get_curren
     settlements = await db.vendor_settlements.find({"vendor_id": vendor_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return settlements
 
+@api_router.get("/settlements/{settlement_id}/statement")
+async def get_settlement_statement(settlement_id: str, user: dict = Depends(get_current_user)):
+    """Get full settlement statement with underlying transactions."""
+    settlement = await db.vendor_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
+    if not settlement:
+        raise HTTPException(status_code=404, detail="Settlement not found")
+    tx_ids = settlement.get("transaction_ids", [])
+    transactions = []
+    if tx_ids:
+        transactions = await db.transactions.find(
+            {"transaction_id": {"$in": tx_ids}},
+            {"_id": 0, "transaction_id": 1, "transaction_type": 1, "amount": 1, "currency": 1,
+             "base_amount": 1, "base_currency": 1, "client_name": 1, "reference": 1,
+             "created_at": 1, "status": 1}
+        ).to_list(1000)
+    vendor = await db.vendors.find_one({"vendor_id": settlement.get("vendor_id")}, {"_id": 0, "vendor_name": 1, "contact_person": 1, "email": 1, "phone": 1})
+    return {
+        "settlement": settlement,
+        "transactions": transactions,
+        "vendor": vendor or {},
+    }
+
 # Admin settle vendor balance
 class VendorSettlementRequest(BaseModel):
     settlement_type: str  # "bank" or "cash"
