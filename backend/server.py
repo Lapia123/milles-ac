@@ -6636,14 +6636,10 @@ async def run_audit_checks() -> dict:
             continue
         
         # 3a. Verify net amount math
+        # Note: psp_net_amount is amount after commission only (reserve fund deducted at settlement)
         amount = tx.get("amount", 0)
         commission = tx.get("psp_commission_amount", 0)
-        reserve_fund = tx.get("psp_reserve_fund_amount", 0) or 0
-        # Fall back to calculating reserve fund from PSP rate for legacy transactions
-        if reserve_fund == 0 and psp.get("reserve_fund_rate", 0) > 0:
-            reserve_fund = round(amount * psp.get("reserve_fund_rate", 0) / 100, 2)
-        extra_charges = tx.get("psp_extra_charges", 0) or 0
-        expected_net = amount - commission - reserve_fund - extra_charges
+        expected_net = amount - commission
         actual_net = tx.get("psp_net_amount", 0)
         
         if actual_net and abs(expected_net - actual_net) > 0.02:
@@ -6651,7 +6647,7 @@ async def run_audit_checks() -> dict:
                 "category": AuditCategory.PSP_SETTLEMENT,
                 "severity": AuditSeverity.CRITICAL,
                 "title": f"Net amount mismatch: {tx.get('reference', tx['transaction_id'])}",
-                "description": f"Expected net {expected_net:,.2f}, actual net {actual_net:,.2f}. Amount={amount:,.2f}, Commission={commission:,.2f}, Reserve={reserve_fund:,.2f}, Extra={extra_charges:,.2f}",
+                "description": f"Expected net {expected_net:,.2f} (amount {amount:,.2f} - commission {commission:,.2f}), actual net {actual_net:,.2f}",
                 "transaction_id": tx["transaction_id"],
                 "reference": tx.get("reference"),
             })
