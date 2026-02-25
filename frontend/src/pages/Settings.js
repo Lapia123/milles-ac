@@ -239,6 +239,8 @@ export default function Settings() {
     fetchUsers();
     fetchEmailSettings();
     fetchEmailLogs();
+    fetchCommissionSettings();
+    fetchFxRates();
   }, []);
 
   const handleSubmit = async (e) => {
