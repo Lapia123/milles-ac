@@ -7043,6 +7043,7 @@ async def startup_db_indexes():
     try:
         scheduler.start()
         await reschedule_daily_report()
+        await reschedule_audit_scan()
         logger.info("Scheduler started successfully")
     except Exception as e:
         logger.error(f"Failed to start scheduler: {e}")
