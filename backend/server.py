@@ -6514,6 +6514,412 @@ async def reschedule_daily_report():
     
     logger.info(f"Daily report scheduled for {report_time}")
 
+# ============== AUDIT & COMPLIANCE MODULE ==============
+
+class AuditSeverity:
+    CRITICAL = "critical"
+    WARNING = "warning"
+    INFO = "info"
+
+class AuditCategory:
+    TRANSACTION_INTEGRITY = "transaction_integrity"
+    FX_RATE_VERIFICATION = "fx_rate_verification"
+    PSP_SETTLEMENT = "psp_settlement"
+    ANOMALY_DETECTION = "anomaly_detection"
+    TREASURY_BALANCE = "treasury_balance"
+
+async def run_audit_checks() -> dict:
+    """Run all audit checks and return findings."""
+    now = datetime.now(timezone.utc)
+    findings = []
+    stats = {
+        "total_checks": 0,
+        "critical": 0,
+        "warning": 0,
+        "info": 0,
+        "passed": 0,
+    }
+    
+    # ---- 1. TRANSACTION INTEGRITY ----
+    all_txs = await db.transactions.find({}, {"_id": 0}).to_list(50000)
+    stats["total_checks"] += 1
+    
+    # 1a. Missing fields
+    for tx in all_txs:
+        issues = []
+        if not tx.get("client_id"):
+            issues.append("Missing client_id")
+        if not tx.get("reference"):
+            issues.append("Missing reference")
+        if not tx.get("amount") or tx.get("amount", 0) <= 0:
+            issues.append("Invalid or zero amount")
+        if not tx.get("currency"):
+            issues.append("Missing currency")
+        if tx.get("status") == "completed" and tx.get("transaction_type") == "deposit" and not tx.get("proof_image") and not tx.get("accountant_proof_image"):
+            issues.append("Completed deposit without proof")
+        if issues:
+            findings.append({
+                "category": AuditCategory.TRANSACTION_INTEGRITY,
+                "severity": AuditSeverity.WARNING,
+                "title": f"Data issue: {tx.get('reference', tx['transaction_id'])}",
+                "description": "; ".join(issues),
+                "transaction_id": tx["transaction_id"],
+                "reference": tx.get("reference"),
+            })
+            stats["warning"] += 1
+    
+    # 1b. Duplicate detection (same client, same amount, within 5 minutes)
+    from collections import defaultdict
+    client_txs = defaultdict(list)
+    for tx in all_txs:
+        key = f"{tx.get('client_id')}_{tx.get('amount')}_{tx.get('transaction_type')}"
+        client_txs[key].append(tx)
+    
+    for key, txs in client_txs.items():
+        if len(txs) < 2:
+            continue
+        txs_sorted = sorted(txs, key=lambda x: x.get("created_at", ""))
+        for i in range(1, len(txs_sorted)):
+            try:
+                t1 = datetime.fromisoformat(txs_sorted[i-1].get("created_at", ""))
+                t2 = datetime.fromisoformat(txs_sorted[i].get("created_at", ""))
+                if abs((t2 - t1).total_seconds()) < 300:  # 5 minutes
+                    findings.append({
+                        "category": AuditCategory.ANOMALY_DETECTION,
+                        "severity": AuditSeverity.WARNING,
+                        "title": f"Potential duplicate: {txs_sorted[i].get('reference', '')}",
+                        "description": f"Same client ({txs_sorted[i].get('client_name', 'N/A')}), same amount ({txs_sorted[i].get('amount', 0)} {txs_sorted[i].get('currency', 'USD')}), within 5 minutes of {txs_sorted[i-1].get('reference', '')}",
+                        "transaction_id": txs_sorted[i]["transaction_id"],
+                        "reference": txs_sorted[i].get("reference"),
+                        "related_transaction": txs_sorted[i-1]["transaction_id"],
+                    })
+                    stats["warning"] += 1
+            except (ValueError, TypeError):
+                continue
+    stats["total_checks"] += 1
+    
+    # ---- 2. FX RATE VERIFICATION ----
+    rates = _fx_cache.get("rates") or FALLBACK_RATES_TO_USD
+    
+    for tx in all_txs:
+        if tx.get("base_currency") and tx.get("base_amount") and tx.get("amount"):
+            base_curr = tx["base_currency"]
+            if base_curr != "USD" and base_curr in rates:
+                expected_usd = round(tx["base_amount"] * rates.get(base_curr, 1.0), 2)
+                actual_usd = tx["amount"]
+                if actual_usd > 0:
+                    deviation_pct = abs(expected_usd - actual_usd) / actual_usd * 100
+                    if deviation_pct > 5:
+                        findings.append({
+                            "category": AuditCategory.FX_RATE_VERIFICATION,
+                            "severity": AuditSeverity.CRITICAL if deviation_pct > 10 else AuditSeverity.WARNING,
+                            "title": f"FX rate deviation: {tx.get('reference', tx['transaction_id'])}",
+                            "description": f"Expected ~{expected_usd:,.2f} USD from {tx['base_amount']:,.2f} {base_curr}, got {actual_usd:,.2f} USD ({deviation_pct:.1f}% deviation)",
+                            "transaction_id": tx["transaction_id"],
+                            "reference": tx.get("reference"),
+                            "deviation_percent": round(deviation_pct, 2),
+                        })
+                        if deviation_pct > 10:
+                            stats["critical"] += 1
+                        else:
+                            stats["warning"] += 1
+    stats["total_checks"] += 1
+    
+    # ---- 3. PSP SETTLEMENT AUDIT ----
+    psp_txs = [tx for tx in all_txs if tx.get("destination_type") == "psp"]
+    psps = {p["psp_id"]: p for p in await db.psps.find({}, {"_id": 0}).to_list(1000)}
+    treasury_accounts = {a["account_id"]: a for a in await db.treasury_accounts.find({}, {"_id": 0}).to_list(100)}
+    
+    for tx in psp_txs:
+        psp = psps.get(tx.get("psp_id"))
+        if not psp:
+            continue
+        
+        # 3a. Verify net amount math
+        amount = tx.get("amount", 0)
+        commission = tx.get("psp_commission_amount", 0)
+        reserve_fund = tx.get("psp_reserve_fund_amount", 0) or 0
+        extra_charges = tx.get("psp_extra_charges", 0) or 0
+        expected_net = amount - commission - reserve_fund - extra_charges
+        actual_net = tx.get("psp_net_amount", 0)
+        
+        if actual_net and abs(expected_net - actual_net) > 0.02:
+            findings.append({
+                "category": AuditCategory.PSP_SETTLEMENT,
+                "severity": AuditSeverity.CRITICAL,
+                "title": f"Net amount mismatch: {tx.get('reference', tx['transaction_id'])}",
+                "description": f"Expected net {expected_net:,.2f}, actual net {actual_net:,.2f}. Amount={amount:,.2f}, Commission={commission:,.2f}, Reserve={reserve_fund:,.2f}, Extra={extra_charges:,.2f}",
+                "transaction_id": tx["transaction_id"],
+                "reference": tx.get("reference"),
+            })
+            stats["critical"] += 1
+        
+        # 3b. Check reserve fund rate matches PSP setting
+        if reserve_fund > 0 and amount > 0:
+            expected_rate = psp.get("reserve_fund_rate", 0)
+            actual_rate = round(reserve_fund / amount * 100, 2)
+            if expected_rate > 0 and abs(actual_rate - expected_rate) > 0.5:
+                findings.append({
+                    "category": AuditCategory.PSP_SETTLEMENT,
+                    "severity": AuditSeverity.WARNING,
+                    "title": f"Reserve fund rate mismatch: {tx.get('reference', tx['transaction_id'])}",
+                    "description": f"PSP rate is {expected_rate}%, but transaction shows {actual_rate}% ({reserve_fund:,.2f} of {amount:,.2f})",
+                    "transaction_id": tx["transaction_id"],
+                    "reference": tx.get("reference"),
+                })
+                stats["warning"] += 1
+        
+        # 3c. Check settled transactions have currency conversion if needed
+        if tx.get("settled"):
+            dest_id = psp.get("settlement_destination_id")
+            dest_acct = treasury_accounts.get(dest_id) if dest_id else None
+            if dest_acct and dest_acct.get("currency", "USD") != tx.get("currency", "USD"):
+                # Check if treasury transaction has conversion
+                ttx = await db.treasury_transactions.find_one({
+                    "related_transaction_id": tx["transaction_id"],
+                    "transaction_type": "psp_settlement"
+                }, {"_id": 0})
+                if ttx and not ttx.get("original_currency"):
+                    findings.append({
+                        "category": AuditCategory.PSP_SETTLEMENT,
+                        "severity": AuditSeverity.CRITICAL,
+                        "title": f"Missing currency conversion: {tx.get('reference', tx['transaction_id'])}",
+                        "description": f"Settled {tx.get('currency','USD')} transaction to {dest_acct.get('currency','USD')} account without conversion",
+                        "transaction_id": tx["transaction_id"],
+                        "reference": tx.get("reference"),
+                    })
+                    stats["critical"] += 1
+    stats["total_checks"] += 1
+    
+    # ---- 4. ANOMALY DETECTION ----
+    # 4a. Large transactions
+    anomaly_settings = await db.app_settings.find_one({"setting_type": "audit"}, {"_id": 0}) or {}
+    large_threshold = anomaly_settings.get("large_transaction_threshold", 50000)
+    
+    for tx in all_txs:
+        if tx.get("amount", 0) >= large_threshold:
+            findings.append({
+                "category": AuditCategory.ANOMALY_DETECTION,
+                "severity": AuditSeverity.INFO,
+                "title": f"Large transaction: {tx.get('reference', tx['transaction_id'])}",
+                "description": f"{tx.get('transaction_type', 'N/A').upper()} of {tx.get('amount', 0):,.2f} {tx.get('currency', 'USD')} for {tx.get('client_name', 'N/A')}",
+                "transaction_id": tx["transaction_id"],
+                "reference": tx.get("reference"),
+            })
+            stats["info"] += 1
+    
+    # 4b. Round number detection (exact multiples of 10000)
+    for tx in all_txs:
+        amt = tx.get("amount", 0)
+        if amt >= 10000 and amt % 10000 == 0:
+            findings.append({
+                "category": AuditCategory.ANOMALY_DETECTION,
+                "severity": AuditSeverity.INFO,
+                "title": f"Round amount: {tx.get('reference', tx['transaction_id'])}",
+                "description": f"Exact round amount {amt:,.0f} {tx.get('currency', 'USD')} - {tx.get('client_name', 'N/A')}",
+                "transaction_id": tx["transaction_id"],
+                "reference": tx.get("reference"),
+            })
+            stats["info"] += 1
+    stats["total_checks"] += 1
+    
+    # ---- 5. TREASURY BALANCE VERIFICATION ----
+    for acct_id, acct in treasury_accounts.items():
+        stored_balance = acct.get("balance", 0)
+        
+        # Sum all treasury transactions for this account
+        ttxs = await db.treasury_transactions.find({"account_id": acct_id}, {"_id": 0}).to_list(50000)
+        calculated_balance = sum(t.get("amount", 0) for t in ttxs)
+        
+        # Note: initial balance is not tracked in transactions, so we can only flag large discrepancies
+        if len(ttxs) > 0 and abs(stored_balance - calculated_balance) > 1.0:
+            findings.append({
+                "category": AuditCategory.TREASURY_BALANCE,
+                "severity": AuditSeverity.WARNING,
+                "title": f"Balance discrepancy: {acct.get('account_name', acct_id)}",
+                "description": f"Stored balance: {stored_balance:,.2f} {acct.get('currency', 'USD')}, Sum of transactions: {calculated_balance:,.2f} {acct.get('currency', 'USD')}. Difference may include initial balance or manual adjustments.",
+                "account_id": acct_id,
+                "stored_balance": round(stored_balance, 2),
+                "calculated_balance": round(calculated_balance, 2),
+                "difference": round(stored_balance - calculated_balance, 2),
+            })
+            stats["warning"] += 1
+    stats["total_checks"] += 1
+    
+    stats["passed"] = stats["total_checks"] - stats["critical"] - stats["warning"]
+    health_score = max(0, 100 - (stats["critical"] * 20) - (stats["warning"] * 5) - (stats["info"] * 1))
+    
+    return {
+        "scan_id": f"audit_{uuid.uuid4().hex[:12]}",
+        "scanned_at": now.isoformat(),
+        "health_score": min(100, health_score),
+        "stats": stats,
+        "findings": findings,
+        "summary": {
+            "total_transactions": len(all_txs),
+            "psp_transactions": len(psp_txs),
+            "treasury_accounts": len(treasury_accounts),
+            "categories_checked": 5,
+        }
+    }
+
+@api_router.post("/audit/run-scan")
+async def run_audit_scan(user: dict = Depends(require_admin)):
+    """Run a full audit scan and save results."""
+    result = await run_audit_checks()
+    
+    # Save to DB
+    await db.audit_scans.insert_one({**result})
+    
+    # Remove _id before returning
+    result.pop("_id", None)
+    return result
+
+@api_router.get("/audit/latest")
+async def get_latest_audit(user: dict = Depends(get_current_user)):
+    """Get the latest audit scan result."""
+    scan = await db.audit_scans.find_one({}, {"_id": 0}, sort=[("scanned_at", -1)])
+    if not scan:
+        return {"message": "No audit scans found. Run a scan first.", "scan_id": None}
+    return scan
+
+@api_router.get("/audit/history")
+async def get_audit_history(user: dict = Depends(get_current_user), limit: int = 20):
+    """Get audit scan history."""
+    scans = await db.audit_scans.find({}, {"_id": 0, "findings": 0}).sort("scanned_at", -1).to_list(limit)
+    return scans
+
+@api_router.get("/audit/settings")
+async def get_audit_settings(user: dict = Depends(require_admin)):
+    """Get audit module settings."""
+    settings = await db.app_settings.find_one({"setting_type": "audit"}, {"_id": 0})
+    if not settings:
+        settings = {
+            "setting_type": "audit",
+            "large_transaction_threshold": 50000,
+            "fx_deviation_threshold": 5,
+            "auto_scan_enabled": False,
+            "auto_scan_time": "02:00",
+            "alert_emails": [],
+        }
+    return settings
+
+class AuditSettingsUpdate(BaseModel):
+    large_transaction_threshold: Optional[float] = None
+    fx_deviation_threshold: Optional[float] = None
+    auto_scan_enabled: Optional[bool] = None
+    auto_scan_time: Optional[str] = None
+    alert_emails: Optional[List[str]] = None
+
+@api_router.put("/audit/settings")
+async def update_audit_settings(settings: AuditSettingsUpdate, user: dict = Depends(require_admin)):
+    """Update audit module settings."""
+    updates = {k: v for k, v in settings.model_dump().items() if v is not None}
+    updates["setting_type"] = "audit"
+    
+    await db.app_settings.update_one(
+        {"setting_type": "audit"},
+        {"$set": updates},
+        upsert=True
+    )
+    
+    # Reschedule auto-scan if needed
+    if settings.auto_scan_enabled is not None or settings.auto_scan_time is not None:
+        await reschedule_audit_scan()
+    
+    return await db.app_settings.find_one({"setting_type": "audit"}, {"_id": 0})
+
+async def send_audit_alert_email(result: dict):
+    """Send audit alert email if issues found."""
+    try:
+        audit_settings = await db.app_settings.find_one({"setting_type": "audit"}, {"_id": 0})
+        if not audit_settings or not audit_settings.get("alert_emails"):
+            return
+        
+        smtp_settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
+        if not smtp_settings or not smtp_settings.get("smtp_email"):
+            return
+        
+        stats = result.get("stats", {})
+        if stats.get("critical", 0) == 0 and stats.get("warning", 0) == 0:
+            return  # No issues to report
+        
+        score = result.get("health_score", 100)
+        color = "#ef4444" if score < 60 else "#f59e0b" if score < 80 else "#22c55e"
+        
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0B0C10;color:#C5C6C7;padding:20px;border-radius:8px;">
+            <h1 style="color:#66FCF1;margin-bottom:4px;">Miles Capitals - Audit Alert</h1>
+            <p style="color:#888;margin-top:0;">{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}</p>
+            <div style="text-align:center;margin:20px 0;">
+                <div style="display:inline-block;width:80px;height:80px;border-radius:50%;border:4px solid {color};line-height:80px;font-size:28px;font-weight:bold;color:{color};">{score}</div>
+                <p style="color:#888;margin-top:8px;">Health Score</p>
+            </div>
+            <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+                <tr><td style="padding:8px;color:#ef4444;">Critical Issues</td><td style="padding:8px;text-align:right;font-weight:bold;">{stats.get('critical', 0)}</td></tr>
+                <tr><td style="padding:8px;color:#f59e0b;">Warnings</td><td style="padding:8px;text-align:right;font-weight:bold;">{stats.get('warning', 0)}</td></tr>
+                <tr><td style="padding:8px;color:#3b82f6;">Info</td><td style="padding:8px;text-align:right;font-weight:bold;">{stats.get('info', 0)}</td></tr>
+            </table>
+        """
+        
+        # Add critical findings
+        criticals = [f for f in result.get("findings", []) if f.get("severity") == "critical"]
+        if criticals:
+            html += '<h3 style="color:#ef4444;">Critical Findings</h3>'
+            for f in criticals[:10]:
+                html += f'<div style="background:#1a1a2e;padding:10px;margin:6px 0;border-left:3px solid #ef4444;border-radius:4px;">'
+                html += f'<strong>{f.get("title","")}</strong><br/><span style="color:#999;font-size:13px;">{f.get("description","")}</span></div>'
+        
+        html += "</div>"
+        
+        await send_email(
+            to_emails=audit_settings["alert_emails"],
+            subject=f"Miles Capitals - Audit Alert (Score: {score}/100)",
+            html_content=html,
+            smtp_host=smtp_settings.get("smtp_host", "smtp.gmail.com"),
+            smtp_port=smtp_settings.get("smtp_port", 587),
+            smtp_email=smtp_settings["smtp_email"],
+            smtp_password=smtp_settings["smtp_password"],
+            smtp_from_email=smtp_settings.get("smtp_from_email", smtp_settings["smtp_email"])
+        )
+        logger.info(f"Audit alert sent to {len(audit_settings['alert_emails'])} recipients")
+    except Exception as e:
+        logger.error(f"Failed to send audit alert: {e}")
+
+async def run_scheduled_audit():
+    """Run scheduled audit scan and send alerts."""
+    try:
+        result = await run_audit_checks()
+        await db.audit_scans.insert_one({**result})
+        await send_audit_alert_email(result)
+        logger.info(f"Scheduled audit complete. Score: {result['health_score']}/100")
+    except Exception as e:
+        logger.error(f"Scheduled audit failed: {e}")
+
+async def reschedule_audit_scan():
+    """Reschedule the automated audit scan."""
+    global scheduler
+    try:
+        scheduler.remove_job("audit_scan")
+    except:
+        pass
+    
+    settings = await db.app_settings.find_one({"setting_type": "audit"}, {"_id": 0})
+    if not settings or not settings.get("auto_scan_enabled"):
+        logger.info("Auto audit scan disabled")
+        return
+    
+    scan_time = settings.get("auto_scan_time", "02:00")
+    hour, minute = map(int, scan_time.split(":"))
+    
+    scheduler.add_job(
+        run_scheduled_audit,
+        CronTrigger(hour=hour, minute=minute),
+        id="audit_scan",
+        replace_existing=True
+    )
+    logger.info(f"Audit scan scheduled for {scan_time}")
+
 # ============== FX RATE ENDPOINTS ==============
 @api_router.get("/fx-rates")
 async def get_fx_rates_endpoint(user: dict = Depends(get_current_user)):
