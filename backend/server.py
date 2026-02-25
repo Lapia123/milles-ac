@@ -5520,7 +5520,7 @@ async def get_psp_reconciliation_details(psp_id: str, user: dict = Depends(get_c
             "client_name": tx.get("client_name"),
             "gross_amount": tx.get("amount"),
             "commission": tx.get("psp_commission_amount", 0),
-            "chargeback": tx.get("psp_chargeback_amount", 0),
+            "chargeback": tx.get("psp_reserve_fund_amount", tx.get("psp_chargeback_amount", 0)),
             "extra_charges": tx.get("psp_extra_charges", 0),
             "expected_net": expected,
             "actual_received": actual,
