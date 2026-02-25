@@ -172,6 +172,69 @@ export default function Settings() {
     }
   };
 
+  const fetchCommissionSettings = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/settings/commission`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        setCommissionSettings(data);
+      }
+    } catch (error) {
+      console.error('Error fetching commission settings:', error);
+    }
+  };
+
+  const fetchFxRates = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/fx-rates`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setFxRates(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching FX rates:', error);
+    } finally {
+      setFxLoading(false);
+    }
+  };
+
+  const handleRefreshRates = async () => {
+    setFxRefreshing(true);
+    try {
+      const response = await fetch(`${API_URL}/api/fx-rates/refresh`, { method: 'POST', headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        toast.success('FX rates refreshed');
+        await fetchFxRates();
+      } else {
+        toast.error('Failed to refresh rates');
+      }
+    } catch (error) {
+      toast.error('Error refreshing rates');
+    } finally {
+      setFxRefreshing(false);
+    }
+  };
+
+  const handleSaveCommission = async () => {
+    setSavingCommission(true);
+    try {
+      const response = await fetch(`${API_URL}/api/settings/commission`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(commissionSettings),
+      });
+      if (response.ok) {
+        toast.success('Commission settings saved');
+      } else {
+        toast.error('Failed to save commission settings');
+      }
+    } catch (error) {
+      toast.error('Error saving commission settings');
+    } finally {
+      setSavingCommission(false);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
     fetchEmailSettings();
