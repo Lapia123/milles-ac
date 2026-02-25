@@ -294,6 +294,9 @@ export default function PSPs() {
       settlement_days: psp.settlement_days.toString(),
       settlement_destination_id: psp.settlement_destination_id,
       min_settlement_amount: (psp.min_settlement_amount || 0).toString(),
+      gateway_fee: (psp.gateway_fee || 0).toString(),
+      refund_fee: (psp.refund_fee || 0).toString(),
+      monthly_minimum_fee: (psp.monthly_minimum_fee || 0).toString(),
       description: psp.description || '',
       status: psp.status,
     });
