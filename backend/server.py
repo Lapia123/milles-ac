@@ -6654,6 +6654,7 @@ async def run_audit_checks() -> dict:
             stats["critical"] += 1
         
         # 3b. Check reserve fund rate matches PSP setting
+        reserve_fund = tx.get("psp_reserve_fund_amount", 0) or 0
         if reserve_fund > 0 and amount > 0:
             expected_rate = psp.get("reserve_fund_rate", 0)
             actual_rate = round(reserve_fund / amount * 100, 2)
