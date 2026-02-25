@@ -33,14 +33,16 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 ### PSP Management (Enhanced Feb 25, 2026)
 - Commission tracking, per-PSP rates
 - **Reserve Fund** (renamed from Chargeback): Reserve Fund Rate %, per-transaction tracking
+- **Per-transaction reserve fund amount**: Stored at creation time, not just at settlement
 - **New fee fields**: Gateway Fee (per tx), Refund Fee, Monthly Minimum Fee
 - Holding & Release Tracking with status badges
 - **Reserve Fund Ledger**: Full ledger tab with summary cards (Total Held, Due This Week, Released, Holding Period)
 - **Release Tracker**: Status (Held/Due/Released), Days Remaining, Hold Date, Release Date
-- **Single & Bulk Release**: Release reserve funds back to treasury with automatic credit
+- **Single & Bulk Release**: Release reserve funds back to treasury with automatic currency conversion
+- **Currency Conversion**: All PSP settlements and reserve fund releases auto-convert to treasury account currency using live FX rates
 - **Dashboard Reserve Fund Card**: Global total reserve fund held with due-for-release amount
 - **Per-PSP Reserve Held**: Shown on each PSP card
-- Two-step settlement process (Record Charges → Record Payment)
+- Two-step settlement process (Record Charges -> Record Payment)
 
 ### Vendor Portal
 - Separate login, assigned transactions, settlement requests
@@ -73,11 +75,19 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 
 ## Key API Endpoints
 
-### Reserve Fund Endpoints (NEW - Feb 25)
+### Currency Conversion (NEW - Feb 25)
+- `convert_currency(amount, from_currency, to_currency)` - Converts between any two currencies via USD intermediate
+
+### Reserve Fund Endpoints
 - `GET /api/psps/{psp_id}/reserve-funds` - Get reserve fund ledger for a PSP
-- `POST /api/psps/reserve-funds/{txId}/release` - Release single reserve fund
-- `POST /api/psps/reserve-funds/bulk-release` - Bulk release reserve funds
+- `POST /api/psps/reserve-funds/{txId}/release` - Release single reserve fund (with currency conversion)
+- `POST /api/psps/reserve-funds/bulk-release` - Bulk release reserve funds (with currency conversion)
 - `GET /api/psps/reserve-funds/global-summary` - Global reserve fund stats
+
+### PSP Settlement Endpoints (Updated - Feb 25)
+- `POST /api/psp/transactions/{id}/settle` - Immediate settle with currency conversion
+- `POST /api/psp/transactions/{id}/record-payment` - Record payment with currency conversion
+- `POST /api/psp-settlements/{id}/complete` - Complete batch settlement with currency conversion
 
 ### FX & Commission
 - `GET /api/fx-rates` - Live exchange rates
@@ -88,6 +98,7 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 
 ## Test Credentials
 - **Admin**: admin@fxbroker.com / password
+- **Vendor**: vendor1@fxbroker.com / password
 
 ## Known Issues
 - P2: Minor session management redirect issue after login
