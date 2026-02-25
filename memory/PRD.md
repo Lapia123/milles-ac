@@ -30,28 +30,33 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 ### Accountant Dashboard
 - Approve/reject transactions, math captcha, settlement approvals
 
-### PSP Management (Enhanced Feb 25, 2026)
-- Commission tracking, per-PSP rates
-- **Reserve Fund**: Reserve Fund Rate %, per-transaction tracking
-- **Per-transaction reserve fund amount**: Stored at creation time
-- **New fee fields**: Gateway Fee (per tx), Refund Fee, Monthly Minimum Fee
-- Holding & Release Tracking with status badges
-- **Reserve Fund Ledger**: Full ledger tab with summary cards
-- **Release Tracker**: Status (Held/Due/Released), Days Remaining
-- **Single & Bulk Release**: Release reserve funds back to treasury with automatic currency conversion
-- **Currency Conversion**: All PSP settlements and reserve fund releases auto-convert to treasury account currency using live FX rates
-- Two-step settlement process (Record Charges -> Record Payment)
+### PSP Management
+- Commission tracking, per-PSP rates, reserve fund with per-transaction storage
+- Currency conversion on all settlements and reserve fund releases
+- Two-step settlement process
 
-### Vendor Portal
+### Vendor Portal (Enhanced Feb 25, 2026)
 - Separate login, assigned transactions, settlement requests
+- **Tabbed layout**: Transactions, Income/Expenses, Settlement History
+- **IE History**: Shows all income/expense entries linked to vendor
+- **IE Approval/Rejection**: Vendor can approve/reject pending entries
+- **Proof Upload Required**: Vendors MUST upload proof screenshot before approving ANY transaction
 - Settlement History with Statement of Settlement (printable)
-- Commission calculation on deposit/withdrawal approval
 
-### Income & Expenses Ledger
+### Income & Expenses (Enhanced Feb 25, 2026)
+- **Visual Distinction**: Green left border + green badge for income, Red left border + red badge for expenses
+- **Vendor Integration**: Vendors available in Account dropdown with "Requires Approval" label
+- **Bank Account Field**: When vendor selected, bank account details can be specified
+- **Pending Vendor Status**: Vendor-linked entries start as "pending_vendor", treasury only updates after approval
+- **Convert Expense to Loan**: Button on expense rows to convert to loan with borrower selection
+- **No Double Entry**: Converted expenses excluded from reports, marked with "Loan" badge
 - Track company income/expenses, custom categories, treasury integration
 
-### Loan Management
+### Loan Management (Enhanced Feb 25, 2026)
+- **Multiple Loans per Company**: Same borrower can have multiple active loans
+- **CSV Export**: Export all loans to CSV for external use
 - Borrower, amount, interest, dates, repayment tracking
+- Converted-from-expense loans tracked with source reference
 
 ### Outstanding Accounts
 - Debtors & Creditors, party linking, interest, payment recording, aging summary
@@ -63,7 +68,7 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 - Gmail SMTP, configurable recipients, APScheduler
 
 ### Live FX Rates
-- Real-time from ExchangeRate-API (open.er-api.com), 1-hour cache, dashboard ticker
+- Real-time from ExchangeRate-API, 1-hour cache, dashboard ticker
 
 ### Broker Commission
 - Global configurable rates for deposits/withdrawals in Settings
@@ -71,46 +76,22 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 ### Reconciliation Module (Scaffold)
 - Bank/Treasury, PSP, Client, Vendor reconciliation views
 
-### Audit & Compliance Module (NEW - Feb 25, 2026)
-- **Dashboard**: Health score ring (0-100), issue breakdown (Critical/Warning/Info), scan summary, 5 category cards
-- **5 Audit Categories**:
-  1. Transaction Integrity: Missing fields, completed deposits without proof
-  2. FX Rate Verification: Compare stored rates vs market rates (configurable threshold)
-  3. PSP Settlement: Net amount math, reserve fund rate consistency, currency conversion checks
-  4. Anomaly Detection: Large transactions (configurable threshold), duplicates within 5min, round amounts
-  5. Treasury Balance: Cross-check stored vs calculated balances
-- **Findings Tab**: Filterable by severity & category, expandable finding cards with details
-- **History Tab**: Past scan records with score trends
-- **Settings Tab**: Configurable thresholds, automated daily scan toggle, email alerts
-- **Automated Daily Scan**: Scheduled via APScheduler, sends email alerts when issues found
-- **Admin-only access**: Sidebar nav item and routes restricted to admin role
+### Audit & Compliance Module
+- Dashboard with health score, 5 audit categories, findings, history, settings
+- Automated daily scan with email alerts, admin-only access
 
-## Key API Endpoints
+## Key API Endpoints (New/Updated)
 
-### Currency Conversion
-- `convert_currency(amount, from_currency, to_currency)` - Converts between any two currencies via USD intermediate
+### Income & Expenses
+- `POST /api/income-expenses` - Create entry (with optional vendor_id, vendor_bank_account)
+- `POST /api/income-expenses/{id}/convert-to-loan` - Convert expense to loan
+- `POST /api/income-expenses/{id}/vendor-approve` - Vendor approves entry
+- `POST /api/income-expenses/{id}/vendor-reject` - Vendor rejects entry
+- `POST /api/income-expenses/{id}/vendor-upload-proof` - Upload proof for IE entry
+- `GET /api/vendor/income-expenses` - Get vendor's IE entries
 
-### Audit & Compliance
-- `POST /api/audit/run-scan` - Run full audit scan
-- `GET /api/audit/latest` - Get most recent scan result
-- `GET /api/audit/history` - Get scan history
-- `GET /api/audit/settings` - Get audit configuration
-- `PUT /api/audit/settings` - Update audit configuration
-
-### Reserve Fund Endpoints
-- `GET /api/psps/{psp_id}/reserve-funds` - Reserve fund ledger
-- `POST /api/psps/reserve-funds/{txId}/release` - Release single reserve fund (with currency conversion)
-- `POST /api/psps/reserve-funds/bulk-release` - Bulk release (with currency conversion)
-- `GET /api/psps/reserve-funds/global-summary` - Global reserve fund stats
-
-### PSP Settlement Endpoints
-- `POST /api/psp/transactions/{id}/settle` - Immediate settle with currency conversion
-- `POST /api/psp/transactions/{id}/record-payment` - Record payment with currency conversion
-- `POST /api/psp-settlements/{id}/complete` - Complete batch settlement with currency conversion
-
-## Database Schema (Key Collections)
-- **audit_scans**: scan_id, scanned_at, health_score, stats, findings[], summary
-- **app_settings** (setting_type: "audit"): large_transaction_threshold, fx_deviation_threshold, auto_scan_enabled, auto_scan_time, alert_emails
+### Loans
+- `GET /api/loans/export/csv` - Export loans to CSV
 
 ## Test Credentials
 - **Admin**: admin@fxbroker.com / password
