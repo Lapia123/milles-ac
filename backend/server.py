@@ -2780,6 +2780,10 @@ async def create_transaction(
         "settled": False,
         "settlement_id": None,
         "settlement_status": None,
+        "broker_commission_rate": broker_commission_rate,
+        "broker_commission_amount": broker_commission_amount,
+        "broker_commission_base_amount": broker_commission_base,
+        "broker_commission_base_currency": base_currency or "USD",
         "created_at": now.isoformat(),
         "processed_at": None
     }
