@@ -167,6 +167,7 @@ class TestFxRatesCommission:
     
     def test_deposit_has_broker_commission(self, auth_headers):
         """POST /api/transactions - Deposit includes broker commission"""
+        import time
         # First get a client and treasury account
         clients_response = requests.get(f"{BASE_URL}/api/clients", headers=auth_headers)
         assert clients_response.status_code == 200
@@ -180,6 +181,9 @@ class TestFxRatesCommission:
         assert len(treasuries) > 0, "No treasury accounts found"
         treasury_id = treasuries[0]["account_id"]
         
+        # Use unique amount based on timestamp to avoid duplicate detection
+        unique_amount = 7000 + int(time.time() % 1000)
+        
         # Create deposit transaction using multipart form
         response = requests.post(
             f"{BASE_URL}/api/transactions",
@@ -187,7 +191,7 @@ class TestFxRatesCommission:
             data={
                 "client_id": client_id,
                 "transaction_type": "deposit",
-                "amount": "1000",
+                "amount": str(unique_amount),
                 "currency": "USD",
                 "base_currency": "USD",
                 "destination_type": "treasury",
@@ -204,17 +208,22 @@ class TestFxRatesCommission:
         assert "broker_commission_base_amount" in data
         assert "broker_commission_base_currency" in data
         
-        # Commission should be 1.5% of $1000 = $15
+        # Commission should be 1.5% of amount
         assert data["broker_commission_rate"] == 1.5
-        assert data["broker_commission_amount"] == 15.0
+        expected_commission = round(unique_amount * 0.015, 2)
+        assert data["broker_commission_amount"] == expected_commission
         
         print(f"Deposit created with broker commission: rate={data['broker_commission_rate']}%, amount=${data['broker_commission_amount']}")
     
     def test_withdrawal_has_broker_commission(self, auth_headers):
         """POST /api/transactions - Withdrawal includes broker commission"""
+        import time
         clients_response = requests.get(f"{BASE_URL}/api/clients", headers=auth_headers)
         clients = clients_response.json()
         client_id = clients[0]["client_id"]
+        
+        # Use unique amount based on timestamp to avoid duplicate detection
+        unique_amount = 3000 + int(time.time() % 1000)
         
         # Create withdrawal transaction
         response = requests.post(
@@ -223,13 +232,13 @@ class TestFxRatesCommission:
             data={
                 "client_id": client_id,
                 "transaction_type": "withdrawal",
-                "amount": "500",
+                "amount": str(unique_amount),
                 "currency": "USD",
                 "base_currency": "USD",
                 "destination_type": "bank",
                 "client_bank_name": "TEST_BANK",
                 "client_bank_account_name": "Test Account",
-                "client_bank_account_number": "123456789",
+                "client_bank_account_number": f"123456789{int(time.time())}",
                 "client_bank_currency": "USD",
                 "reference": f"TEST_BROKER_COMMISSION_WITHDRAWAL_{os.urandom(4).hex()}"
             }
@@ -237,14 +246,16 @@ class TestFxRatesCommission:
         assert response.status_code == 200, f"Transaction failed: {response.text}"
         
         data = response.json()
-        # Withdrawal commission should be 2.0% of $500 = $10
+        # Withdrawal commission should be 2.0% of amount
         assert data["broker_commission_rate"] == 2.0
-        assert data["broker_commission_amount"] == 10.0
+        expected_commission = round(unique_amount * 0.02, 2)
+        assert data["broker_commission_amount"] == expected_commission
         
         print(f"Withdrawal created with broker commission: rate={data['broker_commission_rate']}%, amount=${data['broker_commission_amount']}")
     
     def test_transaction_with_base_currency(self, auth_headers):
         """POST /api/transactions - Commission calculated on base currency amount"""
+        import time
         clients_response = requests.get(f"{BASE_URL}/api/clients", headers=auth_headers)
         clients = clients_response.json()
         client_id = clients[0]["client_id"]
@@ -253,6 +264,10 @@ class TestFxRatesCommission:
         treasuries = treasury_response.json()
         treasury_id = treasuries[0]["account_id"]
         
+        # Use unique amounts based on timestamp
+        unique_base_amount = 5000 + int(time.time() % 1000)
+        unique_usd_amount = round(unique_base_amount * 0.27229, 2)  # Approximate AED to USD
+        
         # Create deposit with AED as base currency
         response = requests.post(
             f"{BASE_URL}/api/transactions",
@@ -260,10 +275,10 @@ class TestFxRatesCommission:
             data={
                 "client_id": client_id,
                 "transaction_type": "deposit",
-                "amount": "272.29",  # ~1000 AED converted to USD
+                "amount": str(unique_usd_amount),
                 "currency": "USD",
                 "base_currency": "AED",
-                "base_amount": "1000",
+                "base_amount": str(unique_base_amount),
                 "destination_type": "treasury",
                 "destination_account_id": treasury_id,
                 "reference": f"TEST_BROKER_COMMISSION_AED_{os.urandom(4).hex()}"
@@ -274,8 +289,9 @@ class TestFxRatesCommission:
         data = response.json()
         assert data["broker_commission_base_currency"] == "AED"
         assert data["broker_commission_rate"] == 1.5
-        # Base amount commission = 1.5% of 1000 AED = 15 AED
-        assert data["broker_commission_base_amount"] == 15.0
+        # Base amount commission = 1.5% of base_amount AED
+        expected_commission_base = round(unique_base_amount * 0.015, 2)
+        assert data["broker_commission_base_amount"] == expected_commission_base
         
         print(f"Transaction with AED base currency: commission_base={data['broker_commission_base_amount']} {data['broker_commission_base_currency']}")
 
