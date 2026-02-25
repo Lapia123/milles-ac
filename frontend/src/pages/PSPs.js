@@ -1113,8 +1113,8 @@ export default function PSPs() {
                   type="number"
                   step="0.01"
                   min="0"
-                  value={chargesForm.chargeback_amount}
-                  onChange={(e) => setChargesForm({ ...chargesForm, chargeback_amount: e.target.value })}
+                  value={chargesForm.reserve_fund_amount}
+                  onChange={(e) => setChargesForm({ ...chargesForm, reserve_fund_amount: e.target.value })}
                   className="bg-[#0B0C10] border-white/10 text-white font-mono"
                   placeholder="0.00"
                 />
