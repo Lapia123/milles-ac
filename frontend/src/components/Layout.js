@@ -64,6 +64,7 @@ export default function Layout() {
     { to: '/psp', icon: CreditCard, label: 'PSP' },
     ...(isAdmin ? [{ to: '/vendors', icon: Store, label: 'Vendors' }] : []),
     { to: '/reconciliation', icon: ArrowUpDown, label: 'Reconciliation' },
+    ...(isAdmin ? [{ to: '/audit', icon: ShieldCheck, label: 'Audit' }] : []),
     { to: '/reports', icon: BarChart3, label: 'Reports' },
     ...(isAccountantOrAdmin ? [{ to: '/accountant', icon: ClipboardCheck, label: 'Approvals' }] : []),
     { to: '/settings', icon: Settings, label: 'Settings' },
