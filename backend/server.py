@@ -157,21 +157,27 @@ class CommissionPaidBy:
 class PSPCreate(BaseModel):
     psp_name: str
     commission_rate: float  # percentage e.g., 2.5 for 2.5%
-    chargeback_rate: float = 0  # percentage for chargeback reserve
+    reserve_fund_rate: float = 0  # percentage for reserve fund
     holding_days: int = 0  # days PSP holds funds before release
     settlement_days: int = 1  # T+1, T+2, etc.
     settlement_destination_id: str  # Treasury account ID
     min_settlement_amount: float = 0
+    gateway_fee: float = 0  # Fixed fee per transaction
+    refund_fee: float = 0  # Fee charged when processing refunds
+    monthly_minimum_fee: float = 0  # Minimum monthly charge by PSP
     description: Optional[str] = None
 
 class PSPUpdate(BaseModel):
     psp_name: Optional[str] = None
     commission_rate: Optional[float] = None
-    chargeback_rate: Optional[float] = None
+    reserve_fund_rate: Optional[float] = None
     holding_days: Optional[int] = None
     settlement_days: Optional[int] = None
     settlement_destination_id: Optional[str] = None
     min_settlement_amount: Optional[float] = None
+    gateway_fee: Optional[float] = None
+    refund_fee: Optional[float] = None
+    monthly_minimum_fee: Optional[float] = None
     status: Optional[str] = None
     description: Optional[str] = None
 
