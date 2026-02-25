@@ -1,0 +1,113 @@
+{
+  "summary": "Complete testing of PSP Reserve Fund Module enhancements. All 14 backend API tests passed (100%). Frontend UI fully verified with all features working correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Dashboard Charts",
+        "issues": ["Minor console warning: Chart width/height of -1 detected - Recharts container styling issue (non-blocking)"]
+      }
+    ]
+  },
+  "passed_tests": {
+    "backend": [
+      "GET /api/psp-summary - Returns total_reserve_fund_held for each PSP",
+      "GET /api/psp/{psp_id} - Returns reserve_fund_rate, gateway_fee, refund_fee, monthly_minimum_fee fields",
+      "GET /api/psps/reserve-funds/global-summary - Returns total_held, total_released, due_for_release",
+      "GET /api/psps/{psp_id}/reserve-funds - Returns ledger array and summary object with correct structure",
+      "GET /api/psps/invalid_psp/reserve-funds - Returns 404 for invalid PSP",
+      "POST /api/psp - Creates PSP with gateway_fee, refund_fee, monthly_minimum_fee fields",
+      "PUT /api/psp/{psp_id} - Updates reserve_fund_rate successfully",
+      "POST /api/psps/reserve-funds/{txId}/release - Releases single reserve fund and credits treasury",
+      "POST /api/psps/reserve-funds/{txId}/release - Returns 400 if already released",
+      "POST /api/psps/reserve-funds/invalid_tx/release - Returns 404 for invalid transaction",
+      "POST /api/psps/reserve-funds/bulk-release - Releases multiple reserve funds",
+      "POST /api/psps/reserve-funds/bulk-release - Returns 400 for empty transaction list",
+      "GET /api/psp/{psp_id}/pending-transactions - Shows reserve fund deductions",
+      "PUT /api/psp/transactions/{txId}/charges - Updates reserve_fund_amount on transactions"
+    ],
+    "frontend": [
+      "PSP Dashboard - Shows 4 stat cards: Total PSPs, Pending Settlement, Reserve Fund Held (with orange accent), Overdue Settlements",
+      "Reserve Fund Held card - Shows amount with orange accent styling and 'due for release' note",
+      "PSP Cards - Display 'Reserve Fund' label (not Chargeback) with percentage rate",
+      "PSP Cards - Show 'Reserve Held' amount in orange color",
+      "PSP Detail View - Shows 'Reserve Fund Rate' label (renamed from Chargeback)",
+      "PSP Detail View - Has 3 tabs: Pending Settlements, Reserve Fund, Settlement History",
+      "Reserve Fund Tab - Shows 4 summary cards: Total Held, Due This Week, Released, Holding Period",
+      "Reserve Fund Ledger Table - Has columns: Reference, Client, Tx Amount, Reserve Held, Hold Date, Release Date, Days Left, Status, Action",
+      "Status Badges - Held (red), Due (yellow), Released (green) correctly styled",
+      "Release Button - Single release button works for unreleased entries",
+      "Bulk Release - Checkbox selection and 'Release Selected' button available",
+      "Add PSP Form - Includes Reserve Fund %, Gateway Fee, Refund Fee, Monthly Min Fee fields",
+      "Pending Settlements - Deductions column shows 'Reserve:' instead of 'CB:'",
+      "Record Charges Dialog - Shows 'Reserve Fund Amount' label (not Chargeback Amount)"
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_reserve_fund.py",
+    "/app/test_reports/pytest/reserve_fund_tests.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_reserve_fund.py"
+  ],
+  "success_rate": {
+    "backend": "100% (14/14 tests passed)",
+    "frontend": "100% (all UI features verified)"
+  },
+  "test_credentials": {
+    "admin": "admin@fxbroker.com / password"
+  },
+  "seed_data_creation": "Existing PSPs used for testing: paypal (3% reserve, 2 days holding) and Uni pay (10% reserve, 180 days holding). Test PSP created and cleaned up during tests.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "PSP Reserve Fund module fully tested. Key features verified: 1) GET /api/psps/reserve-funds/global-summary returns total_held, total_released, due_for_release. 2) GET /api/psps/{psp_id}/reserve-funds returns ledger with entries containing transaction_id, reference, client_name, amount, reserve_fund_amount, hold_date, release_date, days_remaining, status. 3) POST /api/psps/reserve-funds/{txId}/release releases single reserve fund and credits to PSP's settlement_destination treasury account. 4) POST /api/psps/reserve-funds/bulk-release releases multiple at once. 5) PSP create/update supports gateway_fee, refund_fee, monthly_minimum_fee. 6) All 'Chargeback' references renamed to 'Reserve Fund' in UI.",
+  "features_verified": {
+    "dashboard_stat_cards": {
+      "total_psps": "Shows count of PSPs",
+      "pending_settlement": "Shows total pending amount",
+      "reserve_fund_held": "Shows total held with orange accent, includes 'due for release' amount",
+      "overdue_settlements": "Shows count with red/green indicator"
+    },
+    "psp_cards": {
+      "reserve_fund_label": "Shows 'Reserve Fund' (renamed from Chargeback)",
+      "reserve_held_amount": "Shows held amount per PSP in orange color"
+    },
+    "psp_detail_tabs": {
+      "pending_settlements": "Shows transactions with 'Reserve:' deduction (not 'CB:')",
+      "reserve_fund": "Full ledger with summary cards and release functionality",
+      "settlement_history": "Shows completed settlements"
+    },
+    "reserve_fund_ledger": {
+      "summary_cards": ["Total Held", "Due This Week", "Released", "Holding Period"],
+      "table_columns": ["Reference", "Client", "Tx Amount", "Reserve Held", "Hold Date", "Release Date", "Days Left", "Status", "Action"],
+      "status_badges": {"held": "red", "due": "yellow", "released": "green"},
+      "single_release": "Release button per entry",
+      "bulk_release": "Checkbox selection + Release Selected button"
+    },
+    "psp_form_fields": {
+      "new_fields": ["Reserve Fund %", "Gateway Fee (per tx)", "Refund Fee", "Monthly Min Fee"],
+      "preserved_fields": ["PSP Name", "Commission Rate", "Holding Days", "Settlement Days", "Settlement Destination", "Min Settlement Amount"]
+    },
+    "api_endpoints": {
+      "global_summary": "GET /api/psps/reserve-funds/global-summary",
+      "psp_ledger": "GET /api/psps/{psp_id}/reserve-funds",
+      "single_release": "POST /api/psps/reserve-funds/{txId}/release",
+      "bulk_release": "POST /api/psps/reserve-funds/bulk-release"
+    }
+  },
+  "test_data_ids": {
+    "psp_paypal": "psp_1f22117d21a5 (3% reserve, 2 days holding)",
+    "psp_unipay": "psp_3de482bea719 (10% reserve, 180 days holding)"
+  },
+  "mocked_api": {
+    "has_mocked_apis": false,
+    "mocked_apis_list": []
+  }
+}
