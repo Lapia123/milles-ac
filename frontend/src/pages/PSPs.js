@@ -345,7 +345,7 @@ export default function PSPs() {
   // Open record payment dialog
   const openRecordPaymentDialog = (tx) => {
     setSelectedTransaction(tx);
-    const netAmount = (tx.amount || 0) - (tx.psp_commission_amount || 0) - (tx.psp_chargeback_amount || 0) - (tx.psp_extra_charges || 0);
+    const netAmount = (tx.amount || 0) - (tx.psp_commission_amount || 0) - (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0) - (tx.psp_extra_charges || 0);
     setPaymentForm({
       actual_amount_received: netAmount.toString(),
       destination_account_id: '',
@@ -835,8 +835,8 @@ export default function PSPs() {
                           {pendingTransactions.map((tx) => {
                             const overdue = isOverdue(tx.psp_expected_settlement_date);
                             const holdingReleaseOverdue = isOverdue(tx.psp_holding_release_date);
-                            const netAmount = (tx.amount || 0) - (tx.psp_commission_amount || 0) - (tx.psp_chargeback_amount || 0) - (tx.psp_extra_charges || 0);
-                            const totalDeductions = (tx.psp_commission_amount || 0) + (tx.psp_chargeback_amount || 0) + (tx.psp_extra_charges || 0);
+                            const netAmount = (tx.amount || 0) - (tx.psp_commission_amount || 0) - (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0) - (tx.psp_extra_charges || 0);
+                            const totalDeductions = (tx.psp_commission_amount || 0) + (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0) + (tx.psp_extra_charges || 0);
                             const holdingDays = tx.psp_holding_days || viewPsp?.holding_days || 0;
                             const isReleased = tx.psp_holding_release_date && new Date(tx.psp_holding_release_date) <= new Date();
                             return (
