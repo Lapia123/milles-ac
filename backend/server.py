@@ -1489,7 +1489,7 @@ async def get_psp_summary(user: dict = Depends(get_current_user)):
 
 # Model for PSP transaction charges
 class PSPTransactionCharges(BaseModel):
-    chargeback_amount: float = 0  # Chargeback amount for this transaction
+    reserve_fund_amount: float = 0  # Reserve fund amount for this transaction
     extra_charges: float = 0  # Extra charges for this transaction
     charges_description: Optional[str] = None  # Description of charges
 
