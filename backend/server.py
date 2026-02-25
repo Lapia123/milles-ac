@@ -3078,6 +3078,8 @@ async def create_transaction(
         "psp_holding_release_date": holding_release_date if psp_info else None,
         "psp_reserve_fund_rate": psp_info.get("reserve_fund_rate", psp_info.get("chargeback_rate", 0)) if psp_info else None,
         "psp_chargeback_rate": psp_info.get("reserve_fund_rate", psp_info.get("chargeback_rate", 0)) if psp_info else None,
+        "psp_reserve_fund_amount": psp_reserve_fund_amount if psp_info else None,
+        "psp_chargeback_amount": psp_reserve_fund_amount if psp_info else None,
         "vendor_id": vendor_id if destination_type == "vendor" else None,
         "vendor_name": vendor_info["vendor_name"] if vendor_info else None,
         "vendor_deposit_commission": vendor_info["deposit_commission"] if vendor_info and transaction_type == TransactionType.DEPOSIT else None,
