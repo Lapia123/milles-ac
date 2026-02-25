@@ -1801,6 +1801,246 @@ async def settle_psp_transaction(
     
     return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
 
+# ============== RESERVE FUND MANAGEMENT ==============
+
+@api_router.get("/psps/{psp_id}/reserve-funds")
+async def get_psp_reserve_funds(psp_id: str, user: dict = Depends(get_current_user)):
+    """Get reserve fund ledger for a PSP — all transactions with reserve fund amounts."""
+    psp = await db.psps.find_one({"psp_id": psp_id}, {"_id": 0})
+    if not psp:
+        raise HTTPException(status_code=404, detail="PSP not found")
+    
+    holding_days = psp.get("holding_days", 0)
+    now = datetime.now(timezone.utc)
+    
+    # Get all PSP transactions that have reserve fund amounts
+    txs = await db.transactions.find(
+        {
+            "psp_id": psp_id,
+            "destination_type": "psp",
+            "status": {"$in": [TransactionStatus.PENDING, TransactionStatus.APPROVED, TransactionStatus.COMPLETED]},
+            "$or": [
+                {"psp_reserve_fund_amount": {"$gt": 0}},
+                {"psp_chargeback_amount": {"$gt": 0}},
+                {"settled": True}
+            ]
+        },
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(10000)
+    
+    reserve_fund_rate = psp.get("reserve_fund_rate", psp.get("chargeback_rate", 0)) / 100
+    
+    ledger = []
+    total_held = 0
+    total_released = 0
+    due_this_week = 0
+    
+    for tx in txs:
+        rf_amount = tx.get("psp_reserve_fund_amount", tx.get("psp_chargeback_amount", 0))
+        if rf_amount <= 0:
+            rf_amount = round(tx.get("amount", 0) * reserve_fund_rate, 2)
+        if rf_amount <= 0:
+            continue
+        
+        # Calculate dates
+        created_str = tx.get("created_at", "")
+        try:
+            created_dt = datetime.fromisoformat(created_str.replace('Z', '+00:00'))
+            if created_dt.tzinfo is None:
+                created_dt = created_dt.replace(tzinfo=timezone.utc)
+        except:
+            created_dt = now
+        
+        release_date = created_dt + timedelta(days=holding_days) if holding_days > 0 else created_dt
+        days_remaining = max(0, (release_date - now).days)
+        is_released = tx.get("reserve_fund_released", False)
+        
+        # Determine status
+        if is_released:
+            status = "released"
+            total_released += rf_amount
+        elif release_date <= now:
+            status = "due"
+            total_held += rf_amount
+            if (release_date - now).days >= -7:
+                due_this_week += rf_amount
+        else:
+            status = "held"
+            total_held += rf_amount
+            if days_remaining <= 7:
+                due_this_week += rf_amount
+        
+        ledger.append({
+            "transaction_id": tx["transaction_id"],
+            "reference": tx.get("reference", tx["transaction_id"]),
+            "client_name": tx.get("client_name", ""),
+            "amount": tx.get("amount", 0),
+            "currency": tx.get("currency", "USD"),
+            "reserve_fund_amount": rf_amount,
+            "hold_date": created_dt.isoformat(),
+            "release_date": release_date.isoformat(),
+            "days_remaining": days_remaining,
+            "status": status,
+            "released_at": tx.get("reserve_fund_released_at"),
+            "released_by_name": tx.get("reserve_fund_released_by_name"),
+        })
+    
+    return {
+        "ledger": ledger,
+        "summary": {
+            "total_held": round(total_held, 2),
+            "total_released": round(total_released, 2),
+            "due_this_week": round(due_this_week, 2),
+            "holding_days": holding_days,
+            "reserve_fund_rate": psp.get("reserve_fund_rate", psp.get("chargeback_rate", 0)),
+            "total_entries": len(ledger),
+        }
+    }
+
+@api_router.post("/psps/reserve-funds/{transaction_id}/release")
+async def release_reserve_fund(transaction_id: str, user: dict = Depends(require_admin)):
+    """Mark a reserve fund as released back."""
+    tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    if tx.get("reserve_fund_released"):
+        raise HTTPException(status_code=400, detail="Reserve fund already released")
+    
+    now = datetime.now(timezone.utc)
+    rf_amount = tx.get("psp_reserve_fund_amount", tx.get("psp_chargeback_amount", 0))
+    
+    await db.transactions.update_one(
+        {"transaction_id": transaction_id},
+        {"$set": {
+            "reserve_fund_released": True,
+            "reserve_fund_released_at": now.isoformat(),
+            "reserve_fund_released_by": user["user_id"],
+            "reserve_fund_released_by_name": user["name"],
+        }}
+    )
+    
+    # Credit the reserve fund back to treasury
+    psp = await db.psps.find_one({"psp_id": tx.get("psp_id")}, {"_id": 0})
+    if psp and psp.get("settlement_destination_id") and rf_amount > 0:
+        await db.treasury_accounts.update_one(
+            {"account_id": psp["settlement_destination_id"]},
+            {"$inc": {"balance": rf_amount}}
+        )
+        # Create treasury transaction record
+        await db.treasury_transactions.insert_one({
+            "transaction_id": f"ttx_{uuid.uuid4().hex[:12]}",
+            "account_id": psp["settlement_destination_id"],
+            "type": "credit",
+            "amount": rf_amount,
+            "description": f"Reserve fund release - {tx.get('reference', transaction_id)} from {psp.get('psp_name', '')}",
+            "reference": f"RF-{transaction_id}",
+            "created_at": now.isoformat(),
+            "created_by": user["user_id"],
+            "created_by_name": user["name"],
+        })
+    
+    return {"message": "Reserve fund released", "amount": rf_amount, "transaction_id": transaction_id}
+
+@api_router.post("/psps/reserve-funds/bulk-release")
+async def bulk_release_reserve_funds(request: Request, user: dict = Depends(require_admin)):
+    """Bulk release multiple reserve funds."""
+    data = await request.json()
+    tx_ids = data.get("transaction_ids", [])
+    if not tx_ids:
+        raise HTTPException(status_code=400, detail="No transaction IDs provided")
+    
+    now = datetime.now(timezone.utc)
+    released_count = 0
+    total_released = 0
+    
+    for tx_id in tx_ids:
+        tx = await db.transactions.find_one({"transaction_id": tx_id, "reserve_fund_released": {"$ne": True}}, {"_id": 0})
+        if not tx:
+            continue
+        rf_amount = tx.get("psp_reserve_fund_amount", tx.get("psp_chargeback_amount", 0))
+        if rf_amount <= 0:
+            continue
+        
+        await db.transactions.update_one(
+            {"transaction_id": tx_id},
+            {"$set": {
+                "reserve_fund_released": True,
+                "reserve_fund_released_at": now.isoformat(),
+                "reserve_fund_released_by": user["user_id"],
+                "reserve_fund_released_by_name": user["name"],
+            }}
+        )
+        
+        psp = await db.psps.find_one({"psp_id": tx.get("psp_id")}, {"_id": 0})
+        if psp and psp.get("settlement_destination_id"):
+            await db.treasury_accounts.update_one(
+                {"account_id": psp["settlement_destination_id"]},
+                {"$inc": {"balance": rf_amount}}
+            )
+            await db.treasury_transactions.insert_one({
+                "transaction_id": f"ttx_{uuid.uuid4().hex[:12]}",
+                "account_id": psp["settlement_destination_id"],
+                "type": "credit",
+                "amount": rf_amount,
+                "description": f"Reserve fund release - {tx.get('reference', tx_id)} from {psp.get('psp_name', '')}",
+                "reference": f"RF-{tx_id}",
+                "created_at": now.isoformat(),
+                "created_by": user["user_id"],
+                "created_by_name": user["name"],
+            })
+        
+        released_count += 1
+        total_released += rf_amount
+    
+    return {"message": f"Released {released_count} reserve funds", "total_released": round(total_released, 2), "count": released_count}
+
+@api_router.get("/psps/reserve-funds/global-summary")
+async def get_global_reserve_fund_summary(user: dict = Depends(get_current_user)):
+    """Get global reserve fund summary across all PSPs."""
+    psps = await db.psps.find({"status": PSPStatus.ACTIVE}, {"_id": 0, "psp_id": 1, "psp_name": 1, "reserve_fund_rate": 1, "chargeback_rate": 1, "holding_days": 1}).to_list(1000)
+    now = datetime.now(timezone.utc)
+    
+    total_held = 0
+    total_released = 0
+    due_for_release = 0
+    
+    for psp in psps:
+        rf_rate = psp.get("reserve_fund_rate", psp.get("chargeback_rate", 0)) / 100
+        holding = psp.get("holding_days", 0)
+        
+        txs = await db.transactions.find(
+            {"psp_id": psp["psp_id"], "destination_type": "psp",
+             "$or": [{"psp_reserve_fund_amount": {"$gt": 0}}, {"psp_chargeback_amount": {"$gt": 0}}]},
+            {"_id": 0, "psp_reserve_fund_amount": 1, "psp_chargeback_amount": 1, "reserve_fund_released": 1, "created_at": 1, "amount": 1}
+        ).to_list(10000)
+        
+        for tx in txs:
+            rf = tx.get("psp_reserve_fund_amount", tx.get("psp_chargeback_amount", 0))
+            if rf <= 0:
+                rf = round(tx.get("amount", 0) * rf_rate, 2)
+            if rf <= 0:
+                continue
+            
+            if tx.get("reserve_fund_released"):
+                total_released += rf
+            else:
+                total_held += rf
+                try:
+                    created = datetime.fromisoformat(tx.get("created_at", "").replace('Z', '+00:00'))
+                    if created.tzinfo is None:
+                        created = created.replace(tzinfo=timezone.utc)
+                    release_dt = created + timedelta(days=holding)
+                    if release_dt <= now:
+                        due_for_release += rf
+                except:
+                    pass
+    
+    return {
+        "total_held": round(total_held, 2),
+        "total_released": round(total_released, 2),
+        "due_for_release": round(due_for_release, 2),
+    }
+
 # ============== VENDOR ROUTES ==============
 
 @api_router.get("/vendors")
