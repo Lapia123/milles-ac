@@ -874,12 +874,16 @@ export default function Vendors() {
                                   {settlement.settlement_type}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="font-mono text-white">${settlement.gross_amount?.toLocaleString()}</TableCell>
+                              <TableCell className="font-mono text-white">
+                                {settlement.source_currency && settlement.source_currency !== 'USD'
+                                  ? `${settlement.source_currency} ${settlement.gross_amount?.toLocaleString()}`
+                                  : `$${settlement.gross_amount?.toLocaleString()}`}
+                              </TableCell>
                               <TableCell className="font-mono text-red-400">
                                 <div className="text-xs">
-                                  <div>Comm: -${settlement.commission_amount?.toLocaleString()}</div>
+                                  <div>Comm: -{settlement.source_currency && settlement.source_currency !== 'USD' ? `${settlement.source_currency} ` : '$'}{settlement.commission_amount?.toLocaleString()}</div>
                                   {settlement.charges_amount > 0 && (
-                                    <div>Charges: -${settlement.charges_amount?.toLocaleString()}</div>
+                                    <div>Charges: -{settlement.source_currency && settlement.source_currency !== 'USD' ? `${settlement.source_currency} ` : '$'}{settlement.charges_amount?.toLocaleString()}</div>
                                   )}
                                 </div>
                               </TableCell>
