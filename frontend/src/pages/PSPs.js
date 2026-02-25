@@ -1166,7 +1166,7 @@ export default function PSPs() {
                   <div className="flex justify-between pt-2 border-t border-white/10">
                     <span className="text-white font-bold">Net Settlement</span>
                     <span className="text-[#66FCF1] font-mono font-bold">
-                      ${((selectedTransaction.amount || 0) - (selectedTransaction.psp_commission_amount || 0) - parseFloat(chargesForm.chargeback_amount || 0) - parseFloat(chargesForm.extra_charges || 0)).toLocaleString()}
+                      ${((selectedTransaction.amount || 0) - (selectedTransaction.psp_commission_amount || 0) - parseFloat(chargesForm.reserve_fund_amount || 0) - parseFloat(chargesForm.extra_charges || 0)).toLocaleString()}
                     </span>
                   </div>
                 </div>
