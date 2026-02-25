@@ -241,6 +241,7 @@ export default function PSPs() {
     if (viewPsp) {
       fetchPendingTransactions(viewPsp.psp_id);
       fetchSettlements(viewPsp.psp_id);
+      fetchReserveFundLedger(viewPsp.psp_id);
     }
   }, [viewPsp]);
 
