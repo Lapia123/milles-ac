@@ -11,6 +11,7 @@ import requests
 import os
 import time
 import uuid
+import random
 from datetime import datetime
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://miles-ledger.preview.emergentagent.com')
@@ -20,6 +21,11 @@ PSP_UNIPAY = "psp_3de482bea719"  # 10% reserve fund, 6.95% commission
 PSP_PAYPAL = "psp_1f22117d21a5"  # 3% reserve fund, 10% commission
 TREASURY_ENBD_AED = "treasury_d812e38f2a7a"  # ENBD bank, AED currency
 CLIENT_ID = "client_e9792d8531d1"  # safvan kappilakath
+
+
+def random_amount(base=1000, variance=500):
+    """Generate a random amount to avoid duplicate detection"""
+    return round(base + random.uniform(-variance, variance), 2)
 
 
 class TestAuth:
@@ -66,7 +72,6 @@ class TestFXRatesAndConversion(TestAuth):
     
     def test_convert_currency_api(self, headers):
         """GET /api/fx-rates/convert converts USD to AED correctly"""
-        # Convert 1000 USD to AED
         response = requests.get(
             f"{BASE_URL}/api/fx-rates/convert",
             params={"amount": 1000, "from_currency": "USD", "to_currency": "AED"},
@@ -89,13 +94,12 @@ class TestPSPTransactionCreation(TestAuth):
     def test_create_psp_transaction_stores_reserve_fund_amount(self, headers):
         """POST /api/transactions with PSP destination should store psp_reserve_fund_amount"""
         unique_ref = f"TEST_RESERVE_{uuid.uuid4().hex[:8].upper()}"
+        test_amount = random_amount(2500, 500)  # Random amount between 2000-3000
         
-        # Create a PSP transaction with UniPay (10% reserve fund rate)
-        # Note: This endpoint uses Form data, not JSON
         form_data = {
             "client_id": CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": "2500.0",  # 2500 USD
+            "amount": str(test_amount),
             "currency": "USD",
             "base_currency": "USD",
             "destination_type": "psp",
@@ -115,27 +119,27 @@ class TestPSPTransactionCreation(TestAuth):
         # Verify psp_reserve_fund_amount is stored
         assert tx.get("psp_reserve_fund_amount") is not None, "psp_reserve_fund_amount should be set"
         
-        # UniPay has 10% reserve fund rate, so 2500 * 10% = 250
-        expected_reserve = 250.0
+        # UniPay has 10% reserve fund rate
+        expected_reserve = round(test_amount * 0.10, 2)
         actual_reserve = tx.get("psp_reserve_fund_amount")
         assert actual_reserve == expected_reserve, f"Reserve fund should be {expected_reserve}, got {actual_reserve}"
         
         # Also check commission (6.95%)
-        expected_commission = round(2500 * 0.0695, 2)
+        expected_commission = round(test_amount * 0.0695, 2)
         actual_commission = tx.get("psp_commission_amount")
         assert actual_commission == expected_commission, f"Commission should be {expected_commission}, got {actual_commission}"
         
-        print(f"Transaction {tx_id}: amount=2500 USD, reserve_fund={actual_reserve} USD, commission={actual_commission} USD")
-        return tx_id
+        print(f"Transaction {tx_id}: amount={test_amount} USD, reserve_fund={actual_reserve} USD, commission={actual_commission} USD")
     
     def test_create_psp_transaction_with_paypal_reserve_rate(self, headers):
         """Verify different PSP (PayPal 3%) stores correct reserve fund amount"""
         unique_ref = f"TEST_PAYPAL_{uuid.uuid4().hex[:8].upper()}"
+        test_amount = random_amount(5000, 500)  # Random amount between 4500-5500
         
         form_data = {
             "client_id": CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": "5000.0",
+            "amount": str(test_amount),
             "currency": "USD",
             "destination_type": "psp",
             "psp_id": PSP_PAYPAL,  # 3% reserve, 10% commission
@@ -149,17 +153,16 @@ class TestPSPTransactionCreation(TestAuth):
         
         tx = response.json()
         
-        # PayPal has 3% reserve fund rate, so 5000 * 3% = 150
-        expected_reserve = 150.0
+        # PayPal has 3% reserve fund rate
+        expected_reserve = round(test_amount * 0.03, 2)
         actual_reserve = tx.get("psp_reserve_fund_amount")
         assert actual_reserve == expected_reserve, f"PayPal reserve should be {expected_reserve}, got {actual_reserve}"
         
-        # Commission is 10%, so 5000 * 10% = 500
-        expected_commission = 500.0
+        # Commission is 10%
+        expected_commission = round(test_amount * 0.10, 2)
         assert tx.get("psp_commission_amount") == expected_commission
         
         print(f"PayPal transaction: reserve_fund={actual_reserve} USD, commission={tx.get('psp_commission_amount')} USD")
-        return tx.get("transaction_id")
 
 
 class TestPSPSettlementCurrencyConversion(TestAuth):
@@ -168,12 +171,13 @@ class TestPSPSettlementCurrencyConversion(TestAuth):
     def test_settle_psp_transaction_converts_currency(self, headers):
         """POST /api/psp/transactions/{id}/settle should convert USD to AED for ENBD treasury"""
         unique_ref = f"TEST_SETTLE_{uuid.uuid4().hex[:8].upper()}"
+        test_amount = random_amount(1000, 200)  # Random amount between 800-1200
         
         # Step 1: Create a PSP transaction
         form_data = {
             "client_id": CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": "1000.0",
+            "amount": str(test_amount),
             "currency": "USD",
             "destination_type": "psp",
             "psp_id": PSP_UNIPAY,
@@ -188,9 +192,9 @@ class TestPSPSettlementCurrencyConversion(TestAuth):
         tx_id = tx.get("transaction_id")
         
         # Get net amount (after commission)
-        net_amount = tx.get("psp_net_amount", tx.get("amount"))  # Should be 1000 - 6.95% = ~930.50
-        reserve_amount = tx.get("psp_reserve_fund_amount", 0)  # Should be 100 (10%)
-        print(f"Created tx {tx_id}: amount=1000, net={net_amount}, reserve={reserve_amount}")
+        net_amount = tx.get("psp_net_amount", tx.get("amount"))
+        reserve_amount = tx.get("psp_reserve_fund_amount", 0)
+        print(f"Created tx {tx_id}: amount={test_amount}, net={net_amount}, reserve={reserve_amount}")
         
         # Step 2: Get treasury balance before settlement
         treasury_before = requests.get(f"{BASE_URL}/api/treasury", headers=headers)
@@ -208,7 +212,7 @@ class TestPSPSettlementCurrencyConversion(TestAuth):
         assert settle_resp.status_code == 200, f"Settlement failed: {settle_resp.text}"
         
         # Step 4: Get treasury balance after settlement
-        time.sleep(0.5)  # Small delay for database consistency
+        time.sleep(0.5)
         treasury_after = requests.get(f"{BASE_URL}/api/treasury", headers=headers)
         assert treasury_after.status_code == 200
         enbd_after = next((t for t in treasury_after.json() if t["account_id"] == TREASURY_ENBD_AED), None)
@@ -216,7 +220,6 @@ class TestPSPSettlementCurrencyConversion(TestAuth):
         print(f"ENBD Treasury balance after: {balance_after:.2f} AED")
         
         # Step 5: Calculate expected balance change
-        # Get current FX rate
         fx_resp = requests.get(f"{BASE_URL}/api/fx-rates", headers=headers)
         aed_rate = fx_resp.json().get("rates", {}).get("AED", 0.27229408)
         
@@ -228,26 +231,23 @@ class TestPSPSettlementCurrencyConversion(TestAuth):
         print(f"Actual balance change: {actual_change:.2f} AED")
         
         # BUG FIX VERIFICATION: Balance change should be in AED (~3.67x USD), not raw USD
-        # Allow 2% tolerance for rounding/FX rate differences
         tolerance = expected_aed_credit * 0.02
         assert abs(actual_change - expected_aed_credit) < tolerance, \
             f"Settlement should convert USD to AED. Expected ~{expected_aed_credit:.2f} AED, got {actual_change:.2f} AED"
         
-        # Verify it's NOT the raw USD amount (which would be wrong)
+        # Verify it's NOT the raw USD amount
         assert actual_change > net_amount * 1.5, \
             f"Balance change {actual_change} looks like raw USD, not converted AED. BUG: Currency not converted!"
-        
-        return tx_id
     
     def test_record_psp_payment_converts_currency(self, headers):
         """POST /api/psp/transactions/{id}/record-payment also converts currency"""
         unique_ref = f"TEST_RECPAY_{uuid.uuid4().hex[:8].upper()}"
+        test_amount = random_amount(800, 150)  # Random between 650-950
         
-        # Create transaction
         form_data = {
             "client_id": CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": "800.0",
+            "amount": str(test_amount),
             "currency": "USD",
             "destination_type": "psp",
             "psp_id": PSP_PAYPAL,
@@ -297,15 +297,16 @@ class TestReserveFundRelease(TestAuth):
     def test_single_release_converts_currency(self, headers):
         """POST /api/psps/reserve-funds/{tx_id}/release converts and credits treasury"""
         unique_ref = f"TEST_RFREL_{uuid.uuid4().hex[:8].upper()}"
+        test_amount = random_amount(1500, 300)  # Random between 1200-1800
         
         # Step 1: Create and settle a PSP transaction
         form_data = {
             "client_id": CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": "1500.0",  # 1500 USD
+            "amount": str(test_amount),
             "currency": "USD",
             "destination_type": "psp",
-            "psp_id": PSP_UNIPAY,  # 10% reserve = 150 USD
+            "psp_id": PSP_UNIPAY,  # 10% reserve
             "commission_paid_by": "broker",
             "reference": unique_ref,
             "description": "Test reserve fund release currency conversion"
@@ -315,7 +316,8 @@ class TestReserveFundRelease(TestAuth):
         tx = create_resp.json()
         tx_id = tx.get("transaction_id")
         reserve_amount = tx.get("psp_reserve_fund_amount")
-        assert reserve_amount == 150.0, f"Reserve should be 150 USD, got {reserve_amount}"
+        expected_reserve = round(test_amount * 0.10, 2)
+        assert reserve_amount == expected_reserve, f"Reserve should be {expected_reserve} USD, got {reserve_amount}"
         print(f"Created tx {tx_id} with reserve_amount={reserve_amount} USD")
         
         # Settle it first
@@ -351,7 +353,6 @@ class TestReserveFundRelease(TestAuth):
         
         balance_change = balance_after - balance_before
         
-        # 150 USD should become ~550 AED (150 / 0.27229 ≈ 550)
         # Get actual FX rate
         fx_resp = requests.get(f"{BASE_URL}/api/fx-rates", headers=headers)
         aed_rate = fx_resp.json().get("rates", {}).get("AED", 0.27229408)
@@ -371,15 +372,14 @@ class TestReserveFundRelease(TestAuth):
         # Verify transaction is marked as released
         tx_after = requests.get(f"{BASE_URL}/api/transactions/{tx_id}", headers=headers).json()
         assert tx_after.get("reserve_fund_released") == True, "Transaction should be marked as released"
-        
-        return tx_id
     
     def test_bulk_release_converts_currency(self, headers):
         """POST /api/psps/reserve-funds/bulk-release converts currency for all released"""
-        # Create two transactions with different amounts to avoid duplicate detection
+        # Create two transactions with different amounts
         tx_ids = []
-        amounts = [1100.0, 1200.0]  # Different amounts to avoid duplicate detection
+        amounts = [random_amount(1100, 50), random_amount(1200, 50)]
         total_reserve_usd = 0
+        
         for i in range(2):
             unique_ref = f"TEST_BULK_{uuid.uuid4().hex[:8].upper()}"
             form_data = {
@@ -393,7 +393,8 @@ class TestReserveFundRelease(TestAuth):
                 "reference": unique_ref,
                 "description": f"Bulk release test {i+1}"
             }
-            total_reserve_usd += amounts[i] * 0.10  # 10% reserve
+            total_reserve_usd += round(amounts[i] * 0.10, 2)  # 10% reserve
+            
             create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=headers, data=form_data)
             assert create_resp.status_code == 200, f"Create failed: {create_resp.text}"
             tx = create_resp.json()
@@ -427,7 +428,6 @@ class TestReserveFundRelease(TestAuth):
         balance_after = next((t["balance"] for t in treasury_after if t["account_id"] == TREASURY_ENBD_AED), 0)
         
         balance_change = balance_after - balance_before
-        # total_reserve_usd calculated during creation (110 + 120 = 230 USD)
         
         # Get FX rate
         fx_resp = requests.get(f"{BASE_URL}/api/fx-rates", headers=headers)
@@ -443,17 +443,17 @@ class TestReserveFundRelease(TestAuth):
 
 
 class TestTreasuryTransactionRecords(TestAuth):
-    """Test that treasury transaction records have proper fields after settlements and releases"""
+    """Test that treasury transaction records have proper fields after settlements"""
     
     def test_psp_settlement_creates_treasury_transaction(self, headers):
         """Settlement creates treasury_transaction with proper currency fields"""
         unique_ref = f"TEST_TTXREC_{uuid.uuid4().hex[:8].upper()}"
+        test_amount = random_amount(500, 100)  # Random between 400-600
         
-        # Create and settle
         form_data = {
             "client_id": CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": "500.0",
+            "amount": str(test_amount),
             "currency": "USD",
             "destination_type": "psp",
             "psp_id": PSP_PAYPAL,
@@ -474,12 +474,7 @@ class TestTreasuryTransactionRecords(TestAuth):
         )
         assert settle_resp.status_code == 200
         
-        # Get treasury transactions (there may not be a direct endpoint, but we can check via reports)
-        # For now, we verify the settlement was successful and balance changed in AED
         print(f"Settled tx {tx_id} - treasury transaction should have been created")
-        
-        # The key assertion is that the settlement converts currency - already tested above
-        return tx_id
 
 
 class TestLegacyTransactionsHandling(TestAuth):
@@ -487,7 +482,6 @@ class TestLegacyTransactionsHandling(TestAuth):
     
     def test_ledger_handles_legacy_without_stored_amount(self, headers):
         """GET /api/psps/{psp_id}/reserve-funds calculates for legacy transactions"""
-        # Get UniPay reserve fund ledger
         response = requests.get(f"{BASE_URL}/api/psps/{PSP_UNIPAY}/reserve-funds", headers=headers)
         assert response.status_code == 200
         data = response.json()
@@ -495,7 +489,6 @@ class TestLegacyTransactionsHandling(TestAuth):
         assert "ledger" in data, "Response should have ledger array"
         assert "summary" in data, "Response should have summary object"
         
-        # Check summary
         summary = data["summary"]
         assert "total_held" in summary
         assert "total_released" in summary
@@ -504,10 +497,7 @@ class TestLegacyTransactionsHandling(TestAuth):
     
     def test_release_legacy_transaction_calculates_amount(self, headers):
         """Releasing legacy transaction (no psp_reserve_fund_amount) should calculate from PSP rate"""
-        # The existing tx_228cc77ecd63 has amount=90000, psp_reserve_fund_amount=None
-        # If we try to release it, it should calculate: 90000 * 10% = 9000 USD → ~33000 AED
-        
-        # Check if it's already released
+        # Check existing legacy transaction
         tx = requests.get(f"{BASE_URL}/api/transactions/tx_228cc77ecd63", headers=headers).json()
         
         if tx.get("reserve_fund_released"):
@@ -531,7 +521,6 @@ class TestLegacyTransactionsHandling(TestAuth):
         assert release_resp.status_code == 200, f"Legacy release failed: {release_resp.text}"
         release_data = release_resp.json()
         
-        # Verify amount was calculated
         released_amount = release_data.get("amount", 0)
         assert released_amount > 0, "Should calculate reserve amount from PSP rate"
         
