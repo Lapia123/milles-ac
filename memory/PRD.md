@@ -32,16 +32,14 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 
 ### PSP Management (Enhanced Feb 25, 2026)
 - Commission tracking, per-PSP rates
-- **Reserve Fund** (renamed from Chargeback): Reserve Fund Rate %, per-transaction tracking
-- **Per-transaction reserve fund amount**: Stored at creation time, not just at settlement
+- **Reserve Fund**: Reserve Fund Rate %, per-transaction tracking
+- **Per-transaction reserve fund amount**: Stored at creation time
 - **New fee fields**: Gateway Fee (per tx), Refund Fee, Monthly Minimum Fee
 - Holding & Release Tracking with status badges
-- **Reserve Fund Ledger**: Full ledger tab with summary cards (Total Held, Due This Week, Released, Holding Period)
-- **Release Tracker**: Status (Held/Due/Released), Days Remaining, Hold Date, Release Date
+- **Reserve Fund Ledger**: Full ledger tab with summary cards
+- **Release Tracker**: Status (Held/Due/Released), Days Remaining
 - **Single & Bulk Release**: Release reserve funds back to treasury with automatic currency conversion
 - **Currency Conversion**: All PSP settlements and reserve fund releases auto-convert to treasury account currency using live FX rates
-- **Dashboard Reserve Fund Card**: Global total reserve fund held with due-for-release amount
-- **Per-PSP Reserve Held**: Shown on each PSP card
 - Two-step settlement process (Record Charges -> Record Payment)
 
 ### Vendor Portal
@@ -73,32 +71,50 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 ### Reconciliation Module (Scaffold)
 - Bank/Treasury, PSP, Client, Vendor reconciliation views
 
+### Audit & Compliance Module (NEW - Feb 25, 2026)
+- **Dashboard**: Health score ring (0-100), issue breakdown (Critical/Warning/Info), scan summary, 5 category cards
+- **5 Audit Categories**:
+  1. Transaction Integrity: Missing fields, completed deposits without proof
+  2. FX Rate Verification: Compare stored rates vs market rates (configurable threshold)
+  3. PSP Settlement: Net amount math, reserve fund rate consistency, currency conversion checks
+  4. Anomaly Detection: Large transactions (configurable threshold), duplicates within 5min, round amounts
+  5. Treasury Balance: Cross-check stored vs calculated balances
+- **Findings Tab**: Filterable by severity & category, expandable finding cards with details
+- **History Tab**: Past scan records with score trends
+- **Settings Tab**: Configurable thresholds, automated daily scan toggle, email alerts
+- **Automated Daily Scan**: Scheduled via APScheduler, sends email alerts when issues found
+- **Admin-only access**: Sidebar nav item and routes restricted to admin role
+
 ## Key API Endpoints
 
-### Currency Conversion (NEW - Feb 25)
+### Currency Conversion
 - `convert_currency(amount, from_currency, to_currency)` - Converts between any two currencies via USD intermediate
 
+### Audit & Compliance
+- `POST /api/audit/run-scan` - Run full audit scan
+- `GET /api/audit/latest` - Get most recent scan result
+- `GET /api/audit/history` - Get scan history
+- `GET /api/audit/settings` - Get audit configuration
+- `PUT /api/audit/settings` - Update audit configuration
+
 ### Reserve Fund Endpoints
-- `GET /api/psps/{psp_id}/reserve-funds` - Get reserve fund ledger for a PSP
+- `GET /api/psps/{psp_id}/reserve-funds` - Reserve fund ledger
 - `POST /api/psps/reserve-funds/{txId}/release` - Release single reserve fund (with currency conversion)
-- `POST /api/psps/reserve-funds/bulk-release` - Bulk release reserve funds (with currency conversion)
+- `POST /api/psps/reserve-funds/bulk-release` - Bulk release (with currency conversion)
 - `GET /api/psps/reserve-funds/global-summary` - Global reserve fund stats
 
-### PSP Settlement Endpoints (Updated - Feb 25)
+### PSP Settlement Endpoints
 - `POST /api/psp/transactions/{id}/settle` - Immediate settle with currency conversion
 - `POST /api/psp/transactions/{id}/record-payment` - Record payment with currency conversion
 - `POST /api/psp-settlements/{id}/complete` - Complete batch settlement with currency conversion
 
-### FX & Commission
-- `GET /api/fx-rates` - Live exchange rates
-- `GET/PUT /api/settings/commission` - Commission settings
-
-### Settlement Statement
-- `GET /api/settlements/{id}/statement` - Full settlement statement with transactions
+## Database Schema (Key Collections)
+- **audit_scans**: scan_id, scanned_at, health_score, stats, findings[], summary
+- **app_settings** (setting_type: "audit"): large_transaction_threshold, fx_deviation_threshold, auto_scan_enabled, auto_scan_time, alert_emails
 
 ## Test Credentials
 - **Admin**: admin@fxbroker.com / password
-- **Vendor**: vendor1@fxbroker.com / password
+- **Vendor**: vendor3@fxbroker.com / password
 
 ## Known Issues
 - P2: Minor session management redirect issue after login
