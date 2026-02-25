@@ -488,11 +488,11 @@ export default function PSPs() {
                       type="number"
                       step="0.01"
                       min="0"
-                      value={formData.chargeback_rate}
-                      onChange={(e) => setFormData({ ...formData, chargeback_rate: e.target.value })}
+                      value={formData.reserve_fund_rate}
+                      onChange={(e) => setFormData({ ...formData, reserve_fund_rate: e.target.value })}
                       className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
                       placeholder="0"
-                      data-testid="psp-chargeback"
+                      data-testid="psp-reserve-fund"
                     />
                   </div>
                 </div>
