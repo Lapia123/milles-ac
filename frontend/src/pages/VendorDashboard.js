@@ -708,7 +708,89 @@ export default function VendorDashboard() {
           </ScrollArea>
         </CardContent>
       </Card>
+        </TabsContent>
 
+        {/* Income/Expenses Tab */}
+        <TabsContent value="income-expenses" className="mt-4">
+          <Card className="bg-[#1F2833] border-white/5" data-testid="vendor-ie-entries">
+            <CardHeader>
+              <CardTitle className="text-xl text-white uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+                Income & Expense Entries
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {ieEntries.length === 0 ? (
+                <div className="text-center py-10 text-[#C5C6C7]">
+                  <Receipt className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">No income/expense entries assigned to you</p>
+                </div>
+              ) : (
+                <ScrollArea className="h-[500px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-white/10 hover:bg-transparent">
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Type</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Category</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Description</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Bank Account</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {ieEntries.map((entry) => {
+                        const isIncome = entry.entry_type === 'income';
+                        return (
+                          <TableRow key={entry.entry_id} className={`border-white/5 hover:bg-white/5 border-l-4 ${isIncome ? 'border-l-green-500' : 'border-l-red-500'}`}>
+                            <TableCell className="text-white text-sm">{entry.date ? new Date(entry.date).toLocaleDateString() : '-'}</TableCell>
+                            <TableCell>
+                              <Badge className={isIncome ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}>
+                                {isIncome ? 'Income' : 'Expense'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-[#C5C6C7] text-sm capitalize">{entry.category?.replace('_', ' ')}</TableCell>
+                            <TableCell className="text-white text-sm max-w-[200px] truncate">{entry.description || '-'}</TableCell>
+                            <TableCell className="text-[#C5C6C7] text-sm">{entry.vendor_bank_account || '-'}</TableCell>
+                            <TableCell className={`font-mono text-right ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
+                              {isIncome ? '+' : '-'}{entry.amount?.toLocaleString()} {entry.currency}
+                            </TableCell>
+                            <TableCell>
+                              {entry.status === 'pending_vendor' && <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px]"><Clock className="w-2.5 h-2.5 mr-1" />Pending</Badge>}
+                              {entry.status === 'completed' && <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[10px]"><CheckCircle2 className="w-2.5 h-2.5 mr-1" />Approved</Badge>}
+                              {entry.status === 'rejected' && <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]"><XCircle className="w-2.5 h-2.5 mr-1" />Rejected</Badge>}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {entry.status === 'pending_vendor' && (
+                                <div className="flex gap-1 justify-end">
+                                  <label className="cursor-pointer">
+                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files[0]) handleIeUploadProof(entry.entry_id, e.target.files[0]); }} />
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-400 rounded text-xs hover:bg-blue-500/20"><Upload className="w-3 h-3" />Proof</span>
+                                  </label>
+                                  <Button size="sm" onClick={() => handleIeApprove(entry.entry_id)} className="bg-green-500/10 text-green-400 hover:bg-green-500/20 h-7 px-2 text-xs" data-testid={`ie-approve-${entry.entry_id}`}>
+                                    <CheckCircle2 className="w-3 h-3 mr-1" />Approve
+                                  </Button>
+                                  <Button size="sm" onClick={() => handleIeReject(entry.entry_id)} className="bg-red-500/10 text-red-400 hover:bg-red-500/20 h-7 px-2 text-xs" data-testid={`ie-reject-${entry.entry_id}`}>
+                                    <XCircle className="w-3 h-3 mr-1" />Reject
+                                  </Button>
+                                </div>
+                              )}
+                              {entry.vendor_proof_image && <Badge className="bg-blue-500/10 text-blue-400 text-[10px]"><ImageIcon className="w-2.5 h-2.5 mr-1" />Proof</Badge>}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Settlements Tab */}
+        <TabsContent value="settlements" className="mt-4">
       {/* Settlement History */}
       <Card className="bg-[#1F2833] border-white/5" data-testid="vendor-settlement-history">
         <CardHeader>
