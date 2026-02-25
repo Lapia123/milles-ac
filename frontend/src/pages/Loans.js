@@ -366,6 +366,29 @@ export default function Loans() {
 
   const filteredLoans = activeTab === 'all' ? loans : loans.filter(l => l.status === activeTab);
 
+  const handleExportCSV = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${API_URL}/api/loans/export/csv`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `loans_export_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        toast.success('Loans exported successfully');
+      } else {
+        toast.error('Export failed');
+      }
+    } catch { toast.error('Export failed'); }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in" data-testid="loans-page">
       {/* Header */}
