@@ -1940,6 +1940,13 @@ async def release_reserve_fund(transaction_id: str, user: dict = Depends(require
     now = datetime.now(timezone.utc)
     rf_amount = tx.get("psp_reserve_fund_amount", tx.get("psp_chargeback_amount", 0))
     
+    # Fall back to calculating from PSP rate if amount not stored (legacy transactions)
+    if not rf_amount or rf_amount <= 0:
+        psp = await db.psps.find_one({"psp_id": tx.get("psp_id")}, {"_id": 0})
+        if psp:
+            rf_rate = psp.get("reserve_fund_rate", psp.get("chargeback_rate", 0)) / 100
+            rf_amount = round(tx.get("amount", 0) * rf_rate, 2)
+    
     await db.transactions.update_one(
         {"transaction_id": transaction_id},
         {"$set": {
