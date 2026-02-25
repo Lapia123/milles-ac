@@ -106,6 +106,14 @@ function AppRouter() {
             </ProtectedRoute>
           } 
         />
+        <Route 
+          path="/audit" 
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AuditCompliance />
+            </ProtectedRoute>
+          } 
+        />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
