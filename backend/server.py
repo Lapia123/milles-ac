@@ -4171,7 +4171,7 @@ async def convert_expense_to_loan(entry_id: str, req: ConvertToLoanRequest, user
 
 @api_router.post("/income-expenses/{entry_id}/vendor-approve")
 async def vendor_approve_ie(entry_id: str, user: dict = Depends(require_vendor)):
-    """Vendor approves a pending income/expense entry"""
+    """Vendor approves a pending income/expense entry with commission calculation"""
     entry = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
     if not entry:
         raise HTTPException(status_code=404, detail="Entry not found")
@@ -4183,46 +4183,58 @@ async def vendor_approve_ie(entry_id: str, user: dict = Depends(require_vendor))
     if not vendor or vendor.get("vendor_id") != entry.get("vendor_id"):
         raise HTTPException(status_code=403, detail="Not authorized for this entry")
     
+    # Require proof upload
+    if not entry.get("vendor_proof_image"):
+        raise HTTPException(status_code=400, detail="Please upload proof screenshot before approving")
+    
     now = datetime.now(timezone.utc)
     
-    # Update entry status
+    # Calculate commission (same as deposit/withdrawal)
+    # For IE entries: income = deposit-like (vendor receives), expense = withdrawal-like (vendor pays)
+    if entry["entry_type"] == "income":
+        commission_rate = vendor.get("deposit_commission", 0) / 100
+    else:
+        commission_rate = vendor.get("withdrawal_commission", 0) / 100
+    
+    amount = entry.get("amount", 0)
+    amount_usd = entry.get("amount_usd") or convert_to_usd(amount, entry.get("currency", "USD"))
+    commission_amount_usd = round(amount_usd * commission_rate, 2)
+    commission_amount_base = round(amount * commission_rate, 2)
+    
+    # Update entry status with commission details
     await db.income_expenses.update_one(
         {"entry_id": entry_id},
-        {"$set": {"status": "completed", "vendor_approved_at": now.isoformat(), "vendor_approved_by": user["user_id"]}}
+        {"$set": {
+            "status": "completed",
+            "vendor_approved_at": now.isoformat(),
+            "vendor_approved_by": user["user_id"],
+            "vendor_commission_rate": commission_rate * 100,
+            "vendor_commission_amount": commission_amount_usd,
+            "vendor_commission_base_amount": commission_amount_base,
+            "vendor_commission_base_currency": entry.get("currency", "USD"),
+            "amount_usd": amount_usd,
+        }}
     )
     
-    # Now execute the treasury balance change
-    if entry.get("treasury_account_id"):
-        treasury = await db.treasury_accounts.find_one({"account_id": entry["treasury_account_id"]}, {"_id": 0})
-        if treasury:
-            if entry["entry_type"] == "income":
-                await db.treasury_accounts.update_one(
-                    {"account_id": entry["treasury_account_id"]},
-                    {"$inc": {"balance": entry["amount"]}, "$set": {"updated_at": now.isoformat()}}
-                )
-            else:
-                await db.treasury_accounts.update_one(
-                    {"account_id": entry["treasury_account_id"]},
-                    {"$inc": {"balance": -entry["amount"]}, "$set": {"updated_at": now.isoformat()}}
-                )
-            
-            # Record treasury transaction
-            tx_type = "income" if entry["entry_type"] == "income" else "expense"
-            tx_amount = entry["amount"] if entry["entry_type"] == "income" else -entry["amount"]
-            await db.treasury_transactions.insert_one({
-                "treasury_transaction_id": f"ttx_{uuid.uuid4().hex[:12]}",
-                "account_id": entry["treasury_account_id"],
-                "transaction_type": tx_type,
-                "amount": tx_amount,
-                "currency": entry.get("currency", "USD"),
-                "reference": f"Vendor approved: {entry.get('category', '').replace('_', ' ').title()}: {entry.get('description', 'N/A')}",
-                "income_expense_id": entry_id,
-                "created_at": now.isoformat(),
-                "created_by": user["user_id"],
-                "created_by_name": user["name"]
-            })
+    # Update vendor's total commission and volume
+    await db.vendors.update_one(
+        {"vendor_id": vendor["vendor_id"]},
+        {
+            "$inc": {
+                "total_commission": commission_amount_usd,
+                "total_volume": amount_usd,
+            },
+            "$set": {"updated_at": now.isoformat()}
+        }
+    )
     
-    return {"message": "Entry approved", "status": "completed"}
+    return {
+        "message": "Entry approved",
+        "status": "completed",
+        "vendor_commission_rate": commission_rate * 100,
+        "vendor_commission_amount": commission_amount_usd,
+        "vendor_commission_base_amount": commission_amount_base,
+    }
 
 @api_router.post("/income-expenses/{entry_id}/vendor-reject")
 async def vendor_reject_ie(entry_id: str, reason: str = "", user: dict = Depends(require_vendor)):
