@@ -118,7 +118,7 @@ export default function AuditCompliance() {
   const runScan = async () => {
     setScanning(true);
     try {
-      const res = await fetch(`${API}/api/audit/run-scan`, { method: 'POST', headers });
+      const res = await fetch(`${API}/api/audit/run-scan`, { method: 'POST', headers: getHeaders() });
       const data = await res.json();
       setScan(data);
       toast.success(`Audit complete. Health score: ${data.health_score}/100`);
@@ -129,7 +129,7 @@ export default function AuditCompliance() {
 
   const saveSettings = async () => {
     try {
-      await fetch(`${API}/api/audit/settings`, { method: 'PUT', headers, body: JSON.stringify(settings) });
+      await fetch(`${API}/api/audit/settings`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(settings) });
       toast.success('Audit settings saved');
     } catch { toast.error('Failed to save settings'); }
   };
