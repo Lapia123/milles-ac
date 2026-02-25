@@ -4065,6 +4065,207 @@ async def delete_income_expense(entry_id: str, user: dict = Depends(require_admi
     
     return {"message": "Entry deleted successfully"}
 
+class ConvertToLoanRequest(BaseModel):
+    borrower_name: str
+    interest_rate: float = 0
+    due_date: str
+    treasury_account_id: str
+    notes: Optional[str] = None
+
+@api_router.post("/income-expenses/{entry_id}/convert-to-loan")
+async def convert_expense_to_loan(entry_id: str, req: ConvertToLoanRequest, user: dict = Depends(get_current_user)):
+    """Convert an expense entry to a loan (marks expense as converted, creates loan)"""
+    entry = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    if entry["entry_type"] != "expense":
+        raise HTTPException(status_code=400, detail="Only expenses can be converted to loans")
+    if entry.get("converted_to_loan"):
+        raise HTTPException(status_code=400, detail="This expense has already been converted to a loan")
+    
+    now = datetime.now(timezone.utc)
+    loan_id = f"loan_{uuid.uuid4().hex[:12]}"
+    
+    # Reverse the expense from treasury (since the loan disbursement will handle it)
+    if entry.get("treasury_account_id") and entry.get("status") == "completed":
+        await db.treasury_accounts.update_one(
+            {"account_id": entry["treasury_account_id"]},
+            {"$inc": {"balance": entry["amount"]}, "$set": {"updated_at": now.isoformat()}}
+        )
+        # Delete old treasury transaction
+        await db.treasury_transactions.delete_one({"income_expense_id": entry_id})
+    
+    # Create the loan
+    treasury = await db.treasury_accounts.find_one({"account_id": req.treasury_account_id}, {"_id": 0})
+    if not treasury:
+        raise HTTPException(status_code=404, detail="Treasury account not found")
+    
+    loan_doc = {
+        "loan_id": loan_id,
+        "borrower_name": req.borrower_name,
+        "amount": entry["amount"],
+        "currency": entry.get("currency", "USD"),
+        "interest_rate": req.interest_rate,
+        "loan_date": entry.get("date", now.isoformat()[:10]),
+        "due_date": req.due_date,
+        "repayment_mode": "lump_sum",
+        "treasury_account_id": req.treasury_account_id,
+        "source_treasury_name": treasury["account_name"],
+        "outstanding_balance": entry["amount"],
+        "total_repaid": 0,
+        "total_interest": 0,
+        "status": "active",
+        "repayment_count": 0,
+        "converted_from_expense": entry_id,
+        "notes": req.notes or f"Converted from expense: {entry.get('description', '')}",
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    
+    # Deduct from treasury for loan disbursement
+    await db.treasury_accounts.update_one(
+        {"account_id": req.treasury_account_id},
+        {"$inc": {"balance": -entry["amount"]}, "$set": {"updated_at": now.isoformat()}}
+    )
+    
+    # Create treasury transaction for loan
+    await db.treasury_transactions.insert_one({
+        "treasury_transaction_id": f"ttx_{uuid.uuid4().hex[:12]}",
+        "account_id": req.treasury_account_id,
+        "account_name": treasury["account_name"],
+        "transaction_type": "loan_disbursement",
+        "amount": -entry["amount"],
+        "currency": entry.get("currency", "USD"),
+        "reference": f"Loan to {req.borrower_name} (converted from expense {entry_id})",
+        "loan_id": loan_id,
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    })
+    
+    await db.loans.insert_one(loan_doc)
+    
+    # Mark expense as converted
+    await db.income_expenses.update_one(
+        {"entry_id": entry_id},
+        {"$set": {"converted_to_loan": True, "loan_id": loan_id, "status": "converted_to_loan", "updated_at": now.isoformat()}}
+    )
+    
+    loan_doc.pop("_id", None)
+    return {"message": "Expense converted to loan", "loan": loan_doc}
+
+@api_router.post("/income-expenses/{entry_id}/vendor-approve")
+async def vendor_approve_ie(entry_id: str, user: dict = Depends(require_vendor)):
+    """Vendor approves a pending income/expense entry"""
+    entry = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    if entry.get("status") != "pending_vendor":
+        raise HTTPException(status_code=400, detail="Entry is not pending vendor approval")
+    
+    # Verify this vendor is the assigned vendor
+    vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not vendor or vendor.get("vendor_id") != entry.get("vendor_id"):
+        raise HTTPException(status_code=403, detail="Not authorized for this entry")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Update entry status
+    await db.income_expenses.update_one(
+        {"entry_id": entry_id},
+        {"$set": {"status": "completed", "vendor_approved_at": now.isoformat(), "vendor_approved_by": user["user_id"]}}
+    )
+    
+    # Now execute the treasury balance change
+    if entry.get("treasury_account_id"):
+        treasury = await db.treasury_accounts.find_one({"account_id": entry["treasury_account_id"]}, {"_id": 0})
+        if treasury:
+            if entry["entry_type"] == "income":
+                await db.treasury_accounts.update_one(
+                    {"account_id": entry["treasury_account_id"]},
+                    {"$inc": {"balance": entry["amount"]}, "$set": {"updated_at": now.isoformat()}}
+                )
+            else:
+                await db.treasury_accounts.update_one(
+                    {"account_id": entry["treasury_account_id"]},
+                    {"$inc": {"balance": -entry["amount"]}, "$set": {"updated_at": now.isoformat()}}
+                )
+            
+            # Record treasury transaction
+            tx_type = "income" if entry["entry_type"] == "income" else "expense"
+            tx_amount = entry["amount"] if entry["entry_type"] == "income" else -entry["amount"]
+            await db.treasury_transactions.insert_one({
+                "treasury_transaction_id": f"ttx_{uuid.uuid4().hex[:12]}",
+                "account_id": entry["treasury_account_id"],
+                "transaction_type": tx_type,
+                "amount": tx_amount,
+                "currency": entry.get("currency", "USD"),
+                "reference": f"Vendor approved: {entry.get('category', '').replace('_', ' ').title()}: {entry.get('description', 'N/A')}",
+                "income_expense_id": entry_id,
+                "created_at": now.isoformat(),
+                "created_by": user["user_id"],
+                "created_by_name": user["name"]
+            })
+    
+    return {"message": "Entry approved", "status": "completed"}
+
+@api_router.post("/income-expenses/{entry_id}/vendor-reject")
+async def vendor_reject_ie(entry_id: str, reason: str = "", user: dict = Depends(require_vendor)):
+    """Vendor rejects a pending income/expense entry"""
+    entry = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    if entry.get("status") != "pending_vendor":
+        raise HTTPException(status_code=400, detail="Entry is not pending vendor approval")
+    
+    vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not vendor or vendor.get("vendor_id") != entry.get("vendor_id"):
+        raise HTTPException(status_code=403, detail="Not authorized for this entry")
+    
+    now = datetime.now(timezone.utc)
+    await db.income_expenses.update_one(
+        {"entry_id": entry_id},
+        {"$set": {"status": "rejected", "rejection_reason": reason, "vendor_rejected_at": now.isoformat()}}
+    )
+    
+    return {"message": "Entry rejected"}
+
+@api_router.post("/income-expenses/{entry_id}/vendor-upload-proof")
+async def vendor_upload_ie_proof(entry_id: str, user: dict = Depends(require_vendor), proof_image: UploadFile = File(...)):
+    """Vendor uploads proof screenshot for income/expense entry"""
+    entry = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not vendor or vendor.get("vendor_id") != entry.get("vendor_id"):
+        raise HTTPException(status_code=403, detail="Not authorized for this entry")
+    
+    import base64
+    contents = await proof_image.read()
+    b64 = base64.b64encode(contents).decode("utf-8")
+    
+    await db.income_expenses.update_one(
+        {"entry_id": entry_id},
+        {"$set": {"vendor_proof_image": b64, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": "Proof uploaded"}
+
+@api_router.get("/vendor/income-expenses")
+async def get_vendor_ie_entries(user: dict = Depends(require_vendor)):
+    """Get income/expense entries linked to this vendor"""
+    vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    entries = await db.income_expenses.find(
+        {"vendor_id": vendor["vendor_id"]},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(500)
+    return entries
+
 # ============== LOAN MANAGEMENT ROUTES ==============
 
 @api_router.get("/loans")
