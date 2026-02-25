@@ -1349,6 +1349,91 @@ export default function VendorDashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* IE Action Dialog (Approve/Reject with Captcha) */}
+      <Dialog open={ieActionDialog.open} onOpenChange={(open) => { if (!open) { setIeActionDialog({ open: false, entry: null, type: '' }); resetIeActionState(); } }}>
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+              {ieActionDialog.type === 'approve' ? 'Approve' : 'Reject'} Entry
+            </DialogTitle>
+          </DialogHeader>
+          {ieActionDialog.entry && (
+            <div className="space-y-4">
+              {/* Entry Details */}
+              <div className={`p-3 rounded border ${ieActionDialog.entry.entry_type === 'income' ? 'border-green-500/30 bg-green-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
+                <div className="flex justify-between items-center">
+                  <Badge className={ieActionDialog.entry.entry_type === 'income' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}>
+                    {ieActionDialog.entry.entry_type === 'income' ? 'Income' : 'Expense'}
+                  </Badge>
+                  <span className={`font-mono text-lg font-bold ${ieActionDialog.entry.entry_type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
+                    {ieActionDialog.entry.amount?.toLocaleString()} {ieActionDialog.entry.currency}
+                  </span>
+                </div>
+                <p className="text-sm text-[#C5C6C7] mt-2 capitalize">{ieActionDialog.entry.category?.replace('_', ' ')}</p>
+                {ieActionDialog.entry.description && <p className="text-xs text-[#8B8D91] mt-1">{ieActionDialog.entry.description}</p>}
+                {ieActionDialog.entry.vendor_bank_account_number && (
+                  <div className="mt-2 text-[10px] text-[#8B8D91] space-y-0.5">
+                    {ieActionDialog.entry.vendor_bank_account_name && <p>Name: {ieActionDialog.entry.vendor_bank_account_name}</p>}
+                    <p>A/C: {ieActionDialog.entry.vendor_bank_account_number}</p>
+                    {ieActionDialog.entry.vendor_bank_ifsc && <p>IFSC: {ieActionDialog.entry.vendor_bank_ifsc}</p>}
+                    {ieActionDialog.entry.vendor_bank_branch && <p>Branch: {ieActionDialog.entry.vendor_bank_branch}</p>}
+                  </div>
+                )}
+                {vendorInfo && (
+                  <div className="mt-2 pt-2 border-t border-white/10 text-xs text-[#66FCF1]">
+                    Commission: {ieActionDialog.entry.entry_type === 'income'
+                      ? `${vendorInfo.deposit_commission || 0}% (deposit rate)`
+                      : `${vendorInfo.withdrawal_commission || 0}% (withdrawal rate)`
+                    } = {((ieActionDialog.entry.amount || 0) * (ieActionDialog.entry.entry_type === 'income' ? (vendorInfo.deposit_commission || 0) : (vendorInfo.withdrawal_commission || 0)) / 100).toFixed(2)} {ieActionDialog.entry.currency}
+                  </div>
+                )}
+              </div>
+
+              {/* Proof Upload (approve only) */}
+              {ieActionDialog.type === 'approve' && (
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Upload Proof Screenshot *</Label>
+                  <input type="file" accept="image/*" onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setIeProofImage(file);
+                      setIeProofPreview(URL.createObjectURL(file));
+                    }
+                  }} className="block w-full text-xs text-[#C5C6C7] file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-[#66FCF1]/10 file:text-[#66FCF1] file:text-xs hover:file:bg-[#66FCF1]/20" data-testid="ie-proof-upload" />
+                  {ieProofPreview && (
+                    <img src={ieProofPreview} alt="Proof" className="w-full max-h-32 object-contain rounded border border-white/10 mt-1" />
+                  )}
+                </div>
+              )}
+
+              {/* Rejection Reason (reject only) */}
+              {ieActionDialog.type === 'reject' && (
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Rejection Reason</Label>
+                  <Textarea value={ieRejectionReason} onChange={(e) => setIeRejectionReason(e.target.value)} className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]" rows={2} placeholder="Enter reason..." data-testid="ie-rejection-reason" />
+                </div>
+              )}
+
+              {/* Math Captcha */}
+              <div className="space-y-2 p-3 bg-[#0B0C10] border border-white/10 rounded">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Verification: What is {ieCaptcha.num1} + {ieCaptcha.num2}?</Label>
+                <Input type="number" value={ieCaptchaAnswer} onChange={(e) => setIeCaptchaAnswer(e.target.value)} className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono text-center text-lg" placeholder="?" data-testid="ie-captcha-answer" />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="outline" onClick={() => { setIeActionDialog({ open: false, entry: null, type: '' }); resetIeActionState(); }} className="border-white/10 text-[#C5C6C7] hover:bg-white/5">Cancel</Button>
+                <Button onClick={executeIeAction}
+                  className={ieActionDialog.type === 'approve' ? 'bg-green-500 hover:bg-green-600 text-white font-bold' : 'bg-red-500 hover:bg-red-600 text-white font-bold'}
+                  data-testid="ie-confirm-action">
+                  {ieActionDialog.type === 'approve' ? 'Confirm Approve' : 'Confirm Reject'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
