@@ -483,7 +483,7 @@ export default function PSPs() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Chargeback % *</Label>
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Reserve Fund % *</Label>
                     <Input
                       type="number"
                       step="0.01"
