@@ -148,7 +148,7 @@ export default function Login() {
             </Button>
 
             <p className="mt-6 text-center text-xs text-[#C5C6C7]">
-              Demo credentials: admin@fxbroker.com / admin123
+              Demo credentials: admin@fxbroker.com / password
             </p>
           </div>
         </div>
