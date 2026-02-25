@@ -192,7 +192,7 @@ class TestFxRatesCommission:
                 "base_currency": "USD",
                 "destination_type": "treasury",
                 "destination_account_id": treasury_id,
-                "reference": "TEST_BROKER_COMMISSION_DEPOSIT"
+                "reference": f"TEST_BROKER_COMMISSION_DEPOSIT_{os.urandom(4).hex()}"
             }
         )
         assert response.status_code == 200, f"Transaction failed: {response.text}"
@@ -231,7 +231,7 @@ class TestFxRatesCommission:
                 "client_bank_account_name": "Test Account",
                 "client_bank_account_number": "123456789",
                 "client_bank_currency": "USD",
-                "reference": "TEST_BROKER_COMMISSION_WITHDRAWAL"
+                "reference": f"TEST_BROKER_COMMISSION_WITHDRAWAL_{os.urandom(4).hex()}"
             }
         )
         assert response.status_code == 200, f"Transaction failed: {response.text}"
@@ -266,7 +266,7 @@ class TestFxRatesCommission:
                 "base_amount": "1000",
                 "destination_type": "treasury",
                 "destination_account_id": treasury_id,
-                "reference": "TEST_BROKER_COMMISSION_AED"
+                "reference": f"TEST_BROKER_COMMISSION_AED_{os.urandom(4).hex()}"
             }
         )
         assert response.status_code == 200, f"Transaction failed: {response.text}"
