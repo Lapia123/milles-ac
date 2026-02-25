@@ -185,6 +185,7 @@ export default function VendorDashboard() {
     if (vendorInfo) {
       fetchTransactions();
       fetchSettlements();
+      fetchIeEntries();
     }
   }, [vendorInfo]);
 
