@@ -458,7 +458,7 @@ export default function IncomeExpenses() {
                   if (value.startsWith('vendor_')) {
                     setFormData({ ...formData, vendor_id: value.replace('vendor_', ''), treasury_account_id: '' });
                   } else {
-                    setFormData({ ...formData, treasury_account_id: value, vendor_id: '', vendor_bank_account: '' });
+                    setFormData({ ...formData, treasury_account_id: value, vendor_id: '', vendor_bank_account_name: '', vendor_bank_account_number: '', vendor_bank_ifsc: '', vendor_bank_branch: '' });
                   }
                 }}>
                 <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="entry-account">
