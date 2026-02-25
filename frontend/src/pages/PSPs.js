@@ -234,7 +234,7 @@ export default function PSPs() {
         headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({
-          chargeback_amount: parseFloat(chargesForm.chargeback_amount) || 0,
+          reserve_fund_amount: parseFloat(chargesForm.reserve_fund_amount) || 0,
           extra_charges: parseFloat(chargesForm.extra_charges) || 0,
           charges_description: chargesForm.charges_description || null,
         }),
@@ -243,7 +243,7 @@ export default function PSPs() {
       if (response.ok) {
         toast.success('Charges recorded successfully');
         setChargesDialogOpen(false);
-        setChargesForm({ chargeback_amount: '0', extra_charges: '0', charges_description: '' });
+        setChargesForm({ reserve_fund_amount: '0', extra_charges: '0', charges_description: '' });
         if (viewPsp) fetchPendingTransactions(viewPsp.psp_id);
       } else {
         const error = await response.json();
