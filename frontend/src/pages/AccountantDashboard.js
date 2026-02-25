@@ -648,92 +648,73 @@ export default function AccountantDashboard() {
             ) : (
               filteredTransactions.map((tx) => (
                 <Card key={tx.transaction_id} className="bg-[#1F2833] border-white/5">
-                  <CardContent className="p-6">
-                    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                      {/* Transaction Info */}
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reference</p>
-                          <div className="flex items-center gap-2">
-                            <p className="text-white font-mono">{tx.reference}</p>
-                            {tx.proof_image && <ImageIcon className="w-4 h-4 text-[#66FCF1]" />}
+                  <CardContent className="p-4">
+                    <div className="grid grid-cols-[140px_120px_90px_120px_150px_140px_auto] items-center gap-3">
+                      {/* Reference */}
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Reference</p>
+                        <p className="text-white font-mono text-xs truncate" title={tx.reference}>{tx.reference}</p>
+                        {tx.proof_image && <ImageIcon className="w-3 h-3 text-[#66FCF1] mt-0.5" />}
+                      </div>
+                      {/* Client */}
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Client</p>
+                        <p className="text-white text-sm truncate">{tx.client_name}</p>
+                      </div>
+                      {/* Type */}
+                      <div>
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Type</p>
+                        {getTypeBadge(tx.transaction_type)}
+                      </div>
+                      {/* Amount */}
+                      <div>
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Amount</p>
+                        <p className={`font-mono text-sm font-bold ${['deposit', 'rebate'].includes(tx.transaction_type) ? 'text-green-400' : 'text-red-400'}`}>
+                          {['deposit', 'rebate'].includes(tx.transaction_type) ? '+' : '-'}${tx.amount?.toLocaleString()}
+                        </p>
+                        <p className="text-[10px] text-[#C5C6C7] font-mono">
+                          {tx.currency || 'USD'}
+                          {tx.base_currency && tx.base_currency !== 'USD' && tx.base_amount ? ` (${tx.base_amount?.toLocaleString()} ${tx.base_currency})` : ''}
+                        </p>
+                      </div>
+                      {/* Destination */}
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Destination</p>
+                        {tx.destination_type === 'bank' && tx.client_bank_name ? (
+                          <div>
+                            <p className="text-white text-xs font-medium truncate">{tx.client_bank_name}</p>
+                            <p className="text-[10px] text-[#C5C6C7] font-mono truncate">{tx.client_bank_account_number}</p>
+                            <p className="text-[10px] text-[#66FCF1]">{tx.client_bank_currency || 'USD'}</p>
                           </div>
-                        </div>
-                        <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Client</p>
-                          <p className="text-white">{tx.client_name}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Type</p>
-                          {getTypeBadge(tx.transaction_type)}
-                        </div>
-                        <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Amount</p>
-                          <p className={`font-mono text-lg font-bold ${['deposit', 'rebate'].includes(tx.transaction_type) ? 'text-green-400' : 'text-red-400'}`}>
-                            {['deposit', 'rebate'].includes(tx.transaction_type) ? '+' : '-'}${tx.amount?.toLocaleString()} USD
-                          </p>
-                          {tx.base_currency && tx.base_currency !== 'USD' && tx.base_amount && (
-                            <p className="text-xs text-[#C5C6C7]">
-                              ({tx.base_amount?.toLocaleString()} {tx.base_currency})
-                            </p>
-                          )}
-                        </div>
+                        ) : tx.destination_type === 'usdt' && tx.client_usdt_address ? (
+                          <div>
+                            <p className="text-white text-xs font-mono truncate">{tx.client_usdt_address?.slice(0, 8)}...{tx.client_usdt_address?.slice(-4)}</p>
+                            <Badge className="bg-green-500/20 text-green-400 text-[10px] mt-0.5">{tx.client_usdt_network || 'USDT'}</Badge>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="text-white text-xs truncate">{tx.destination_account_name || tx.vendor_name || 'N/A'}</p>
+                            <p className="text-[10px] text-[#C5C6C7] truncate">{tx.destination_bank_name || ''}</p>
+                          </div>
+                        )}
                       </div>
-
-                      {/* Destination & Date */}
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Destination</p>
-                          {tx.destination_type === 'bank' && tx.client_bank_name ? (
-                            <div className="flex items-start gap-2">
-                              <Building2 className="w-4 h-4 text-blue-400 mt-0.5" />
-                              <div>
-                                <p className="text-white text-sm">{tx.client_bank_name}</p>
-                                <p className="text-xs text-[#C5C6C7] font-mono">{tx.client_bank_account_number}</p>
-                                {tx.client_bank_swift_iban && (
-                                  <p className="text-xs text-[#C5C6C7]">SWIFT: {tx.client_bank_swift_iban}</p>
-                                )}
-                                <p className="text-xs text-[#66FCF1]">{tx.client_bank_currency || 'USD'}</p>
-                              </div>
-                            </div>
-                          ) : tx.destination_type === 'usdt' && tx.client_usdt_address ? (
-                            <div className="flex items-start gap-2">
-                              <Wallet className="w-4 h-4 text-green-400 mt-0.5" />
-                              <div>
-                                <p className="text-white text-sm font-mono truncate max-w-[150px]" title={tx.client_usdt_address}>
-                                  {tx.client_usdt_address?.slice(0, 10)}...{tx.client_usdt_address?.slice(-6)}
-                                </p>
-                                <Badge className="bg-green-500/20 text-green-400 text-xs mt-1">
-                                  {tx.client_usdt_network || 'USDT'}
-                                </Badge>
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <p className="text-white">{tx.destination_account_name || tx.vendor_name || 'N/A'}</p>
-                              <p className="text-xs text-[#C5C6C7]">{tx.destination_bank_name || ''}</p>
-                            </>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created</p>
-                          <p className="text-white text-sm">{formatDate(tx.created_at)}</p>
-                          <p className="text-xs text-[#C5C6C7]">by {tx.created_by_name || 'System'}</p>
-                        </div>
+                      {/* Created */}
+                      <div>
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Created</p>
+                        <p className="text-white text-xs">{formatDate(tx.created_at)}</p>
+                        <p className="text-[10px] text-[#C5C6C7]">by {tx.created_by_name || 'System'}</p>
                       </div>
-
                       {/* Actions */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 justify-end">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => setViewTransaction(tx)}
-                          className="text-[#C5C6C7] hover:text-white hover:bg-white/5"
+                          className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0"
                           data-testid={`view-tx-${tx.transaction_id}`}
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
-                        {/* Upload Proof button for withdrawals */}
                         {tx.transaction_type === 'withdrawal' && !tx.accountant_proof_image && (
                           <Button
                             variant="ghost"
