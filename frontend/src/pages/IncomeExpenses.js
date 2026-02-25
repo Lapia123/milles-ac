@@ -647,7 +647,11 @@ function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCate
                     <TableCell className="text-white text-sm max-w-[200px] truncate">{entry.description || '-'}</TableCell>
                     <TableCell className="text-sm">
                       {entry.vendor_name ? (
-                        <span className="flex items-center gap-1 text-amber-400"><Store className="w-3 h-3" />{entry.vendor_name}</span>
+                        <div>
+                          <span className="flex items-center gap-1 text-amber-400"><Store className="w-3 h-3" />{entry.vendor_name}</span>
+                          {entry.vendor_bank_account && <p className="text-[10px] text-[#8B8D91] mt-0.5">Bank: {entry.vendor_bank_account}</p>}
+                          {entry.treasury_account_name && <p className="text-[10px] text-[#66FCF1]/60 mt-0.5">Treasury: {entry.treasury_account_name}</p>}
+                        </div>
                       ) : (
                         <span className="text-[#66FCF1]">{entry.treasury_account_name || '-'}</span>
                       )}
