@@ -2873,6 +2873,14 @@ async def approve_settlement(settlement_id: str, user: dict = Depends(require_ac
         {"$set": {"settled": True, "settlement_status": "completed"}}
     )
     
+    # Mark IE entries as fully settled
+    ie_entry_ids = settlement.get("ie_entry_ids", [])
+    if ie_entry_ids:
+        await db.income_expenses.update_many(
+            {"entry_id": {"$in": ie_entry_ids}},
+            {"$set": {"settled": True, "settlement_status": "completed"}}
+        )
+    
     # Update treasury balance with settlement amount
     await db.treasury_accounts.update_one(
         {"account_id": settlement["settlement_destination_id"]},
