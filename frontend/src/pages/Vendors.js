@@ -926,6 +926,7 @@ export default function Vendors() {
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Deductions</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Settled</TableHead>
                             <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
