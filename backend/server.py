@@ -3939,7 +3939,7 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = De
             raise HTTPException(status_code=404, detail="Vendor not found")
     
     treasury = None
-    if entry_data.treasury_account_id:
+    if entry_data.treasury_account_id and not entry_data.vendor_id:
         treasury = await db.treasury_accounts.find_one({"account_id": entry_data.treasury_account_id}, {"_id": 0})
         if not treasury:
             raise HTTPException(status_code=404, detail="Treasury account not found")
