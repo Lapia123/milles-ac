@@ -425,21 +425,53 @@ export default function Transactions() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Client *</Label>
-                <Select
-                  value={formData.client_id}
-                  onValueChange={(value) => setFormData({ ...formData, client_id: value })}
-                >
-                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-client">
-                    <SelectValue placeholder="Select a client" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1F2833] border-white/10 max-h-60">
-                    {clients.map((client) => (
-                      <SelectItem key={client.client_id} value={client.client_id} className="text-white hover:bg-white/5">
-                        {client.first_name} {client.last_name} - {client.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={clientSearchOpen}
+                      className="w-full justify-between bg-[#0B0C10] border-white/10 text-white hover:bg-[#0B0C10] hover:text-white"
+                      data-testid="select-client"
+                    >
+                      {formData.client_id
+                        ? (() => {
+                            const c = clients.find(cl => cl.client_id === formData.client_id);
+                            return c ? `${c.first_name} ${c.last_name}` : 'Select client';
+                          })()
+                        : 'Search & select client...'}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-[#1F2833] border-white/10" align="start">
+                    <Command className="bg-[#1F2833]">
+                      <CommandInput placeholder="Search by name, email, ID..." className="text-white" data-testid="client-search-input" />
+                      <CommandList>
+                        <CommandEmpty className="text-[#C5C6C7] text-sm py-4 text-center">No client found.</CommandEmpty>
+                        <CommandGroup className="max-h-60 overflow-y-auto">
+                          {clients.map((client) => (
+                            <CommandItem
+                              key={client.client_id}
+                              value={`${client.first_name} ${client.last_name} ${client.email} ${client.client_id}`}
+                              onSelect={() => {
+                                setFormData({ ...formData, client_id: client.client_id });
+                                setClientSearchOpen(false);
+                              }}
+                              className="text-white hover:bg-white/5 cursor-pointer"
+                              data-testid={`client-option-${client.client_id}`}
+                            >
+                              <Check className={`mr-2 h-4 w-4 ${formData.client_id === client.client_id ? 'opacity-100 text-[#66FCF1]' : 'opacity-0'}`} />
+                              <div>
+                                <span className="font-medium">{client.first_name} {client.last_name}</span>
+                                <span className="text-[#C5C6C7] text-xs ml-2">{client.email}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
