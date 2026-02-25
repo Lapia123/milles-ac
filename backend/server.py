@@ -6114,6 +6114,96 @@ async def reschedule_daily_report():
     
     logger.info(f"Daily report scheduled for {report_time}")
 
+# ============== FX RATE ENDPOINTS ==============
+@api_router.get("/fx-rates")
+async def get_fx_rates_endpoint(user: dict = Depends(get_current_user)):
+    """Return current exchange rates (1 unit of currency = X USD)."""
+    rates = await get_fx_rates()
+    # Return a curated list of commonly used currencies
+    popular = ["USD", "EUR", "GBP", "AED", "SAR", "INR", "JPY", "USDT", "CAD", "AUD", "CHF", "CNY", "SGD", "HKD", "KWD", "BHD", "OMR", "QAR", "MYR", "THB"]
+    filtered = {k: v for k, v in rates.items() if k in popular}
+    # Always include all rates as a secondary field
+    return {
+        "rates": filtered,
+        "all_rates": {k: v for k, v in sorted(rates.items())},
+        "source": _fx_cache.get("source", "fallback"),
+        "fetched_at": _fx_cache.get("fetched_at", "").isoformat() if _fx_cache.get("fetched_at") else None,
+        "cache_ttl_minutes": int(FX_CACHE_TTL.total_seconds() / 60),
+    }
+
+@api_router.post("/fx-rates/refresh")
+async def refresh_fx_rates(user: dict = Depends(require_admin)):
+    """Force-refresh exchange rates from the live API."""
+    _fx_cache["fetched_at"] = None  # invalidate cache
+    rates = await get_fx_rates()
+    return {
+        "message": "Rates refreshed",
+        "source": _fx_cache.get("source", "fallback"),
+        "fetched_at": _fx_cache.get("fetched_at", "").isoformat() if _fx_cache.get("fetched_at") else None,
+        "sample_rates": {k: rates.get(k) for k in ["USD", "EUR", "GBP", "AED", "INR"] if k in rates},
+    }
+
+@api_router.get("/fx-rates/convert")
+async def convert_currency_endpoint(
+    amount: float, from_currency: str, to_currency: str,
+    user: dict = Depends(get_current_user)
+):
+    """Convert an amount between two currencies using live rates."""
+    rates = await get_fx_rates()
+    from_rate = rates.get(from_currency.upper())
+    to_rate = rates.get(to_currency.upper())
+    if from_rate is None or to_rate is None:
+        raise HTTPException(status_code=400, detail=f"Unsupported currency: {from_currency if from_rate is None else to_currency}")
+    usd_amount = amount * from_rate
+    converted = usd_amount / to_rate if to_rate else usd_amount
+    return {
+        "from_currency": from_currency.upper(),
+        "to_currency": to_currency.upper(),
+        "amount": amount,
+        "converted_amount": round(converted, 4),
+        "usd_equivalent": round(usd_amount, 4),
+        "rate": round(from_rate / to_rate, 6) if to_rate else None,
+    }
+
+# ============== COMMISSION SETTINGS ENDPOINTS ==============
+@api_router.get("/settings/commission")
+async def get_commission_settings(user: dict = Depends(require_admin)):
+    """Get global commission settings for deposits and withdrawals."""
+    settings = await db.app_settings.find_one({"setting_type": "commission"}, {"_id": 0})
+    if not settings:
+        return {
+            "deposit_commission_rate": 0.0,
+            "withdrawal_commission_rate": 0.0,
+            "commission_enabled": False,
+        }
+    return {
+        "deposit_commission_rate": settings.get("deposit_commission_rate", 0.0),
+        "withdrawal_commission_rate": settings.get("withdrawal_commission_rate", 0.0),
+        "commission_enabled": settings.get("commission_enabled", False),
+    }
+
+@api_router.put("/settings/commission")
+async def update_commission_settings(request: Request, user: dict = Depends(require_admin)):
+    """Update global commission settings."""
+    data = await request.json()
+    deposit_rate = float(data.get("deposit_commission_rate", 0))
+    withdrawal_rate = float(data.get("withdrawal_commission_rate", 0))
+    enabled = bool(data.get("commission_enabled", False))
+
+    await db.app_settings.update_one(
+        {"setting_type": "commission"},
+        {"$set": {
+            "setting_type": "commission",
+            "deposit_commission_rate": deposit_rate,
+            "withdrawal_commission_rate": withdrawal_rate,
+            "commission_enabled": enabled,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_by": user["user_id"],
+        }},
+        upsert=True
+    )
+    return {"message": "Commission settings updated", "deposit_commission_rate": deposit_rate, "withdrawal_commission_rate": withdrawal_rate, "commission_enabled": enabled}
+
 # Include router
 app.include_router(api_router)
 
