@@ -62,6 +62,12 @@ export default function VendorDashboard() {
   const [statementLoading, setStatementLoading] = useState(false);
   const [ieEntries, setIeEntries] = useState([]);
   const [activeVendorTab, setActiveVendorTab] = useState('transactions');
+  const [ieActionDialog, setIeActionDialog] = useState({ open: false, entry: null, type: '' });
+  const [ieCaptcha, setIeCaptcha] = useState({ num1: 0, num2: 0 });
+  const [ieCaptchaAnswer, setIeCaptchaAnswer] = useState('');
+  const [ieProofImage, setIeProofImage] = useState(null);
+  const [ieProofPreview, setIeProofPreview] = useState(null);
+  const [ieRejectionReason, setIeRejectionReason] = useState('');
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
