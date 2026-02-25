@@ -3906,12 +3906,13 @@ async def get_monthly_report(
         monthly_data[month_str] = {"income": 0, "expense": 0}
     
     for entry in entries:
-        month_str = entry["date"][:7]  # YYYY-MM
+        month_str = entry.get("date", "")[:7]  # YYYY-MM
         if month_str in monthly_data:
+            amt_usd = entry.get("amount_usd") or convert_to_usd(entry.get("amount", 0), entry.get("currency", "USD"))
             if entry["entry_type"] == IncomeExpenseType.INCOME:
-                monthly_data[month_str]["income"] += entry["amount_usd"]
+                monthly_data[month_str]["income"] += amt_usd
             else:
-                monthly_data[month_str]["expense"] += entry["amount_usd"]
+                monthly_data[month_str]["expense"] += amt_usd
     
     # Calculate net for each month
     result = []
