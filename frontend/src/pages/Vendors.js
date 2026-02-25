@@ -58,6 +58,9 @@ import {
   Banknote,
   Wallet,
   Receipt,
+  FileText,
+  Printer,
+  X,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
