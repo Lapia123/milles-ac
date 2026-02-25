@@ -496,6 +496,49 @@ export default function PSPs() {
                     />
                   </div>
                 </div>
+
+                {/* New PSP Fee Fields */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Gateway Fee (per tx)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.gateway_fee}
+                      onChange={(e) => setFormData({ ...formData, gateway_fee: e.target.value })}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      placeholder="0.00"
+                      data-testid="psp-gateway-fee"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Refund Fee</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.refund_fee}
+                      onChange={(e) => setFormData({ ...formData, refund_fee: e.target.value })}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      placeholder="0.00"
+                      data-testid="psp-refund-fee"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Monthly Min Fee</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.monthly_minimum_fee}
+                      onChange={(e) => setFormData({ ...formData, monthly_minimum_fee: e.target.value })}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      placeholder="0.00"
+                      data-testid="psp-monthly-min-fee"
+                    />
+                  </div>
+                </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
