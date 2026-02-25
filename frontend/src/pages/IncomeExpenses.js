@@ -139,8 +139,16 @@ export default function IncomeExpenses() {
 
     try {
       const payload = { ...formData, amount: parseFloat(formData.amount) };
-      if (!payload.vendor_id) { delete payload.vendor_id; delete payload.vendor_bank_account; }
-      if (!payload.treasury_account_id) delete payload.treasury_account_id;
+      if (!payload.vendor_id) {
+        delete payload.vendor_id;
+        delete payload.vendor_bank_account_name;
+        delete payload.vendor_bank_account_number;
+        delete payload.vendor_bank_ifsc;
+        delete payload.vendor_bank_branch;
+      } else {
+        // When vendor is selected, clear treasury_account_id
+        delete payload.treasury_account_id;
+      }
       const response = await fetch(`${API_URL}/api/income-expenses`, {
         method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload),
       });
