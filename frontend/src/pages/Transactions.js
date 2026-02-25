@@ -813,7 +813,7 @@ export default function Transactions() {
                   
                   {/* For withdrawals via vendor - enter client bank details */}
                   {formData.transaction_type === 'withdrawal' && (
-                    <div className="space-y-4 p-4 bg-[#0B0C10] rounded-sm border border-white/10">
+                    <div className="space-y-4 p-4 bg-[#0B0C10] rounded-sm border border-white/10 mt-2">
                       <div className="flex items-center gap-2 text-[#66FCF1] mb-2">
                         <Building2 className="w-4 h-4" />
                         <span className="text-xs uppercase tracking-wider font-bold">Client Bank Details (Destination)</span>
