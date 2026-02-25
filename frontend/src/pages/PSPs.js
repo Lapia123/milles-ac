@@ -257,7 +257,7 @@ export default function PSPs() {
   const openChargesDialog = (transaction) => {
     setSelectedTransaction(transaction);
     setChargesForm({
-      chargeback_amount: (transaction.psp_chargeback_amount || 0).toString(),
+      reserve_fund_amount: (transaction.psp_reserve_fund_amount || transaction.psp_chargeback_amount || 0).toString(),
       extra_charges: (transaction.psp_extra_charges || 0).toString(),
       charges_description: transaction.psp_charges_description || '',
     });
