@@ -237,7 +237,9 @@ class IncomeExpenseCreate(BaseModel):
     custom_category: Optional[str] = None
     amount: float
     currency: str = "USD"
-    treasury_account_id: str
+    treasury_account_id: Optional[str] = None  # Optional when vendor handles it
+    vendor_id: Optional[str] = None  # If linked to a vendor
+    vendor_bank_account: Optional[str] = None  # Bank details for vendor payment
     description: Optional[str] = None
     reference: Optional[str] = None
     date: Optional[str] = None  # ISO date string
