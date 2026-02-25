@@ -6260,6 +6260,13 @@ async def startup_db_indexes():
     except Exception as e:
         logger.error(f"Failed to start scheduler: {e}")
 
+    # Warm FX rate cache
+    try:
+        await get_fx_rates()
+        logger.info(f"FX rates loaded (source: {_fx_cache.get('source', 'unknown')})")
+    except Exception as e:
+        logger.warning(f"FX rate warm-up failed: {e}")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     scheduler.shutdown(wait=False)
