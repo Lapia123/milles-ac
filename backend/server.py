@@ -2799,8 +2799,9 @@ async def settle_vendor_balance(
         "exchange_rate": settlement_request.exchange_rate,
         "destination_currency": settlement_request.destination_currency,
         "settlement_amount": settlement_amount,
-        "transaction_count": len(pending_txs),
+        "transaction_count": len(pending_txs) + len(pending_ie),
         "transaction_ids": [tx["transaction_id"] for tx in pending_txs],
+        "ie_entry_ids": ie_entry_ids,
         "settlement_destination_id": dest_account_id,
         "settlement_destination_name": dest["account_name"],
         "status": VendorSettlementStatus.PENDING,  # Settlements go to pending first
