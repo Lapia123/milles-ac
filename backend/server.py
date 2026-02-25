@@ -4658,6 +4658,47 @@ async def get_loans_summary(user: dict = Depends(get_current_user)):
         "by_borrower": {k: {**v, "disbursed": round(v["disbursed"], 2), "outstanding": round(v["outstanding"], 2)} for k, v in by_borrower.items()}
     }
 
+@api_router.get("/loans/export/csv")
+async def export_loans_csv(user: dict = Depends(get_current_user)):
+    """Export all loans as CSV"""
+    from io import StringIO
+    import csv
+    
+    loans = await db.loans.find({}, {"_id": 0}).sort("loan_date", -1).to_list(50000)
+    
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "Loan ID", "Borrower", "Amount", "Currency", "Interest Rate (%)",
+        "Loan Date", "Due Date", "Outstanding Balance", "Total Repaid",
+        "Status", "Repayment Mode", "Notes", "Created At"
+    ])
+    
+    for loan in loans:
+        writer.writerow([
+            loan.get("loan_id", ""),
+            loan.get("borrower_name", ""),
+            loan.get("amount", 0),
+            loan.get("currency", "USD"),
+            loan.get("interest_rate", 0),
+            loan.get("loan_date", ""),
+            loan.get("due_date", ""),
+            loan.get("outstanding_balance", 0),
+            loan.get("total_repaid", 0),
+            loan.get("status", ""),
+            loan.get("repayment_mode", ""),
+            loan.get("notes", ""),
+            loan.get("created_at", "")
+        ])
+    
+    from fastapi.responses import StreamingResponse
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=loans_export.csv"}
+    )
+
 # ============== DEBT MANAGEMENT ==============
 
 class DebtType:
