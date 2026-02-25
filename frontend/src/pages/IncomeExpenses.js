@@ -491,21 +491,26 @@ export default function IncomeExpenses() {
                 <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded text-xs text-amber-400">
                   <Clock className="w-3 h-3 inline mr-1" /> This entry will be sent to vendor for approval before treasury is updated
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Vendor Bank Account</Label>
-                  <Input value={formData.vendor_bank_account} onChange={(e) => setFormData({ ...formData, vendor_bank_account: e.target.value })} className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]" placeholder="Bank name - Account number" data-testid="vendor-bank-input" />
-                </div>
-                {/* Treasury account for actual debit/credit */}
-                <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Treasury Account (for settlement)</Label>
-                  <Select value={formData.treasury_account_id} onValueChange={(value) => setFormData({ ...formData, treasury_account_id: value })}>
-                    <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white"><SelectValue placeholder="Select treasury account" /></SelectTrigger>
-                    <SelectContent className="bg-[#1F2833] border-white/10">
-                      {treasuryAccounts.map((acc) => (
-                        <SelectItem key={acc.account_id} value={acc.account_id} className="text-white hover:bg-white/5">{acc.account_name} ({acc.currency})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-3 p-3 bg-[#0B0C10]/50 border border-white/10 rounded">
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider font-semibold">Vendor Bank Details</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[#8B8D91] text-[10px] uppercase">Account Holder Name</Label>
+                      <Input value={formData.vendor_bank_account_name} onChange={(e) => setFormData({ ...formData, vendor_bank_account_name: e.target.value })} className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] h-8 text-sm" placeholder="Name" data-testid="vendor-bank-name" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[#8B8D91] text-[10px] uppercase">Account Number</Label>
+                      <Input value={formData.vendor_bank_account_number} onChange={(e) => setFormData({ ...formData, vendor_bank_account_number: e.target.value })} className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] h-8 text-sm" placeholder="Account number" data-testid="vendor-bank-number" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[#8B8D91] text-[10px] uppercase">IFSC Code</Label>
+                      <Input value={formData.vendor_bank_ifsc} onChange={(e) => setFormData({ ...formData, vendor_bank_ifsc: e.target.value })} className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] h-8 text-sm" placeholder="IFSC code" data-testid="vendor-bank-ifsc" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[#8B8D91] text-[10px] uppercase">Branch</Label>
+                      <Input value={formData.vendor_bank_branch} onChange={(e) => setFormData({ ...formData, vendor_bank_branch: e.target.value })} className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] h-8 text-sm" placeholder="Branch name" data-testid="vendor-bank-branch" />
+                    </div>
+                  </div>
                 </div>
               </>
             )}
