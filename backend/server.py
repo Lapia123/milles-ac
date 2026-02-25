@@ -1407,10 +1407,18 @@ async def complete_settlement(settlement_id: str, user: dict = Depends(require_a
     
     now = datetime.now(timezone.utc)
     
-    # Update treasury balance
+    # Get destination treasury account for currency conversion
+    dest = await db.treasury_accounts.find_one({"account_id": settlement["settlement_destination_id"]}, {"_id": 0})
+    dest_currency = dest.get("currency", "USD") if dest else "USD"
+    
+    # Settlement amounts are in USD (transaction currency); convert to treasury currency
+    settlement_net = settlement["net_amount"]
+    treasury_amount = convert_currency(settlement_net, "USD", dest_currency)
+    
+    # Update treasury balance (in treasury account's currency)
     await db.treasury_accounts.update_one(
         {"account_id": settlement["settlement_destination_id"]},
-        {"$inc": {"balance": settlement["net_amount"]}, "$set": {"updated_at": now.isoformat()}}
+        {"$inc": {"balance": treasury_amount}, "$set": {"updated_at": now.isoformat()}}
     )
     
     # Update settlement status
