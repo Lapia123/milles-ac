@@ -176,6 +176,34 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* FX Rates Ticker */}
+      {fxRates?.rates && (
+        <Card className="bg-[#1F2833] border-white/5" data-testid="fx-rates-ticker">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center gap-4 overflow-x-auto scrollbar-none">
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <TrendingUp className="w-4 h-4 text-[#66FCF1]" />
+                <span className="text-xs text-[#C5C6C7] uppercase tracking-wider font-bold">Live FX</span>
+                <Badge className={`text-[10px] px-1.5 py-0 ${fxRates.source === 'live' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'}`}>
+                  {fxRates.source === 'live' ? 'LIVE' : 'CACHED'}
+                </Badge>
+              </div>
+              <div className="h-4 w-px bg-white/10 flex-shrink-0" />
+              {['EUR', 'GBP', 'AED', 'INR', 'SAR', 'JPY', 'USDT'].map(code => {
+                const rate = fxRates.rates[code];
+                if (!rate) return null;
+                return (
+                  <div key={code} className="flex items-center gap-1.5 flex-shrink-0" data-testid={`dashboard-fx-${code}`}>
+                    <span className="text-white font-mono text-xs font-medium">{code}</span>
+                    <span className="text-[#66FCF1] font-mono text-xs">${rate.toFixed(4)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Transaction Chart */}
