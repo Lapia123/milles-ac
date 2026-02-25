@@ -34,6 +34,8 @@ import {
 } from '../components/ui/dropdown-menu';
 import { Textarea } from '../components/ui/textarea';
 import { ScrollArea } from '../components/ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../components/ui/command';
 import { toast } from 'sonner';
 import {
   ArrowLeftRight,
