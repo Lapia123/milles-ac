@@ -58,6 +58,10 @@ import {
   CheckCircle2,
   AlertCircle,
   FileText,
+  DollarSign,
+  RefreshCw,
+  TrendingUp,
+  Percent,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
