@@ -95,8 +95,8 @@ export default function AuditCompliance() {
     setLoading(true);
     try {
       const [scanRes, histRes] = await Promise.all([
-        fetch(`${API}/api/audit/latest`, { headers }),
-        fetch(`${API}/api/audit/history`, { headers }),
+        fetch(`${API}/api/audit/latest`, { headers: getHeaders() }),
+        fetch(`${API}/api/audit/history`, { headers: getHeaders() }),
       ]);
       const scanData = await scanRes.json();
       const histData = await histRes.json();
@@ -104,14 +104,14 @@ export default function AuditCompliance() {
       setHistory(Array.isArray(histData) ? histData : []);
     } catch { toast.error('Failed to load audit data'); }
     setLoading(false);
-  }, [token]);
+  }, []);
 
   const fetchSettings = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/audit/settings`, { headers });
+      const res = await fetch(`${API}/api/audit/settings`, { headers: getHeaders() });
       setSettings(await res.json());
     } catch { /* ignore */ }
-  }, [token]);
+  }, []);
 
   useEffect(() => { fetchLatest(); fetchSettings(); }, [fetchLatest, fetchSettings]);
 
