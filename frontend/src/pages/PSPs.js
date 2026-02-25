@@ -722,7 +722,7 @@ export default function PSPs() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-[#1F2833] border-white/5">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -746,6 +746,23 @@ export default function PSPs() {
               </div>
               <div className="p-3 bg-yellow-500/10 rounded-sm">
                 <Clock className="w-6 h-6 text-yellow-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-[#1F2833] border-white/5 border-l-2 border-l-orange-500/50" data-testid="total-reserve-fund-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reserve Fund Held</p>
+                <p className="text-3xl font-bold font-mono text-orange-400">${(globalReserveSummary?.total_held || 0).toLocaleString()}</p>
+                {globalReserveSummary?.due_for_release > 0 && (
+                  <p className="text-xs text-yellow-400 mt-1">${globalReserveSummary.due_for_release.toLocaleString()} due for release</p>
+                )}
+              </div>
+              <div className="p-3 bg-orange-500/10 rounded-sm">
+                <Shield className="w-6 h-6 text-orange-500" />
               </div>
             </div>
           </CardContent>
