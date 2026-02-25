@@ -1179,7 +1179,7 @@ export default function PSPs() {
                   {(selectedTransaction.psp_reserve_fund_amount || selectedTransaction.psp_chargeback_amount) > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-[#C5C6C7]">Chargeback</span>
-                      <span className="text-red-400 font-mono">-${selectedTransaction.psp_chargeback_amount.toLocaleString()}</span>
+                      <span className="text-red-400 font-mono">-${(selectedTransaction.psp_reserve_fund_amount || selectedTransaction.psp_chargeback_amount).toLocaleString()}</span>
                     </div>
                   )}
                   {selectedTransaction.psp_extra_charges > 0 && (
