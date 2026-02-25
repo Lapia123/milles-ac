@@ -168,6 +168,7 @@ export default function VendorDashboard() {
   useEffect(() => {
     if (vendorInfo) {
       fetchTransactions();
+      fetchSettlements();
     }
   }, [vendorInfo]);
 
