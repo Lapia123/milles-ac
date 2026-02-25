@@ -1016,6 +1016,125 @@ export default function VendorDashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Settlement Statement Dialog */}
+      <Dialog open={statementOpen} onOpenChange={setStatementOpen}>
+        <DialogContent className="max-w-3xl bg-white text-[#1a1a1a] border-0 p-0 max-h-[90vh] overflow-hidden">
+          {statementLoading ? (
+            <div className="flex justify-center items-center py-20">
+              <div className="w-8 h-8 border-2 border-[#0B3D91] border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : statementData ? (() => {
+            const s = statementData.settlement;
+            const txs = statementData.transactions;
+            const v = statementData.vendor;
+            const cur = s.source_currency || 'USD';
+            const dCur = s.destination_currency || cur;
+            const deposits = txs.filter(t => t.transaction_type === 'deposit');
+            const withdrawals = txs.filter(t => t.transaction_type === 'withdrawal');
+            return (
+              <>
+                <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
+                  <h2 className="font-bold text-[#0B3D91] text-lg">Settlement Statement</h2>
+                  <Button variant="outline" size="sm" onClick={printStatement} className="text-[#0B3D91] border-[#0B3D91] hover:bg-[#0B3D91]/10" data-testid="vendor-print-statement-btn">
+                    <Printer className="w-4 h-4 mr-1" /> Print
+                  </Button>
+                </div>
+                <ScrollArea className="max-h-[calc(90vh-60px)]">
+                  <div id="vendor-settlement-statement" className="px-8 py-6">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #0B3D91', paddingBottom: '16px', marginBottom: '20px' }}>
+                      <div>
+                        <div style={{ fontSize: '22px', fontWeight: 800, color: '#0B3D91' }}>MILES CAPITALS</div>
+                        <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>Foreign Exchange Brokerage</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '16px', fontWeight: 700, color: '#0B3D91' }}>STATEMENT OF SETTLEMENT</div>
+                        <div style={{ fontSize: '11px', color: '#666', fontFamily: 'monospace' }}>{s.settlement_id}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '40px', marginBottom: '20px' }}>
+                      <div style={{ flex: 1 }}>
+                        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', marginBottom: '6px' }}>Vendor</h4>
+                        <p style={{ fontSize: '13px', fontWeight: 600 }}>{v.vendor_name || s.vendor_name}</p>
+                        {v.contact_person && <p style={{ fontSize: '12px', color: '#555' }}>{v.contact_person}</p>}
+                        {v.email && <p style={{ fontSize: '12px', color: '#555' }}>{v.email}</p>}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', marginBottom: '6px' }}>Settlement Details</h4>
+                        <p style={{ fontSize: '12px' }}>
+                          <strong>Type:</strong> {s.settlement_type?.toUpperCase()}<br />
+                          <strong>Destination:</strong> {s.settlement_destination_name}<br />
+                          <strong>Status:</strong> <span style={{ display: 'inline-block', padding: '1px 8px', borderRadius: '3px', fontSize: '10px', fontWeight: 600, background: s.status === 'approved' ? '#d1fae5' : '#fef3c7', color: s.status === 'approved' ? '#065f46' : '#92400e' }}>{s.status?.toUpperCase()}</span><br />
+                          <strong>Date:</strong> {s.settled_at ? new Date(s.settled_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Pending'}
+                        </p>
+                      </div>
+                    </div>
+                    <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', marginBottom: '8px' }}>Included Transactions ({txs.length})</h4>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', margin: '0 0 16px 0' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ background: '#0B3D91', color: '#fff', fontSize: '10px', textTransform: 'uppercase', padding: '8px 12px', textAlign: 'left' }}>Reference</th>
+                          <th style={{ background: '#0B3D91', color: '#fff', fontSize: '10px', textTransform: 'uppercase', padding: '8px 12px', textAlign: 'left' }}>Type</th>
+                          <th style={{ background: '#0B3D91', color: '#fff', fontSize: '10px', textTransform: 'uppercase', padding: '8px 12px', textAlign: 'left' }}>Client</th>
+                          <th style={{ background: '#0B3D91', color: '#fff', fontSize: '10px', textTransform: 'uppercase', padding: '8px 12px', textAlign: 'right' }}>Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {txs.map((tx, idx) => (
+                          <tr key={tx.transaction_id} style={{ background: idx % 2 === 0 ? '#fff' : '#f9f9f9' }}>
+                            <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5', fontFamily: 'monospace' }}>{tx.reference || tx.transaction_id}</td>
+                            <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5', textTransform: 'capitalize' }}>{tx.transaction_type}</td>
+                            <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5' }}>{tx.client_name || '-'}</td>
+                            <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5', textAlign: 'right', fontFamily: 'monospace', color: tx.transaction_type === 'deposit' ? '#16a34a' : '#dc2626' }}>
+                              {tx.transaction_type === 'deposit' ? '+' : '-'}{tx.base_currency && tx.base_currency === cur ? fmtCurrency(tx.base_amount, cur) : fmtCurrency(tx.amount, tx.currency)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div style={{ background: '#f0f4fa', border: '1px solid #d0d8e8', borderRadius: '4px', padding: '16px', marginTop: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '13px' }}>
+                        <span>Gross Amount ({deposits.length} deposits, {withdrawals.length} withdrawals)</span>
+                        <span style={{ fontFamily: 'monospace' }}>{fmtCurrency(s.gross_amount, cur)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '13px', color: '#dc2626' }}>
+                        <span>Commission</span>
+                        <span style={{ fontFamily: 'monospace' }}>-{fmtCurrency(s.commission_amount, cur)}</span>
+                      </div>
+                      {s.charges_amount > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '13px', color: '#dc2626' }}>
+                          <span>Additional Charges {s.charges_description ? `(${s.charges_description})` : ''}</span>
+                          <span style={{ fontFamily: 'monospace' }}>-{fmtCurrency(s.charges_amount, cur)}</span>
+                        </div>
+                      )}
+                      {cur !== dCur && s.exchange_rate !== 1 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '13px', color: '#555' }}>
+                          <span>Exchange Rate ({cur} to {dCur})</span>
+                          <span style={{ fontFamily: 'monospace' }}>{s.exchange_rate}</span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #0B3D91', marginTop: '8px', paddingTop: '8px', fontWeight: 700, fontSize: '15px', color: '#0B3D91' }}>
+                        <span>Net Settlement</span>
+                        <span style={{ fontFamily: 'monospace' }}>{fmtCurrency(s.settlement_amount, dCur)}</span>
+                      </div>
+                    </div>
+                    {s.approved_by_name && (
+                      <div style={{ marginTop: '24px', fontSize: '12px', color: '#555' }}>
+                        <strong>Approved by:</strong> {s.approved_by_name} on {s.approved_at ? new Date(s.approved_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                      </div>
+                    )}
+                    <div style={{ marginTop: '40px', paddingTop: '16px', borderTop: '1px solid #ddd', fontSize: '10px', color: '#888', textAlign: 'center' }}>
+                      This is a system-generated statement from Miles Capitals Back Office. Generated on {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}.
+                    </div>
+                  </div>
+                </ScrollArea>
+              </>
+            );
+          })() : (
+            <div className="py-10 text-center text-gray-400">No data available</div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
