@@ -427,7 +427,7 @@ class TestReserveFundRelease(TestAuth):
         balance_after = next((t["balance"] for t in treasury_after if t["account_id"] == TREASURY_ENBD_AED), 0)
         
         balance_change = balance_after - balance_before
-        total_reserve_usd = 200.0  # 100 USD x 2
+        # total_reserve_usd calculated during creation (110 + 120 = 230 USD)
         
         # Get FX rate
         fx_resp = requests.get(f"{BASE_URL}/api/fx-rates", headers=headers)
