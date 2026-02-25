@@ -3931,6 +3931,9 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = De
     if entry_data.amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")
     
+    if not entry_data.vendor_id and not entry_data.treasury_account_id:
+        raise HTTPException(status_code=400, detail="Either a vendor or treasury account is required")
+    
     # Vendor-linked entry: auto-create pending approval in vendor portal
     vendor_info = None
     if entry_data.vendor_id:
