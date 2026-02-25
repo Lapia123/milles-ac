@@ -59,6 +59,8 @@ export default function VendorDashboard() {
   const [statementData, setStatementData] = useState(null);
   const [statementOpen, setStatementOpen] = useState(false);
   const [statementLoading, setStatementLoading] = useState(false);
+  const [ieEntries, setIeEntries] = useState([]);
+  const [activeVendorTab, setActiveVendorTab] = useState('transactions');
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
