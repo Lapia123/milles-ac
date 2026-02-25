@@ -41,7 +41,7 @@ class TestAuth:
     @pytest.fixture(scope="class")
     def headers(self, auth_token):
         """Return headers with auth token"""
-        return {"Authorization": f"Bearer {auth_token}", "Content-Type": "application/json"}
+        return {"Authorization": f"Bearer {auth_token}"}
 
 
 class TestFXRatesAndConversion(TestAuth):
@@ -91,10 +91,11 @@ class TestPSPTransactionCreation(TestAuth):
         unique_ref = f"TEST_RESERVE_{uuid.uuid4().hex[:8].upper()}"
         
         # Create a PSP transaction with UniPay (10% reserve fund rate)
-        payload = {
+        # Note: This endpoint uses Form data, not JSON
+        form_data = {
             "client_id": CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": 2500.0,  # 2500 USD
+            "amount": "2500.0",  # 2500 USD
             "currency": "USD",
             "base_currency": "USD",
             "destination_type": "psp",
@@ -104,7 +105,7 @@ class TestPSPTransactionCreation(TestAuth):
             "description": "Test reserve fund amount storage"
         }
         
-        response = requests.post(f"{BASE_URL}/api/transactions", headers=headers, json=payload)
+        response = requests.post(f"{BASE_URL}/api/transactions", headers=headers, data=form_data)
         assert response.status_code == 200, f"Create transaction failed: {response.text}"
         
         tx = response.json()
@@ -131,10 +132,10 @@ class TestPSPTransactionCreation(TestAuth):
         """Verify different PSP (PayPal 3%) stores correct reserve fund amount"""
         unique_ref = f"TEST_PAYPAL_{uuid.uuid4().hex[:8].upper()}"
         
-        payload = {
+        form_data = {
             "client_id": CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": 5000.0,
+            "amount": "5000.0",
             "currency": "USD",
             "destination_type": "psp",
             "psp_id": PSP_PAYPAL,  # 3% reserve, 10% commission
@@ -143,8 +144,8 @@ class TestPSPTransactionCreation(TestAuth):
             "description": "Test PayPal reserve fund"
         }
         
-        response = requests.post(f"{BASE_URL}/api/transactions", headers=headers, json=payload)
-        assert response.status_code == 200
+        response = requests.post(f"{BASE_URL}/api/transactions", headers=headers, data=form_data)
+        assert response.status_code == 200, f"Create failed: {response.text}"
         
         tx = response.json()
         
@@ -169,10 +170,10 @@ class TestPSPSettlementCurrencyConversion(TestAuth):
         unique_ref = f"TEST_SETTLE_{uuid.uuid4().hex[:8].upper()}"
         
         # Step 1: Create a PSP transaction
-        create_payload = {
+        form_data = {
             "client_id": CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": 1000.0,
+            "amount": "1000.0",
             "currency": "USD",
             "destination_type": "psp",
             "psp_id": PSP_UNIPAY,
@@ -181,8 +182,8 @@ class TestPSPSettlementCurrencyConversion(TestAuth):
             "description": "Test settlement currency conversion"
         }
         
-        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=headers, json=create_payload)
-        assert create_resp.status_code == 200
+        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=headers, data=form_data)
+        assert create_resp.status_code == 200, f"Create failed: {create_resp.text}"
         tx = create_resp.json()
         tx_id = tx.get("transaction_id")
         
@@ -243,18 +244,19 @@ class TestPSPSettlementCurrencyConversion(TestAuth):
         unique_ref = f"TEST_RECPAY_{uuid.uuid4().hex[:8].upper()}"
         
         # Create transaction
-        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=headers, json={
+        form_data = {
             "client_id": CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": 800.0,
+            "amount": "800.0",
             "currency": "USD",
             "destination_type": "psp",
             "psp_id": PSP_PAYPAL,
             "commission_paid_by": "client",
             "reference": unique_ref,
             "description": "Test record payment conversion"
-        })
-        assert create_resp.status_code == 200
+        }
+        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=headers, data=form_data)
+        assert create_resp.status_code == 200, f"Create failed: {create_resp.text}"
         tx = create_resp.json()
         tx_id = tx.get("transaction_id")
         net_amount = tx.get("psp_net_amount")
@@ -297,18 +299,19 @@ class TestReserveFundRelease(TestAuth):
         unique_ref = f"TEST_RFREL_{uuid.uuid4().hex[:8].upper()}"
         
         # Step 1: Create and settle a PSP transaction
-        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=headers, json={
+        form_data = {
             "client_id": CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": 1500.0,  # 1500 USD
+            "amount": "1500.0",  # 1500 USD
             "currency": "USD",
             "destination_type": "psp",
             "psp_id": PSP_UNIPAY,  # 10% reserve = 150 USD
             "commission_paid_by": "broker",
             "reference": unique_ref,
             "description": "Test reserve fund release currency conversion"
-        })
-        assert create_resp.status_code == 200
+        }
+        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=headers, data=form_data)
+        assert create_resp.status_code == 200, f"Create failed: {create_resp.text}"
         tx = create_resp.json()
         tx_id = tx.get("transaction_id")
         reserve_amount = tx.get("psp_reserve_fund_amount")
@@ -377,18 +380,19 @@ class TestReserveFundRelease(TestAuth):
         tx_ids = []
         for i in range(2):
             unique_ref = f"TEST_BULK_{uuid.uuid4().hex[:8].upper()}"
-            create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=headers, json={
+            form_data = {
                 "client_id": CLIENT_ID,
                 "transaction_type": "deposit",
-                "amount": 1000.0,
+                "amount": "1000.0",
                 "currency": "USD",
                 "destination_type": "psp",
                 "psp_id": PSP_UNIPAY,  # 10% reserve = 100 USD each
                 "commission_paid_by": "broker",
                 "reference": unique_ref,
                 "description": f"Bulk release test {i+1}"
-            })
-            assert create_resp.status_code == 200
+            }
+            create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=headers, data=form_data)
+            assert create_resp.status_code == 200, f"Create failed: {create_resp.text}"
             tx = create_resp.json()
             tx_id = tx.get("transaction_id")
             tx_ids.append(tx_id)
@@ -443,18 +447,19 @@ class TestTreasuryTransactionRecords(TestAuth):
         unique_ref = f"TEST_TTXREC_{uuid.uuid4().hex[:8].upper()}"
         
         # Create and settle
-        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=headers, json={
+        form_data = {
             "client_id": CLIENT_ID,
             "transaction_type": "deposit",
-            "amount": 500.0,
+            "amount": "500.0",
             "currency": "USD",
             "destination_type": "psp",
             "psp_id": PSP_PAYPAL,
             "commission_paid_by": "client",
             "reference": unique_ref,
             "description": "Test treasury transaction record"
-        })
-        assert create_resp.status_code == 200
+        }
+        create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=headers, data=form_data)
+        assert create_resp.status_code == 200, f"Create failed: {create_resp.text}"
         tx = create_resp.json()
         tx_id = tx.get("transaction_id")
         
