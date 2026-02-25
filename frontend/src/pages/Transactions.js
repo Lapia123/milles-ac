@@ -1211,6 +1211,28 @@ export default function Transactions() {
                   <p className="text-sm text-[#C5C6C7]">{viewTransaction.destination_bank_name}</p>
                 </div>
               )}
+              {/* Broker Commission */}
+              {viewTransaction.broker_commission_amount > 0 && (
+                <div className="pt-4 border-t border-white/10" data-testid="broker-commission-detail">
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Broker Commission</p>
+                  <div className="grid grid-cols-2 gap-3 p-3 bg-[#0B0C10] rounded-sm border border-white/5">
+                    <div>
+                      <p className="text-xs text-[#C5C6C7]">Rate</p>
+                      <p className="text-white font-mono">{viewTransaction.broker_commission_rate}%</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-[#C5C6C7]">Amount (USD)</p>
+                      <p className="text-yellow-400 font-mono">${viewTransaction.broker_commission_amount?.toLocaleString()}</p>
+                    </div>
+                    {viewTransaction.broker_commission_base_currency !== 'USD' && (
+                      <div className="col-span-2">
+                        <p className="text-xs text-[#C5C6C7]">Amount ({viewTransaction.broker_commission_base_currency})</p>
+                        <p className="text-yellow-400 font-mono">{viewTransaction.broker_commission_base_amount?.toLocaleString()} {viewTransaction.broker_commission_base_currency}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               {viewTransaction.description && (
                 <div className="pt-4 border-t border-white/10">
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Description</p>
