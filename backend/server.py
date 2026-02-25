@@ -1322,20 +1322,24 @@ async def create_settlement(psp_id: str, user: dict = Depends(require_admin)):
     commission_rate = psp.get("commission_rate", 0) / 100
     commission_amount = round(gross_amount * commission_rate, 2)
     
-    # Chargeback (from PSP default rate)
-    chargeback_rate = psp.get("chargeback_rate", 0) / 100
-    chargeback_amount = round(gross_amount * chargeback_rate, 2)
+    # Reserve Fund (from PSP default rate)
+    reserve_fund_rate = psp.get("reserve_fund_rate", psp.get("chargeback_rate", 0)) / 100
+    reserve_fund_amount = round(gross_amount * reserve_fund_rate, 2)
     
     # Extra charges (sum from individual transactions)
     total_extra_charges = sum(tx.get("psp_extra_charges", 0) for tx in pending_txs)
     
-    # Individual transaction chargebacks (override PSP rate if set per transaction)
-    total_tx_chargebacks = sum(tx.get("psp_chargeback_amount", 0) for tx in pending_txs)
-    # Use transaction-level chargebacks if any, otherwise use PSP rate
-    final_chargeback = total_tx_chargebacks if total_tx_chargebacks > 0 else chargeback_amount
+    # Gateway fees (per transaction)
+    gateway_fee = psp.get("gateway_fee", 0)
+    total_gateway_fees = round(gateway_fee * len(pending_txs), 2)
     
-    # Net amount = Gross - Commission - Chargeback - Extra Charges
-    net_amount = gross_amount - commission_amount - final_chargeback - total_extra_charges
+    # Individual transaction reserve fund amounts (override PSP rate if set per transaction)
+    total_tx_reserve = sum(tx.get("psp_reserve_fund_amount", tx.get("psp_chargeback_amount", 0)) for tx in pending_txs)
+    # Use transaction-level amounts if any, otherwise use PSP rate
+    final_reserve_fund = total_tx_reserve if total_tx_reserve > 0 else reserve_fund_amount
+    
+    # Net amount = Gross - Commission - Reserve Fund - Extra Charges - Gateway Fees
+    net_amount = gross_amount - commission_amount - final_reserve_fund - total_extra_charges - total_gateway_fees
     
     settlement_id = f"stl_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
