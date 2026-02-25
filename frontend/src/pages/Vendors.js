@@ -76,6 +76,9 @@ export default function Vendors() {
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [viewVendor, setViewVendor] = useState(null);
   const [settleDialogOpen, setSettleDialogOpen] = useState(false);
+  const [statementData, setStatementData] = useState(null);
+  const [statementOpen, setStatementOpen] = useState(false);
+  const [statementLoading, setStatementLoading] = useState(false);
   const [settlementType, setSettlementType] = useState('bank');
   const [settlementDestination, setSettlementDestination] = useState('');
   const [settlementCommission, setSettlementCommission] = useState('');
