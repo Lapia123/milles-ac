@@ -239,7 +239,10 @@ class IncomeExpenseCreate(BaseModel):
     currency: str = "USD"
     treasury_account_id: Optional[str] = None  # Optional when vendor handles it
     vendor_id: Optional[str] = None  # If linked to a vendor
-    vendor_bank_account: Optional[str] = None  # Bank details for vendor payment
+    vendor_bank_account_name: Optional[str] = None
+    vendor_bank_account_number: Optional[str] = None
+    vendor_bank_ifsc: Optional[str] = None
+    vendor_bank_branch: Optional[str] = None
     description: Optional[str] = None
     reference: Optional[str] = None
     date: Optional[str] = None  # ISO date string
