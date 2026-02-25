@@ -2715,6 +2715,21 @@ async def create_transaction(
         holding_days = psp_info.get("holding_days", 0)
         holding_release_date = (now + timedelta(days=holding_days)).isoformat() if holding_days > 0 else None
     
+    # ===== BROKER COMMISSION CALCULATION =====
+    broker_commission_rate = 0.0
+    broker_commission_amount = 0.0
+    broker_commission_base = 0.0
+    commission_settings = await db.app_settings.find_one({"setting_type": "commission"}, {"_id": 0})
+    if commission_settings and commission_settings.get("commission_enabled"):
+        if transaction_type == TransactionType.DEPOSIT:
+            broker_commission_rate = commission_settings.get("deposit_commission_rate", 0)
+        elif transaction_type == TransactionType.WITHDRAWAL:
+            broker_commission_rate = commission_settings.get("withdrawal_commission_rate", 0)
+        if broker_commission_rate > 0:
+            broker_commission_amount = round(usd_amount * broker_commission_rate / 100, 2)
+            b_base = base_amount if (base_currency and base_currency != "USD" and base_amount) else usd_amount
+            broker_commission_base = round(b_base * broker_commission_rate / 100, 2)
+
     tx_doc = {
         "transaction_id": tx_id,
         "client_id": client_id,
