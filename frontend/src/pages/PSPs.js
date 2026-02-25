@@ -168,6 +168,69 @@ export default function PSPs() {
     }
   };
 
+  const fetchReserveFundLedger = async (pspId) => {
+    setReserveFundLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/psps/${pspId}/reserve-funds`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setReserveFundLedger(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching reserve fund ledger:', error);
+    } finally {
+      setReserveFundLoading(false);
+    }
+  };
+
+  const fetchGlobalReserveSummary = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/psps/reserve-funds/global-summary`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setGlobalReserveSummary(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching global reserve summary:', error);
+    }
+  };
+
+  const handleReleaseReserveFund = async (txId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/psps/reserve-funds/${txId}/release`, { method: 'POST', headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`Reserve fund $${data.amount} released & credited to treasury`);
+        fetchReserveFundLedger(viewPsp.psp_id);
+        fetchGlobalReserveSummary();
+      } else {
+        const err = await response.json();
+        toast.error(err.detail || 'Failed to release');
+      }
+    } catch (error) {
+      toast.error('Error releasing reserve fund');
+    }
+  };
+
+  const handleBulkRelease = async () => {
+    if (selectedReleaseIds.length === 0) return;
+    try {
+      const response = await fetch(`${API_URL}/api/psps/reserve-funds/bulk-release`, {
+        method: 'POST', headers: getAuthHeaders(), credentials: 'include',
+        body: JSON.stringify({ transaction_ids: selectedReleaseIds }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`Released ${data.count} reserve funds totaling $${data.total_released}`);
+        setSelectedReleaseIds([]);
+        fetchReserveFundLedger(viewPsp.psp_id);
+        fetchGlobalReserveSummary();
+      } else {
+        toast.error('Failed to bulk release');
+      }
+    } catch (error) {
+      toast.error('Error in bulk release');
+    }
+  };
+
   useEffect(() => {
     fetchPsps();
     fetchTreasuryAccounts();
