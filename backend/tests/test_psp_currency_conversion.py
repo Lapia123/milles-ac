@@ -376,21 +376,24 @@ class TestReserveFundRelease(TestAuth):
     
     def test_bulk_release_converts_currency(self, headers):
         """POST /api/psps/reserve-funds/bulk-release converts currency for all released"""
-        # Create two transactions
+        # Create two transactions with different amounts to avoid duplicate detection
         tx_ids = []
+        amounts = [1100.0, 1200.0]  # Different amounts to avoid duplicate detection
+        total_reserve_usd = 0
         for i in range(2):
             unique_ref = f"TEST_BULK_{uuid.uuid4().hex[:8].upper()}"
             form_data = {
                 "client_id": CLIENT_ID,
                 "transaction_type": "deposit",
-                "amount": "1000.0",
+                "amount": str(amounts[i]),
                 "currency": "USD",
                 "destination_type": "psp",
-                "psp_id": PSP_UNIPAY,  # 10% reserve = 100 USD each
+                "psp_id": PSP_UNIPAY,  # 10% reserve 
                 "commission_paid_by": "broker",
                 "reference": unique_ref,
                 "description": f"Bulk release test {i+1}"
             }
+            total_reserve_usd += amounts[i] * 0.10  # 10% reserve
             create_resp = requests.post(f"{BASE_URL}/api/transactions", headers=headers, data=form_data)
             assert create_resp.status_code == 200, f"Create failed: {create_resp.text}"
             tx = create_resp.json()
