@@ -284,25 +284,65 @@ class LoanRepaymentCreate(BaseModel):
     reference: Optional[str] = None
     notes: Optional[str] = None
 
-# Exchange rates to USD (simplified - in production use live API)
-EXCHANGE_RATES_TO_USD = {
-    "USD": 1.0,
-    "EUR": 1.08,
-    "GBP": 1.27,
-    "AED": 0.27,
-    "SAR": 0.27,
-    "INR": 0.012,
-    "JPY": 0.0067,
-    "USDT": 1.0,
+# ============== LIVE FX RATE SERVICE ==============
+FALLBACK_RATES_TO_USD = {
+    "USD": 1.0, "EUR": 1.08, "GBP": 1.27, "AED": 0.27,
+    "SAR": 0.27, "INR": 0.012, "JPY": 0.0067, "USDT": 1.0,
 }
 
+_fx_cache = {"rates": None, "fetched_at": None, "source": "fallback"}
+FX_CACHE_TTL = timedelta(hours=1)
+
+async def fetch_live_rates() -> dict:
+    """Fetch live rates from open.er-api.com (USD base). Returns {currency: rate_to_usd}."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client_http:
+            resp = await client_http.get("https://open.er-api.com/v6/latest/USD")
+            resp.raise_for_status()
+            data = resp.json()
+            if data.get("result") != "success":
+                raise ValueError("API returned non-success result")
+            raw = data["rates"]  # e.g. {"USD":1, "AED":3.6725, ...}
+            # Convert to "rate_to_usd" format: 1 unit of currency = X USD
+            rates_to_usd = {}
+            for code, val in raw.items():
+                rates_to_usd[code] = round(1.0 / val, 8) if val else 0
+            return rates_to_usd
+    except Exception as e:
+        logger.warning(f"Live FX fetch failed: {e}")
+        return None
+
+async def get_fx_rates() -> dict:
+    """Return cached rates dict {currency: rate_to_usd}. Refreshes if stale."""
+    now = datetime.now(timezone.utc)
+    if (
+        _fx_cache["rates"]
+        and _fx_cache["fetched_at"]
+        and (now - _fx_cache["fetched_at"]) < FX_CACHE_TTL
+    ):
+        return _fx_cache["rates"]
+    live = await fetch_live_rates()
+    if live:
+        _fx_cache["rates"] = live
+        _fx_cache["fetched_at"] = now
+        _fx_cache["source"] = "live"
+        return live
+    if _fx_cache["rates"]:
+        return _fx_cache["rates"]
+    _fx_cache["rates"] = FALLBACK_RATES_TO_USD
+    _fx_cache["source"] = "fallback"
+    return FALLBACK_RATES_TO_USD
+
 def convert_to_usd(amount: float, currency: str) -> float:
-    rate = EXCHANGE_RATES_TO_USD.get(currency.upper(), 1.0)
+    """Sync wrapper – uses whatever is in cache (or fallback)."""
+    rates = _fx_cache.get("rates") or FALLBACK_RATES_TO_USD
+    rate = rates.get(currency.upper(), 1.0)
     return round(amount * rate, 2)
 
 def convert_from_usd(amount: float, target_currency: str) -> float:
-    """Convert USD amount to target currency"""
-    rate = EXCHANGE_RATES_TO_USD.get(target_currency.upper(), 1.0)
+    """Convert USD amount to target currency."""
+    rates = _fx_cache.get("rates") or FALLBACK_RATES_TO_USD
+    rate = rates.get(target_currency.upper(), 1.0)
     if rate == 0:
         return amount
     return round(amount / rate, 2)
