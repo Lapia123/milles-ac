@@ -869,6 +869,14 @@ export default function PSPs() {
                     <span className="text-[#C5C6C7] text-sm">Pending</span>
                     <span className="text-yellow-400 font-mono">${(psp.pending_amount || 0).toLocaleString()}</span>
                   </div>
+                  {psp.total_reserve_fund_held > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-[#C5C6C7] flex items-center gap-1">
+                        <Shield className="w-3 h-3" /> Reserve Held
+                      </span>
+                      <span className="text-orange-400 font-mono">${(psp.total_reserve_fund_held || 0).toLocaleString()}</span>
+                    </div>
+                  )}
                   {psp.overdue_count > 0 && (
                     <div className="flex items-center justify-between pt-2 border-t border-white/5">
                       <span className="text-red-400 text-sm flex items-center gap-1">
