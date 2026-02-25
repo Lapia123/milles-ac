@@ -64,7 +64,9 @@ export default function IncomeExpenses() {
 
   const [formData, setFormData] = useState({
     entry_type: 'income', category: '', custom_category: '', amount: '',
-    currency: 'USD', treasury_account_id: '', vendor_id: '', vendor_bank_account: '',
+    currency: 'USD', treasury_account_id: '', vendor_id: '',
+    vendor_bank_account_name: '', vendor_bank_account_number: '',
+    vendor_bank_ifsc: '', vendor_bank_branch: '',
     description: '', reference: '', date: new Date().toISOString().split('T')[0],
   });
 
