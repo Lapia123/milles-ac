@@ -1198,6 +1198,11 @@ export default function Transactions() {
                   <p className={`font-mono text-xl ${['deposit', 'rebate'].includes(viewTransaction.transaction_type) ? 'text-green-400' : 'text-red-400'}`}>
                     {['deposit', 'rebate'].includes(viewTransaction.transaction_type) ? '+' : '-'}${viewTransaction.amount?.toLocaleString()} {viewTransaction.currency}
                   </p>
+                  {viewTransaction.base_currency && viewTransaction.base_currency !== 'USD' && viewTransaction.base_amount && (
+                    <p className="text-sm text-[#C5C6C7] font-mono mt-1">
+                      {viewTransaction.base_amount?.toLocaleString()} {viewTransaction.base_currency}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created</p>
