@@ -2743,12 +2743,12 @@ async def create_transaction(
         "destination_account_id": destination_account_id if destination_type in ["treasury", "usdt"] else None,
         "destination_account_name": destination_account["account_name"] if destination_account else None,
         "destination_bank_name": destination_account["bank_name"] if destination_account else None,
-        # Client bank details (for withdrawal to bank)
-        "client_bank_name": client_bank_name if destination_type == "bank" else None,
-        "client_bank_account_name": client_bank_account_name if destination_type == "bank" else None,
-        "client_bank_account_number": client_bank_account_number if destination_type == "bank" else None,
-        "client_bank_swift_iban": client_bank_swift_iban if destination_type == "bank" else None,
-        "client_bank_currency": client_bank_currency if destination_type == "bank" else None,
+        # Client bank details (for withdrawal to bank or vendor)
+        "client_bank_name": client_bank_name if destination_type in ["bank", "vendor"] else None,
+        "client_bank_account_name": client_bank_account_name if destination_type in ["bank", "vendor"] else None,
+        "client_bank_account_number": client_bank_account_number if destination_type in ["bank", "vendor"] else None,
+        "client_bank_swift_iban": client_bank_swift_iban if destination_type in ["bank", "vendor"] else None,
+        "client_bank_currency": client_bank_currency if destination_type in ["bank", "vendor"] else None,
         # Client USDT details (for withdrawal to USDT)
         "client_usdt_address": client_usdt_address if destination_type == "usdt" else None,
         "client_usdt_network": client_usdt_network if destination_type == "usdt" else None,
