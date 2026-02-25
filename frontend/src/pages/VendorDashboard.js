@@ -752,7 +752,16 @@ export default function VendorDashboard() {
                             </TableCell>
                             <TableCell className="text-[#C5C6C7] text-sm capitalize">{entry.category?.replace('_', ' ')}</TableCell>
                             <TableCell className="text-white text-sm max-w-[200px] truncate">{entry.description || '-'}</TableCell>
-                            <TableCell className="text-[#C5C6C7] text-sm">{entry.vendor_bank_account || '-'}</TableCell>
+                            <TableCell className="text-[#C5C6C7] text-sm">
+                              {entry.vendor_bank_account_number ? (
+                                <div className="text-[10px] space-y-0.5">
+                                  <p>A/C: {entry.vendor_bank_account_number}</p>
+                                  {entry.vendor_bank_ifsc && <p>IFSC: {entry.vendor_bank_ifsc}</p>}
+                                  {entry.vendor_bank_branch && <p>Branch: {entry.vendor_bank_branch}</p>}
+                                  {entry.vendor_bank_account_name && <p>Name: {entry.vendor_bank_account_name}</p>}
+                                </div>
+                              ) : entry.vendor_bank_account || '-'}
+                            </TableCell>
                             <TableCell className={`font-mono text-right ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
                               {isIncome ? '+' : '-'}{entry.amount?.toLocaleString()} {entry.currency}
                             </TableCell>
