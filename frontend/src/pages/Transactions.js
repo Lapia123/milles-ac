@@ -791,7 +791,7 @@ export default function Transactions() {
               
               {/* Vendor Destination */}
               {formData.destination_type === 'vendor' && (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div className="space-y-2">
                     <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Select Vendor *</Label>
                     <Select
