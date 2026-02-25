@@ -76,7 +76,7 @@ function FindingCard({ finding }) {
 }
 
 export default function AuditCompliance() {
-  const { token } = useAuth();
+  const { user } = useAuth();
   const [scan, setScan] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -86,7 +86,10 @@ export default function AuditCompliance() {
   const [filterCat, setFilterCat] = useState('all');
   const [tab, setTab] = useState('dashboard');
 
-  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const getHeaders = () => {
+    const token = localStorage.getItem('auth_token');
+    return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+  };
 
   const fetchLatest = useCallback(async () => {
     setLoading(true);
