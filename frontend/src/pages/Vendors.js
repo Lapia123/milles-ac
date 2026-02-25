@@ -169,6 +169,63 @@ export default function Vendors() {
     fetchVendorDetails(vendor.vendor_id); // Fetch full details including settlement_by_currency
   };
 
+  const openStatement = async (settlementId) => {
+    setStatementLoading(true);
+    setStatementOpen(true);
+    try {
+      const response = await fetch(`${API_URL}/api/settlements/${settlementId}/statement`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setStatementData(await response.json());
+      } else {
+        toast.error('Failed to load settlement statement');
+      }
+    } catch (error) {
+      toast.error('Error loading statement');
+    } finally {
+      setStatementLoading(false);
+    }
+  };
+
+  const printStatement = () => {
+    const el = document.getElementById('settlement-statement');
+    if (!el) return;
+    const win = window.open('', '_blank');
+    win.document.write(`<html><head><title>Settlement Statement</title><style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: 'Inter', Arial, sans-serif; color: #1a1a1a; padding: 40px; }
+      .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0B3D91; padding-bottom: 20px; margin-bottom: 24px; }
+      .logo { font-size: 22px; font-weight: 800; color: #0B3D91; }
+      .subtitle { font-size: 11px; color: #666; margin-top: 2px; }
+      .stmt-title { font-size: 18px; font-weight: 700; text-align: right; color: #0B3D91; }
+      .stmt-id { font-size: 11px; color: #666; text-align: right; }
+      .info-row { display: flex; gap: 40px; margin-bottom: 20px; }
+      .info-block { flex: 1; }
+      .info-block h4 { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px; }
+      .info-block p { font-size: 12px; line-height: 1.6; }
+      table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+      th { background: #0B3D91; color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 12px; text-align: left; }
+      td { padding: 8px 12px; font-size: 12px; border-bottom: 1px solid #e5e5e5; }
+      tr:nth-child(even) td { background: #f9f9f9; }
+      .summary { background: #f0f4fa; border: 1px solid #d0d8e8; border-radius: 4px; padding: 16px; margin-top: 20px; }
+      .summary-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+      .summary-row.total { border-top: 2px solid #0B3D91; margin-top: 8px; padding-top: 8px; font-weight: 700; font-size: 15px; color: #0B3D91; }
+      .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #ddd; font-size: 10px; color: #888; text-align: center; }
+      .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+      .badge-approved { background: #d1fae5; color: #065f46; }
+      .badge-pending { background: #fef3c7; color: #92400e; }
+      .mono { font-family: 'Courier New', monospace; }
+    </style></head><body>`);
+    win.document.write(el.innerHTML);
+    win.document.write('</body></html>');
+    win.document.close();
+    win.print();
+  };
+
+  const fmtCurrency = (amount, currency) => {
+    if (!currency || currency === 'USD') return `$${(amount || 0).toLocaleString()}`;
+    return `${currency} ${(amount || 0).toLocaleString()}`;
+  };
+
   useEffect(() => {
     fetchVendors();
     fetchTreasuryAccounts();
