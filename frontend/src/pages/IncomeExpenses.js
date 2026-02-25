@@ -666,8 +666,12 @@ function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCate
                       {entry.vendor_name ? (
                         <div>
                           <span className="flex items-center gap-1 text-amber-400"><Store className="w-3 h-3" />{entry.vendor_name}</span>
-                          {entry.vendor_bank_account && <p className="text-[10px] text-[#8B8D91] mt-0.5">Bank: {entry.vendor_bank_account}</p>}
-                          {entry.treasury_account_name && <p className="text-[10px] text-[#66FCF1]/60 mt-0.5">Treasury: {entry.treasury_account_name}</p>}
+                          {entry.vendor_bank_account_number && <p className="text-[10px] text-[#8B8D91] mt-0.5">A/C: {entry.vendor_bank_account_number}</p>}
+                          {entry.vendor_bank_ifsc && <p className="text-[10px] text-[#8B8D91]">IFSC: {entry.vendor_bank_ifsc}</p>}
+                          {entry.vendor_bank_branch && <p className="text-[10px] text-[#8B8D91]">Branch: {entry.vendor_bank_branch}</p>}
+                          {entry.vendor_bank_account_name && <p className="text-[10px] text-[#8B8D91]">Name: {entry.vendor_bank_account_name}</p>}
+                          {/* Legacy single field fallback */}
+                          {entry.vendor_bank_account && !entry.vendor_bank_account_number && <p className="text-[10px] text-[#8B8D91] mt-0.5">{entry.vendor_bank_account}</p>}
                         </div>
                       ) : (
                         <span className="text-[#66FCF1]">{entry.treasury_account_name || '-'}</span>
