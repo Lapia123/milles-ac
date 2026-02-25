@@ -332,9 +332,55 @@ export default function VendorDashboard() {
   };
 
   const pendingCount = transactions.filter(t => t.status === 'pending').length;
+  const pendingIeCount = ieEntries.filter(e => e.status === 'pending_vendor').length;
   const pendingDeposits = transactions.filter(t => t.status === 'pending' && t.transaction_type === 'deposit');
   const pendingWithdrawals = transactions.filter(t => t.status === 'pending' && t.transaction_type === 'withdrawal');
   const approvedWithdrawals = transactions.filter(t => t.status === 'approved' && t.transaction_type === 'withdrawal');
+
+  const handleIeApprove = async (entryId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/income-expenses/${entryId}/vendor-approve`, {
+        method: 'POST', headers: getAuthHeaders(), credentials: 'include',
+      });
+      if (response.ok) {
+        toast.success('Entry approved');
+        fetchIeEntries();
+      } else {
+        const err = await response.json();
+        toast.error(err.detail || 'Approval failed');
+      }
+    } catch { toast.error('Approval failed'); }
+  };
+
+  const handleIeReject = async (entryId) => {
+    const reason = window.prompt('Rejection reason:');
+    if (reason === null) return;
+    try {
+      const response = await fetch(`${API_URL}/api/income-expenses/${entryId}/vendor-reject?reason=${encodeURIComponent(reason)}`, {
+        method: 'POST', headers: getAuthHeaders(), credentials: 'include',
+      });
+      if (response.ok) {
+        toast.success('Entry rejected');
+        fetchIeEntries();
+      } else { toast.error('Rejection failed'); }
+    } catch { toast.error('Rejection failed'); }
+  };
+
+  const handleIeUploadProof = async (entryId, file) => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const formData = new FormData();
+      formData.append('proof_image', file);
+      const response = await fetch(`${API_URL}/api/income-expenses/${entryId}/vendor-upload-proof`, {
+        method: 'POST', headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        credentials: 'include', body: formData,
+      });
+      if (response.ok) {
+        toast.success('Proof uploaded');
+        fetchIeEntries();
+      } else { toast.error('Upload failed'); }
+    } catch { toast.error('Upload failed'); }
+  };
 
   if (loading) {
     return (
