@@ -1,0 +1,92 @@
+{
+  "summary": "Complete verification of PSP Currency Conversion Bug Fixes. All 15 backend API tests passed (100%), 1 skipped (legacy tx already released). Three critical bugs confirmed FIXED.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "bugs_verified_fixed": {
+    "bug_1_psp_settlement_currency_conversion": {
+      "description": "PSP settlements now correctly convert USD to AED when crediting ENBD treasury account",
+      "endpoints_fixed": [
+        "/api/psp/transactions/{id}/settle",
+        "/api/psp/transactions/{id}/record-payment",
+        "/api/psp-settlements/{id}/complete"
+      ],
+      "verification": "1000 USD settlement correctly credits ~3672 AED to ENBD treasury (balance change > 1.5x USD amount)"
+    },
+    "bug_2_reserve_fund_amount_storage": {
+      "description": "New PSP transactions now store psp_reserve_fund_amount field at creation time",
+      "verification": "UniPay (10%) correctly stores 250 USD reserve for 2500 USD transaction; PayPal (3%) correctly stores 150 USD for 5000 USD transaction"
+    },
+    "bug_3_reserve_fund_release_currency_conversion": {
+      "description": "Releasing reserve funds now converts USD to AED and credits treasury with converted amount",
+      "endpoints_fixed": [
+        "/api/psps/reserve-funds/{transaction_id}/release",
+        "/api/psps/reserve-funds/bulk-release"
+      ],
+      "verification": "150 USD reserve release credits ~550 AED to ENBD treasury (balance change > 2x USD amount)"
+    }
+  },
+  "passed_tests": [
+    "GET /api/fx-rates - Returns live FX rates with AED ~0.27 (1 USD = ~3.67 AED)",
+    "GET /api/fx-rates/convert - Correctly converts 1000 USD to ~3672 AED",
+    "POST /api/transactions (UniPay PSP) - Stores psp_reserve_fund_amount = 10% of amount",
+    "POST /api/transactions (PayPal PSP) - Stores psp_reserve_fund_amount = 3% of amount",
+    "POST /api/psp/transactions/{id}/settle - Converts USD to AED when crediting ENBD treasury",
+    "POST /api/psp/transactions/{id}/record-payment - Converts USD to AED when crediting treasury",
+    "POST /api/psps/reserve-funds/{id}/release - Single reserve fund release converts currency and credits treasury",
+    "POST /api/psps/reserve-funds/bulk-release - Bulk release converts currency for all transactions",
+    "GET /api/psps/{psp_id}/reserve-funds - Ledger handles legacy transactions without stored amount",
+    "GET /api/psps/reserve-funds/global-summary - Returns correct structure with total_held, total_released, due_for_release",
+    "GET /api/fx-rates/convert (USD→AED) - 100 USD = ~367 AED",
+    "GET /api/fx-rates/convert (AED→USD) - 367 AED = ~100 USD",
+    "GET /api/fx-rates/convert (EUR→INR) - Cross-currency via USD intermediate works",
+    "GET /api/fx-rates/convert (USD→USD) - Same currency returns same amount"
+  ],
+  "skipped_tests": [
+    "test_release_legacy_transaction_calculates_amount - Legacy tx_228cc77ecd63 already released in previous test run"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_psp_currency_conversion.py",
+    "/app/test_reports/pytest/psp_currency_conversion_tests.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_psp_currency_conversion.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 tests passed, 1 skipped)"
+  },
+  "test_credentials": {
+    "admin": "admin@fxbroker.com / password"
+  },
+  "seed_data_creation": "Multiple TEST_ prefixed transactions created during testing with random amounts to avoid duplicate detection. Transactions created: ~8 PSP transactions with settlements and reserve fund releases.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "PSP Currency Conversion bugs verified FIXED. Key changes: 1) convert_currency() function converts between any two currencies via USD intermediate. 2) PSP settlement (settle, record-payment, complete_settlement) now use convert_currency() to convert USD to treasury currency (AED). 3) New transactions store psp_reserve_fund_amount at creation time. 4) Reserve fund release (single and bulk) now converts USD to AED before crediting treasury. 5) Legacy transactions without psp_reserve_fund_amount fall back to calculating from PSP rate. Treasury account ENBD has AED currency, PSP transactions are in USD.",
+  "key_data": {
+    "psp_unipay": "psp_3de482bea719 - 10% reserve fund, 6.95% commission, dest: ENBD (AED)",
+    "psp_paypal": "psp_1f22117d21a5 - 3% reserve fund, 10% commission, dest: ENBD (AED)",
+    "treasury_enbd": "treasury_d812e38f2a7a - ENBD bank, AED currency",
+    "fx_rate_aed": "~0.27229 (1 USD = ~3.67 AED)",
+    "client_used": "client_e9792d8531d1 (safvan kappilakath)"
+  },
+  "code_verification_details": {
+    "convert_currency_function": "Line 356-361 - Converts via USD intermediate using convert_to_usd then convert_from_usd",
+    "release_reserve_fund": "Line 1960-1991 - Gets dest currency, calls convert_currency(rf_amount, tx_currency, dest_currency) before crediting treasury",
+    "bulk_release_reserve_funds": "Line 2030-2057 - Same pattern for bulk release",
+    "record_psp_payment": "Line 1666-1675 - Converts settle_amount from tx_currency to dest_currency",
+    "settle_psp_transaction": "Line 1771-1780 - Converts settle_amount from tx_currency to dest_currency",
+    "create_transaction": "Line 3088-3144 - Stores psp_reserve_fund_amount calculated from PSP reserve_fund_rate"
+  },
+  "mocked_api": {
+    "has_mocked_apis": false,
+    "external_api": "open.er-api.com - Real live exchange rate API used for FX rates"
+  }
+}
