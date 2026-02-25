@@ -2490,6 +2490,10 @@ async def vendor_approve_transaction(transaction_id: str, user: dict = Depends(r
     if tx["status"] != TransactionStatus.PENDING:
         raise HTTPException(status_code=400, detail="Transaction is not pending")
     
+    # Vendor must upload proof before approving
+    if not tx.get("vendor_proof_image"):
+        raise HTTPException(status_code=400, detail="Please upload proof screenshot before approving")
+    
     now = datetime.now(timezone.utc)
     
     # Calculate commission based on transaction type
