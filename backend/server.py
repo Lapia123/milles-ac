@@ -2747,6 +2747,21 @@ async def settle_vendor_balance(
             # Default: add
             gross_amount += tx_amount
     
+    # Add IE entries to gross amount
+    # Income entries = vendor receives (like deposit), Expense entries = vendor pays (like withdrawal)
+    ie_entry_ids = []
+    for ie in pending_ie:
+        if ie.get("currency") == source_currency:
+            ie_amount = ie["amount"]
+        else:
+            ie_amount = ie.get("amount_usd", ie["amount"])
+        
+        if ie["entry_type"] == "income":
+            gross_amount += ie_amount
+        else:  # expense
+            gross_amount -= ie_amount
+        ie_entry_ids.append(ie["entry_id"])
+    
     # Manual commission and charges
     commission_amount = settlement_request.commission_amount
     charges_amount = settlement_request.charges_amount
