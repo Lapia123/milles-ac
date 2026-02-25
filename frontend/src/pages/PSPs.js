@@ -820,8 +820,8 @@ export default function PSPs() {
                   <p className="text-xl font-mono text-white">{viewPsp.commission_rate}%</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Chargeback Rate</p>
-                  <p className="text-xl font-mono text-white">{viewPsp.chargeback_rate || 0}%</p>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reserve Fund Rate</p>
+                  <p className="text-xl font-mono text-white">{viewPsp.reserve_fund_rate || viewPsp.chargeback_rate || 0}%</p>
                 </div>
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Holding Time</p>
