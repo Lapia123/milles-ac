@@ -1499,7 +1499,7 @@ async def update_psp_transaction_charges(
     charges: PSPTransactionCharges,
     user: dict = Depends(get_current_user)
 ):
-    """Record chargeback and extra charges on a PSP transaction"""
+    """Record reserve fund and extra charges on a PSP transaction"""
     tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
@@ -1515,13 +1515,14 @@ async def update_psp_transaction_charges(
     # Calculate new net amount
     gross_amount = tx.get("amount", 0)
     commission = tx.get("psp_commission_amount", 0)
-    new_net = gross_amount - commission - charges.chargeback_amount - charges.extra_charges
+    new_net = gross_amount - commission - charges.reserve_fund_amount - charges.extra_charges
     
     updates = {
-        "psp_chargeback_amount": charges.chargeback_amount,
+        "psp_reserve_fund_amount": charges.reserve_fund_amount,
+        "psp_chargeback_amount": charges.reserve_fund_amount,
         "psp_extra_charges": charges.extra_charges,
         "psp_charges_description": charges.charges_description,
-        "psp_total_deductions": commission + charges.chargeback_amount + charges.extra_charges,
+        "psp_total_deductions": commission + charges.reserve_fund_amount + charges.extra_charges,
         "psp_net_amount": new_net,
         "charges_updated_at": now.isoformat(),
         "charges_updated_by": user["user_id"],
