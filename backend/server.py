@@ -3919,14 +3919,22 @@ async def get_income_expense(entry_id: str, user: dict = Depends(get_current_use
 
 @api_router.post("/income-expenses")
 async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = Depends(get_current_user)):
-    """Create a new income or expense entry"""
-    # Verify treasury account exists
-    treasury = await db.treasury_accounts.find_one({"account_id": entry_data.treasury_account_id}, {"_id": 0})
-    if not treasury:
-        raise HTTPException(status_code=404, detail="Treasury account not found")
-    
+    """Create a new income or expense entry, optionally linked to a vendor for approval"""
     if entry_data.amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")
+    
+    # Vendor-linked entry: auto-create pending approval in vendor portal
+    vendor_info = None
+    if entry_data.vendor_id:
+        vendor_info = await db.vendors.find_one({"vendor_id": entry_data.vendor_id}, {"_id": 0})
+        if not vendor_info:
+            raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    treasury = None
+    if entry_data.treasury_account_id:
+        treasury = await db.treasury_accounts.find_one({"account_id": entry_data.treasury_account_id}, {"_id": 0})
+        if not treasury:
+            raise HTTPException(status_code=404, detail="Treasury account not found")
     
     entry_id = f"ie_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
@@ -3934,6 +3942,9 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = De
     
     # Calculate USD equivalent
     amount_usd = convert_to_usd(entry_data.amount, entry_data.currency)
+    
+    # Determine initial status: pending if vendor-linked, completed otherwise
+    status = "pending_vendor" if vendor_info else "completed"
     
     entry_doc = {
         "entry_id": entry_id,
@@ -3944,9 +3955,17 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = De
         "currency": entry_data.currency,
         "amount_usd": amount_usd,
         "treasury_account_id": entry_data.treasury_account_id,
+        "treasury_account_name": treasury["account_name"] if treasury else None,
+        "vendor_id": entry_data.vendor_id,
+        "vendor_name": vendor_info["vendor_name"] if vendor_info else None,
+        "vendor_bank_account": entry_data.vendor_bank_account,
         "description": entry_data.description,
         "reference": entry_data.reference,
         "date": entry_date,
+        "status": status,
+        "converted_to_loan": False,
+        "loan_id": None,
+        "vendor_proof_image": None,
         "created_at": now.isoformat(),
         "created_by": user["user_id"],
         "created_by_name": user["name"]
@@ -3954,43 +3973,43 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = De
     
     await db.income_expenses.insert_one(entry_doc)
     
-    # Update treasury account balance
-    if entry_data.entry_type == IncomeExpenseType.INCOME:
-        # Credit income to treasury
-        await db.treasury_accounts.update_one(
-            {"account_id": entry_data.treasury_account_id},
-            {"$inc": {"balance": entry_data.amount}, "$set": {"updated_at": now.isoformat()}}
-        )
-    else:
-        # Deduct expense from treasury
-        if treasury.get("balance", 0) < entry_data.amount:
-            raise HTTPException(status_code=400, detail="Insufficient balance in treasury account")
-        await db.treasury_accounts.update_one(
-            {"account_id": entry_data.treasury_account_id},
-            {"$inc": {"balance": -entry_data.amount}, "$set": {"updated_at": now.isoformat()}}
-        )
-    
-    # Record in treasury transactions
-    tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
-    tx_type = "income" if entry_data.entry_type == IncomeExpenseType.INCOME else "expense"
-    tx_amount = entry_data.amount if entry_data.entry_type == IncomeExpenseType.INCOME else -entry_data.amount
-    
-    tx_doc = {
-        "treasury_transaction_id": tx_id,
-        "account_id": entry_data.treasury_account_id,
-        "transaction_type": tx_type,
-        "amount": tx_amount,
-        "currency": entry_data.currency,
-        "reference": f"{entry_data.category.replace('_', ' ').title()}: {entry_data.description or 'N/A'}",
-        "income_expense_id": entry_id,
-        "created_at": now.isoformat(),
-        "created_by": user["user_id"],
-        "created_by_name": user["name"]
-    }
-    await db.treasury_transactions.insert_one(tx_doc)
+    # Only update treasury if not vendor-linked (vendor must approve first)
+    if not vendor_info and treasury:
+        if entry_data.entry_type == IncomeExpenseType.INCOME:
+            await db.treasury_accounts.update_one(
+                {"account_id": entry_data.treasury_account_id},
+                {"$inc": {"balance": entry_data.amount}, "$set": {"updated_at": now.isoformat()}}
+            )
+        else:
+            if treasury.get("balance", 0) < entry_data.amount:
+                raise HTTPException(status_code=400, detail="Insufficient balance in treasury account")
+            await db.treasury_accounts.update_one(
+                {"account_id": entry_data.treasury_account_id},
+                {"$inc": {"balance": -entry_data.amount}, "$set": {"updated_at": now.isoformat()}}
+            )
+        
+        # Record in treasury transactions
+        tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+        tx_type = "income" if entry_data.entry_type == IncomeExpenseType.INCOME else "expense"
+        tx_amount = entry_data.amount if entry_data.entry_type == IncomeExpenseType.INCOME else -entry_data.amount
+        
+        tx_doc = {
+            "treasury_transaction_id": tx_id,
+            "account_id": entry_data.treasury_account_id,
+            "transaction_type": tx_type,
+            "amount": tx_amount,
+            "currency": entry_data.currency,
+            "reference": f"{entry_data.category.replace('_', ' ').title()}: {entry_data.description or 'N/A'}",
+            "income_expense_id": entry_id,
+            "created_at": now.isoformat(),
+            "created_by": user["user_id"],
+            "created_by_name": user["name"]
+        }
+        await db.treasury_transactions.insert_one(tx_doc)
     
     entry_doc.pop("_id", None)
-    entry_doc["treasury_account_name"] = treasury["account_name"]
+    if treasury:
+        entry_doc["treasury_account_name"] = treasury["account_name"]
     return entry_doc
 
 @api_router.put("/income-expenses/{entry_id}")
