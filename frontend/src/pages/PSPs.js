@@ -996,7 +996,7 @@ export default function PSPs() {
                               <TableCell className="font-mono text-white">${settlement.gross_amount?.toLocaleString()}</TableCell>
                               <TableCell className="font-mono text-yellow-400">-${(settlement.commission_amount || 0).toLocaleString()}</TableCell>
                               <TableCell className="font-mono text-red-400">
-                                {settlement.chargeback_amount ? `-$${settlement.chargeback_amount.toLocaleString()}` : '-'}
+                                {settlement.chargeback_amount || settlement.reserve_fund_amount ? `-$${(settlement.reserve_fund_amount || settlement.chargeback_amount).toLocaleString()}` : '-'}
                               </TableCell>
                               <TableCell className="font-mono text-red-400">
                                 {settlement.extra_charges ? `-$${settlement.extra_charges.toLocaleString()}` : '-'}
