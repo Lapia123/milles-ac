@@ -6749,8 +6749,8 @@ async def run_audit_checks() -> dict:
             stats["warning"] += 1
     stats["total_checks"] += 1
     
-    stats["passed"] = stats["total_checks"] - stats["critical"] - stats["warning"]
-    health_score = max(0, 100 - (stats["critical"] * 20) - (stats["warning"] * 5) - (stats["info"] * 1))
+    stats["passed"] = max(0, stats["total_checks"] - stats["critical"] - stats["warning"])
+    health_score = max(0, 100 - (stats["critical"] * 15) - (stats["warning"] * 3))
     
     return {
         "scan_id": f"audit_{uuid.uuid4().hex[:12]}",
