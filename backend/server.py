@@ -3807,8 +3807,8 @@ async def get_income_expense_summary(
         else:
             query["date"] = {"$lte": end_date}
     
-    # Get all entries
-    entries = await db.income_expenses.find(query, {"_id": 0}).to_list(10000)
+    # Get all entries (exclude converted to loan to avoid double-counting)
+    entries = await db.income_expenses.find({**query, "converted_to_loan": {"$ne": True}}, {"_id": 0}).to_list(10000)
     
     total_income = sum(e["amount_usd"] for e in entries if e["entry_type"] == IncomeExpenseType.INCOME)
     total_expense = sum(e["amount_usd"] for e in entries if e["entry_type"] == IncomeExpenseType.EXPENSE)
