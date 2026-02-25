@@ -122,6 +122,20 @@ export default function VendorDashboard() {
     }
   };
 
+  const fetchIeEntries = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/vendor/income-expenses`, {
+        headers: getAuthHeaders(),
+        credentials: 'include'
+      });
+      if (response.ok) {
+        setIeEntries(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching IE entries:', error);
+    }
+  };
+
   const openStatement = async (settlementId) => {
     setStatementLoading(true);
     setStatementOpen(true);
