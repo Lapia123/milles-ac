@@ -77,6 +77,10 @@ export default function PSPs() {
   const [settleDialogOpen, setSettleDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [settlementDestination, setSettlementDestination] = useState('');
+  const [reserveFundLedger, setReserveFundLedger] = useState(null);
+  const [reserveFundLoading, setReserveFundLoading] = useState(false);
+  const [globalReserveSummary, setGlobalReserveSummary] = useState(null);
+  const [selectedReleaseIds, setSelectedReleaseIds] = useState([]);
   const [formData, setFormData] = useState({
     psp_name: '',
     commission_rate: '',
