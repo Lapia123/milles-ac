@@ -557,6 +557,22 @@ export default function VendorDashboard() {
         </Card>
       </div>
 
+      {/* Tabbed Content: Transactions, Income/Expenses, Settlements */}
+      <Tabs value={activeVendorTab} onValueChange={setActiveVendorTab}>
+        <TabsList className="bg-[#1F2833] border border-white/10">
+          <TabsTrigger value="transactions" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
+            Transactions {pendingCount > 0 && <Badge className="ml-1 bg-yellow-500/30 text-yellow-400 text-[10px]">{pendingCount}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="income-expenses" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
+            Income/Expenses {pendingIeCount > 0 && <Badge className="ml-1 bg-amber-500/30 text-amber-400 text-[10px]">{pendingIeCount}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="settlements" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
+            Settlement History
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Transactions Tab */}
+        <TabsContent value="transactions" className="mt-4">
       {/* Transactions Table */}
       <Card className="bg-[#1F2833] border-white/5">
         <CardHeader>
