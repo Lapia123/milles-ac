@@ -2009,6 +2009,12 @@ async def bulk_release_reserve_funds(request: Request, user: dict = Depends(requ
         if not tx:
             continue
         rf_amount = tx.get("psp_reserve_fund_amount", tx.get("psp_chargeback_amount", 0))
+        # Fall back to calculating from PSP rate if amount not stored (legacy transactions)
+        if not rf_amount or rf_amount <= 0:
+            psp_for_rate = await db.psps.find_one({"psp_id": tx.get("psp_id")}, {"_id": 0})
+            if psp_for_rate:
+                rf_rate = psp_for_rate.get("reserve_fund_rate", psp_for_rate.get("chargeback_rate", 0)) / 100
+                rf_amount = round(tx.get("amount", 0) * rf_rate, 2)
         if rf_amount <= 0:
             continue
         
