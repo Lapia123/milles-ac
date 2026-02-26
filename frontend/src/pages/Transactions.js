@@ -1252,6 +1252,7 @@ export default function Transactions() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
