@@ -135,10 +135,10 @@ export default function Dashboard() {
     <div className="space-y-6 animate-fade-in" data-testid="dashboard">
       {/* Header */}
       <div>
-        <h1 className="text-4xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
+        <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
           Dashboard
         </h1>
-        <p className="text-[#C5C6C7]">Overview of your FX brokerage operations</p>
+        <p className="text-slate-500">Overview of your FX brokerage operations</p>
       </div>
 
       {/* Stats Grid */}
@@ -165,7 +165,7 @@ export default function Dashboard() {
           icon={DollarSign}
           trend="+8.5%"
           trendUp
-          color="cyan"
+          color="blue"
         />
         <StatCard
           title="Pending Actions"
