@@ -571,13 +571,13 @@ export default function Settings() {
                           </>
                         )}
                         <div className="space-y-2">
-                          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Role</Label>
+                          <Label className="text-slate-500 text-xs uppercase tracking-wider">Role</Label>
                           <Select
                             value={formData.role}
                             onValueChange={(value) => setFormData({ ...formData, role: value })}
                           >
-                            <SelectTrigger className="bg-slate-50 border-slate-200 text-white" data-testid="user-role-select">
-                              <SelectValue />
+                            <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="user-role-select">
+                              <SelectValue placeholder="Select role" />
                             </SelectTrigger>
                             <SelectContent className="bg-white border-slate-200">
                               {roleOptions.map((role) => (
