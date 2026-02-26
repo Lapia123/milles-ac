@@ -4478,6 +4478,207 @@ async def vendor_upload_ie_proof(entry_id: str, user: dict = Depends(require_ven
     
     return {"message": "Proof uploaded"}
 
+@api_router.post("/income-expenses/{entry_id}/upload-invoice")
+async def upload_ie_invoice(entry_id: str, user: dict = Depends(get_current_user), invoice_file: UploadFile = File(...)):
+    """Upload invoice/document to an income/expense entry"""
+    entry = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    import base64
+    contents = await invoice_file.read()
+    b64 = base64.b64encode(contents).decode("utf-8")
+    
+    # Store with filename info
+    file_info = {
+        "data": b64,
+        "filename": invoice_file.filename,
+        "content_type": invoice_file.content_type,
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "uploaded_by": user["user_id"],
+        "uploaded_by_name": user["name"]
+    }
+    
+    await db.income_expenses.update_one(
+        {"entry_id": entry_id},
+        {"$set": {"invoice_file": file_info, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": "Invoice uploaded successfully", "filename": invoice_file.filename}
+
+@api_router.post("/income-expenses/bulk-import")
+async def bulk_import_ie_entries(
+    user: dict = Depends(require_admin_or_accountant),
+    file: UploadFile = File(...),
+    treasury_account_id: str = Form(...)
+):
+    """
+    Bulk import income/expense entries from Excel file.
+    Excel columns expected: entry_type, category, amount, currency, date, description, reference
+    """
+    import openpyxl
+    from io import BytesIO
+    
+    # Verify treasury account
+    treasury = await db.treasury_accounts.find_one({"account_id": treasury_account_id}, {"_id": 0})
+    if not treasury:
+        raise HTTPException(status_code=404, detail="Treasury account not found")
+    
+    # Read Excel file
+    contents = await file.read()
+    try:
+        wb = openpyxl.load_workbook(BytesIO(contents))
+        ws = wb.active
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid Excel file: {str(e)}")
+    
+    # Get headers from first row
+    headers = [str(cell.value).lower().strip() if cell.value else "" for cell in ws[1]]
+    
+    # Map expected columns
+    col_map = {}
+    expected = ["entry_type", "type", "category", "amount", "currency", "date", "description", "reference"]
+    for idx, h in enumerate(headers):
+        for exp in expected:
+            if exp in h:
+                col_map[exp] = idx
+                break
+    
+    if "amount" not in col_map:
+        raise HTTPException(status_code=400, detail="Excel file must have an 'amount' column")
+    
+    now = datetime.now(timezone.utc)
+    imported = 0
+    errors = []
+    
+    for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+        try:
+            # Get values
+            amount_val = row[col_map.get("amount", 0)]
+            if not amount_val or float(amount_val) <= 0:
+                continue
+            
+            amount = float(amount_val)
+            entry_type_val = row[col_map.get("entry_type", col_map.get("type", 0))] if "entry_type" in col_map or "type" in col_map else "expense"
+            entry_type = "income" if str(entry_type_val).lower().strip() in ["income", "in", "credit", "cr"] else "expense"
+            category = str(row[col_map.get("category", 0)] or "other").lower().replace(" ", "_")
+            currency = str(row[col_map.get("currency", 0)] or "USD").upper()
+            date_val = row[col_map.get("date", 0)]
+            description = str(row[col_map.get("description", 0)] or "")
+            reference = str(row[col_map.get("reference", 0)] or "")
+            
+            # Parse date
+            if date_val:
+                if isinstance(date_val, datetime):
+                    entry_date = date_val.strftime("%Y-%m-%d")
+                else:
+                    entry_date = str(date_val)[:10]
+            else:
+                entry_date = now.strftime("%Y-%m-%d")
+            
+            entry_id = f"ie_{uuid.uuid4().hex[:12]}"
+            amount_usd = convert_to_usd(amount, currency)
+            
+            entry_doc = {
+                "entry_id": entry_id,
+                "entry_type": entry_type,
+                "category": category,
+                "custom_category": None,
+                "amount": amount,
+                "currency": currency,
+                "amount_usd": amount_usd,
+                "treasury_account_id": treasury_account_id,
+                "treasury_account_name": treasury["account_name"],
+                "vendor_id": None,
+                "vendor_name": None,
+                "vendor_supplier_id": None,
+                "vendor_supplier_name": None,
+                "client_id": None,
+                "client_name": None,
+                "ie_category_id": None,
+                "ie_category_name": None,
+                "description": description if description != "None" else "",
+                "reference": reference if reference != "None" else "",
+                "date": entry_date,
+                "status": "completed",
+                "converted_to_loan": False,
+                "loan_id": None,
+                "vendor_proof_image": None,
+                "invoice_file": None,
+                "created_at": now.isoformat(),
+                "created_by": user["user_id"],
+                "created_by_name": user["name"],
+                "imported_from": file.filename
+            }
+            
+            await db.income_expenses.insert_one(entry_doc)
+            
+            # Update treasury balance
+            if entry_type == "income":
+                await db.treasury_accounts.update_one(
+                    {"account_id": treasury_account_id},
+                    {"$inc": {"balance": amount}, "$set": {"updated_at": now.isoformat()}}
+                )
+            else:
+                await db.treasury_accounts.update_one(
+                    {"account_id": treasury_account_id},
+                    {"$inc": {"balance": -amount}, "$set": {"updated_at": now.isoformat()}}
+                )
+            
+            imported += 1
+        except Exception as e:
+            errors.append(f"Row {row_idx}: {str(e)}")
+    
+    return {
+        "message": f"Import completed",
+        "imported": imported,
+        "errors": errors[:10] if errors else []
+    }
+
+@api_router.get("/income-expenses/export-template")
+async def get_ie_import_template(user: dict = Depends(get_current_user)):
+    """Download Excel template for bulk importing income/expense entries"""
+    import openpyxl
+    from io import BytesIO
+    from fastapi.responses import StreamingResponse
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Income_Expenses"
+    
+    # Headers
+    headers = ["Entry Type", "Category", "Amount", "Currency", "Date", "Description", "Reference"]
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = openpyxl.styles.Font(bold=True)
+    
+    # Example rows
+    examples = [
+        ["income", "commission", 1000, "USD", "2025-01-15", "Monthly commission", "INV-001"],
+        ["expense", "bank_fee", 50, "USD", "2025-01-15", "Wire transfer fee", "REF-002"],
+        ["income", "service_fee", 500, "EUR", "2025-01-16", "Service charge", "INV-003"],
+        ["expense", "operational", 200, "USD", "2025-01-17", "Office supplies", "REF-004"],
+    ]
+    for row_idx, row_data in enumerate(examples, 2):
+        for col_idx, value in enumerate(row_data, 1):
+            ws.cell(row=row_idx, column=col_idx, value=value)
+    
+    # Adjust column widths
+    for col in ws.columns:
+        max_length = max(len(str(cell.value or "")) for cell in col)
+        ws.column_dimensions[col[0].column_letter].width = min(max_length + 2, 30)
+    
+    # Save to BytesIO
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=income_expenses_template.xlsx"}
+    )
+
 @api_router.get("/vendor/income-expenses")
 async def get_vendor_ie_entries(user: dict = Depends(require_vendor)):
     """Get income/expense entries linked to this vendor"""
