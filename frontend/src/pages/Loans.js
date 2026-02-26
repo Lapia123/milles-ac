@@ -383,6 +383,48 @@ export default function Loans() {
     }
   };
 
+  const handleCreateBorrower = async (e) => {
+    e.preventDefault();
+    
+    if (!borrowerForm.name) {
+      toast.error('Please enter borrower/company name');
+      return;
+    }
+    
+    try {
+      // Create vendor with minimal required fields
+      const payload = {
+        name: borrowerForm.name,
+        email: borrowerForm.email || `${borrowerForm.name.toLowerCase().replace(/\s+/g, '_')}@borrower.local`,
+        phone: borrowerForm.phone || '',
+        address: borrowerForm.address || '',
+        contact_person: borrowerForm.contact_person || '',
+        deposit_commission_rate: 0,
+        withdrawal_commission_rate: 0,
+        deposit_method: 'bank_transfer',
+      };
+      
+      const response = await fetch(`${API_URL}/api/vendors`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        toast.success('Borrower company created successfully');
+        setIsBorrowerDialogOpen(false);
+        setBorrowerForm({ name: '', email: '', phone: '', address: '', contact_person: '' });
+        fetchVendors();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to create borrower');
+      }
+    } catch (error) {
+      toast.error('Failed to create borrower');
+    }
+  };
+
   const handleRecordRepayment = async (e) => {
     e.preventDefault();
     
