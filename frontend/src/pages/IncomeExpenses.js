@@ -188,8 +188,8 @@ export default function IncomeExpenses() {
   };
 
   const handleConvertToLoan = async () => {
-    if (!convertForm.borrower_name || !convertForm.due_date || !convertForm.treasury_account_id) {
-      toast.error('Please fill borrower, due date, and treasury account'); return;
+    if (!convertForm.borrower_name || !convertForm.due_date) {
+      toast.error('Please fill borrower name and due date'); return;
     }
     try {
       const response = await fetch(`${API_URL}/api/income-expenses/${convertDialog.entry.entry_id}/convert-to-loan`, {
@@ -198,8 +198,10 @@ export default function IncomeExpenses() {
       if (response.ok) {
         toast.success('Expense converted to loan successfully');
         setConvertDialog({ open: false, entry: null });
-        setConvertForm({ borrower_name: '', interest_rate: 0, due_date: '', treasury_account_id: '', notes: '' });
-        fetchEntries(); fetchSummary();
+        setConvertForm({ borrower_name: '', interest_rate: 0, due_date: '', notes: '' });
+        setBorrowerSearch('');
+        setShowAddBorrower(false);
+        fetchEntries(); fetchSummary(); fetchBorrowers();
       } else {
         const err = await response.json();
         toast.error(err.detail || 'Conversion failed');
