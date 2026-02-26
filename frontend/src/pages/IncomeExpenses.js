@@ -1275,6 +1275,157 @@ export default function IncomeExpenses() {
           </form>
         </DialogContent>
       </Dialog>
+      
+      {/* Import Excel Dialog */}
+      <Dialog open={importDialog} onOpenChange={(open) => { if (!open) { setImportDialog(false); setImportFile(null); setImportTreasuryId(''); } }}>
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <FileSpreadsheet className="w-5 h-5 text-green-500" /> Import from Excel
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 bg-blue-50 rounded border border-blue-200 text-sm text-blue-700">
+              <p className="font-medium mb-1">Excel Format:</p>
+              <p className="text-xs">Columns: Entry Type, Category, Amount, Currency, Date, Description, Reference</p>
+              <Button variant="link" size="sm" onClick={downloadTemplate} className="text-blue-600 p-0 h-auto mt-1">
+                <Download className="w-3 h-3 mr-1" /> Download Template
+              </Button>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Treasury Account *</Label>
+              <Select value={importTreasuryId} onValueChange={setImportTreasuryId}>
+                <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                  <SelectValue placeholder="Select treasury account" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-slate-200">
+                  {treasuryAccounts.map((acc) => (
+                    <SelectItem key={acc.account_id} value={acc.account_id} className="text-slate-800 hover:bg-slate-100">
+                      {acc.account_name} ({acc.balance?.toLocaleString()} {acc.currency})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {treasuryAccounts.length === 0 && (
+                <p className="text-xs text-amber-600">No treasury accounts found. Please create one in Treasury first.</p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Excel File *</Label>
+              <div className="border-2 border-dashed border-slate-200 rounded-lg p-4 text-center hover:border-[#66FCF1] transition-colors">
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={(e) => setImportFile(e.target.files[0])}
+                  className="hidden"
+                  id="import-file"
+                />
+                <label htmlFor="import-file" className="cursor-pointer">
+                  <FileSpreadsheet className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                  {importFile ? (
+                    <p className="text-sm text-slate-800 font-medium">{importFile.name}</p>
+                  ) : (
+                    <p className="text-sm text-slate-500">Click to select Excel file</p>
+                  )}
+                </label>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => { setImportDialog(false); setImportFile(null); setImportTreasuryId(''); }} className="border-slate-200 text-slate-500">Cancel</Button>
+              <Button onClick={handleBulkImport} disabled={importing || !importFile || !importTreasuryId} className="bg-green-500 hover:bg-green-600 text-white font-bold">
+                {importing ? 'Importing...' : 'Import'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Upload Invoice Dialog */}
+      <Dialog open={invoiceDialog.open} onOpenChange={(open) => { if (!open) { setInvoiceDialog({ open: false, entry: null }); setInvoiceFile(null); } }}>
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Upload className="w-5 h-5 text-blue-500" /> Upload Invoice / Document
+            </DialogTitle>
+          </DialogHeader>
+          {invoiceDialog.entry && (
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-50 rounded border border-slate-200">
+                <p className="text-xs text-slate-400 uppercase">Entry</p>
+                <p className="font-medium text-slate-800">{invoiceDialog.entry.description || 'No description'}</p>
+                <p className="text-sm text-slate-500">{invoiceDialog.entry.amount?.toLocaleString()} {invoiceDialog.entry.currency}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Select File</Label>
+                <div className="border-2 border-dashed border-slate-200 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                    onChange={(e) => setInvoiceFile(e.target.files[0])}
+                    className="hidden"
+                    id="invoice-file"
+                  />
+                  <label htmlFor="invoice-file" className="cursor-pointer">
+                    <FileText className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                    {invoiceFile ? (
+                      <p className="text-sm text-slate-800 font-medium">{invoiceFile.name}</p>
+                    ) : (
+                      <>
+                        <p className="text-sm text-slate-500">Click to select file</p>
+                        <p className="text-xs text-slate-400 mt-1">PDF, Images, or Documents</p>
+                      </>
+                    )}
+                  </label>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="outline" onClick={() => { setInvoiceDialog({ open: false, entry: null }); setInvoiceFile(null); }} className="border-slate-200 text-slate-500">Cancel</Button>
+                <Button onClick={handleInvoiceUpload} disabled={uploadingInvoice || !invoiceFile} className="bg-blue-500 hover:bg-blue-600 text-white font-bold">
+                  {uploadingInvoice ? 'Uploading...' : 'Upload'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* View Invoice Dialog */}
+      <Dialog open={viewInvoiceDialog.open} onOpenChange={(open) => { if (!open) setViewInvoiceDialog({ open: false, file: null }); }}>
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-500" /> Invoice Preview
+            </DialogTitle>
+          </DialogHeader>
+          {viewInvoiceDialog.file && (
+            <div className="space-y-4">
+              <p className="text-sm text-slate-500">Filename: {viewInvoiceDialog.file.filename}</p>
+              {viewInvoiceDialog.file.content_type?.startsWith('image/') ? (
+                <img src={`data:${viewInvoiceDialog.file.content_type};base64,${viewInvoiceDialog.file.data}`} alt="Invoice" className="max-w-full max-h-[60vh] object-contain mx-auto rounded" />
+              ) : viewInvoiceDialog.file.content_type === 'application/pdf' ? (
+                <iframe src={`data:application/pdf;base64,${viewInvoiceDialog.file.data}`} className="w-full h-[60vh] rounded" title="Invoice PDF" />
+              ) : (
+                <div className="p-8 text-center bg-slate-50 rounded">
+                  <FileText className="w-12 h-12 text-slate-400 mx-auto mb-2" />
+                  <p className="text-slate-500">Preview not available for this file type</p>
+                  <a 
+                    href={`data:${viewInvoiceDialog.file.content_type};base64,${viewInvoiceDialog.file.data}`} 
+                    download={viewInvoiceDialog.file.filename}
+                    className="text-blue-600 text-sm hover:underline mt-2 inline-block"
+                  >
+                    Download File
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
