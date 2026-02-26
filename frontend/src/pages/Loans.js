@@ -442,18 +442,23 @@ export default function Loans() {
 
   const resetLoanForm = () => {
     setLoanForm({
+      vendor_id: '',
       borrower_name: '',
       amount: '',
       currency: 'USD',
       interest_rate: '0',
+      loan_type: 'short_term',
       loan_date: new Date().toISOString().split('T')[0],
       due_date: '',
       repayment_mode: 'lump_sum',
       installment_amount: '',
       installment_frequency: 'monthly',
+      num_installments: '',
       treasury_account_id: '',
+      collateral: '',
       notes: '',
     });
+    setVendorSearch('');
   };
 
   const resetRepaymentForm = () => {
