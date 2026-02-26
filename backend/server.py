@@ -2609,9 +2609,10 @@ async def vendor_approve_transaction(transaction_id: str, user: dict = Depends(r
     if tx["status"] != TransactionStatus.PENDING:
         raise HTTPException(status_code=400, detail="Transaction is not pending")
     
-    # Vendor must upload proof before approving
-    if not tx.get("vendor_proof_image"):
-        raise HTTPException(status_code=400, detail="Please upload proof screenshot before approving")
+    # Only withdrawals require proof upload before approving
+    # Deposits can be approved without proof
+    if tx["transaction_type"] == TransactionType.WITHDRAWAL and not tx.get("vendor_proof_image"):
+        raise HTTPException(status_code=400, detail="Please upload proof screenshot before approving withdrawal")
     
     now = datetime.now(timezone.utc)
     
