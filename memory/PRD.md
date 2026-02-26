@@ -97,6 +97,11 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 - **Admin**: admin@fxbroker.com / password
 - **Vendor**: vendor3@fxbroker.com / password
 
+## UI Terminology (Updated Feb 26, 2026)
+- "Deposit Commission" renamed to "Money In Commission"
+- "Withdrawal Commission" renamed to "Money Out Commission"
+- Commission displays now show **USD (base currency) first**, with original currency in parentheses
+
 ## Known Issues
 - P2: Minor session management redirect issue after login
 
