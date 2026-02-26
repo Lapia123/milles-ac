@@ -856,7 +856,7 @@ export default function Loans() {
                     {vendors.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center text-slate-400 py-8">
-                          No vendors found. Add vendors in the Exchangers module.
+                          No exchangers found. Add exchangers in the Exchangers module.
                         </TableCell>
                       </TableRow>
                     )}
@@ -1164,7 +1164,7 @@ export default function Loans() {
                   value={vendorSearch}
                   onChange={(e) => setExchangerSearch(e.target.value)}
                   className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] pl-9"
-                  placeholder="Search vendor or enter new name..."
+                  placeholder="Search exchanger or enter new name..."
                   data-testid="loan-borrower-search"
                 />
               </div>
