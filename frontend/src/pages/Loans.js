@@ -565,19 +565,325 @@ export default function Loans() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Main Tabs */}
+      <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
+        <TabsList className="bg-[#1F2833] border border-white/10 mb-4">
+          <TabsTrigger value="dashboard" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
+            <BarChart3 className="w-4 h-4 mr-2" /> Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="borrowers" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
+            <Users className="w-4 h-4 mr-2" /> Borrowers
+          </TabsTrigger>
+          <TabsTrigger value="loans" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
+            <Banknote className="w-4 h-4 mr-2" /> All Loans
+          </TabsTrigger>
+          <TabsTrigger value="transactions" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
+            <History className="w-4 h-4 mr-2" /> Transactions
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Dashboard Tab */}
+        <TabsContent value="dashboard">
+          {dashboard ? (
+            <div className="space-y-6">
+              {/* Portfolio Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card className="bg-[#1F2833] border-white/5">
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">Total Disbursed</p>
+                        <p className="text-xl font-bold font-mono text-white">${dashboard.portfolio_overview.total_disbursed_usd?.toLocaleString()}</p>
+                      </div>
+                      <div className="p-2 bg-blue-500/10 rounded-sm">
+                        <Banknote className="w-5 h-5 text-blue-400" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-[#1F2833] border-white/5">
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">Outstanding</p>
+                        <p className="text-xl font-bold font-mono text-[#66FCF1]">${dashboard.portfolio_overview.total_outstanding_usd?.toLocaleString()}</p>
+                      </div>
+                      <div className="p-2 bg-cyan-500/10 rounded-sm">
+                        <PiggyBank className="w-5 h-5 text-[#66FCF1]" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-[#1F2833] border-white/5">
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">Total Repaid</p>
+                        <p className="text-xl font-bold font-mono text-green-400">${dashboard.portfolio_overview.total_repaid_usd?.toLocaleString()}</p>
+                      </div>
+                      <div className="p-2 bg-green-500/10 rounded-sm">
+                        <DollarSign className="w-5 h-5 text-green-400" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-[#1F2833] border-white/5">
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">Collected This Month</p>
+                        <p className="text-xl font-bold font-mono text-yellow-400">${dashboard.collection_this_month?.toLocaleString()}</p>
+                      </div>
+                      <div className="p-2 bg-yellow-500/10 rounded-sm">
+                        <TrendingUp className="w-5 h-5 text-yellow-400" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Aging Analysis */}
+                <Card className="bg-[#1F2833] border-white/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-white text-lg flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-[#66FCF1]" /> Aging Analysis
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#C5C6C7] text-sm">Current (Not Due)</span>
+                        <span className="text-green-400 font-mono">${dashboard.aging_analysis.current?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#C5C6C7] text-sm">1-30 Days Overdue</span>
+                        <span className="text-yellow-400 font-mono">${dashboard.aging_analysis.days_1_30?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#C5C6C7] text-sm">31-60 Days Overdue</span>
+                        <span className="text-orange-400 font-mono">${dashboard.aging_analysis.days_31_60?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#C5C6C7] text-sm">61-90 Days Overdue</span>
+                        <span className="text-red-400 font-mono">${dashboard.aging_analysis.days_61_90?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#C5C6C7] text-sm">90+ Days Overdue</span>
+                        <span className="text-red-600 font-mono font-bold">${dashboard.aging_analysis.days_90_plus?.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Top Borrowers */}
+                <Card className="bg-[#1F2833] border-white/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-white text-lg flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-[#66FCF1]" /> Top Borrowers
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {dashboard.top_borrowers?.map((b, i) => (
+                        <div key={i} className="flex justify-between items-center">
+                          <div>
+                            <span className="text-white text-sm">{b.name}</span>
+                            <span className="text-[#8B8D91] text-xs ml-2">({b.loan_count} loans)</span>
+                          </div>
+                          <span className="text-[#66FCF1] font-mono">${b.outstanding?.toLocaleString()}</span>
+                        </div>
+                      ))}
+                      {(!dashboard.top_borrowers || dashboard.top_borrowers.length === 0) && (
+                        <p className="text-[#8B8D91] text-sm text-center py-4">No borrowers yet</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Upcoming Dues */}
+              <Card className="bg-[#1F2833] border-white/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white text-lg flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-yellow-400" /> Upcoming Dues (Next 30 Days)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {dashboard.upcoming_dues?.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-white/10 hover:bg-transparent">
+                          <TableHead className="text-[#C5C6C7] text-xs">Borrower</TableHead>
+                          <TableHead className="text-[#C5C6C7] text-xs text-right">Outstanding</TableHead>
+                          <TableHead className="text-[#C5C6C7] text-xs">Due Date</TableHead>
+                          <TableHead className="text-[#C5C6C7] text-xs text-right">Days Left</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {dashboard.upcoming_dues.map((d, i) => (
+                          <TableRow key={i} className="border-white/5 hover:bg-white/5">
+                            <TableCell className="text-white text-sm">{d.borrower}</TableCell>
+                            <TableCell className="text-[#66FCF1] font-mono text-sm text-right">${d.outstanding?.toFixed(2)}</TableCell>
+                            <TableCell className="text-white text-sm">{formatDate(d.due_date)}</TableCell>
+                            <TableCell className="text-right">
+                              <Badge className={d.days_until_due <= 7 ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'}>
+                                {d.days_until_due} days
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-[#8B8D91] text-sm text-center py-6">No upcoming dues in the next 30 days</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <Card className="bg-[#1F2833] border-white/5">
+              <CardContent className="p-12 flex justify-center">
+                <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Borrowers Tab */}
+        <TabsContent value="borrowers">
           <Card className="bg-[#1F2833] border-white/5">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Total Disbursed</p>
-                  <p className="text-2xl font-bold font-mono text-white">${summary.total_disbursed_usd?.toLocaleString()}</p>
-                </div>
-                <div className="p-3 bg-blue-500/10 rounded-sm">
-                  <Banknote className="w-6 h-6 text-blue-400" />
-                </div>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white text-lg flex items-center gap-2">
+                <Users className="w-5 h-5 text-[#66FCF1]" /> Borrower Companies (Vendors)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[500px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-white/10 hover:bg-transparent">
+                      <TableHead className="text-[#C5C6C7] text-xs">Company</TableHead>
+                      <TableHead className="text-[#C5C6C7] text-xs text-right">Total Loans</TableHead>
+                      <TableHead className="text-[#C5C6C7] text-xs text-right">Disbursed</TableHead>
+                      <TableHead className="text-[#C5C6C7] text-xs text-right">Outstanding</TableHead>
+                      <TableHead className="text-[#C5C6C7] text-xs text-center">Active</TableHead>
+                      <TableHead className="text-[#C5C6C7] text-xs">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {vendors.map((v) => (
+                      <TableRow key={v.vendor_id} className="border-white/5 hover:bg-white/5">
+                        <TableCell>
+                          <div className="text-white font-medium">{v.name}</div>
+                          <div className="text-[10px] text-[#8B8D91]">{v.email}</div>
+                        </TableCell>
+                        <TableCell className="text-white font-mono text-right">{v.loan_stats.total_loans}</TableCell>
+                        <TableCell className="text-white font-mono text-right">${v.loan_stats.total_disbursed_usd?.toLocaleString()}</TableCell>
+                        <TableCell className="text-[#66FCF1] font-mono text-right font-semibold">${v.loan_stats.total_outstanding_usd?.toLocaleString()}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge className={v.loan_stats.active_loans > 0 ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-500/20 text-gray-400'}>
+                            {v.loan_stats.active_loans}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={v.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}>
+                            {v.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {vendors.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-[#8B8D91] py-8">
+                          No vendors found. Add vendors in the Vendors module.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* All Loans Tab */}
+        <TabsContent value="loans">
+          {/* Summary Cards */}
+          {summary && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <Card className="bg-[#1F2833] border-white/5">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">Total Disbursed</p>
+                      <p className="text-xl font-bold font-mono text-white">${summary.total_disbursed_usd?.toLocaleString()}</p>
+                    </div>
+                    <div className="p-2 bg-blue-500/10 rounded-sm">
+                      <Banknote className="w-5 h-5 text-blue-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-[#1F2833] border-white/5">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">Outstanding</p>
+                      <p className="text-xl font-bold font-mono text-[#66FCF1]">${summary.total_outstanding_usd?.toLocaleString()}</p>
+                    </div>
+                    <div className="p-2 bg-cyan-500/10 rounded-sm">
+                      <PiggyBank className="w-5 h-5 text-[#66FCF1]" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-[#1F2833] border-white/5">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">Total Repaid</p>
+                      <p className="text-xl font-bold font-mono text-green-400">${summary.total_repaid_usd?.toLocaleString()}</p>
+                    </div>
+                    <div className="p-2 bg-green-500/10 rounded-sm">
+                      <DollarSign className="w-5 h-5 text-green-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-[#1F2833] border-white/5">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">Interest Earned</p>
+                      <p className="text-xl font-bold font-mono text-yellow-400">${summary.total_interest_earned_usd?.toLocaleString()}</p>
+                    </div>
+                    <div className="p-2 bg-yellow-500/10 rounded-sm">
+                      <TrendingUp className="w-5 h-5 text-yellow-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Status Summary */}
+          {summary && (
+            <div className="flex gap-4 flex-wrap mb-4">
+              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 px-3 py-1">
+                Active: {summary.status_breakdown?.active || 0}
+              </Badge>
+              <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 px-3 py-1">
+                Partially Paid: {summary.status_breakdown?.partially_paid || 0}
+              </Badge>
+              <Badge className="bg-green-500/20 text-green-400 border-green-500/30 px-3 py-1">
+                Fully Paid: {summary.status_breakdown?.fully_paid || 0}
+              </Badge>
+              <Badge className="bg-red-500/20 text-red-400 border-red-500/30 px-3 py-1">
+                Overdue: {summary.status_breakdown?.overdue || 0}
+              </Badge>
+            </div>
+          )}
               </div>
             </CardContent>
           </Card>
