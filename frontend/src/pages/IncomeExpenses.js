@@ -586,7 +586,9 @@ export default function IncomeExpenses() {
           <TabsContent key={tabVal} value={tabVal} className="mt-4">
             <EntriesTable entries={entries} loading={loading} onDelete={handleDelete} isAdmin={isAdmin}
               formatDate={formatDate} getCategoryLabel={getCategoryLabel}
-              onConvertToLoan={(entry) => { setConvertDialog({ open: true, entry }); setConvertForm({ ...convertForm, borrower_name: entry.description || '', treasury_account_id: entry.treasury_account_id || '' }); }} />
+              onConvertToLoan={(entry) => { setConvertDialog({ open: true, entry }); setConvertForm({ ...convertForm, borrower_name: entry.description || '', treasury_account_id: entry.treasury_account_id || '' }); }}
+              onUploadInvoice={(entry) => setInvoiceDialog({ open: true, entry })}
+              onViewInvoice={(file) => setViewInvoiceDialog({ open: true, file })} />
           </TabsContent>
         ))}
         
