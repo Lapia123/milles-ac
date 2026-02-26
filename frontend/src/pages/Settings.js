@@ -70,6 +70,7 @@ const roleOptions = [
   { value: 'admin', label: 'Admin' },
   { value: 'sub_admin', label: 'Sub-Admin' },
   { value: 'accountant', label: 'Accountant' },
+  { value: 'vendor', label: 'Exchanger' },
 ];
 
 export default function Settings() {
