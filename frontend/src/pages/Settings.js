@@ -592,6 +592,38 @@ export default function Settings() {
                             </SelectContent>
                           </Select>
                         </div>
+                        {/* Exchanger Commission Fields */}
+                        {formData.role === 'vendor' && !selectedUser && (
+                          <div className="space-y-3 p-3 bg-amber-50 border border-amber-200 rounded-sm">
+                            <p className="text-xs text-amber-700 font-semibold uppercase tracking-wider">Exchanger Commission Rates</p>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-slate-500 text-xs">Deposit Commission (%)</Label>
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  min="0"
+                                  value={formData.deposit_commission}
+                                  onChange={(e) => setFormData({ ...formData, deposit_commission: parseFloat(e.target.value) || 0 })}
+                                  className="bg-white border-slate-200 text-slate-800"
+                                  placeholder="0.0"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-slate-500 text-xs">Withdrawal Commission (%)</Label>
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  min="0"
+                                  value={formData.withdrawal_commission}
+                                  onChange={(e) => setFormData({ ...formData, withdrawal_commission: parseFloat(e.target.value) || 0 })}
+                                  className="bg-white border-slate-200 text-slate-800"
+                                  placeholder="0.0"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
                         {selectedUser && (
                           <div className="flex items-center justify-between p-3 bg-slate-50 rounded-sm border border-slate-200">
                             <Label className="text-[#C5C6C7]">Active</Label>
