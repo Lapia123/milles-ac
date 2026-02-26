@@ -4668,6 +4668,20 @@ async def record_loan_repayment(loan_id: str, repayment: LoanRepaymentCreate, us
     }
     await db.treasury_transactions.insert_one(tx_doc)
     
+    # Record loan transaction
+    await db.loan_transactions.insert_one({
+        "transaction_id": f"ltx_{uuid.uuid4().hex[:12]}",
+        "loan_id": loan_id,
+        "transaction_type": LoanTransactionType.REPAYMENT,
+        "amount": repayment.amount,
+        "currency": repayment.currency,
+        "treasury_account_id": repayment.treasury_account_id,
+        "description": f"Repayment from {loan['borrower_name']}",
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    })
+    
     repayment_doc.pop("_id", None)
     repayment_doc["treasury_account_name"] = treasury["account_name"]
     repayment_doc["new_outstanding"] = max(0, outstanding)
