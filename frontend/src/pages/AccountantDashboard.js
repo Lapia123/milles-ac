@@ -595,7 +595,7 @@ export default function AccountantDashboard() {
                   <SelectItem value="bank" className="text-white hover:bg-white/5">Client Bank</SelectItem>
                   <SelectItem value="usdt" className="text-white hover:bg-white/5">USDT</SelectItem>
                   <SelectItem value="psp" className="text-white hover:bg-white/5">PSP</SelectItem>
-                  <SelectItem value="vendor" className="text-white hover:bg-white/5">Vendor</SelectItem>
+                  <SelectItem value="vendor" className="text-white hover:bg-white/5">Exchanger</SelectItem>
                 </SelectContent>
               </Select>
               <Input
@@ -784,7 +784,7 @@ export default function AccountantDashboard() {
                       {/* Settlement Info */}
                       <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Vendor</p>
+                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Exchanger</p>
                           <div className="flex items-center gap-2">
                             <Store className="w-4 h-4 text-[#66FCF1]" />
                             <p className="text-white">{settlement.vendor_name}</p>

@@ -38,7 +38,7 @@ const incomeCategories = [
 const expenseCategories = [
   { value: 'bank_fee', label: 'Bank Fees' },
   { value: 'transfer_charge', label: 'Transfer Charges' },
-  { value: 'vendor_payment', label: 'Vendor Payments' },
+  { value: 'vendor_payment', label: 'Exchanger Payments' },
   { value: 'operational', label: 'Operational Costs' },
   { value: 'marketing', label: 'Marketing' },
   { value: 'software', label: 'Software/Subscriptions' },
@@ -51,7 +51,7 @@ export default function IncomeExpenses() {
   const { user } = useAuth();
   const [entries, setEntries] = useState([]);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
-  const [vendors, setVendors] = useState([]);
+  const [vendors, setExchangers] = useState([]);
   const [borrowers, setBorrowers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -104,10 +104,10 @@ export default function IncomeExpenses() {
     } catch {}
   };
 
-  const fetchVendors = async () => {
+  const fetchExchangers = async () => {
     try {
       const response = await fetch(`${API_URL}/api/vendors`, { headers: getAuthHeaders() });
-      if (response.ok) setVendors(await response.json());
+      if (response.ok) setExchangers(await response.json());
     } catch {}
   };
 
@@ -141,7 +141,7 @@ export default function IncomeExpenses() {
     } catch {}
   };
 
-  useEffect(() => { fetchEntries(); fetchTreasuryAccounts(); fetchVendors(); fetchBorrowers(); fetchSummary(); fetchMonthlyData(); }, []);
+  useEffect(() => { fetchEntries(); fetchTreasuryAccounts(); fetchExchangers(); fetchBorrowers(); fetchSummary(); fetchMonthlyData(); }, []);
   useEffect(() => { fetchEntries(); fetchSummary(); }, [fetchEntries]);
 
   const handleSubmit = async (e) => {
@@ -463,10 +463,10 @@ export default function IncomeExpenses() {
               </div>
             </div>
 
-            {/* Account / Vendor Selection */}
+            {/* Account / Exchanger Selection */}
             <div className="space-y-2">
               <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                {formData.entry_type === 'income' ? 'Credit to Account / Vendor *' : 'Deduct from Account / Vendor *'}
+                {formData.entry_type === 'income' ? 'Credit to Account / Exchanger *' : 'Deduct from Account / Exchanger *'}
               </Label>
               <Select value={formData.vendor_id ? `vendor_${formData.vendor_id}` : formData.treasury_account_id}
                 onValueChange={(value) => {
@@ -488,7 +488,7 @@ export default function IncomeExpenses() {
                   ))}
                   {vendors.length > 0 && (
                     <>
-                      <div className="px-2 py-1 text-xs text-amber-400 font-semibold uppercase tracking-wider mt-2 border-t border-slate-200 pt-2">Vendors (Requires Approval)</div>
+                      <div className="px-2 py-1 text-xs text-amber-400 font-semibold uppercase tracking-wider mt-2 border-t border-slate-200 pt-2">Exchangers (Requires Approval)</div>
                       {vendors.map((v) => (
                         <SelectItem key={v.vendor_id} value={`vendor_${v.vendor_id}`} className="text-slate-800 hover:bg-slate-100">
                           <span className="flex items-center gap-2"><Store className="w-3 h-3 text-amber-400" />{v.vendor_name}</span>
@@ -500,14 +500,14 @@ export default function IncomeExpenses() {
               </Select>
             </div>
 
-            {/* Vendor Bank Account (when vendor selected) */}
+            {/* Exchanger Bank Account (when vendor selected) */}
             {formData.vendor_id && (
               <>
                 <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded text-xs text-amber-400">
                   <Clock className="w-3 h-3 inline mr-1" /> This entry will be sent to vendor for approval before treasury is updated
                 </div>
                 <div className="space-y-3 p-3 bg-slate-50/50 border border-slate-200 rounded">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Vendor Bank Details</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Exchanger Bank Details</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <Label className="text-slate-400 text-[10px] uppercase">Account Holder Name</Label>
@@ -721,7 +721,7 @@ function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCate
                 <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
                 <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Category</TableHead>
                 <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Description</TableHead>
-                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Account / Vendor</TableHead>
+                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Account / Exchanger</TableHead>
                 <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
                 <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
                 {isAdmin && <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs w-24">Actions</TableHead>}

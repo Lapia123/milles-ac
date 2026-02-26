@@ -80,7 +80,7 @@ export default function Transactions() {
   const [clients, setClients] = useState([]);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [psps, setPsps] = useState([]);
-  const [vendors, setVendors] = useState([]);
+  const [vendors, setExchangers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -187,11 +187,11 @@ export default function Transactions() {
     }
   };
 
-  const fetchVendors = async () => {
+  const fetchExchangers = async () => {
     try {
       const response = await fetch(`${API_URL}/api/vendors`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setVendors(await response.json());
+        setExchangers(await response.json());
       }
     } catch (error) {
       console.error('Error fetching vendors:', error);
@@ -222,7 +222,7 @@ export default function Transactions() {
     fetchClients();
     fetchTreasuryAccounts();
     fetchPsps();
-    fetchVendors();
+    fetchExchangers();
   }, [typeFilter, statusFilter]);
 
   // Fetch client bank accounts when client changes and destination is bank or vendor
@@ -577,7 +577,7 @@ export default function Transactions() {
                     <SelectItem value="bank" className="text-slate-800 hover:bg-slate-100">Client Bank (Withdrawal)</SelectItem>
                     <SelectItem value="usdt" className="text-slate-800 hover:bg-slate-100">USDT</SelectItem>
                     <SelectItem value="psp" className="text-slate-800 hover:bg-slate-100">Payment Service Provider (PSP)</SelectItem>
-                    <SelectItem value="vendor" className="text-slate-800 hover:bg-slate-100">Vendor</SelectItem>
+                    <SelectItem value="vendor" className="text-slate-800 hover:bg-slate-100">Exchanger</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -789,11 +789,11 @@ export default function Transactions() {
                 </div>
               )}
               
-              {/* Vendor Destination */}
+              {/* Exchanger Destination */}
               {formData.destination_type === 'vendor' && (
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Select Vendor *</Label>
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Select Exchanger *</Label>
                     <Select
                       value={formData.vendor_id}
                       onValueChange={(value) => setFormData({ ...formData, vendor_id: value })}
@@ -1167,7 +1167,7 @@ export default function Transactions() {
                             </span>
                           )}
                           {tx.vendor_proof_image && (
-                            <span title="Vendor Proof" className="flex items-center">
+                            <span title="Exchanger Proof" className="flex items-center">
                               <ImageIcon className="w-4 h-4 text-orange-400" />
                             </span>
                           )}
@@ -1317,17 +1317,17 @@ export default function Transactions() {
                   )}
                 </div>
               )}
-              {/* Vendor Proof - For Withdrawals */}
+              {/* Exchanger Proof - For Withdrawals */}
               {viewTransaction.vendor_proof_image && (
                 <div className="pt-4 border-t border-slate-200">
                   <p className="text-xs text-orange-400 uppercase tracking-wider mb-2 flex items-center gap-2">
                     <ImageIcon className="w-4 h-4" />
-                    Vendor Payment Proof
+                    Exchanger Payment Proof
                   </p>
                   <div className="relative group">
                     <img 
                       src={`data:image/png;base64,${viewTransaction.vendor_proof_image}`} 
-                      alt="Vendor payment proof" 
+                      alt="Exchanger payment proof" 
                       className="w-full max-h-48 object-contain rounded border border-orange-400/30 bg-slate-50 cursor-pointer hover:border-orange-400"
                       onClick={() => window.open(`data:image/png;base64,${viewTransaction.vendor_proof_image}`, '_blank')}
                       data-testid="vendor-proof-thumbnail"

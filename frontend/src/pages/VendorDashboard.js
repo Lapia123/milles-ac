@@ -42,9 +42,9 @@ import {
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-export default function VendorDashboard() {
+export default function ExchangerDashboard() {
   const { user } = useAuth();
-  const [vendorInfo, setVendorInfo] = useState(null);
+  const [vendorInfo, setExchangerInfo] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewTransaction, setViewTransaction] = useState(null);
@@ -61,7 +61,7 @@ export default function VendorDashboard() {
   const [statementOpen, setStatementOpen] = useState(false);
   const [statementLoading, setStatementLoading] = useState(false);
   const [ieEntries, setIeEntries] = useState([]);
-  const [activeVendorTab, setActiveVendorTab] = useState('transactions');
+  const [activeExchangerTab, setActiveExchangerTab] = useState('transactions');
   const [ieActionDialog, setIeActionDialog] = useState({ open: false, entry: null, type: '' });
   const [ieCaptcha, setIeCaptcha] = useState({ num1: 0, num2: 0 });
   const [ieCaptchaAnswer, setIeCaptchaAnswer] = useState('');
@@ -83,12 +83,12 @@ export default function VendorDashboard() {
     setCaptchaAnswer('');
   };
 
-  const fetchVendorInfo = async () => {
+  const fetchExchangerInfo = async () => {
     try {
       const response = await fetch(`${API_URL}/api/vendor/me`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
-        setVendorInfo(data);
+        setExchangerInfo(data);
         setTransactions(data.pending_transactions || []);
       }
     } catch (error) {
@@ -185,7 +185,7 @@ export default function VendorDashboard() {
   };
 
   useEffect(() => {
-    fetchVendorInfo();
+    fetchExchangerInfo();
   }, []);
 
   useEffect(() => {
@@ -298,7 +298,7 @@ export default function VendorDashboard() {
         toast.success(`Transaction ${actionType === 'complete' ? 'completed' : actionType + 'd'} successfully`);
         setActionDialogOpen(false);
         fetchTransactions();
-        fetchVendorInfo();
+        fetchExchangerInfo();
       } else if (response) {
         let errorMessage = 'Action failed';
         try {
@@ -439,7 +439,7 @@ export default function VendorDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
-            Vendor Portal
+            Exchanger Portal
           </h1>
           <p className="text-slate-500">Welcome, {vendorInfo?.vendor_name}</p>
         </div>
@@ -602,7 +602,7 @@ export default function VendorDashboard() {
       </div>
 
       {/* Tabbed Content: Transactions, Income/Expenses, Settlements */}
-      <Tabs value={activeVendorTab} onValueChange={setActiveVendorTab}>
+      <Tabs value={activeExchangerTab} onValueChange={setActiveExchangerTab}>
         <TabsList className="bg-white border border-slate-200">
           <TabsTrigger value="transactions" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
             Transactions {pendingCount > 0 && <Badge className="ml-1 bg-yellow-500/30 text-yellow-400 text-[10px]">{pendingCount}</Badge>}
@@ -1059,10 +1059,10 @@ export default function VendorDashboard() {
               )}
               {viewTransaction.vendor_proof_image && (
                 <div className="pt-4 border-t border-slate-200">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Vendor Proof (Withdrawal)</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Exchanger Proof (Withdrawal)</p>
                   <img 
                     src={`data:image/png;base64,${viewTransaction.vendor_proof_image}`} 
-                    alt="Vendor proof" 
+                    alt="Exchanger proof" 
                     className="max-w-full rounded border border-slate-200"
                   />
                 </div>
@@ -1266,7 +1266,7 @@ export default function VendorDashboard() {
                     </div>
                     <div style={{ display: 'flex', gap: '40px', marginBottom: '20px' }}>
                       <div style={{ flex: 1 }}>
-                        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', marginBottom: '6px' }}>Vendor</h4>
+                        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', marginBottom: '6px' }}>Exchanger</h4>
                         <p style={{ fontSize: '13px', fontWeight: 600 }}>{v.vendor_name || s.vendor_name}</p>
                         {v.contact_person && <p style={{ fontSize: '12px', color: '#555' }}>{v.contact_person}</p>}
                         {v.email && <p style={{ fontSize: '12px', color: '#555' }}>{v.email}</p>}

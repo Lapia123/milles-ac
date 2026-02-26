@@ -43,12 +43,12 @@ export default function Layout() {
   };
 
   const isAccountantOrAdmin = user?.role === 'admin' || user?.role === 'accountant';
-  const isVendor = user?.role === 'vendor';
+  const isExchanger = user?.role === 'vendor';
   const isAdmin = user?.role === 'admin';
 
-  // Vendor-specific navigation
+  // Exchanger-specific navigation
   const vendorNavItems = [
-    { to: '/vendor-portal', icon: Store, label: 'My Portal' },
+    { to: '/exchanger-portal', icon: Store, label: 'My Portal' },
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
 
@@ -62,7 +62,7 @@ export default function Layout() {
     ...(isAccountantOrAdmin ? [{ to: '/loans', icon: Banknote, label: 'Loans' }] : []),
     ...(isAccountantOrAdmin ? [{ to: '/debts', icon: Receipt, label: 'O/S Accounts' }] : []),
     { to: '/psp', icon: CreditCard, label: 'PSP' },
-    ...(isAdmin ? [{ to: '/vendors', icon: Store, label: 'Vendors' }] : []),
+    ...(isAdmin ? [{ to: '/vendors', icon: Store, label: 'Exchangers' }] : []),
     { to: '/reconciliation', icon: ArrowUpDown, label: 'Reconciliation' },
     ...(isAdmin ? [{ to: '/audit', icon: ShieldCheck, label: 'Audit' }] : []),
     { to: '/reports', icon: BarChart3, label: 'Reports' },
@@ -70,7 +70,7 @@ export default function Layout() {
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
 
-  const navItems = isVendor ? vendorNavItems : adminNavItems;
+  const navItems = isExchanger ? vendorNavItems : adminNavItems;
 
   const NavItem = ({ to, icon: Icon, label }) => (
     <NavLink

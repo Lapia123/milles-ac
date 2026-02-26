@@ -90,7 +90,7 @@ export default function Reports() {
   
   // Report data states
   const [transactionReport, setTransactionReport] = useState(null);
-  const [vendorReport, setVendorReport] = useState(null);
+  const [vendorReport, setExchangerReport] = useState(null);
   const [commissionReport, setCommissionReport] = useState(null);
   const [clientReport, setClientReport] = useState(null);
   const [treasuryReport, setTreasuryReport] = useState(null);
@@ -144,7 +144,7 @@ export default function Reports() {
       ]);
 
       if (txRes.ok) setTransactionReport(await txRes.json());
-      if (vendorRes.ok) setVendorReport(await vendorRes.json());
+      if (vendorRes.ok) setExchangerReport(await vendorRes.json());
       if (commRes.ok) setCommissionReport(await commRes.json());
       if (clientRes.ok) setClientReport(await clientRes.json());
       if (treasuryRes.ok) setTreasuryReport(await treasuryRes.json());
@@ -298,7 +298,7 @@ export default function Reports() {
           </TabsTrigger>
           <TabsTrigger value="vendors" className="data-[state=active]:bg-blue-600/20 data-[state=active]:text-blue-400">
             <Store className="w-4 h-4 mr-2" />
-            Vendors
+            Exchangers
           </TabsTrigger>
           <TabsTrigger value="commissions" className="data-[state=active]:bg-blue-600/20 data-[state=active]:text-blue-400">
             <Percent className="w-4 h-4 mr-2" />
@@ -497,13 +497,13 @@ export default function Reports() {
           )}
         </TabsContent>
 
-        {/* ========== VENDORS REPORT ========== */}
+        {/* ========== EXCHANGERS REPORT ========== */}
         <TabsContent value="vendors" className="space-y-4">
           {vendorReport && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
-                  title="Total Vendors"
+                  title="Total Exchangers"
                   value={vendorReport.grand_totals?.total_vendors || 0}
                   icon={Store}
                   color="purple"
@@ -531,7 +531,7 @@ export default function Reports() {
 
               <Card className="bg-[#1E293B] border-slate-200">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg font-semibold text-slate-800">Vendor Settlement Summary</CardTitle>
+                  <CardTitle className="text-lg font-semibold text-slate-800">Exchanger Settlement Summary</CardTitle>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -543,7 +543,7 @@ export default function Reports() {
                       commission_usd: v.totals?.commission_usd,
                       net_settlement_usd: v.totals?.net_settlement_usd
                     })), 'vendor_settlements', [
-                      { key: 'vendor_name', label: 'Vendor' },
+                      { key: 'vendor_name', label: 'Exchanger' },
                       { key: 'deposits_usd', label: 'Deposits (USD)' },
                       { key: 'withdrawals_usd', label: 'Withdrawals (USD)' },
                       { key: 'commission_usd', label: 'Commission (USD)' },
@@ -559,7 +559,7 @@ export default function Reports() {
                     <Table>
                       <TableHeader>
                         <TableRow className="border-slate-200">
-                          <TableHead className="text-[#94A3B8] text-xs">Vendor</TableHead>
+                          <TableHead className="text-[#94A3B8] text-xs">Exchanger</TableHead>
                           <TableHead className="text-[#94A3B8] text-xs text-right">Deposits</TableHead>
                           <TableHead className="text-[#94A3B8] text-xs text-right">Withdrawals</TableHead>
                           <TableHead className="text-[#94A3B8] text-xs text-right">Commission</TableHead>
@@ -615,7 +615,7 @@ export default function Reports() {
                   color="yellow"
                 />
                 <StatCard
-                  title="Vendors with Commission"
+                  title="Exchangers with Commission"
                   value={(commissionReport.vendors || []).length}
                   icon={Store}
                   color="purple"
@@ -630,13 +630,13 @@ export default function Reports() {
 
               <Card className="bg-[#1E293B] border-slate-200">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg font-semibold text-slate-800">Commission by Vendor</CardTitle>
+                  <CardTitle className="text-lg font-semibold text-slate-800">Commission by Exchanger</CardTitle>
                   <Button
                     size="sm"
                     variant="ghost"
                     className="text-[#94A3B8] hover:text-slate-800"
                     onClick={() => downloadCSV(commissionReport.vendors || [], 'vendor_commissions', [
-                      { key: 'vendor_name', label: 'Vendor' },
+                      { key: 'vendor_name', label: 'Exchanger' },
                       { key: 'total_commission_usd', label: 'Total Commission (USD)' },
                       { key: 'deposit_commissions', label: 'Money In Commissions' },
                       { key: 'withdrawal_commissions', label: 'Money Out Commissions' },
@@ -652,7 +652,7 @@ export default function Reports() {
                     <Table>
                       <TableHeader>
                         <TableRow className="border-slate-200">
-                          <TableHead className="text-[#94A3B8] text-xs">Vendor</TableHead>
+                          <TableHead className="text-[#94A3B8] text-xs">Exchanger</TableHead>
                           <TableHead className="text-[#94A3B8] text-xs text-right">Total Commission</TableHead>
                           <TableHead className="text-[#94A3B8] text-xs text-right">From Deposits</TableHead>
                           <TableHead className="text-[#94A3B8] text-xs text-right">From Withdrawals</TableHead>
@@ -681,7 +681,7 @@ export default function Reports() {
               {/* Commission by Currency */}
               <Card className="bg-[#1E293B] border-slate-200">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-semibold text-slate-800">Commission by Currency (All Vendors)</CardTitle>
+                  <CardTitle className="text-lg font-semibold text-slate-800">Commission by Currency (All Exchangers)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -1120,7 +1120,7 @@ export default function Reports() {
                 </Card>
               </div>
 
-              {/* Loans & Vendor Commission Summary */}
+              {/* Loans & Exchanger Commission Summary */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <Card className="bg-[#1E293B] border-slate-200">
                   <CardHeader className="pb-2">
@@ -1155,7 +1155,7 @@ export default function Reports() {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
                       <Percent className="w-5 h-5 text-amber-400" />
-                      Vendor Commission Summary
+                      Exchanger Commission Summary
                     </CardTitle>
                   </CardHeader>
                   <CardContent>

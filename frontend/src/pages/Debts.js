@@ -66,7 +66,7 @@ export default function Debts() {
   const [debts, setDebts] = useState([]);
   const [summary, setSummary] = useState(null);
   const [clients, setClients] = useState([]);
-  const [vendors, setVendors] = useState([]);
+  const [vendors, setExchangers] = useState([]);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDebtDialogOpen, setIsDebtDialogOpen] = useState(false);
@@ -120,7 +120,7 @@ export default function Debts() {
       if (debtsRes.ok) setDebts(await debtsRes.json());
       if (summaryRes.ok) setSummary(await summaryRes.json());
       if (clientsRes.ok) setClients(await clientsRes.json());
-      if (vendorsRes.ok) setVendors(await vendorsRes.json());
+      if (vendorsRes.ok) setExchangers(await vendorsRes.json());
       if (treasuryRes.ok) setTreasuryAccounts(await treasuryRes.json());
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -339,7 +339,7 @@ export default function Debts() {
                   <SelectContent className="bg-[#1E293B] border-slate-200">
                     <SelectItem value="other" className="text-white hover:bg-white/5">Other Party</SelectItem>
                     <SelectItem value="client" className="text-white hover:bg-white/5">Client</SelectItem>
-                    <SelectItem value="vendor" className="text-white hover:bg-white/5">Vendor</SelectItem>
+                    <SelectItem value="vendor" className="text-white hover:bg-white/5">Exchanger</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -374,7 +374,7 @@ export default function Debts() {
 
               {debtForm.party_type === 'vendor' && (
                 <div className="space-y-2">
-                  <Label className="text-[#94A3B8] text-xs uppercase tracking-wider">Select Vendor</Label>
+                  <Label className="text-[#94A3B8] text-xs uppercase tracking-wider">Select Exchanger</Label>
                   <Select
                     value={debtForm.party_id}
                     onValueChange={(value) => {

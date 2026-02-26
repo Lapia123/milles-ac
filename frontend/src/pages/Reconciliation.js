@@ -77,8 +77,8 @@ export default function Reconciliation() {
   const [selectedClient, setSelectedClient] = useState(null);
   const [clientDetails, setClientDetails] = useState(null);
   
-  // Vendor reconciliation state
-  const [vendorRecon, setVendorRecon] = useState([]);
+  // Exchanger reconciliation state
+  const [vendorRecon, setExchangerRecon] = useState([]);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -201,14 +201,14 @@ export default function Reconciliation() {
     }
   };
 
-  const fetchVendorRecon = async () => {
+  const fetchExchangerRecon = async () => {
     try {
       const response = await fetch(`${API_URL}/api/reconciliation/vendors`, {
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         credentials: 'include',
       });
       if (response.ok) {
-        setVendorRecon(await response.json());
+        setExchangerRecon(await response.json());
       }
     } catch (error) {
       console.error('Error:', error);
@@ -221,7 +221,7 @@ export default function Reconciliation() {
     fetchBankBatches();
     fetchPspRecon();
     fetchClientRecon();
-    fetchVendorRecon();
+    fetchExchangerRecon();
   }, [fetchSummary]);
 
   const handleFileUpload = async (e) => {
@@ -299,7 +299,7 @@ export default function Reconciliation() {
           <p className="text-[#C5C6C7]">Match and verify transactions across all accounts</p>
         </div>
         <Button
-          onClick={() => { fetchSummary(); fetchBankBatches(); fetchPspRecon(); fetchClientRecon(); fetchVendorRecon(); }}
+          onClick={() => { fetchSummary(); fetchBankBatches(); fetchPspRecon(); fetchClientRecon(); fetchExchangerRecon(); }}
           variant="outline"
           className="border-slate-200 text-[#C5C6C7] hover:bg-white/5"
         >
@@ -373,7 +373,7 @@ export default function Reconciliation() {
                     <Store className="w-5 h-5 text-orange-400" />
                   </div>
                   <div>
-                    <p className="text-xs text-[#C5C6C7] uppercase">Vendors</p>
+                    <p className="text-xs text-[#C5C6C7] uppercase">Exchangers</p>
                     <p className="text-xl font-bold text-white">{summary.vendors.vendors_with_discrepancy}</p>
                     <p className="text-xs text-[#C5C6C7]">Discrepancies</p>
                   </div>
@@ -401,7 +401,7 @@ export default function Reconciliation() {
             Clients
           </TabsTrigger>
           <TabsTrigger value="vendors" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-            Vendors
+            Exchangers
           </TabsTrigger>
         </TabsList>
 
@@ -744,20 +744,20 @@ export default function Reconciliation() {
           </Dialog>
         </TabsContent>
 
-        {/* Vendor Reconciliation Tab */}
+        {/* Exchanger Reconciliation Tab */}
         <TabsContent value="vendors" className="mt-4">
           <Card className="bg-white border-slate-200">
             <CardHeader>
               <CardTitle className="text-lg text-white flex items-center gap-2">
                 <Store className="w-5 h-5 text-[#66FCF1]" />
-                Vendor Commission Reconciliation
+                Exchanger Commission Reconciliation
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow className="border-slate-200">
-                    <TableHead className="text-[#C5C6C7] text-xs">Vendor</TableHead>
+                    <TableHead className="text-[#C5C6C7] text-xs">Exchanger</TableHead>
                     <TableHead className="text-[#C5C6C7] text-xs">Rate</TableHead>
                     <TableHead className="text-[#C5C6C7] text-xs">Volume</TableHead>
                     <TableHead className="text-[#C5C6C7] text-xs">Expected Comm.</TableHead>
@@ -884,13 +884,13 @@ export default function Reconciliation() {
                   <CardHeader>
                     <CardTitle className="text-lg text-white flex items-center gap-2">
                       <Store className="w-5 h-5 text-orange-400" />
-                      Vendor Reconciliation
+                      Exchanger Reconciliation
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
                       <div className="flex justify-between">
-                        <span className="text-[#C5C6C7]">Total Vendors</span>
+                        <span className="text-[#C5C6C7]">Total Exchangers</span>
                         <span className="text-white font-bold">{summary.vendors.total_vendors}</span>
                       </div>
                       <div className="flex justify-between">

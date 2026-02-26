@@ -87,7 +87,7 @@ export default function Loans() {
   const { user } = useAuth();
   const [loans, setLoans] = useState([]);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
-  const [vendors, setVendors] = useState([]);
+  const [vendors, setExchangers] = useState([]);
   const [dashboard, setDashboard] = useState(null);
   const [loanTransactions, setLoanTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -100,7 +100,7 @@ export default function Loans() {
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
   const [summary, setSummary] = useState(null);
-  const [vendorSearch, setVendorSearch] = useState('');
+  const [vendorSearch, setExchangerSearch] = useState('');
   
   // Filter
   const [statusFilter, setStatusFilter] = useState('');
@@ -214,11 +214,11 @@ export default function Loans() {
     }
   };
 
-  const fetchVendors = async () => {
+  const fetchExchangers = async () => {
     try {
       const response = await fetch(`${API_URL}/api/loans/vendors`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setVendors(await response.json());
+        setExchangers(await response.json());
       }
     } catch (error) {
       console.error('Error fetching vendors:', error);
@@ -255,7 +255,7 @@ export default function Loans() {
     fetchTreasuryAccounts();
     fetchSummary();
     fetchDashboard();
-    fetchVendors();
+    fetchExchangers();
     fetchLoanTransactions();
   }, []);
 
@@ -415,7 +415,7 @@ export default function Loans() {
         toast.success('Borrower company created successfully');
         setIsBorrowerDialogOpen(false);
         setBorrowerForm({ name: '', email: '', phone: '', address: '', contact_person: '' });
-        fetchVendors();
+        fetchExchangers();
       } else {
         const error = await response.json();
         toast.error(error.detail || 'Failed to create borrower');
@@ -510,7 +510,7 @@ export default function Loans() {
       collateral: '',
       notes: '',
     });
-    setVendorSearch('');
+    setExchangerSearch('');
   };
 
   const resetRepaymentForm = () => {
@@ -807,7 +807,7 @@ export default function Loans() {
           <Card className="bg-white border-slate-200">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-slate-800 text-lg flex items-center gap-2">
-                <Users className="w-5 h-5 text-blue-600" /> Borrower Companies (Vendors)
+                <Users className="w-5 h-5 text-blue-600" /> Borrower Companies (Exchangers)
               </CardTitle>
               <Button
                 onClick={() => setIsBorrowerDialogOpen(true)}
@@ -856,7 +856,7 @@ export default function Loans() {
                     {vendors.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center text-slate-400 py-8">
-                          No vendors found. Add vendors in the Vendors module.
+                          No vendors found. Add vendors in the Exchangers module.
                         </TableCell>
                       </TableRow>
                     )}
@@ -1153,7 +1153,7 @@ export default function Loans() {
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreateLoan} className="space-y-4">
-            {/* Vendor/Borrower Selection */}
+            {/* Exchanger/Borrower Selection */}
             <div className="space-y-2">
               <Label className="text-slate-500 text-xs uppercase tracking-wider flex items-center gap-2">
                 <Building2 className="w-3 h-3" /> Borrower Company *
@@ -1162,7 +1162,7 @@ export default function Loans() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input
                   value={vendorSearch}
-                  onChange={(e) => setVendorSearch(e.target.value)}
+                  onChange={(e) => setExchangerSearch(e.target.value)}
                   className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] pl-9"
                   placeholder="Search vendor or enter new name..."
                   data-testid="loan-borrower-search"
@@ -1182,7 +1182,7 @@ export default function Loans() {
                       className={`px-3 py-2 cursor-pointer hover:bg-slate-100 text-slate-800 text-sm ${loanForm.vendor_id === v.vendor_id ? 'bg-blue-100' : ''}`}
                       onClick={() => { 
                         setLoanForm({ ...loanForm, borrower_name: v.name, vendor_id: v.vendor_id }); 
-                        setVendorSearch(v.name);
+                        setExchangerSearch(v.name);
                       }}
                     >
                       {v.name}
@@ -1197,7 +1197,7 @@ export default function Loans() {
                 <div className="flex items-center gap-2 text-xs text-blue-600">
                   <CheckCircle2 className="w-3 h-3" />
                   Selected: {loanForm.borrower_name}
-                  <Button type="button" variant="ghost" size="sm" onClick={() => { setLoanForm({ ...loanForm, borrower_name: '', vendor_id: '' }); setVendorSearch(''); }} className="h-5 px-1 text-slate-400">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => { setLoanForm({ ...loanForm, borrower_name: '', vendor_id: '' }); setExchangerSearch(''); }} className="h-5 px-1 text-slate-400">
                     <X className="w-3 h-3" />
                   </Button>
                 </div>

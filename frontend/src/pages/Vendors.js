@@ -65,16 +65,16 @@ import {
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-export default function Vendors() {
+export default function Exchangers() {
   const { user } = useAuth();
-  const [vendors, setVendors] = useState([]);
+  const [vendors, setExchangers] = useState([]);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [pendingTransactions, setPendingTransactions] = useState([]);
   const [settlements, setSettlements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedVendor, setSelectedVendor] = useState(null);
-  const [viewVendor, setViewVendor] = useState(null);
+  const [selectedExchanger, setSelectedExchanger] = useState(null);
+  const [viewExchanger, setViewExchanger] = useState(null);
   const [settleDialogOpen, setSettleDialogOpen] = useState(false);
   const [statementData, setStatementData] = useState(null);
   const [statementOpen, setStatementOpen] = useState(false);
@@ -105,11 +105,11 @@ export default function Vendors() {
     };
   };
 
-  const fetchVendors = async () => {
+  const fetchExchangers = async () => {
     try {
       const response = await fetch(`${API_URL}/api/vendors`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setVendors(await response.json());
+        setExchangers(await response.json());
       }
     } catch (error) {
       console.error('Error fetching vendors:', error);
@@ -130,7 +130,7 @@ export default function Vendors() {
     }
   };
 
-  const fetchVendorTransactions = async (vendorId) => {
+  const fetchExchangerTransactions = async (vendorId) => {
     try {
       const response = await fetch(`${API_URL}/api/vendors/${vendorId}/transactions`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
@@ -141,7 +141,7 @@ export default function Vendors() {
     }
   };
 
-  const fetchVendorSettlements = async (vendorId) => {
+  const fetchExchangerSettlements = async (vendorId) => {
     try {
       const response = await fetch(`${API_URL}/api/vendors/${vendorId}/settlements`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
@@ -152,21 +152,21 @@ export default function Vendors() {
     }
   };
 
-  const fetchVendorDetails = async (vendorId) => {
+  const fetchExchangerDetails = async (vendorId) => {
     try {
       const response = await fetch(`${API_URL}/api/vendors/${vendorId}`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
         const vendorData = await response.json();
-        setViewVendor(vendorData);
+        setViewExchanger(vendorData);
       }
     } catch (error) {
       console.error('Error fetching vendor details:', error);
     }
   };
 
-  const openVendorView = (vendor) => {
-    setViewVendor(vendor); // Set initial data
-    fetchVendorDetails(vendor.vendor_id); // Fetch full details including settlement_by_currency
+  const openExchangerView = (vendor) => {
+    setViewExchanger(vendor); // Set initial data
+    fetchExchangerDetails(vendor.vendor_id); // Fetch full details including settlement_by_currency
   };
 
   const openStatement = async (settlementId) => {
@@ -227,24 +227,24 @@ export default function Vendors() {
   };
 
   useEffect(() => {
-    fetchVendors();
+    fetchExchangers();
     fetchTreasuryAccounts();
   }, []);
 
   useEffect(() => {
-    if (viewVendor) {
-      fetchVendorTransactions(viewVendor.vendor_id);
-      fetchVendorSettlements(viewVendor.vendor_id);
+    if (viewExchanger) {
+      fetchExchangerTransactions(viewExchanger.vendor_id);
+      fetchExchangerSettlements(viewExchanger.vendor_id);
     }
-  }, [viewVendor?.vendor_id]);
+  }, [viewExchanger?.vendor_id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const url = selectedVendor
-        ? `${API_URL}/api/vendors/${selectedVendor.vendor_id}`
+      const url = selectedExchanger
+        ? `${API_URL}/api/vendors/${selectedExchanger.vendor_id}`
         : `${API_URL}/api/vendors`;
-      const method = selectedVendor ? 'PUT' : 'POST';
+      const method = selectedExchanger ? 'PUT' : 'POST';
 
       const payload = {
         vendor_name: formData.vendor_name,
@@ -253,7 +253,7 @@ export default function Vendors() {
         description: formData.description || null,
       };
 
-      if (!selectedVendor) {
+      if (!selectedExchanger) {
         payload.email = formData.email;
         payload.password = formData.password;
       } else {
@@ -268,10 +268,10 @@ export default function Vendors() {
       });
 
       if (response.ok) {
-        toast.success(selectedVendor ? 'Vendor updated' : 'Vendor created');
+        toast.success(selectedExchanger ? 'Exchanger updated' : 'Exchanger created');
         setIsDialogOpen(false);
         resetForm();
-        fetchVendors();
+        fetchExchangers();
       } else {
         const error = await response.json();
         toast.error(error.detail || 'Operation failed');
@@ -290,8 +290,8 @@ export default function Vendors() {
         credentials: 'include',
       });
       if (response.ok) {
-        toast.success('Vendor deleted');
-        fetchVendors();
+        toast.success('Exchanger deleted');
+        fetchExchangers();
       } else {
         const error = await response.json();
         toast.error(error.detail || 'Delete failed');
@@ -302,7 +302,7 @@ export default function Vendors() {
   };
 
   const handleEdit = (vendor) => {
-    setSelectedVendor(vendor);
+    setSelectedExchanger(vendor);
     setFormData({
       vendor_name: vendor.vendor_name,
       email: vendor.email,
@@ -315,8 +315,8 @@ export default function Vendors() {
     setIsDialogOpen(true);
   };
 
-  const handleSettleVendor = async () => {
-    if (!viewVendor || !settlementDestination) {
+  const handleSettleExchanger = async () => {
+    if (!viewExchanger || !settlementDestination) {
       toast.error('Please select a settlement destination');
       return;
     }
@@ -326,7 +326,7 @@ export default function Vendors() {
     const destCurrency = destAccount?.currency || 'USD';
     
     // Get transaction/base currency
-    const baseCurrencyData = viewVendor?.settlement_by_currency?.[0];
+    const baseCurrencyData = viewExchanger?.settlement_by_currency?.[0];
     const baseCurrency = baseCurrencyData?.currency || 'USD';
     
     // Only require manual amount entry if currencies are different
@@ -338,10 +338,10 @@ export default function Vendors() {
     
     try {
       // Get the commission from settlement_by_currency
-      const baseCurrencyData = viewVendor?.settlement_by_currency?.find(c => c.currency === baseCurrency);
+      const baseCurrencyData = viewExchanger?.settlement_by_currency?.find(c => c.currency === baseCurrency);
       const preCalculatedCommission = baseCurrencyData?.commission_earned_base || 0;
       
-      const response = await fetch(`${API_URL}/api/vendors/${viewVendor.vendor_id}/settle`, {
+      const response = await fetch(`${API_URL}/api/vendors/${viewExchanger.vendor_id}/settle`, {
         method: 'POST',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -366,9 +366,9 @@ export default function Vendors() {
         setSettlementCharges('');
         setSettlementChargesDescription('');
         setSettlementAmountInDestCurrency('');
-        fetchVendorTransactions(viewVendor.vendor_id);
-        fetchVendorSettlements(viewVendor.vendor_id);
-        fetchVendors();
+        fetchExchangerTransactions(viewExchanger.vendor_id);
+        fetchExchangerSettlements(viewExchanger.vendor_id);
+        fetchExchangers();
       } else {
         const error = await response.json();
         toast.error(error.detail || 'Settlement failed');
@@ -379,7 +379,7 @@ export default function Vendors() {
   };
 
   const resetForm = () => {
-    setSelectedVendor(null);
+    setSelectedExchanger(null);
     setFormData({
       vendor_name: '',
       email: '',
@@ -421,7 +421,7 @@ export default function Vendors() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
-            Vendors
+            Exchangers
           </h1>
           <p className="text-slate-500">Manage vendors, commissions, and settlements</p>
         </div>
@@ -433,18 +433,18 @@ export default function Vendors() {
                 data-testid="add-vendor-btn"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Add Vendor
+                Add Exchanger
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
-                  {selectedVendor ? 'Edit Vendor' : 'Add New Vendor'}
+                  {selectedExchanger ? 'Edit Exchanger' : 'Add New Exchanger'}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Vendor Name *</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Exchanger Name *</Label>
                   <Input
                     value={formData.vendor_name}
                     onChange={(e) => setFormData({ ...formData, vendor_name: e.target.value })}
@@ -455,7 +455,7 @@ export default function Vendors() {
                   />
                 </div>
                 
-                {!selectedVendor && (
+                {!selectedExchanger && (
                   <>
                     <div className="space-y-2">
                       <Label className="text-slate-500 text-xs uppercase tracking-wider">Email (Login) *</Label>
@@ -511,7 +511,7 @@ export default function Vendors() {
                   </div>
                 </div>
                 
-                {selectedVendor && (
+                {selectedExchanger && (
                   <div className="space-y-2">
                     <Label className="text-slate-500 text-xs uppercase tracking-wider">Status</Label>
                     <Select
@@ -554,7 +554,7 @@ export default function Vendors() {
                     className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
                     data-testid="save-vendor-btn"
                   >
-                    {selectedVendor ? 'Update' : 'Create'}
+                    {selectedExchanger ? 'Update' : 'Create'}
                   </Button>
                 </div>
               </form>
@@ -569,7 +569,7 @@ export default function Vendors() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total Vendors</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total Exchangers</p>
                 <p className="text-3xl font-bold font-mono text-slate-800">{vendors.length}</p>
               </div>
               <div className="p-3 bg-blue-100 rounded-sm">
@@ -597,7 +597,7 @@ export default function Vendors() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Active Vendors</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Active Exchangers</p>
                 <p className="text-3xl font-bold font-mono text-slate-800">{vendors.filter(v => v.status === 'active').length}</p>
               </div>
               <div className="p-3 bg-green-500/10 rounded-sm">
@@ -608,7 +608,7 @@ export default function Vendors() {
         </Card>
       </div>
 
-      {/* Vendors Grid */}
+      {/* Exchangers Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
           <div className="col-span-full flex justify-center py-12">
@@ -618,14 +618,14 @@ export default function Vendors() {
           <div className="col-span-full text-center py-12">
             <Store className="w-12 h-12 text-slate-500 mx-auto mb-4" />
             <p className="text-slate-500">No vendors found</p>
-            {isAdmin && <p className="text-sm text-slate-500/60 mt-2">Click "Add Vendor" to create one</p>}
+            {isAdmin && <p className="text-sm text-slate-500/60 mt-2">Click "Add Exchanger" to create one</p>}
           </div>
         ) : (
           vendors.map((vendor) => (
             <Card 
               key={vendor.vendor_id} 
               className="bg-white border-slate-200 card-hover cursor-pointer"
-              onClick={() => openVendorView(vendor)}
+              onClick={() => openExchangerView(vendor)}
             >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
@@ -646,7 +646,7 @@ export default function Vendors() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-white border-slate-200">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openVendorView(vendor); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openExchangerView(vendor); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
                           <Eye className="w-4 h-4 mr-2" /> View Details
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(vendor); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
@@ -718,35 +718,35 @@ export default function Vendors() {
         )}
       </div>
 
-      {/* View Vendor Details Dialog */}
-      <Dialog open={!!viewVendor} onOpenChange={() => { setViewVendor(null); setPendingTransactions([]); setSettlements([]); }}>
+      {/* View Exchanger Details Dialog */}
+      <Dialog open={!!viewExchanger} onOpenChange={() => { setViewExchanger(null); setPendingTransactions([]); setSettlements([]); }}>
         <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-4xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-3" style={{ fontFamily: 'Barlow Condensed' }}>
               <Store className="w-6 h-6 text-blue-600" />
-              {viewVendor?.vendor_name}
+              {viewExchanger?.vendor_name}
             </DialogTitle>
           </DialogHeader>
-          {viewVendor && (
+          {viewExchanger && (
             <div className="space-y-4">
-              {/* Vendor Info */}
+              {/* Exchanger Info */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-sm">
                 <div>
                   <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money In Commission</p>
-                  <p className="text-xl font-mono text-slate-800">{viewVendor.deposit_commission}%</p>
+                  <p className="text-xl font-mono text-slate-800">{viewExchanger.deposit_commission}%</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money Out Commission</p>
-                  <p className="text-xl font-mono text-slate-800">{viewVendor.withdrawal_commission}%</p>
+                  <p className="text-xl font-mono text-slate-800">{viewExchanger.withdrawal_commission}%</p>
                 </div>
               </div>
               
               {/* Settlement Balance by Currency */}
               <div className="p-4 bg-slate-50 rounded-sm border-l-4 border-l-[#66FCF1]">
                 <p className="text-xs text-blue-600 uppercase tracking-wider mb-3">Settlement Balance by Currency (Deposits - Withdrawals - Commission)</p>
-                {viewVendor.settlement_by_currency && viewVendor.settlement_by_currency.length > 0 ? (
+                {viewExchanger.settlement_by_currency && viewExchanger.settlement_by_currency.length > 0 ? (
                   <div className="space-y-3">
-                    {viewVendor.settlement_by_currency.map((item, idx) => (
+                    {viewExchanger.settlement_by_currency.map((item, idx) => (
                       <div key={idx} className="space-y-1">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -789,13 +789,13 @@ export default function Vendors() {
                       <div className="flex justify-between mb-1">
                         <span className="text-slate-500 text-sm">Total Commission Earned:</span>
                         <span className="text-sm font-bold font-mono text-yellow-400">
-                          ${viewVendor.settlement_by_currency.reduce((sum, item) => sum + (item.commission_earned_usd || 0), 0).toLocaleString()}
+                          ${viewExchanger.settlement_by_currency.reduce((sum, item) => sum + (item.commission_earned_usd || 0), 0).toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-500 text-sm">Net Settlement (USD):</span>
-                        <span className={`text-lg font-bold font-mono ${viewVendor.settlement_by_currency.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0) >= 0 ? 'text-slate-800' : 'text-red-400'}`}>
-                          ${viewVendor.settlement_by_currency.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString()}
+                        <span className={`text-lg font-bold font-mono ${viewExchanger.settlement_by_currency.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0) >= 0 ? 'text-slate-800' : 'text-red-400'}`}>
+                          ${viewExchanger.settlement_by_currency.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString()}
                         </span>
                       </div>
                     </div>
@@ -813,7 +813,7 @@ export default function Vendors() {
                   data-testid="settle-vendor-btn"
                 >
                   <Wallet className="w-4 h-4 mr-2" />
-                  Settle Vendor Balance (${viewVendor?.settlement_by_currency?.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString() || '0'})
+                  Settle Exchanger Balance (${viewExchanger?.settlement_by_currency?.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString() || '0'})
                 </Button>
               )}
 
@@ -982,7 +982,7 @@ export default function Vendors() {
         </DialogContent>
       </Dialog>
 
-      {/* Settle Vendor Dialog */}
+      {/* Settle Exchanger Dialog */}
       <Dialog open={settleDialogOpen} onOpenChange={() => { 
         setSettleDialogOpen(false); 
         setSettlementType('bank'); 
@@ -995,15 +995,15 @@ export default function Vendors() {
         <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
-              Settle Vendor Balance
+              Settle Exchanger Balance
             </DialogTitle>
           </DialogHeader>
-          {viewVendor && (
+          {viewExchanger && (
             <div className="space-y-4">
               <div className="p-4 bg-slate-50 rounded-sm space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Vendor</span>
-                  <span className="text-slate-800">{viewVendor.vendor_name}</span>
+                  <span className="text-slate-500">Exchanger</span>
+                  <span className="text-slate-800">{viewExchanger.vendor_name}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Transactions to Settle</span>
@@ -1011,7 +1011,7 @@ export default function Vendors() {
                 </div>
                 
                 {/* Show breakdown by currency */}
-                {viewVendor?.settlement_by_currency?.map((item, idx) => (
+                {viewExchanger?.settlement_by_currency?.map((item, idx) => (
                   <div key={idx} className="border-t border-slate-200 pt-2 space-y-1">
                     <div className="flex justify-between items-center">
                       <Badge className={`text-xs ${
@@ -1043,7 +1043,7 @@ export default function Vendors() {
                 
                 <div className="flex justify-between border-t border-slate-200 pt-2">
                   <span className="text-blue-600 font-semibold">Total Net (USD)</span>
-                  <span className="text-blue-600 font-mono font-bold">${viewVendor?.settlement_by_currency?.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString() || '0'}</span>
+                  <span className="text-blue-600 font-mono font-bold">${viewExchanger?.settlement_by_currency?.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString() || '0'}</span>
                 </div>
               </div>
               
@@ -1128,7 +1128,7 @@ export default function Vendors() {
                 const destCurrency = destAccount?.currency || 'USD';
                 
                 // Get base currency info (transaction currency)
-                const baseCurrencyData = viewVendor?.settlement_by_currency?.[0];
+                const baseCurrencyData = viewExchanger?.settlement_by_currency?.[0];
                 const baseCurrency = baseCurrencyData?.currency || 'USD';
                 const netSettlementBase = baseCurrencyData?.amount || 0;
                 
@@ -1217,7 +1217,7 @@ export default function Vendors() {
                   Cancel
                 </Button>
                 <Button
-                  onClick={handleSettleVendor}
+                  onClick={handleSettleExchanger}
                   className="bg-green-500 text-slate-800 hover:bg-green-600 font-bold uppercase tracking-wider"
                   data-testid="confirm-settle-vendor-btn"
                 >
@@ -1275,7 +1275,7 @@ export default function Vendors() {
                     {/* Info Row */}
                     <div style={{ display: 'flex', gap: '40px', marginBottom: '20px' }}>
                       <div style={{ flex: 1 }}>
-                        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', marginBottom: '6px' }}>Vendor</h4>
+                        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', marginBottom: '6px' }}>Exchanger</h4>
                         <p style={{ fontSize: '13px', fontWeight: 600 }}>{v.vendor_name || s.vendor_name}</p>
                         {v.contact_person && <p style={{ fontSize: '12px', color: '#555' }}>{v.contact_person}</p>}
                         {v.email && <p style={{ fontSize: '12px', color: '#555' }}>{v.email}</p>}

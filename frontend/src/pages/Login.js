@@ -22,7 +22,7 @@ export default function Login() {
       toast.success('Login successful');
       // Redirect based on role
       if (userData?.role === 'vendor') {
-        navigate('/vendor-portal');
+        navigate('/exchanger-portal');
       } else {
         navigate('/dashboard');
       }

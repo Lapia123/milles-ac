@@ -191,7 +191,7 @@ export default function Clients() {
       });
       if (response.ok) {
         const transactions = await response.json();
-        const headers = ['Transaction ID', 'Reference', 'Client', 'Type', 'Amount (USD)', 'Base Amount', 'Base Currency', 'Status', 'Vendor', 'Created At'];
+        const headers = ['Transaction ID', 'Reference', 'Client', 'Type', 'Amount (USD)', 'Base Amount', 'Base Currency', 'Status', 'Exchanger', 'Created At'];
         const rows = transactions.map(tx => [
           tx.transaction_id,
           tx.reference,
