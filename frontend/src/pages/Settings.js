@@ -432,7 +432,7 @@ export default function Settings() {
   const getRoleBadge = (role) => {
     const isAdmin = role === 'admin';
     return (
-      <Badge className={`${isAdmin ? 'bg-[#66FCF1]/20 text-[#66FCF1] border border-[#66FCF1]/30' : 'bg-white/10 text-[#C5C6C7] border border-white/10'} text-xs uppercase`}>
+      <Badge className={`${isAdmin ? 'bg-[#66FCF1]/20 text-[#66FCF1] border border-[#66FCF1]/30' : 'bg-white/10 text-[#C5C6C7] border border-slate-200'} text-xs uppercase`}>
         {role === 'admin' ? 'Admin' : 'Sub-Admin'}
       </Badge>
     );
@@ -451,7 +451,7 @@ export default function Settings() {
       </div>
 
       {/* Current User Info */}
-      <Card className="bg-[#1F2833] border-white/5">
+      <Card className="bg-white border-slate-200">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
             <UserCog className="w-5 h-5 text-[#66FCF1]" />
@@ -481,7 +481,7 @@ export default function Settings() {
       {/* Admin-Only Settings with Tabs */}
       {isCurrentUserAdmin ? (
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="bg-[#0B0C10] border border-white/10 mb-4">
+          <TabsList className="bg-slate-50 border border-slate-200 mb-4">
             <TabsTrigger value="users" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
               <Users className="w-4 h-4 mr-2" />
               Users
@@ -498,7 +498,7 @@ export default function Settings() {
           
           {/* Users Tab */}
           <TabsContent value="users">
-            <Card className="bg-[#1F2833] border-white/5">
+            <Card className="bg-white border-slate-200">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
@@ -515,7 +515,7 @@ export default function Settings() {
                         Add User
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg">
+                    <DialogContent className="bg-white border-slate-200 text-white max-w-lg">
                       <DialogHeader>
                         <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
                           {selectedUser ? 'Edit User' : 'Add New User'}
@@ -527,7 +527,7 @@ export default function Settings() {
                           <Input
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                            className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1]"
                             data-testid="user-name-input"
                             required
                           />
@@ -540,7 +540,7 @@ export default function Settings() {
                                 type="email"
                                 value={formData.email}
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                                className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1] font-mono"
                                 data-testid="user-email-input"
                                 required
                               />
@@ -551,7 +551,7 @@ export default function Settings() {
                                 type="password"
                                 value={formData.password}
                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                                className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1]"
                                 data-testid="user-password-input"
                                 required
                               />
@@ -564,10 +564,10 @@ export default function Settings() {
                             value={formData.role}
                             onValueChange={(value) => setFormData({ ...formData, role: value })}
                           >
-                            <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="user-role-select">
+                            <SelectTrigger className="bg-slate-50 border-slate-200 text-white" data-testid="user-role-select">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-[#1F2833] border-white/10">
+                            <SelectContent className="bg-white border-slate-200">
                               {roleOptions.map((role) => (
                                 <SelectItem key={role.value} value={role.value} className="text-white hover:bg-white/5">
                                   {role.label}
@@ -577,7 +577,7 @@ export default function Settings() {
                           </Select>
                         </div>
                         {selectedUser && (
-                          <div className="flex items-center justify-between p-3 bg-[#0B0C10] rounded-sm border border-white/5">
+                          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-sm border border-slate-200">
                             <Label className="text-[#C5C6C7]">Active</Label>
                             <Switch
                               checked={formData.is_active}
@@ -591,7 +591,7 @@ export default function Settings() {
                             type="button"
                             variant="outline"
                             onClick={() => { setIsDialogOpen(false); resetForm(); }}
-                            className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                            className="border-slate-200 text-[#C5C6C7] hover:bg-white/5"
                           >
                             Cancel
                           </Button>
@@ -612,7 +612,7 @@ export default function Settings() {
                 <ScrollArea className="h-[400px]">
                   <Table>
                     <TableHeader>
-                      <TableRow className="border-white/10 hover:bg-transparent">
+                      <TableRow className="border-slate-200 hover:bg-transparent">
                         <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">User</TableHead>
                         <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Email</TableHead>
                         <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Role</TableHead>
@@ -635,7 +635,7 @@ export default function Settings() {
                         </TableRow>
                       ) : (
                         users.map((userItem) => (
-                          <TableRow key={userItem.user_id} className="border-white/5 hover:bg-white/5">
+                          <TableRow key={userItem.user_id} className="border-slate-200 hover:bg-white/5">
                             <TableCell>
                               <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-[#66FCF1]/10 rounded-full flex items-center justify-center">
@@ -665,7 +665,7 @@ export default function Settings() {
                                     <MoreVertical className="w-4 h-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-[#1F2833] border-white/10">
+                                <DropdownMenuContent align="end" className="bg-white border-slate-200">
                                   <DropdownMenuItem onClick={() => handleEdit(userItem)} className="text-white hover:bg-white/5 cursor-pointer">
                                     <Edit className="w-4 h-4 mr-2" /> Edit
                                   </DropdownMenuItem>
@@ -691,7 +691,7 @@ export default function Settings() {
           <TabsContent value="email">
             <div className="grid gap-6 md:grid-cols-2">
               {/* SMTP Settings Card */}
-              <Card className="bg-[#1F2833] border-white/5">
+              <Card className="bg-white border-slate-200">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
                     <Mail className="w-5 h-5 text-[#66FCF1]" />
@@ -706,7 +706,7 @@ export default function Settings() {
                         type="text"
                         value={emailSettings.smtp_host}
                         onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp_host: e.target.value }))}
-                        className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono text-sm"
+                        className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1] font-mono text-sm"
                         placeholder="smtp.gmail.com"
                         data-testid="smtp-host"
                       />
@@ -717,7 +717,7 @@ export default function Settings() {
                         type="number"
                         value={emailSettings.smtp_port}
                         onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp_port: e.target.value }))}
-                        className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono text-sm"
+                        className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1] font-mono text-sm"
                         placeholder="587"
                         data-testid="smtp-port"
                       />
@@ -729,7 +729,7 @@ export default function Settings() {
                       type="email"
                       value={emailSettings.smtp_email}
                       onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp_email: e.target.value }))}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1] font-mono"
                       placeholder="no-reply@milescapitals.com"
                       data-testid="smtp-email"
                     />
@@ -742,7 +742,7 @@ export default function Settings() {
                       type="password"
                       value={emailSettings.smtp_password}
                       onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp_password: e.target.value }))}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1] font-mono"
                       placeholder={emailSettings.smtp_password_set ? "••••••••••••••••" : "Enter SMTP password"}
                       data-testid="smtp-password"
                     />
@@ -753,7 +753,7 @@ export default function Settings() {
                       type="email"
                       value={emailSettings.smtp_from_email}
                       onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp_from_email: e.target.value }))}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1] font-mono"
                       placeholder="no-reply@milescapitals.com"
                       data-testid="smtp-from-email"
                     />
@@ -776,7 +776,7 @@ export default function Settings() {
               </Card>
               
               {/* Director Emails Card */}
-              <Card className="bg-[#1F2833] border-white/5">
+              <Card className="bg-white border-slate-200">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
                     <Users className="w-5 h-5 text-[#66FCF1]" />
@@ -789,7 +789,7 @@ export default function Settings() {
                       type="email"
                       value={newDirectorEmail}
                       onChange={(e) => setNewDirectorEmail(e.target.value)}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1] font-mono"
                       placeholder="director@company.com"
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addDirectorEmail())}
                       data-testid="director-email-input"
@@ -807,7 +807,7 @@ export default function Settings() {
                       <p className="text-[#C5C6C7] text-sm text-center py-4">No directors added yet</p>
                     ) : (
                       emailSettings.director_emails.map((email, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-[#0B0C10] rounded-sm border border-white/5">
+                        <div key={index} className="flex items-center justify-between p-2 bg-slate-50 rounded-sm border border-slate-200">
                           <span className="text-white font-mono text-sm">{email}</span>
                           <Button
                             variant="ghost"
@@ -825,7 +825,7 @@ export default function Settings() {
               </Card>
               
               {/* Schedule Settings Card */}
-              <Card className="bg-[#1F2833] border-white/5">
+              <Card className="bg-white border-slate-200">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
                     <Clock className="w-5 h-5 text-[#66FCF1]" />
@@ -833,7 +833,7 @@ export default function Settings() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-[#0B0C10] rounded-sm border border-white/5">
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-sm border border-slate-200">
                     <div>
                       <Label className="text-white">Enable Daily Reports</Label>
                       <p className="text-xs text-[#C5C6C7]">Auto-send reports to directors</p>
@@ -850,7 +850,7 @@ export default function Settings() {
                       type="time"
                       value={emailSettings.report_time}
                       onChange={(e) => setEmailSettings(prev => ({ ...prev, report_time: e.target.value }))}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                      className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1]"
                       data-testid="report-time"
                     />
                     <p className="text-xs text-[#C5C6C7]">Currently set to: {emailSettings.report_time} UTC</p>
@@ -888,7 +888,7 @@ export default function Settings() {
               </Card>
               
               {/* Email Logs Card */}
-              <Card className="bg-[#1F2833] border-white/5">
+              <Card className="bg-white border-slate-200">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
                     <FileText className="w-5 h-5 text-[#66FCF1]" />
@@ -902,7 +902,7 @@ export default function Settings() {
                     ) : (
                       <div className="space-y-2">
                         {emailLogs.map((log, index) => (
-                          <div key={index} className="p-3 bg-[#0B0C10] rounded-sm border border-white/5">
+                          <div key={index} className="p-3 bg-slate-50 rounded-sm border border-slate-200">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-xs text-[#C5C6C7] uppercase">{log.type}</span>
                               {log.status === 'sent' ? (
@@ -934,7 +934,7 @@ export default function Settings() {
           <TabsContent value="commission">
             <div className="grid gap-6 md:grid-cols-2">
               {/* Commission Settings Card */}
-              <Card className="bg-[#1F2833] border-white/5">
+              <Card className="bg-white border-slate-200">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
                     <Percent className="w-5 h-5 text-[#66FCF1]" />
@@ -942,7 +942,7 @@ export default function Settings() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-[#0B0C10] rounded-sm border border-white/5">
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-sm border border-slate-200">
                     <div>
                       <Label className="text-white">Enable Commission</Label>
                       <p className="text-xs text-[#C5C6C7]">Apply broker commission on deposits & withdrawals</p>
@@ -962,7 +962,7 @@ export default function Settings() {
                       max="100"
                       value={commissionSettings.deposit_commission_rate}
                       onChange={(e) => setCommissionSettings(prev => ({ ...prev, deposit_commission_rate: parseFloat(e.target.value) || 0 }))}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1] font-mono"
                       placeholder="0.00"
                       data-testid="deposit-commission-rate"
                     />
@@ -977,7 +977,7 @@ export default function Settings() {
                       max="100"
                       value={commissionSettings.withdrawal_commission_rate}
                       onChange={(e) => setCommissionSettings(prev => ({ ...prev, withdrawal_commission_rate: parseFloat(e.target.value) || 0 }))}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1] font-mono"
                       placeholder="0.00"
                       data-testid="withdrawal-commission-rate"
                     />
@@ -1000,7 +1000,7 @@ export default function Settings() {
               </Card>
 
               {/* Live FX Rates Card */}
-              <Card className="bg-[#1F2833] border-white/5">
+              <Card className="bg-white border-slate-200">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
@@ -1042,7 +1042,7 @@ export default function Settings() {
                         {Object.entries(fxRates.rates)
                           .sort(([a], [b]) => a.localeCompare(b))
                           .map(([code, rate]) => (
-                          <div key={code} className="flex items-center justify-between p-2 bg-[#0B0C10] rounded-sm border border-white/5" data-testid={`fx-rate-${code}`}>
+                          <div key={code} className="flex items-center justify-between p-2 bg-slate-50 rounded-sm border border-slate-200" data-testid={`fx-rate-${code}`}>
                             <span className="text-white font-mono text-sm font-medium">{code}</span>
                             <span className="text-[#66FCF1] font-mono text-sm">${rate?.toFixed(4)}</span>
                           </div>
@@ -1058,7 +1058,7 @@ export default function Settings() {
           </TabsContent>
         </Tabs>
       ) : (
-        <Card className="bg-[#1F2833] border-white/5">
+        <Card className="bg-white border-slate-200">
           <CardContent className="p-8 text-center">
             <Shield className="w-12 h-12 text-[#C5C6C7] mx-auto mb-4" />
             <p className="text-[#C5C6C7]">Admin access required to manage settings</p>

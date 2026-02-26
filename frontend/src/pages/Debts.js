@@ -263,7 +263,7 @@ export default function Debts() {
   );
 
   const StatCard = ({ title, value, subtitle, icon: Icon, color = 'blue' }) => (
-    <Card className="bg-[#1E293B] border-white/5">
+    <Card className="bg-[#1E293B] border-slate-200">
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div>
@@ -320,7 +320,7 @@ export default function Debts() {
               Add {activeTab === 'receivables' ? 'Receivable' : 'Payable'}
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-[#1E293B] border-white/10 text-white max-w-lg">
+          <DialogContent className="bg-[#1E293B] border-slate-200 text-white max-w-lg">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
                 {debtForm.debt_type === 'receivable' ? 'Add Receivable (Debtor)' : 'Add Payable (Creditor)'}
@@ -333,10 +333,10 @@ export default function Debts() {
                   value={debtForm.party_type}
                   onValueChange={(value) => setDebtForm({ ...debtForm, party_type: value, party_id: '', party_name: '' })}
                 >
-                  <SelectTrigger className="bg-[#0F172A] border-white/10 text-white">
+                  <SelectTrigger className="bg-[#0F172A] border-slate-200 text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1E293B] border-white/10">
+                  <SelectContent className="bg-[#1E293B] border-slate-200">
                     <SelectItem value="other" className="text-white hover:bg-white/5">Other Party</SelectItem>
                     <SelectItem value="client" className="text-white hover:bg-white/5">Client</SelectItem>
                     <SelectItem value="vendor" className="text-white hover:bg-white/5">Vendor</SelectItem>
@@ -358,10 +358,10 @@ export default function Debts() {
                       });
                     }}
                   >
-                    <SelectTrigger className="bg-[#0F172A] border-white/10 text-white">
+                    <SelectTrigger className="bg-[#0F172A] border-slate-200 text-white">
                       <SelectValue placeholder="Select client" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1E293B] border-white/10">
+                    <SelectContent className="bg-[#1E293B] border-slate-200">
                       {clients.map((client) => (
                         <SelectItem key={client.client_id} value={client.client_id} className="text-white hover:bg-white/5">
                           {client.first_name} {client.last_name}
@@ -386,10 +386,10 @@ export default function Debts() {
                       });
                     }}
                   >
-                    <SelectTrigger className="bg-[#0F172A] border-white/10 text-white">
+                    <SelectTrigger className="bg-[#0F172A] border-slate-200 text-white">
                       <SelectValue placeholder="Select vendor" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1E293B] border-white/10">
+                    <SelectContent className="bg-[#1E293B] border-slate-200">
                       {vendors.map((vendor) => (
                         <SelectItem key={vendor.vendor_id} value={vendor.vendor_id} className="text-white hover:bg-white/5">
                           {vendor.vendor_name}
@@ -406,7 +406,7 @@ export default function Debts() {
                   <Input
                     value={debtForm.party_name}
                     onChange={(e) => setDebtForm({ ...debtForm, party_name: e.target.value })}
-                    className="bg-[#0F172A] border-white/10 text-white"
+                    className="bg-[#0F172A] border-slate-200 text-white"
                     placeholder="Enter party name"
                     required
                   />
@@ -421,17 +421,17 @@ export default function Debts() {
                     step="0.01"
                     value={debtForm.amount}
                     onChange={(e) => setDebtForm({ ...debtForm, amount: e.target.value })}
-                    className="bg-[#0F172A] border-white/10 text-white font-mono"
+                    className="bg-[#0F172A] border-slate-200 text-white font-mono"
                     required
                   />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[#94A3B8] text-xs uppercase tracking-wider">Currency</Label>
                   <Select value={debtForm.currency} onValueChange={(value) => setDebtForm({ ...debtForm, currency: value })}>
-                    <SelectTrigger className="bg-[#0F172A] border-white/10 text-white">
+                    <SelectTrigger className="bg-[#0F172A] border-slate-200 text-white">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1E293B] border-white/10">
+                    <SelectContent className="bg-[#1E293B] border-slate-200">
                       {CURRENCIES.map((curr) => (
                         <SelectItem key={curr} value={curr} className="text-white hover:bg-white/5">{curr}</SelectItem>
                       ))}
@@ -447,7 +447,7 @@ export default function Debts() {
                     type="date"
                     value={debtForm.due_date}
                     onChange={(e) => setDebtForm({ ...debtForm, due_date: e.target.value })}
-                    className="bg-[#0F172A] border-white/10 text-white"
+                    className="bg-[#0F172A] border-slate-200 text-white"
                     required
                   />
                 </div>
@@ -458,7 +458,7 @@ export default function Debts() {
                     step="0.1"
                     value={debtForm.interest_rate}
                     onChange={(e) => setDebtForm({ ...debtForm, interest_rate: e.target.value })}
-                    className="bg-[#0F172A] border-white/10 text-white font-mono"
+                    className="bg-[#0F172A] border-slate-200 text-white font-mono"
                     placeholder="e.g., 12 for 12%"
                   />
                 </div>
@@ -469,7 +469,7 @@ export default function Debts() {
                 <Input
                   value={debtForm.reference}
                   onChange={(e) => setDebtForm({ ...debtForm, reference: e.target.value })}
-                  className="bg-[#0F172A] border-white/10 text-white font-mono"
+                  className="bg-[#0F172A] border-slate-200 text-white font-mono"
                   placeholder="Invoice #, Contract #, etc."
                 />
               </div>
@@ -479,13 +479,13 @@ export default function Debts() {
                 <Textarea
                   value={debtForm.description}
                   onChange={(e) => setDebtForm({ ...debtForm, description: e.target.value })}
-                  className="bg-[#0F172A] border-white/10 text-white"
+                  className="bg-[#0F172A] border-slate-200 text-white"
                   rows={2}
                 />
               </div>
 
               <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsDebtDialogOpen(false)} className="border-white/10 text-[#94A3B8]">
+                <Button type="button" variant="outline" onClick={() => setIsDebtDialogOpen(false)} className="border-slate-200 text-[#94A3B8]">
                   Cancel
                 </Button>
                 <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase">
@@ -501,7 +501,7 @@ export default function Debts() {
       {summary && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Main Summary Card */}
-          <Card className="bg-[#1E293B] border-white/5 lg:col-span-2">
+          <Card className="bg-[#1E293B] border-slate-200 lg:col-span-2">
             <CardContent className="p-4">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="text-center p-3 bg-[#0F172A] rounded-lg">
@@ -534,7 +534,7 @@ export default function Debts() {
 
           {/* Aging Summary - Compact */}
           {summary?.aging && (
-            <Card className="bg-[#1E293B] border-white/5">
+            <Card className="bg-[#1E293B] border-slate-200">
               <CardContent className="p-4">
                 <p className="text-xs text-[#94A3B8] uppercase mb-3 flex items-center gap-2">
                   <Clock className="w-4 h-4 text-amber-400" />
@@ -570,7 +570,7 @@ export default function Debts() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="bg-[#1E293B] border border-white/5">
+        <TabsList className="bg-[#1E293B] border border-slate-200">
           <TabsTrigger value="receivables" className="data-[state=active]:bg-emerald-600/20 data-[state=active]:text-emerald-400">
             <ArrowDownLeft className="w-4 h-4 mr-2" />
             Receivables (Debtors)
@@ -582,12 +582,12 @@ export default function Debts() {
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-4">
-          <Card className="bg-[#1E293B] border-white/5">
+          <Card className="bg-[#1E293B] border-slate-200">
             <CardContent className="p-0">
               <ScrollArea className="h-[500px]">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-white/10 hover:bg-transparent">
+                    <TableRow className="border-slate-200 hover:bg-transparent">
                       <TableHead className="text-[#94A3B8] font-bold uppercase tracking-wider text-xs">Party</TableHead>
                       <TableHead className="text-[#94A3B8] font-bold uppercase tracking-wider text-xs">Amount</TableHead>
                       <TableHead className="text-[#94A3B8] font-bold uppercase tracking-wider text-xs">Paid</TableHead>
@@ -607,7 +607,7 @@ export default function Debts() {
                       </TableRow>
                     ) : (
                       filteredDebts.map((debt) => (
-                        <TableRow key={debt.debt_id} className="border-white/5 hover:bg-white/5">
+                        <TableRow key={debt.debt_id} className="border-slate-200 hover:bg-white/5">
                           <TableCell>
                             <div>
                               <p className="text-white font-medium">{debt.party_name}</p>
@@ -657,7 +657,7 @@ export default function Debts() {
                                   <MoreVertical className="w-4 h-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="bg-[#1E293B] border-white/10">
+                              <DropdownMenuContent align="end" className="bg-[#1E293B] border-slate-200">
                                 <DropdownMenuItem onClick={() => fetchDebtDetails(debt.debt_id)} className="text-white hover:bg-white/5 cursor-pointer">
                                   <Eye className="w-4 h-4 mr-2" /> View Details
                                 </DropdownMenuItem>
@@ -682,7 +682,7 @@ export default function Debts() {
 
       {/* Payment Dialog */}
       <Dialog open={isPaymentDialogOpen} onOpenChange={(open) => { setIsPaymentDialogOpen(open); if (!open) { resetPaymentForm(); setSelectedDebt(null); } }}>
-        <DialogContent className="bg-[#1E293B] border-white/10 text-white max-w-md">
+        <DialogContent className="bg-[#1E293B] border-slate-200 text-white max-w-md">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
               Record Payment
@@ -706,17 +706,17 @@ export default function Debts() {
                     step="0.01"
                     value={paymentForm.amount}
                     onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
-                    className="bg-[#0F172A] border-white/10 text-white font-mono"
+                    className="bg-[#0F172A] border-slate-200 text-white font-mono"
                     required
                   />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[#94A3B8] text-xs uppercase tracking-wider">Currency</Label>
                   <Select value={paymentForm.currency} onValueChange={(value) => setPaymentForm({ ...paymentForm, currency: value })}>
-                    <SelectTrigger className="bg-[#0F172A] border-white/10 text-white">
+                    <SelectTrigger className="bg-[#0F172A] border-slate-200 text-white">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1E293B] border-white/10">
+                    <SelectContent className="bg-[#1E293B] border-slate-200">
                       {CURRENCIES.map((curr) => (
                         <SelectItem key={curr} value={curr} className="text-white hover:bg-white/5">{curr}</SelectItem>
                       ))}
@@ -731,7 +731,7 @@ export default function Debts() {
                   type="date"
                   value={paymentForm.payment_date}
                   onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })}
-                  className="bg-[#0F172A] border-white/10 text-white"
+                  className="bg-[#0F172A] border-slate-200 text-white"
                   required
                 />
               </div>
@@ -743,10 +743,10 @@ export default function Debts() {
                   onValueChange={(value) => setPaymentForm({ ...paymentForm, treasury_account_id: value })}
                   required
                 >
-                  <SelectTrigger className="bg-[#0F172A] border-white/10 text-white">
+                  <SelectTrigger className="bg-[#0F172A] border-slate-200 text-white">
                     <SelectValue placeholder="Select account" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1E293B] border-white/10">
+                  <SelectContent className="bg-[#1E293B] border-slate-200">
                     {treasuryAccounts.map((acc) => (
                       <SelectItem key={acc.account_id} value={acc.account_id} className="text-white hover:bg-white/5">
                         {acc.account_name} ({acc.currency})
@@ -761,7 +761,7 @@ export default function Debts() {
                 <Input
                   value={paymentForm.reference}
                   onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
-                  className="bg-[#0F172A] border-white/10 text-white font-mono"
+                  className="bg-[#0F172A] border-slate-200 text-white font-mono"
                   placeholder="Payment reference"
                 />
               </div>
@@ -771,13 +771,13 @@ export default function Debts() {
                 <Textarea
                   value={paymentForm.notes}
                   onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
-                  className="bg-[#0F172A] border-white/10 text-white"
+                  className="bg-[#0F172A] border-slate-200 text-white"
                   rows={2}
                 />
               </div>
 
               <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsPaymentDialogOpen(false)} className="border-white/10 text-[#94A3B8]">
+                <Button type="button" variant="outline" onClick={() => setIsPaymentDialogOpen(false)} className="border-slate-200 text-[#94A3B8]">
                   Cancel
                 </Button>
                 <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold uppercase">
@@ -791,7 +791,7 @@ export default function Debts() {
 
       {/* View Debt Details Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={(open) => { setIsViewDialogOpen(open); if (!open) setDebtDetails(null); }}>
-        <DialogContent className="bg-[#1E293B] border-white/10 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-[#1E293B] border-slate-200 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
               Debt Details

@@ -301,7 +301,7 @@ export default function Reconciliation() {
         <Button
           onClick={() => { fetchSummary(); fetchBankBatches(); fetchPspRecon(); fetchClientRecon(); fetchVendorRecon(); }}
           variant="outline"
-          className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+          className="border-slate-200 text-[#C5C6C7] hover:bg-white/5"
         >
           <RefreshCw className="w-4 h-4 mr-2" />
           Refresh
@@ -311,7 +311,7 @@ export default function Reconciliation() {
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className={`bg-[#1F2833] border-white/5 ${summary.bank.status === 'attention' ? 'border-l-4 border-l-yellow-500' : ''}`}>
+          <Card className={`bg-white border-slate-200 ${summary.bank.status === 'attention' ? 'border-l-4 border-l-yellow-500' : ''}`}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -329,7 +329,7 @@ export default function Reconciliation() {
             </CardContent>
           </Card>
 
-          <Card className={`bg-[#1F2833] border-white/5 ${summary.psp.status === 'attention' ? 'border-l-4 border-l-yellow-500' : ''}`}>
+          <Card className={`bg-white border-slate-200 ${summary.psp.status === 'attention' ? 'border-l-4 border-l-yellow-500' : ''}`}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -347,7 +347,7 @@ export default function Reconciliation() {
             </CardContent>
           </Card>
 
-          <Card className={`bg-[#1F2833] border-white/5 ${summary.clients.status === 'attention' ? 'border-l-4 border-l-yellow-500' : ''}`}>
+          <Card className={`bg-white border-slate-200 ${summary.clients.status === 'attention' ? 'border-l-4 border-l-yellow-500' : ''}`}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -365,7 +365,7 @@ export default function Reconciliation() {
             </CardContent>
           </Card>
 
-          <Card className={`bg-[#1F2833] border-white/5 ${summary.vendors.status === 'attention' ? 'border-l-4 border-l-yellow-500' : ''}`}>
+          <Card className={`bg-white border-slate-200 ${summary.vendors.status === 'attention' ? 'border-l-4 border-l-yellow-500' : ''}`}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -387,7 +387,7 @@ export default function Reconciliation() {
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-[#0B0C10] border border-white/10">
+        <TabsList className="bg-slate-50 border border-slate-200">
           <TabsTrigger value="summary" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
             Summary
           </TabsTrigger>
@@ -409,7 +409,7 @@ export default function Reconciliation() {
         <TabsContent value="bank" className="mt-4">
           <div className="grid gap-4 md:grid-cols-2">
             {/* Upload Section */}
-            <Card className="bg-[#1F2833] border-white/5">
+            <Card className="bg-white border-slate-200">
               <CardHeader>
                 <CardTitle className="text-lg text-white flex items-center gap-2">
                   <Upload className="w-5 h-5 text-[#66FCF1]" />
@@ -420,10 +420,10 @@ export default function Reconciliation() {
                 <div className="space-y-2">
                   <Label className="text-[#C5C6C7] text-xs uppercase">Treasury Account</Label>
                   <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-                    <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white">
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-white">
                       <SelectValue placeholder="Select account..." />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1F2833] border-white/10">
+                    <SelectContent className="bg-white border-slate-200">
                       {treasuryAccounts.map((acc) => (
                         <SelectItem key={acc.account_id} value={acc.account_id} className="text-white hover:bg-white/5">
                           {acc.account_name} - {acc.bank_name} ({acc.currency})
@@ -439,7 +439,7 @@ export default function Reconciliation() {
                     accept=".csv,.xlsx,.xls"
                     onChange={handleFileUpload}
                     disabled={uploading || !selectedAccount}
-                    className="bg-[#0B0C10] border-white/10 text-white file:bg-[#66FCF1] file:text-[#0B0C10] file:border-0 file:rounded file:px-3 file:py-1 file:mr-3 file:font-bold"
+                    className="bg-slate-50 border-slate-200 text-white file:bg-[#66FCF1] file:text-[#0B0C10] file:border-0 file:rounded file:px-3 file:py-1 file:mr-3 file:font-bold"
                     data-testid="bank-statement-upload"
                   />
                 </div>
@@ -453,7 +453,7 @@ export default function Reconciliation() {
             </Card>
 
             {/* Recent Batches */}
-            <Card className="bg-[#1F2833] border-white/5">
+            <Card className="bg-white border-slate-200">
               <CardHeader>
                 <CardTitle className="text-lg text-white flex items-center gap-2">
                   <FileSpreadsheet className="w-5 h-5 text-[#66FCF1]" />
@@ -469,7 +469,7 @@ export default function Reconciliation() {
                       {bankBatches.map((batch) => (
                         <div
                           key={batch.batch_id}
-                          className="p-3 bg-[#0B0C10] rounded-lg border border-white/5 cursor-pointer hover:border-[#66FCF1]/30"
+                          className="p-3 bg-slate-50 rounded-lg border border-slate-200 cursor-pointer hover:border-[#66FCF1]/30"
                           onClick={() => { setSelectedBatch(batch); fetchBatchDetails(batch.batch_id); }}
                         >
                           <div className="flex items-center justify-between mb-1">
@@ -492,7 +492,7 @@ export default function Reconciliation() {
 
           {/* Batch Details Dialog */}
           <Dialog open={!!batchDetails} onOpenChange={() => setBatchDetails(null)}>
-            <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-4xl max-h-[80vh]">
+            <DialogContent className="bg-white border-slate-200 text-white max-w-4xl max-h-[80vh]">
               <DialogHeader>
                 <DialogTitle className="text-xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
                   Reconciliation Details - {batchDetails?.batch?.filename}
@@ -501,7 +501,7 @@ export default function Reconciliation() {
               <ScrollArea className="h-[500px]">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-white/10">
+                    <TableRow className="border-slate-200">
                       <TableHead className="text-[#C5C6C7] text-xs">Row</TableHead>
                       <TableHead className="text-[#C5C6C7] text-xs">Amount</TableHead>
                       <TableHead className="text-[#C5C6C7] text-xs">Date</TableHead>
@@ -512,7 +512,7 @@ export default function Reconciliation() {
                   </TableHeader>
                   <TableBody>
                     {batchDetails?.entries?.map((entry) => (
-                      <TableRow key={entry.entry_id} className="border-white/5 hover:bg-white/5">
+                      <TableRow key={entry.entry_id} className="border-slate-200 hover:bg-white/5">
                         <TableCell className="text-white">{entry.row_number}</TableCell>
                         <TableCell className="text-white font-mono">{formatCurrency(entry.parsed_amount)}</TableCell>
                         <TableCell className="text-[#C5C6C7]">{entry.parsed_date || '-'}</TableCell>
@@ -532,7 +532,7 @@ export default function Reconciliation() {
 
         {/* PSP Reconciliation Tab */}
         <TabsContent value="psp" className="mt-4">
-          <Card className="bg-[#1F2833] border-white/5">
+          <Card className="bg-white border-slate-200">
             <CardHeader>
               <CardTitle className="text-lg text-white flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-[#66FCF1]" />
@@ -542,7 +542,7 @@ export default function Reconciliation() {
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow className="border-white/10">
+                  <TableRow className="border-slate-200">
                     <TableHead className="text-[#C5C6C7] text-xs">PSP</TableHead>
                     <TableHead className="text-[#C5C6C7] text-xs">Transactions</TableHead>
                     <TableHead className="text-[#C5C6C7] text-xs">Expected</TableHead>
@@ -554,7 +554,7 @@ export default function Reconciliation() {
                 </TableHeader>
                 <TableBody>
                   {pspRecon.map((psp) => (
-                    <TableRow key={psp.psp_id} className="border-white/5 hover:bg-white/5">
+                    <TableRow key={psp.psp_id} className="border-slate-200 hover:bg-white/5">
                       <TableCell className="text-white font-medium">{psp.psp_name}</TableCell>
                       <TableCell className="text-white">{psp.total_transactions}</TableCell>
                       <TableCell className="text-white font-mono">{formatCurrency(psp.expected_amount)}</TableCell>
@@ -590,7 +590,7 @@ export default function Reconciliation() {
 
           {/* PSP Details Dialog */}
           <Dialog open={!!selectedPsp && pspDetails.length > 0} onOpenChange={() => { setSelectedPsp(null); setPspDetails([]); }}>
-            <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-4xl max-h-[80vh]">
+            <DialogContent className="bg-white border-slate-200 text-white max-w-4xl max-h-[80vh]">
               <DialogHeader>
                 <DialogTitle className="text-xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
                   {selectedPsp?.psp_name} - Settlement Details
@@ -599,7 +599,7 @@ export default function Reconciliation() {
               <ScrollArea className="h-[500px]">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-white/10">
+                    <TableRow className="border-slate-200">
                       <TableHead className="text-[#C5C6C7] text-xs">Reference</TableHead>
                       <TableHead className="text-[#C5C6C7] text-xs">Gross</TableHead>
                       <TableHead className="text-[#C5C6C7] text-xs">Deductions</TableHead>
@@ -611,7 +611,7 @@ export default function Reconciliation() {
                   </TableHeader>
                   <TableBody>
                     {pspDetails.map((tx) => (
-                      <TableRow key={tx.transaction_id} className="border-white/5 hover:bg-white/5">
+                      <TableRow key={tx.transaction_id} className="border-slate-200 hover:bg-white/5">
                         <TableCell className="text-white font-mono text-xs">{tx.reference}</TableCell>
                         <TableCell className="text-white font-mono">{formatCurrency(tx.gross_amount)}</TableCell>
                         <TableCell className="text-red-400 font-mono text-xs">
@@ -634,7 +634,7 @@ export default function Reconciliation() {
 
         {/* Client Reconciliation Tab */}
         <TabsContent value="clients" className="mt-4">
-          <Card className="bg-[#1F2833] border-white/5">
+          <Card className="bg-white border-slate-200">
             <CardHeader>
               <CardTitle className="text-lg text-white flex items-center gap-2">
                 <Users className="w-5 h-5 text-[#66FCF1]" />
@@ -644,7 +644,7 @@ export default function Reconciliation() {
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow className="border-white/10">
+                  <TableRow className="border-slate-200">
                     <TableHead className="text-[#C5C6C7] text-xs">Client</TableHead>
                     <TableHead className="text-[#C5C6C7] text-xs">Transactions</TableHead>
                     <TableHead className="text-[#C5C6C7] text-xs">Recorded Balance</TableHead>
@@ -656,7 +656,7 @@ export default function Reconciliation() {
                 </TableHeader>
                 <TableBody>
                   {clientRecon.map((client) => (
-                    <TableRow key={client.client_id} className="border-white/5 hover:bg-white/5">
+                    <TableRow key={client.client_id} className="border-slate-200 hover:bg-white/5">
                       <TableCell className="text-white font-medium">{client.client_name}</TableCell>
                       <TableCell className="text-white">{client.transaction_count}</TableCell>
                       <TableCell className="text-white font-mono">{formatCurrency(client.recorded_balance)}</TableCell>
@@ -684,7 +684,7 @@ export default function Reconciliation() {
 
           {/* Client Details Dialog */}
           <Dialog open={!!clientDetails} onOpenChange={() => setClientDetails(null)}>
-            <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-4xl max-h-[80vh]">
+            <DialogContent className="bg-white border-slate-200 text-white max-w-4xl max-h-[80vh]">
               <DialogHeader>
                 <DialogTitle className="text-xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
                   {clientDetails?.client?.name} - Transaction History
@@ -692,7 +692,7 @@ export default function Reconciliation() {
               </DialogHeader>
               {clientDetails && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4 p-4 bg-[#0B0C10] rounded-lg">
+                  <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg">
                     <div>
                       <p className="text-xs text-[#C5C6C7] uppercase">Recorded Balance</p>
                       <p className="text-xl font-bold text-white">{formatCurrency(clientDetails.client.recorded_balance)}</p>
@@ -711,7 +711,7 @@ export default function Reconciliation() {
                   <ScrollArea className="h-[400px]">
                     <Table>
                       <TableHeader>
-                        <TableRow className="border-white/10">
+                        <TableRow className="border-slate-200">
                           <TableHead className="text-[#C5C6C7] text-xs">Date</TableHead>
                           <TableHead className="text-[#C5C6C7] text-xs">Type</TableHead>
                           <TableHead className="text-[#C5C6C7] text-xs">Amount</TableHead>
@@ -721,7 +721,7 @@ export default function Reconciliation() {
                       </TableHeader>
                       <TableBody>
                         {clientDetails.transactions?.map((tx, idx) => (
-                          <TableRow key={idx} className="border-white/5 hover:bg-white/5">
+                          <TableRow key={idx} className="border-slate-200 hover:bg-white/5">
                             <TableCell className="text-[#C5C6C7] text-xs">{formatDate(tx.date)}</TableCell>
                             <TableCell>
                               <Badge className={tx.type === 'deposit' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}>
@@ -746,7 +746,7 @@ export default function Reconciliation() {
 
         {/* Vendor Reconciliation Tab */}
         <TabsContent value="vendors" className="mt-4">
-          <Card className="bg-[#1F2833] border-white/5">
+          <Card className="bg-white border-slate-200">
             <CardHeader>
               <CardTitle className="text-lg text-white flex items-center gap-2">
                 <Store className="w-5 h-5 text-[#66FCF1]" />
@@ -756,7 +756,7 @@ export default function Reconciliation() {
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow className="border-white/10">
+                  <TableRow className="border-slate-200">
                     <TableHead className="text-[#C5C6C7] text-xs">Vendor</TableHead>
                     <TableHead className="text-[#C5C6C7] text-xs">Rate</TableHead>
                     <TableHead className="text-[#C5C6C7] text-xs">Volume</TableHead>
@@ -769,7 +769,7 @@ export default function Reconciliation() {
                 </TableHeader>
                 <TableBody>
                   {vendorRecon.map((vendor) => (
-                    <TableRow key={vendor.vendor_id} className="border-white/5 hover:bg-white/5">
+                    <TableRow key={vendor.vendor_id} className="border-slate-200 hover:bg-white/5">
                       <TableCell className="text-white font-medium">{vendor.vendor_name}</TableCell>
                       <TableCell className="text-white">{vendor.commission_rate}%</TableCell>
                       <TableCell className="text-white font-mono">{formatCurrency(vendor.total_volume)}</TableCell>
@@ -793,7 +793,7 @@ export default function Reconciliation() {
           <div className="grid gap-4 md:grid-cols-2">
             {summary && (
               <>
-                <Card className="bg-[#1F2833] border-white/5">
+                <Card className="bg-white border-slate-200">
                   <CardHeader>
                     <CardTitle className="text-lg text-white flex items-center gap-2">
                       <Building2 className="w-5 h-5 text-blue-400" />
@@ -822,7 +822,7 @@ export default function Reconciliation() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-[#1F2833] border-white/5">
+                <Card className="bg-white border-slate-200">
                   <CardHeader>
                     <CardTitle className="text-lg text-white flex items-center gap-2">
                       <CreditCard className="w-5 h-5 text-purple-400" />
@@ -851,7 +851,7 @@ export default function Reconciliation() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-[#1F2833] border-white/5">
+                <Card className="bg-white border-slate-200">
                   <CardHeader>
                     <CardTitle className="text-lg text-white flex items-center gap-2">
                       <Users className="w-5 h-5 text-green-400" />
@@ -880,7 +880,7 @@ export default function Reconciliation() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-[#1F2833] border-white/5">
+                <Card className="bg-white border-slate-200">
                   <CardHeader>
                     <CardTitle className="text-lg text-white flex items-center gap-2">
                       <Store className="w-5 h-5 text-orange-400" />

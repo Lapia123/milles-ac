@@ -87,7 +87,7 @@ const MathCaptcha = ({ onVerified, onCancel, actionType }) => {
         <span className="text-sm uppercase tracking-wider">Security Verification</span>
       </div>
       
-      <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
+      <div className="p-4 bg-slate-50 rounded-sm border border-slate-200">
         <p className="text-[#C5C6C7] text-sm mb-3">
           Please solve this math problem to {actionType === 'approve' ? 'approve' : 'reject'} the transaction:
         </p>
@@ -107,7 +107,7 @@ const MathCaptcha = ({ onVerified, onCancel, actionType }) => {
             type="number"
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
-            className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono text-xl text-center"
+            className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1] font-mono text-xl text-center"
             placeholder="Enter the sum"
             autoFocus
             data-testid="captcha-answer"
@@ -120,7 +120,7 @@ const MathCaptcha = ({ onVerified, onCancel, actionType }) => {
             type="button"
             variant="outline"
             onClick={onCancel}
-            className="flex-1 border-white/10 text-[#C5C6C7] hover:bg-white/5"
+            className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5"
           >
             Cancel
           </Button>
@@ -533,7 +533,7 @@ export default function AccountantDashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="bg-[#1F2833] border-white/5">
+        <Card className="bg-white border-slate-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -550,7 +550,7 @@ export default function AccountantDashboard() {
           </CardContent>
         </Card>
         
-        <Card className="bg-[#1F2833] border-white/5">
+        <Card className="bg-white border-slate-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -566,7 +566,7 @@ export default function AccountantDashboard() {
       </div>
 
       {/* Filters */}
-      <Card className="bg-[#1F2833] border-white/5">
+      <Card className="bg-white border-slate-200">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
@@ -575,10 +575,10 @@ export default function AccountantDashboard() {
             </div>
             <div className="flex-1 flex flex-wrap gap-4">
               <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[150px] bg-[#0B0C10] border-white/10 text-white">
+                <SelectTrigger className="w-[150px] bg-slate-50 border-slate-200 text-white">
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1F2833] border-white/10">
+                <SelectContent className="bg-white border-slate-200">
                   <SelectItem value="all" className="text-white hover:bg-white/5">All Types</SelectItem>
                   <SelectItem value="deposit" className="text-white hover:bg-white/5">Deposit</SelectItem>
                   <SelectItem value="withdrawal" className="text-white hover:bg-white/5">Withdrawal</SelectItem>
@@ -586,10 +586,10 @@ export default function AccountantDashboard() {
                 </SelectContent>
               </Select>
               <Select value={destFilter} onValueChange={setDestFilter}>
-                <SelectTrigger className="w-[180px] bg-[#0B0C10] border-white/10 text-white">
+                <SelectTrigger className="w-[180px] bg-slate-50 border-slate-200 text-white">
                   <SelectValue placeholder="Destination" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1F2833] border-white/10">
+                <SelectContent className="bg-white border-slate-200">
                   <SelectItem value="all" className="text-white hover:bg-white/5">All Destinations</SelectItem>
                   <SelectItem value="treasury" className="text-white hover:bg-white/5">Treasury</SelectItem>
                   <SelectItem value="bank" className="text-white hover:bg-white/5">Client Bank</SelectItem>
@@ -602,7 +602,7 @@ export default function AccountantDashboard() {
                 value={clientFilter}
                 onChange={(e) => setClientFilter(e.target.value)}
                 placeholder="Search client..."
-                className="w-[200px] bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                className="w-[200px] bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1]"
               />
               {(typeFilter !== 'all' || destFilter !== 'all' || clientFilter) && (
                 <Button
@@ -621,7 +621,7 @@ export default function AccountantDashboard() {
 
       {/* Tabs for Transactions and Settlements */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-[#0B0C10] border border-white/10 mb-4">
+        <TabsList className="bg-slate-50 border border-slate-200 mb-4">
           <TabsTrigger value="transactions" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
             Transactions ({filteredTransactions.length})
           </TabsTrigger>
@@ -638,7 +638,7 @@ export default function AccountantDashboard() {
                 <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : filteredTransactions.length === 0 ? (
-              <Card className="bg-[#1F2833] border-white/5">
+              <Card className="bg-white border-slate-200">
                 <CardContent className="p-12 text-center">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
                   <p className="text-white text-lg">All caught up!</p>
@@ -647,7 +647,7 @@ export default function AccountantDashboard() {
               </Card>
             ) : (
               filteredTransactions.map((tx) => (
-                <Card key={tx.transaction_id} className="bg-[#1F2833] border-white/5">
+                <Card key={tx.transaction_id} className="bg-white border-slate-200">
                   <CardContent className="p-4">
                     <div className="grid grid-cols-[140px_120px_90px_120px_150px_140px_auto] items-center gap-3">
                       {/* Reference */}
@@ -769,7 +769,7 @@ export default function AccountantDashboard() {
                 <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : pendingSettlements.length === 0 ? (
-              <Card className="bg-[#1F2833] border-white/5">
+              <Card className="bg-white border-slate-200">
                 <CardContent className="p-12 text-center">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
                   <p className="text-white text-lg">All caught up!</p>
@@ -778,7 +778,7 @@ export default function AccountantDashboard() {
               </Card>
             ) : (
               pendingSettlements.map((settlement) => (
-                <Card key={settlement.settlement_id} className="bg-[#1F2833] border-white/5">
+                <Card key={settlement.settlement_id} className="bg-white border-slate-200">
                   <CardContent className="p-6">
                     <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                       {/* Settlement Info */}
@@ -866,7 +866,7 @@ export default function AccountantDashboard() {
 
       {/* View Transaction Dialog */}
       <Dialog open={!!viewTransaction} onOpenChange={() => setViewTransaction(null)}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-white border-slate-200 text-white max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
               Transaction Details
@@ -881,7 +881,7 @@ export default function AccountantDashboard() {
                 </div>
                 <Badge className="status-pending text-xs uppercase">Pending</Badge>
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Client</p>
                   <p className="text-white">{viewTransaction.client_name}</p>
@@ -907,25 +907,25 @@ export default function AccountantDashboard() {
                 </div>
               </div>
               {viewTransaction.destination_account_name && (
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-slate-200">
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Destination</p>
                   <p className="text-white">{viewTransaction.destination_account_name}</p>
                   <p className="text-sm text-[#C5C6C7]">{viewTransaction.destination_bank_name}</p>
                 </div>
               )}
               {viewTransaction.description && (
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-slate-200">
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Description</p>
                   <p className="text-white">{viewTransaction.description}</p>
                 </div>
               )}
               {viewTransaction.proof_image && (
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-slate-200">
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Proof of Payment</p>
                   <img 
                     src={`data:image/png;base64,${viewTransaction.proof_image}`} 
                     alt="Proof of payment" 
-                    className="max-w-full rounded border border-white/10"
+                    className="max-w-full rounded border border-slate-200"
                   />
                 </div>
               )}
@@ -963,7 +963,7 @@ export default function AccountantDashboard() {
           setCaptchaAction(null);
         }
       }}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+        <DialogContent className="bg-white border-slate-200 text-white max-w-md">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
               <Calculator className="w-6 h-6 text-[#66FCF1]" />
@@ -983,7 +983,7 @@ export default function AccountantDashboard() {
 
       {/* Reject Reason Dialog */}
       <Dialog open={!!showRejectDialog} onOpenChange={() => { setShowRejectDialog(null); setRejectReason(''); }}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+        <DialogContent className="bg-white border-slate-200 text-white max-w-md">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
               <AlertCircle className="w-6 h-6 text-red-400" />
@@ -996,7 +996,7 @@ export default function AccountantDashboard() {
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Enter rejection reason..."
-              className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+              className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1]"
               rows={3}
               data-testid="reject-reason"
             />
@@ -1004,7 +1004,7 @@ export default function AccountantDashboard() {
               <Button
                 variant="outline"
                 onClick={() => { setShowRejectDialog(null); setRejectReason(''); }}
-                className="flex-1 border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5"
               >
                 Cancel
               </Button>
@@ -1022,7 +1022,7 @@ export default function AccountantDashboard() {
 
       {/* View Settlement Dialog */}
       <Dialog open={!!viewSettlement} onOpenChange={() => setViewSettlement(null)}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-white border-slate-200 text-white max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
               <Wallet className="w-6 h-6 text-[#66FCF1]" />
@@ -1038,7 +1038,7 @@ export default function AccountantDashboard() {
                 </div>
                 <Badge className="bg-yellow-500/20 text-yellow-400 text-xs uppercase">Pending</Badge>
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Settlement Type</p>
                   <Badge className={viewSettlement.settlement_type === 'bank' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}>
@@ -1083,11 +1083,11 @@ export default function AccountantDashboard() {
                   </p>
                 </div>
               </div>
-              <div className="pt-4 border-t border-white/10">
+              <div className="pt-4 border-t border-slate-200">
                 <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Destination Account</p>
                 <p className="text-white">{viewSettlement.settlement_destination_name}</p>
               </div>
-              <div className="pt-4 border-t border-white/10">
+              <div className="pt-4 border-t border-slate-200">
                 <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created By</p>
                 <p className="text-white">{viewSettlement.created_by_name}</p>
                 <p className="text-sm text-[#C5C6C7]">{formatDate(viewSettlement.created_at)}</p>
@@ -1121,7 +1121,7 @@ export default function AccountantDashboard() {
 
       {/* Settlement Reject Reason Dialog */}
       <Dialog open={!!showSettlementRejectDialog} onOpenChange={() => { setShowSettlementRejectDialog(null); setRejectReason(''); }}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+        <DialogContent className="bg-white border-slate-200 text-white max-w-md">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
               <AlertCircle className="w-6 h-6 text-red-400" />
@@ -1134,7 +1134,7 @@ export default function AccountantDashboard() {
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Enter rejection reason..."
-              className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+              className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1]"
               rows={3}
               data-testid="settlement-reject-reason"
             />
@@ -1142,7 +1142,7 @@ export default function AccountantDashboard() {
               <Button
                 variant="outline"
                 onClick={() => { setShowSettlementRejectDialog(null); setRejectReason(''); }}
-                className="flex-1 border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5"
               >
                 Cancel
               </Button>
@@ -1160,7 +1160,7 @@ export default function AccountantDashboard() {
 
       {/* Upload Proof Dialog for Withdrawals */}
       <Dialog open={!!uploadingProof} onOpenChange={() => { setUploadingProof(null); setProofPreview(null); }}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+        <DialogContent className="bg-white border-slate-200 text-white max-w-md">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
               <Upload className="w-6 h-6 text-[#66FCF1]" />
@@ -1169,14 +1169,14 @@ export default function AccountantDashboard() {
           </DialogHeader>
           {uploadingProof && (
             <div className="space-y-4">
-              <div className="p-4 bg-[#0B0C10] rounded-sm">
+              <div className="p-4 bg-slate-50 rounded-sm">
                 <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Transaction</p>
                 <p className="text-white font-mono">{uploadingProof.reference}</p>
                 <p className="text-sm text-[#C5C6C7] mt-2">
                   Withdrawal of <span className="text-red-400 font-mono">${uploadingProof.amount?.toLocaleString()}</span> to:
                 </p>
                 {uploadingProof.destination_type === 'bank' && uploadingProof.client_bank_name && (
-                  <div className="mt-2 p-2 bg-[#1F2833] rounded-sm">
+                  <div className="mt-2 p-2 bg-white rounded-sm">
                     <div className="flex items-center gap-2">
                       <Building2 className="w-4 h-4 text-blue-400" />
                       <span className="text-white text-sm">{uploadingProof.client_bank_name}</span>
@@ -1185,7 +1185,7 @@ export default function AccountantDashboard() {
                   </div>
                 )}
                 {uploadingProof.destination_type === 'usdt' && uploadingProof.client_usdt_address && (
-                  <div className="mt-2 p-2 bg-[#1F2833] rounded-sm">
+                  <div className="mt-2 p-2 bg-white rounded-sm">
                     <div className="flex items-center gap-2">
                       <Wallet className="w-4 h-4 text-green-400" />
                       <Badge className="bg-green-500/20 text-green-400 text-xs">{uploadingProof.client_usdt_network}</Badge>
@@ -1197,7 +1197,7 @@ export default function AccountantDashboard() {
               
               {proofPreview ? (
                 <div className="relative">
-                  <img src={proofPreview} alt="Proof preview" className="w-full h-48 object-contain bg-[#0B0C10] rounded-sm" />
+                  <img src={proofPreview} alt="Proof preview" className="w-full h-48 object-contain bg-slate-50 rounded-sm" />
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1230,7 +1230,7 @@ export default function AccountantDashboard() {
               <Button
                 variant="outline"
                 onClick={() => { setUploadingProof(null); setProofPreview(null); }}
-                className="w-full border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                className="w-full border-slate-200 text-[#C5C6C7] hover:bg-white/5"
               >
                 Cancel
               </Button>
@@ -1246,7 +1246,7 @@ export default function AccountantDashboard() {
         setApprovalProof(null); 
         setApprovalProofPreview(null); 
       }}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-white border-slate-200 text-white max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
               <CheckCircle className="w-6 h-6 text-green-400" />
@@ -1256,7 +1256,7 @@ export default function AccountantDashboard() {
           {showApprovalDialog && (
             <div className="space-y-4">
               {/* Transaction Details */}
-              <div className="p-4 bg-[#0B0C10] rounded-sm">
+              <div className="p-4 bg-slate-50 rounded-sm">
                 <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Transaction</p>
                 <p className="text-white font-mono">{showApprovalDialog.reference}</p>
                 <div className="mt-2 flex items-center justify-between">
@@ -1279,7 +1279,7 @@ export default function AccountantDashboard() {
 
               {/* Destination Details - Only for Withdrawals */}
               {showApprovalDialog.transaction_type === 'withdrawal' && (
-                <div className="p-4 bg-[#0B0C10] rounded-sm">
+                <div className="p-4 bg-slate-50 rounded-sm">
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Sending To</p>
                   {showApprovalDialog.destination_type === 'bank' && showApprovalDialog.client_bank_name && (
                     <div className="flex items-start gap-2">
@@ -1309,7 +1309,7 @@ export default function AccountantDashboard() {
 
               {/* Deposit Destination Info */}
               {showApprovalDialog.transaction_type === 'deposit' && showApprovalDialog.destination_account_name && (
-                <div className="p-4 bg-[#0B0C10] rounded-sm">
+                <div className="p-4 bg-slate-50 rounded-sm">
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Depositing To</p>
                   <div className="flex items-start gap-2">
                     <Building2 className="w-5 h-5 text-[#66FCF1] mt-0.5" />
@@ -1326,10 +1326,10 @@ export default function AccountantDashboard() {
                 <div className="space-y-2">
                   <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Source Account (Where funds come from) *</Label>
                   <Select value={approvalSourceAccount} onValueChange={setApprovalSourceAccount}>
-                    <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="approval-source-account">
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-white" data-testid="approval-source-account">
                       <SelectValue placeholder="Select treasury/USDT account" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1F2833] border-white/10 max-h-[200px]">
+                    <SelectContent className="bg-white border-slate-200 max-h-[200px]">
                       {treasuryAccounts.map((account) => (
                         <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
                           <div className="flex items-center gap-2">
@@ -1352,7 +1352,7 @@ export default function AccountantDashboard() {
                 </Label>
                 {approvalProofPreview ? (
                   <div className="relative">
-                    <img src={approvalProofPreview} alt="Proof preview" className="w-full h-40 object-contain bg-[#0B0C10] rounded-sm" />
+                    <img src={approvalProofPreview} alt="Proof preview" className="w-full h-40 object-contain bg-slate-50 rounded-sm" />
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1395,7 +1395,7 @@ export default function AccountantDashboard() {
                     setApprovalProof(null); 
                     setApprovalProofPreview(null); 
                   }}
-                  className="flex-1 border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                  className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5"
                 >
                   Cancel
                 </Button>

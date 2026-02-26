@@ -157,7 +157,7 @@ export default function AuditCompliance() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="bg-[#1F2833] border border-[#2A3A4A]">
+        <TabsList className="bg-white border border-[#2A3A4A]">
           <TabsTrigger value="dashboard" className="data-[state=active]:bg-[#66FCF1]/10 data-[state=active]:text-[#66FCF1]">Dashboard</TabsTrigger>
           <TabsTrigger value="findings" className="data-[state=active]:bg-[#66FCF1]/10 data-[state=active]:text-[#66FCF1]">
             Findings {findings.length > 0 && <Badge variant="outline" className="ml-1 text-[10px]">{findings.length}</Badge>}
@@ -169,7 +169,7 @@ export default function AuditCompliance() {
         {/* DASHBOARD TAB */}
         <TabsContent value="dashboard" className="space-y-6 mt-4">
           {!scan?.scan_id ? (
-            <Card className="bg-[#1F2833] border-[#2A3A4A]">
+            <Card className="bg-white border-[#2A3A4A]">
               <CardContent className="py-12 text-center">
                 <ShieldCheck className="w-12 h-12 text-[#8B8D91] mx-auto mb-3" />
                 <p className="text-[#8B8D91]">No audit scan found. Click "Run Audit Scan" to start.</p>
@@ -179,7 +179,7 @@ export default function AuditCompliance() {
             <>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Health Score */}
-                <Card className="bg-[#1F2833] border-[#2A3A4A]">
+                <Card className="bg-white border-[#2A3A4A]">
                   <CardContent className="pt-6 pb-4">
                     <HealthScoreRing score={scan.health_score} />
                     <p className="text-center text-xs text-[#8B8D91] mt-2">
@@ -189,7 +189,7 @@ export default function AuditCompliance() {
                 </Card>
 
                 {/* Stats Cards */}
-                <Card className="bg-[#1F2833] border-[#2A3A4A]">
+                <Card className="bg-white border-[#2A3A4A]">
                   <CardHeader className="pb-2"><CardTitle className="text-sm text-[#8B8D91]">Issue Breakdown</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -208,7 +208,7 @@ export default function AuditCompliance() {
                 </Card>
 
                 {/* Summary */}
-                <Card className="bg-[#1F2833] border-[#2A3A4A]">
+                <Card className="bg-white border-[#2A3A4A]">
                   <CardHeader className="pb-2"><CardTitle className="text-sm text-[#8B8D91]">Scan Summary</CardTitle></CardHeader>
                   <CardContent className="space-y-3 text-sm">
                     <div className="flex justify-between"><span className="text-[#8B8D91]">Transactions Scanned</span><span className="text-[#C5C6C7] font-medium">{scan.summary?.total_transactions || 0}</span></div>
@@ -220,7 +220,7 @@ export default function AuditCompliance() {
               </div>
 
               {/* Category Breakdown */}
-              <Card className="bg-[#1F2833] border-[#2A3A4A]">
+              <Card className="bg-white border-[#2A3A4A]">
                 <CardHeader><CardTitle className="text-sm text-[#8B8D91]">Findings by Category</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -267,7 +267,7 @@ export default function AuditCompliance() {
             ))}
             <span className="text-xs text-[#8B8D91] ml-3 mr-1">Category:</span>
             <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
-              className="bg-[#1F2833] border border-[#2A3A4A] text-[#C5C6C7] text-xs rounded px-2 py-1"
+              className="bg-white border border-[#2A3A4A] text-[#C5C6C7] text-xs rounded px-2 py-1"
               data-testid="filter-category-select">
               <option value="all">All Categories</option>
               {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -290,7 +290,7 @@ export default function AuditCompliance() {
 
         {/* HISTORY TAB */}
         <TabsContent value="history" className="mt-4">
-          <Card className="bg-[#1F2833] border-[#2A3A4A]">
+          <Card className="bg-white border-[#2A3A4A]">
             <CardContent className="pt-4">
               {history.length === 0 ? (
                 <p className="text-center py-8 text-[#8B8D91] text-sm">No audit history yet.</p>
@@ -332,7 +332,7 @@ export default function AuditCompliance() {
         {/* SETTINGS TAB */}
         <TabsContent value="settings" className="mt-4">
           {settings && (
-            <Card className="bg-[#1F2833] border-[#2A3A4A]">
+            <Card className="bg-white border-[#2A3A4A]">
               <CardHeader><CardTitle className="text-sm text-[#C5C6C7] flex items-center gap-2"><Settings2 className="w-4 h-4" /> Audit Configuration</CardTitle></CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -340,7 +340,7 @@ export default function AuditCompliance() {
                     <Label className="text-[#8B8D91] text-xs">Large Transaction Threshold (USD)</Label>
                     <Input type="number" value={settings.large_transaction_threshold || 50000}
                       onChange={e => setSettings({ ...settings, large_transaction_threshold: Number(e.target.value) })}
-                      className="bg-[#0B0C10] border-[#2A3A4A] text-[#C5C6C7]"
+                      className="bg-slate-50 border-[#2A3A4A] text-[#C5C6C7]"
                       data-testid="threshold-input" />
                     <p className="text-[10px] text-[#8B8D91]">Transactions above this amount will be flagged as info</p>
                   </div>
@@ -348,7 +348,7 @@ export default function AuditCompliance() {
                     <Label className="text-[#8B8D91] text-xs">FX Rate Deviation Threshold (%)</Label>
                     <Input type="number" value={settings.fx_deviation_threshold || 5}
                       onChange={e => setSettings({ ...settings, fx_deviation_threshold: Number(e.target.value) })}
-                      className="bg-[#0B0C10] border-[#2A3A4A] text-[#C5C6C7]"
+                      className="bg-slate-50 border-[#2A3A4A] text-[#C5C6C7]"
                       data-testid="fx-deviation-input" />
                     <p className="text-[10px] text-[#8B8D91]">FX rate deviations above this % are flagged</p>
                   </div>
@@ -367,7 +367,7 @@ export default function AuditCompliance() {
                       <Label className="text-[#8B8D91] text-xs">Scan Time (UTC)</Label>
                       <Input type="time" value={settings.auto_scan_time || '02:00'}
                         onChange={e => setSettings({ ...settings, auto_scan_time: e.target.value })}
-                        className="bg-[#0B0C10] border-[#2A3A4A] text-[#C5C6C7] w-40"
+                        className="bg-slate-50 border-[#2A3A4A] text-[#C5C6C7] w-40"
                         data-testid="scan-time-input" />
                     </div>
                   )}
@@ -379,7 +379,7 @@ export default function AuditCompliance() {
                   <Input value={(settings.alert_emails || []).join(', ')}
                     onChange={e => setSettings({ ...settings, alert_emails: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
                     placeholder="admin@company.com, cfo@company.com"
-                    className="bg-[#0B0C10] border-[#2A3A4A] text-[#C5C6C7]"
+                    className="bg-slate-50 border-[#2A3A4A] text-[#C5C6C7]"
                     data-testid="alert-emails-input" />
                 </div>
 

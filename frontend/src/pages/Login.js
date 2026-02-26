@@ -42,7 +42,7 @@ export default function Login() {
           backgroundImage: 'url(https://images.pexels.com/photos/30766684/pexels-photo-30766684.png?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940)'
         }}
       >
-        <div className="absolute inset-0 bg-[#0B0C10]/80 backdrop-blur-sm" />
+        <div className="absolute inset-0 bg-slate-50/80 backdrop-blur-sm" />
         <div className="relative z-10 flex flex-col justify-center items-center w-full p-12 text-center">
           <div className="flex items-center gap-3 mb-6">
             <TrendingUp className="w-12 h-12 text-[#66FCF1]" />
@@ -60,7 +60,7 @@ export default function Login() {
       </div>
 
       {/* Right Panel - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-[#0B0C10]">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-slate-50">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
@@ -70,7 +70,7 @@ export default function Login() {
             </span>
           </div>
 
-          <div className="bg-[#1F2833] rounded-sm border border-white/5 p-8">
+          <div className="bg-white rounded-sm border border-slate-200 p-8">
             <h2 className="text-3xl font-bold uppercase tracking-tight text-white mb-2" style={{ fontFamily: 'Barlow Condensed' }}>
               Sign In
             </h2>
@@ -91,7 +91,7 @@ export default function Login() {
                     placeholder="admin@fxbroker.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 bg-[#0B0C10] border-white/10 text-white placeholder:text-white/20 focus:border-[#66FCF1] focus:ring-[#66FCF1] font-mono"
+                    className="pl-10 bg-slate-50 border-slate-200 text-white placeholder:text-white/20 focus:border-[#66FCF1] focus:ring-[#66FCF1] font-mono"
                     data-testid="login-email-input"
                     required
                   />
@@ -110,7 +110,7 @@ export default function Login() {
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 bg-[#0B0C10] border-white/10 text-white placeholder:text-white/20 focus:border-[#66FCF1] focus:ring-[#66FCF1]"
+                    className="pl-10 bg-slate-50 border-slate-200 text-white placeholder:text-white/20 focus:border-[#66FCF1] focus:ring-[#66FCF1]"
                     data-testid="login-password-input"
                     required
                   />
@@ -129,10 +129,10 @@ export default function Login() {
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/10"></div>
+                <div className="w-full border-t border-slate-200"></div>
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[#1F2833] px-4 text-[#C5C6C7]">Or continue with</span>
+                <span className="bg-white px-4 text-[#C5C6C7]">Or continue with</span>
               </div>
             </div>
 
