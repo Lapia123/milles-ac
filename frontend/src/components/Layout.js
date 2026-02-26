@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import {
@@ -30,12 +31,17 @@ import {
   Receipt,
   ArrowUpDown,
   ShieldCheck,
+  Sun,
+  Moon,
 } from 'lucide-react';
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const isDark = theme === 'dark';
 
   const handleLogout = async () => {
     await logout();
@@ -79,8 +85,12 @@ export default function Layout() {
       className={({ isActive }) =>
         `flex items-center gap-3 px-4 py-3 text-sm font-medium uppercase tracking-wider transition-all duration-200 ${
           isActive
-            ? 'bg-blue-50 text-blue-600 border-l-2 border-blue-600'
-            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border-l-2 border-transparent'
+            ? isDark 
+              ? 'bg-[#66FCF1]/10 text-[#66FCF1] border-l-2 border-[#66FCF1]'
+              : 'bg-blue-50 text-blue-600 border-l-2 border-blue-600'
+            : isDark
+              ? 'text-[#C5C6C7] hover:text-white hover:bg-white/5 border-l-2 border-transparent'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border-l-2 border-transparent'
         }`
       }
       data-testid={`nav-${label.toLowerCase().replace(' ', '-')}`}
@@ -91,7 +101,7 @@ export default function Layout() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
+    <div className={`min-h-screen flex theme-transition ${isDark ? 'bg-[#0B0C10]' : 'bg-[#F8FAFC]'}`}>
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/30 z-40 lg:hidden"
@@ -100,23 +110,23 @@ export default function Layout() {
       )}
 
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 shadow-sm transform transition-transform duration-200 ${
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 shadow-sm transform transition-transform duration-200 theme-transition ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}
+        } ${isDark ? 'bg-[#1F2833] border-r border-[#2D3748]' : 'bg-white border-r border-slate-200'}`}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200">
+          <div className={`flex items-center justify-between h-16 px-4 border-b ${isDark ? 'border-[#2D3748]' : 'border-slate-200'}`}>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-white" />
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-[#66FCF1]' : 'bg-blue-600'}`}>
+                <TrendingUp className={`w-5 h-5 ${isDark ? 'text-[#0B0C10]' : 'text-white'}`} />
               </div>
-              <span className="text-xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
+              <span className={`text-xl font-bold uppercase tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`} style={{ fontFamily: 'Barlow Condensed' }}>
                 Miles Capitals
               </span>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden text-slate-500 hover:text-slate-700"
+              className={`lg:hidden ${isDark ? 'text-[#C5C6C7] hover:text-white' : 'text-slate-500 hover:text-slate-700'}`}
             >
               <X className="w-6 h-6" />
             </button>
@@ -128,17 +138,38 @@ export default function Layout() {
             ))}
           </nav>
 
-          <div className="p-4 border-t border-slate-200">
+          {/* Theme Toggle */}
+          <div className={`px-4 py-3 border-t ${isDark ? 'border-[#2D3748]' : 'border-slate-200'}`}>
+            <button
+              onClick={toggleTheme}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200 ${
+                isDark 
+                  ? 'bg-[#0B0C10] hover:bg-[#151922] text-[#C5C6C7]' 
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+              }`}
+              data-testid="theme-toggle-btn"
+            >
+              <div className="flex items-center gap-2">
+                {isDark ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                <span className="text-sm font-medium">{isDark ? 'Dark Mode' : 'Light Mode'}</span>
+              </div>
+              <div className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-200 ${isDark ? 'bg-[#66FCF1]' : 'bg-slate-300'}`}>
+                <div className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-200 ${isDark ? 'translate-x-5' : 'translate-x-0'}`} />
+              </div>
+            </button>
+          </div>
+
+          <div className={`p-4 border-t ${isDark ? 'border-[#2D3748]' : 'border-slate-200'}`}>
             <div className="flex items-center gap-3">
-              <Avatar className="w-10 h-10 border border-blue-200">
+              <Avatar className={`w-10 h-10 border ${isDark ? 'border-[#66FCF1]/30' : 'border-blue-200'}`}>
                 <AvatarImage src={user?.picture} />
-                <AvatarFallback className="bg-blue-100 text-blue-600">
+                <AvatarFallback className={isDark ? 'bg-[#66FCF1]/20 text-[#66FCF1]' : 'bg-blue-100 text-blue-600'}>
                   {user?.name?.charAt(0) || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-800 truncate">{user?.name}</p>
-                <p className="text-xs text-slate-500 truncate capitalize">{user?.role?.replace('_', ' ')}</p>
+                <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-slate-800'}`}>{user?.name}</p>
+                <p className={`text-xs truncate capitalize ${isDark ? 'text-[#C5C6C7]' : 'text-slate-500'}`}>{user?.role?.replace('_', ' ')}</p>
               </div>
             </div>
           </div>
@@ -146,11 +177,13 @@ export default function Layout() {
       </aside>
 
       <div className="flex-1 flex flex-col min-h-screen">
-        <header className="sticky top-0 z-30 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <header className={`sticky top-0 z-30 h-16 backdrop-blur-md border-b theme-transition ${
+          isDark ? 'bg-[#1F2833]/80 border-[#2D3748]' : 'bg-white/80 border-slate-200'
+        }`}>
           <div className="flex items-center justify-between h-full px-4 md:px-6">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-slate-500 hover:text-slate-700"
+              className={`lg:hidden ${isDark ? 'text-[#C5C6C7] hover:text-white' : 'text-slate-500 hover:text-slate-700'}`}
               data-testid="mobile-menu-btn"
             >
               <Menu className="w-6 h-6" />
@@ -158,43 +191,60 @@ export default function Layout() {
 
             <div className="flex-1" />
 
+            {/* Theme Toggle - Mobile/Header */}
+            <button
+              onClick={toggleTheme}
+              className={`mr-3 p-2 rounded-lg transition-colors ${
+                isDark 
+                  ? 'text-[#66FCF1] hover:bg-white/10' 
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+              data-testid="theme-toggle-header"
+            >
+              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  className={`flex items-center gap-2 ${
+                    isDark 
+                      ? 'text-[#C5C6C7] hover:text-white hover:bg-white/10' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
                   data-testid="user-menu-btn"
                 >
-                  <Avatar className="w-8 h-8 border border-blue-200">
+                  <Avatar className={`w-8 h-8 border ${isDark ? 'border-[#66FCF1]/30' : 'border-blue-200'}`}>
                     <AvatarImage src={user?.picture} />
-                    <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
+                    <AvatarFallback className={`text-xs ${isDark ? 'bg-[#66FCF1]/20 text-[#66FCF1]' : 'bg-blue-100 text-blue-600'}`}>
                       {user?.name?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden md:inline text-sm">{user?.name}</span>
+                  <span className={`hidden md:inline text-sm ${isDark ? 'text-[#C5C6C7]' : ''}`}>{user?.name}</span>
                   <ChevronDown className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-56 bg-white border-slate-200 text-slate-800"
+                className={`w-56 ${isDark ? 'bg-[#1F2833] border-[#2D3748] text-white' : 'bg-white border-slate-200 text-slate-800'}`}
               >
                 <div className="px-3 py-2">
                   <p className="text-sm font-medium">{user?.name}</p>
-                  <p className="text-xs text-slate-500">{user?.email}</p>
+                  <p className={`text-xs ${isDark ? 'text-[#C5C6C7]' : 'text-slate-500'}`}>{user?.email}</p>
                 </div>
-                <DropdownMenuSeparator className="bg-slate-200" />
+                <DropdownMenuSeparator className={isDark ? 'bg-[#2D3748]' : 'bg-slate-200'} />
                 <DropdownMenuItem
                   onClick={() => navigate('/settings')}
-                  className="cursor-pointer hover:bg-slate-100 focus:bg-slate-100"
+                  className={`cursor-pointer ${isDark ? 'hover:bg-white/10 focus:bg-white/10' : 'hover:bg-slate-100 focus:bg-slate-100'}`}
                 >
                   <Settings className="w-4 h-4 mr-2" />
                   Settings
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-slate-200" />
+                <DropdownMenuSeparator className={isDark ? 'bg-[#2D3748]' : 'bg-slate-200'} />
                 <DropdownMenuItem
                   onClick={handleLogout}
-                  className="cursor-pointer text-red-600 hover:bg-slate-100 focus:bg-slate-100"
+                  className={`cursor-pointer text-red-500 ${isDark ? 'hover:bg-white/10 focus:bg-white/10' : 'hover:bg-slate-100 focus:bg-slate-100'}`}
                   data-testid="logout-btn"
                 >
                   <LogOut className="w-4 h-4 mr-2" />
