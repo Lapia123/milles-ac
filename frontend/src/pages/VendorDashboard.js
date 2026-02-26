@@ -1383,8 +1383,8 @@ export default function VendorDashboard() {
                 {vendorInfo && (
                   <div className="mt-2 pt-2 border-t border-white/10 text-xs text-[#66FCF1]">
                     Commission: {ieActionDialog.entry.entry_type === 'income'
-                      ? `${vendorInfo.deposit_commission || 0}% (deposit rate)`
-                      : `${vendorInfo.withdrawal_commission || 0}% (withdrawal rate)`
+                      ? `${vendorInfo.deposit_commission || 0}% (Money In rate)`
+                      : `${vendorInfo.withdrawal_commission || 0}% (Money Out rate)`
                     } = {((ieActionDialog.entry.amount || 0) * (ieActionDialog.entry.entry_type === 'income' ? (vendorInfo.deposit_commission || 0) : (vendorInfo.withdrawal_commission || 0)) / 100).toFixed(2)} {ieActionDialog.entry.currency}
                   </div>
                 )}
