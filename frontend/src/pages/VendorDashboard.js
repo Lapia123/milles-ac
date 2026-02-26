@@ -454,7 +454,7 @@ export default function VendorDashboard() {
         {/* Settlement Balance - Highlighted */}
         <Card className="bg-[#1F2833] border-white/5 border-l-4 border-l-[#66FCF1] lg:col-span-2">
           <CardContent className="p-6">
-            <p className="text-xs text-[#66FCF1] uppercase tracking-wider mb-3">Settlement Balance (Deposits - Withdrawals - Commission)</p>
+            <p className="text-xs text-[#66FCF1] uppercase tracking-wider mb-3">Settlement Balance (Money In - Money Out - Commission)</p>
             {vendorInfo?.settlement_by_currency && vendorInfo.settlement_by_currency.length > 0 ? (
               <div className="space-y-3">
                 {vendorInfo.settlement_by_currency.map((item, idx) => (
