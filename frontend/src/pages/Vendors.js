@@ -777,9 +777,9 @@ export default function Vendors() {
                         </div>
                         {(item.commission_earned_base > 0 || item.commission_earned_usd > 0) && (
                           <div className="text-xs text-yellow-400 pl-2">
-                            Commission earned: {item.commission_earned_base?.toLocaleString()} {item.currency}
-                            {item.currency !== 'USD' && item.commission_earned_usd > 0 && (
-                              <span className="text-[#C5C6C7]"> (${item.commission_earned_usd?.toLocaleString()} USD)</span>
+                            Commission earned: ${item.commission_earned_usd?.toLocaleString()}
+                            {item.currency !== 'USD' && item.commission_earned_base > 0 && (
+                              <span className="text-[#C5C6C7]"> ({item.commission_earned_base?.toLocaleString()} {item.currency})</span>
                             )}
                           </div>
                         )}
