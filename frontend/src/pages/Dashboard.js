@@ -266,10 +266,10 @@ export default function Dashboard() {
         </Card>
 
         {/* KYC Distribution */}
-        <Card className="bg-[#1F2833] border-white/5">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-[#66FCF1]" />
+            <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-blue-600" />
               KYC Status
             </CardTitle>
           </CardHeader>
@@ -293,11 +293,11 @@ export default function Dashboard() {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      background: '#1F2833',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: '2px',
+                      background: '#fff',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '8px',
                     }}
-                    itemStyle={{ color: '#fff' }}
+                    itemStyle={{ color: '#1E293B' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -306,7 +306,7 @@ export default function Dashboard() {
               {kycData.map((item, index) => (
                 <div key={item.status} className="flex items-center gap-1">
                   <div className="w-2 h-2 rounded-full" style={{ background: COLORS[index % COLORS.length] }} />
-                  <span className="text-xs text-[#C5C6C7] capitalize">{item.status}: {item.count}</span>
+                  <span className="text-xs text-slate-500 capitalize">{item.status}: {item.count}</span>
                 </div>
               ))}
             </div>
@@ -317,9 +317,9 @@ export default function Dashboard() {
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Recent Transactions */}
-        <Card className="bg-[#1F2833] border-white/5">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-semibold text-white">Recent Transactions</CardTitle>
+            <CardTitle className="text-lg font-semibold text-slate-800">Recent Transactions</CardTitle>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-64">
@@ -327,23 +327,23 @@ export default function Dashboard() {
                 {recentActivity.recent_transactions?.map((tx) => (
                   <div
                     key={tx.transaction_id}
-                    className="flex items-center justify-between p-3 bg-[#0B0C10] rounded-sm border border-white/5"
+                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200"
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-sm ${tx.transaction_type === 'deposit' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                      <div className={`p-2 rounded-lg ${tx.transaction_type === 'deposit' ? 'bg-green-100' : 'bg-red-100'}`}>
                         {tx.transaction_type === 'deposit' ? (
-                          <ArrowDownRight className="w-4 h-4 text-green-400" />
+                          <ArrowDownRight className="w-4 h-4 text-green-600" />
                         ) : (
-                          <ArrowUpRight className="w-4 h-4 text-red-400" />
+                          <ArrowUpRight className="w-4 h-4 text-red-600" />
                         )}
                       </div>
                       <div>
-                        <p className="text-sm text-white font-mono">{tx.reference}</p>
-                        <p className="text-xs text-[#C5C6C7]">{tx.client_name}</p>
+                        <p className="text-sm text-slate-800 font-mono">{tx.reference}</p>
+                        <p className="text-xs text-slate-500">{tx.client_name}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={`text-sm font-mono ${tx.transaction_type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
+                      <p className={`text-sm font-mono ${tx.transaction_type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
                         {tx.transaction_type === 'deposit' ? '+' : '-'}${tx.amount?.toLocaleString()}
                       </p>
                       {getStatusBadge(tx.status)}
