@@ -884,140 +884,204 @@ export default function Loans() {
               </Badge>
             </div>
           )}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-[#1F2833] border-white/5">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Outstanding</p>
-                  <p className="text-2xl font-bold font-mono text-[#66FCF1]">${summary.total_outstanding_usd?.toLocaleString()}</p>
-                </div>
-                <div className="p-3 bg-[#66FCF1]/10 rounded-sm">
-                  <PiggyBank className="w-6 h-6 text-[#66FCF1]" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-[#1F2833] border-white/5">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Total Repaid</p>
-                  <p className="text-2xl font-bold font-mono text-green-400">${summary.total_repaid_usd?.toLocaleString()}</p>
-                </div>
-                <div className="p-3 bg-green-500/10 rounded-sm">
-                  <Receipt className="w-6 h-6 text-green-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-[#1F2833] border-white/5">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Interest Earned</p>
-                  <p className="text-2xl font-bold font-mono text-yellow-400">${summary.total_interest_earned_usd?.toLocaleString()}</p>
-                </div>
-                <div className="p-3 bg-yellow-500/10 rounded-sm">
-                  <TrendingUp className="w-6 h-6 text-yellow-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
-      {/* Status Summary */}
-      {summary && (
-        <div className="flex gap-4 flex-wrap">
-          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 px-3 py-1">
-            Active: {summary.status_breakdown?.active || 0}
-          </Badge>
-          <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 px-3 py-1">
-            Partially Paid: {summary.status_breakdown?.partially_paid || 0}
-          </Badge>
-          <Badge className="bg-green-500/20 text-green-400 border-green-500/30 px-3 py-1">
-            Fully Paid: {summary.status_breakdown?.fully_paid || 0}
-          </Badge>
-          <Badge className="bg-red-500/20 text-red-400 border-red-500/30 px-3 py-1">
-            Overdue: {summary.status_breakdown?.overdue || 0}
-          </Badge>
-        </div>
-      )}
+          {/* Loans Table Filter Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="bg-[#1F2833] border border-white/10">
+              <TabsTrigger value="all" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
+                All Loans ({loans.length})
+              </TabsTrigger>
+              <TabsTrigger value="active" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400">
+                Active
+              </TabsTrigger>
+              <TabsTrigger value="partially_paid" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400">
+                Partially Paid
+              </TabsTrigger>
+              <TabsTrigger value="fully_paid" className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400">
+                Fully Paid
+              </TabsTrigger>
+            </TabsList>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-[#1F2833] border border-white/10">
-          <TabsTrigger value="all" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
-            All Loans ({loans.length})
-          </TabsTrigger>
-          <TabsTrigger value="active" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400">
-            Active
-          </TabsTrigger>
-          <TabsTrigger value="partially_paid" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400">
-            Partially Paid
-          </TabsTrigger>
-          <TabsTrigger value="fully_paid" className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400">
-            Fully Paid
-          </TabsTrigger>
-        </TabsList>
+            {/* Loans Table */}
+            <TabsContent value={activeTab} className="mt-4">
+              {loading ? (
+                <Card className="bg-[#1F2833] border-white/5">
+                  <CardContent className="p-12 flex justify-center">
+                    <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
+                  </CardContent>
+                </Card>
+              ) : filteredLoans.length === 0 ? (
+                <Card className="bg-[#1F2833] border-white/5">
+                  <CardContent className="p-12 text-center">
+                    <Banknote className="w-12 h-12 text-[#C5C6C7] mx-auto mb-4" />
+                    <p className="text-[#C5C6C7]">No loans found</p>
+                    <p className="text-sm text-[#C5C6C7]/60 mt-2">Click "New Loan" to create one</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="bg-[#1F2833] border-white/5">
+                  <CardContent className="p-0">
+                    <ScrollArea className="h-[500px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-white/10 hover:bg-transparent">
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Borrower</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Principal</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Outstanding</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Due</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredLoans.map((loan) => (
+                            <TableRow key={loan.loan_id} className="border-white/5 hover:bg-white/5">
+                              <TableCell>
+                                <div className="text-white font-medium">{loan.borrower_name}</div>
+                                <div className="text-[10px] text-[#8B8D91]">{loan.source_treasury_name || '—'}</div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="text-white font-mono text-sm">
+                                  {loan.currency === 'USD' ? '$' : ''}{loan.amount?.toLocaleString()}{loan.currency !== 'USD' ? ` ${loan.currency}` : ''}
+                                </div>
+                                {loan.interest_rate > 0 && (
+                                  <div className="text-[10px] text-yellow-400/80">@ {loan.interest_rate}% interest</div>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <span className="text-[#66FCF1] font-mono text-sm font-semibold">
+                                  {loan.currency === 'USD' ? '$' : ''}{loan.outstanding_balance?.toLocaleString()}{loan.currency !== 'USD' ? ` ${loan.currency}` : ''}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-white text-sm">{formatDate(loan.due_date)}</TableCell>
+                              <TableCell>{getStatusBadge(loan)}</TableCell>
+                              <TableCell>
+                                <div className="flex gap-0.5 justify-end">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => fetchLoanDetail(loan.loan_id)}
+                                    className="text-[#66FCF1] hover:text-[#66FCF1] hover:bg-[#66FCF1]/10 h-7 w-7 p-0"
+                                    title="View Details"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                  </Button>
+                                  {loan.status !== 'fully_paid' && loan.status !== 'written_off' && (
+                                    <>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => openRepaymentDialog(loan)}
+                                        className="text-green-400 hover:text-green-300 hover:bg-green-500/10 h-7 w-7 p-0"
+                                        title="Record Repayment"
+                                      >
+                                        <CreditCard className="w-3.5 h-3.5" />
+                                      </Button>
+                                      {isAdmin && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => { setSelectedLoan(loan); setIsSwapDialogOpen(true); }}
+                                          className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 h-7 w-7 p-0"
+                                          title="Swap/Transfer Loan"
+                                        >
+                                          <ArrowRightLeft className="w-3.5 h-3.5" />
+                                        </Button>
+                                      )}
+                                    </>
+                                  )}
+                                  {isAdmin && loan.repayment_count === 0 && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteLoan(loan.loan_id)}
+                                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-7 w-7 p-0"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                  )}
+                                  {isAdmin && loan.status !== 'fully_paid' && loan.status !== 'written_off' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleWriteOff(loan.loan_id)}
+                                      className="text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 h-7 w-7 p-0"
+                                      title="Write Off"
+                                    >
+                                      <FileX className="w-3.5 h-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
 
-        {/* Loans Table */}
-        <TabsContent value={activeTab} className="mt-4">
-          {loading ? (
-            <Card className="bg-[#1F2833] border-white/5">
-              <CardContent className="p-12 flex justify-center">
-                <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
-              </CardContent>
-            </Card>
-          ) : filteredLoans.length === 0 ? (
-            <Card className="bg-[#1F2833] border-white/5">
-              <CardContent className="p-12 text-center">
-                <Banknote className="w-12 h-12 text-[#C5C6C7] mx-auto mb-4" />
-                <p className="text-[#C5C6C7]">No loans found</p>
-                <p className="text-sm text-[#C5C6C7]/60 mt-2">Click "New Loan" to create one</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="bg-[#1F2833] border-white/5">
-              <CardContent className="p-0">
-                <ScrollArea className="h-[500px]">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-white/10 hover:bg-transparent">
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Borrower</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Principal</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Outstanding</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Due</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
+        {/* Transactions Tab */}
+        <TabsContent value="transactions">
+          <Card className="bg-[#1F2833] border-white/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white text-lg flex items-center gap-2">
+                <History className="w-5 h-5 text-[#66FCF1]" /> Loan Transactions Log
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[500px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-white/10 hover:bg-transparent">
+                      <TableHead className="text-[#C5C6C7] text-xs">Date</TableHead>
+                      <TableHead className="text-[#C5C6C7] text-xs">Type</TableHead>
+                      <TableHead className="text-[#C5C6C7] text-xs">Description</TableHead>
+                      <TableHead className="text-[#C5C6C7] text-xs text-right">Amount</TableHead>
+                      <TableHead className="text-[#C5C6C7] text-xs">By</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loanTransactions.map((tx) => (
+                      <TableRow key={tx.transaction_id} className="border-white/5 hover:bg-white/5">
+                        <TableCell className="text-white text-sm">{formatDate(tx.created_at)}</TableCell>
+                        <TableCell>
+                          <Badge className={
+                            tx.transaction_type === 'disbursement' ? 'bg-blue-500/20 text-blue-400' :
+                            tx.transaction_type === 'repayment' ? 'bg-green-500/20 text-green-400' :
+                            tx.transaction_type === 'swap_out' || tx.transaction_type === 'swap_in' ? 'bg-purple-500/20 text-purple-400' :
+                            tx.transaction_type === 'write_off' ? 'bg-red-500/20 text-red-400' :
+                            'bg-gray-500/20 text-gray-400'
+                          }>
+                            {tx.transaction_type?.replace(/_/g, ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-[#C5C6C7] text-sm max-w-[300px] truncate">{tx.description}</TableCell>
+                        <TableCell className="text-white font-mono text-sm text-right">
+                          {tx.currency === 'USD' ? '$' : ''}{tx.amount?.toLocaleString()}{tx.currency !== 'USD' ? ` ${tx.currency}` : ''}
+                        </TableCell>
+                        <TableCell className="text-[#8B8D91] text-sm">{tx.created_by_name}</TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredLoans.map((loan) => (
-                        <TableRow key={loan.loan_id} className="border-white/5 hover:bg-white/5">
-                          <TableCell>
-                            <div className="text-white font-medium">{loan.borrower_name}</div>
-                            <div className="text-[10px] text-[#8B8D91]">{loan.source_treasury_name || '—'}</div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="text-white font-mono text-sm">
-                              {loan.currency === 'USD' ? '$' : ''}{loan.amount?.toLocaleString()}{loan.currency !== 'USD' ? ` ${loan.currency}` : ''}
-                            </div>
-                            {loan.interest_rate > 0 && (
-                              <div className="text-[10px] text-yellow-400/80">@ {loan.interest_rate}% interest</div>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <span className="text-[#66FCF1] font-mono text-sm font-semibold">
-                              {loan.currency === 'USD' ? '$' : ''}{loan.outstanding_balance?.toLocaleString()}{loan.currency !== 'USD' ? ` ${loan.currency}` : ''}
-                            </span>
-                          </TableCell>
+                    ))}
+                    {loanTransactions.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-[#8B8D91] py-8">
+                          No transactions yet
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
                           <TableCell className="text-white text-sm">{formatDate(loan.due_date)}</TableCell>
                           <TableCell>{getStatusBadge(loan)}</TableCell>
                           <TableCell>
