@@ -1030,7 +1030,7 @@ export default function Vendors() {
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-[#C5C6C7]">Commission</span>
-                      <span className="text-yellow-400">-{item.commission_earned_base?.toLocaleString()} {item.currency}</span>
+                      <span className="text-yellow-400">-${item.commission_earned_usd?.toLocaleString()}{item.currency !== 'USD' && ` (${item.commission_earned_base?.toLocaleString()} ${item.currency})`}</span>
                     </div>
                     {item.currency !== 'USD' && (
                       <div className="flex justify-between text-xs">
