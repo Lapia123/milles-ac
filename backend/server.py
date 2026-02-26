@@ -4383,6 +4383,209 @@ async def get_vendor_ie_entries(user: dict = Depends(require_vendor)):
 
 # ============== LOAN MANAGEMENT ROUTES ==============
 
+# === Static loan routes (MUST come before /{loan_id} route) ===
+
+@api_router.get("/loans/dashboard")
+async def get_loan_dashboard(user: dict = Depends(get_current_user)):
+    """Get comprehensive loan dashboard data"""
+    loans = await db.loans.find({}, {"_id": 0}).to_list(10000)
+    now = datetime.now(timezone.utc)
+    
+    # Basic metrics
+    total_disbursed_usd = 0
+    total_outstanding_usd = 0
+    total_repaid_usd = 0
+    total_interest_earned = 0
+    
+    # Aging analysis
+    aging = {"current": 0, "days_1_30": 0, "days_31_60": 0, "days_61_90": 0, "days_90_plus": 0}
+    
+    # Status counts
+    status_counts = {"active": 0, "partially_paid": 0, "fully_paid": 0, "overdue": 0, "written_off": 0}
+    
+    # Loan type breakdown
+    type_breakdown = {"short_term": 0, "long_term": 0, "credit_line": 0}
+    
+    # Top borrowers
+    borrower_data = {}
+    
+    # Currency exposure
+    currency_exposure = {}
+    
+    # Upcoming dues (next 30 days)
+    upcoming_dues = []
+    
+    for loan in loans:
+        amount_usd = loan.get("amount_usd", convert_to_usd(loan["amount"], loan.get("currency", "USD")))
+        interest_usd = convert_to_usd(loan.get("total_interest", 0), loan.get("currency", "USD"))
+        repaid_usd = convert_to_usd(loan.get("total_repaid", 0), loan.get("currency", "USD"))
+        outstanding = amount_usd + interest_usd - repaid_usd
+        
+        total_disbursed_usd += amount_usd
+        if outstanding > 0:
+            total_outstanding_usd += outstanding
+        total_repaid_usd += repaid_usd
+        
+        if loan.get("total_repaid", 0) > loan["amount"]:
+            total_interest_earned += convert_to_usd(loan["total_repaid"] - loan["amount"], loan.get("currency", "USD"))
+        
+        # Status counts
+        status = loan.get("status", "active")
+        if status in status_counts:
+            status_counts[status] += 1
+        
+        # Loan type
+        loan_type = loan.get("loan_type", "short_term")
+        if loan_type in type_breakdown:
+            type_breakdown[loan_type] += amount_usd
+        
+        # Currency exposure
+        currency = loan.get("currency", "USD")
+        if currency not in currency_exposure:
+            currency_exposure[currency] = {"amount": 0, "outstanding": 0, "count": 0}
+        currency_exposure[currency]["amount"] += loan["amount"]
+        currency_exposure[currency]["outstanding"] += max(0, loan["amount"] + loan.get("total_interest", 0) - loan.get("total_repaid", 0))
+        currency_exposure[currency]["count"] += 1
+        
+        # Top borrowers
+        borrower = loan["borrower_name"]
+        if borrower not in borrower_data:
+            borrower_data[borrower] = {"total_disbursed": 0, "outstanding": 0, "loan_count": 0, "vendor_id": loan.get("vendor_id")}
+        borrower_data[borrower]["total_disbursed"] += amount_usd
+        borrower_data[borrower]["outstanding"] += max(0, outstanding)
+        borrower_data[borrower]["loan_count"] += 1
+        
+        # Aging analysis (for active/partially paid loans)
+        if status in ["active", "partially_paid"] and loan.get("due_date"):
+            due_str = loan["due_date"]
+            try:
+                if "T" in due_str:
+                    due = datetime.fromisoformat(due_str.replace("Z", "+00:00"))
+                else:
+                    due = datetime.strptime(due_str[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                if due.tzinfo is None:
+                    due = due.replace(tzinfo=timezone.utc)
+                
+                days_overdue = (now - due).days
+                
+                if days_overdue < 0:
+                    aging["current"] += outstanding
+                    # Check if due within 30 days
+                    if days_overdue >= -30:
+                        upcoming_dues.append({
+                            "loan_id": loan["loan_id"],
+                            "borrower": loan["borrower_name"],
+                            "amount": loan["amount"],
+                            "currency": loan.get("currency", "USD"),
+                            "outstanding": outstanding,
+                            "due_date": loan["due_date"],
+                            "days_until_due": abs(days_overdue)
+                        })
+                elif days_overdue <= 30:
+                    aging["days_1_30"] += outstanding
+                elif days_overdue <= 60:
+                    aging["days_31_60"] += outstanding
+                elif days_overdue <= 90:
+                    aging["days_61_90"] += outstanding
+                else:
+                    aging["days_90_plus"] += outstanding
+            except:
+                pass
+    
+    # Sort upcoming dues by days
+    upcoming_dues.sort(key=lambda x: x["days_until_due"])
+    
+    # Top 5 borrowers by outstanding
+    top_borrowers = sorted(borrower_data.items(), key=lambda x: x[1]["outstanding"], reverse=True)[:5]
+    
+    # Collection rate (this month)
+    start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    this_month_repayments = await db.loan_repayments.find({
+        "payment_date": {"$gte": start_of_month.isoformat()}
+    }, {"_id": 0}).to_list(10000)
+    
+    this_month_collected = sum(convert_to_usd(r.get("amount", 0), r.get("currency", "USD")) for r in this_month_repayments)
+    
+    return {
+        "portfolio_overview": {
+            "total_disbursed_usd": round(total_disbursed_usd, 2),
+            "total_outstanding_usd": round(total_outstanding_usd, 2),
+            "total_repaid_usd": round(total_repaid_usd, 2),
+            "total_interest_earned_usd": round(total_interest_earned, 2),
+            "total_loans": len(loans)
+        },
+        "status_breakdown": status_counts,
+        "loan_type_breakdown": {k: round(v, 2) for k, v in type_breakdown.items()},
+        "aging_analysis": {k: round(v, 2) for k, v in aging.items()},
+        "currency_exposure": currency_exposure,
+        "top_borrowers": [{"name": k, **{kk: round(vv, 2) if isinstance(vv, float) else vv for kk, vv in v.items()}} for k, v in top_borrowers],
+        "upcoming_dues": upcoming_dues[:10],
+        "collection_this_month": round(this_month_collected, 2)
+    }
+
+@api_router.get("/loans/transactions")
+async def get_loan_transactions(
+    loan_id: Optional[str] = None,
+    transaction_type: Optional[str] = None,
+    limit: int = 100,
+    user: dict = Depends(get_current_user)
+):
+    """Get loan transactions log"""
+    query = {}
+    if loan_id:
+        query["loan_id"] = loan_id
+    if transaction_type:
+        query["transaction_type"] = transaction_type
+    
+    transactions = await db.loan_transactions.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    return transactions
+
+@api_router.get("/loans/vendors")
+async def get_vendor_borrowers(user: dict = Depends(get_current_user)):
+    """Get all vendors that can be borrowers with their loan stats"""
+    vendors = await db.vendors.find({}, {"_id": 0}).to_list(1000)
+    
+    # Get loan stats for each vendor
+    vendor_stats = {}
+    loans = await db.loans.find({}, {"_id": 0, "vendor_id": 1, "amount": 1, "currency": 1, "total_repaid": 1, "total_interest": 1, "status": 1}).to_list(10000)
+    
+    for loan in loans:
+        vid = loan.get("vendor_id")
+        if vid:
+            if vid not in vendor_stats:
+                vendor_stats[vid] = {"total_loans": 0, "total_disbursed": 0, "total_outstanding": 0, "active_loans": 0}
+            
+            amount_usd = convert_to_usd(loan["amount"], loan.get("currency", "USD"))
+            outstanding = loan["amount"] + loan.get("total_interest", 0) - loan.get("total_repaid", 0)
+            outstanding_usd = convert_to_usd(max(0, outstanding), loan.get("currency", "USD"))
+            
+            vendor_stats[vid]["total_loans"] += 1
+            vendor_stats[vid]["total_disbursed"] += amount_usd
+            vendor_stats[vid]["total_outstanding"] += outstanding_usd
+            if loan["status"] in ["active", "partially_paid"]:
+                vendor_stats[vid]["active_loans"] += 1
+    
+    # Combine vendor info with stats
+    result = []
+    for v in vendors:
+        stats = vendor_stats.get(v["vendor_id"], {"total_loans": 0, "total_disbursed": 0, "total_outstanding": 0, "active_loans": 0})
+        result.append({
+            "vendor_id": v["vendor_id"],
+            "name": v["name"],
+            "email": v.get("email"),
+            "status": v.get("status", "active"),
+            "loan_stats": {
+                "total_loans": stats["total_loans"],
+                "total_disbursed_usd": round(stats["total_disbursed"], 2),
+                "total_outstanding_usd": round(stats["total_outstanding"], 2),
+                "active_loans": stats["active_loans"]
+            }
+        })
+    
+    return result
+
+# === List all loans ===
+
 @api_router.get("/loans")
 async def get_loans(
     status: Optional[str] = None,
