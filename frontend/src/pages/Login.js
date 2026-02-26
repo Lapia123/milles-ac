@@ -80,18 +80,18 @@ export default function Login() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                <Label htmlFor="email" className="text-slate-600 text-xs uppercase tracking-wider">
                   Email Address
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C5C6C7]" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input
                     id="email"
                     type="email"
                     placeholder="admin@fxbroker.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 bg-slate-50 border-slate-200 text-white placeholder:text-white/20 focus:border-[#66FCF1] focus:ring-[#66FCF1] font-mono"
+                    className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500 font-mono"
                     data-testid="login-email-input"
                     required
                   />
@@ -99,18 +99,18 @@ export default function Login() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                <Label htmlFor="password" className="text-slate-600 text-xs uppercase tracking-wider">
                   Password
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C5C6C7]" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input
                     id="password"
                     type="password"
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 bg-slate-50 border-slate-200 text-white placeholder:text-white/20 focus:border-[#66FCF1] focus:ring-[#66FCF1]"
+                    className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500"
                     data-testid="login-password-input"
                     required
                   />
@@ -120,7 +120,7 @@ export default function Login() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan glow-cyan-hover"
+                className="w-full bg-blue-600 text-white hover:bg-blue-700 font-bold uppercase tracking-wider rounded-lg shadow-sm"
                 data-testid="login-submit-btn"
               >
                 {isLoading ? 'Signing in...' : 'Sign In'}
@@ -132,7 +132,7 @@ export default function Login() {
                 <div className="w-full border-t border-slate-200"></div>
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-4 text-[#C5C6C7]">Or continue with</span>
+                <span className="bg-white px-4 text-slate-500">Or continue with</span>
               </div>
             </div>
 
@@ -140,14 +140,14 @@ export default function Login() {
               type="button"
               variant="outline"
               onClick={loginWithGoogle}
-              className="w-full bg-transparent border-[#66FCF1] text-[#66FCF1] hover:bg-[#66FCF1]/10 font-medium uppercase tracking-wider rounded-sm"
+              className="w-full bg-transparent border-blue-600 text-blue-600 hover:bg-blue-50 font-medium uppercase tracking-wider rounded-lg"
               data-testid="google-login-btn"
             >
               <Chrome className="w-4 h-4 mr-2" />
               Sign in with Google
             </Button>
 
-            <p className="mt-6 text-center text-xs text-[#C5C6C7]">
+            <p className="mt-6 text-center text-xs text-slate-500">
               Demo credentials: admin@fxbroker.com / password
             </p>
           </div>
