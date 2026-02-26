@@ -4467,10 +4467,15 @@ async def create_loan(loan_data: LoanCreate, user: dict = Depends(get_current_us
     if loan_data.amount <= 0:
         raise HTTPException(status_code=400, detail="Loan amount must be positive")
     
+    # If vendor_id provided, get vendor details
+    vendor = None
+    if loan_data.vendor_id:
+        vendor = await db.vendors.find_one({"vendor_id": loan_data.vendor_id}, {"_id": 0})
+    
     loan_id = f"loan_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
     
-    # Calculate interest (simple interest for now)
+    # Calculate interest (simple interest)
     # Interest = Principal * Rate * Time (in years)
     loan_date = datetime.fromisoformat(loan_data.loan_date.replace("Z", "+00:00"))
     due_date = datetime.fromisoformat(loan_data.due_date.replace("Z", "+00:00"))
@@ -4483,17 +4488,22 @@ async def create_loan(loan_data: LoanCreate, user: dict = Depends(get_current_us
     
     loan_doc = {
         "loan_id": loan_id,
+        "vendor_id": loan_data.vendor_id,
+        "vendor_name": vendor["name"] if vendor else None,
         "borrower_name": loan_data.borrower_name,
         "amount": loan_data.amount,
         "currency": loan_data.currency,
         "amount_usd": amount_usd,
         "interest_rate": loan_data.interest_rate,
+        "loan_type": loan_data.loan_type,
         "total_interest": total_interest,
         "loan_date": loan_data.loan_date,
         "due_date": loan_data.due_date,
         "repayment_mode": loan_data.repayment_mode,
         "installment_amount": loan_data.installment_amount,
         "installment_frequency": loan_data.installment_frequency,
+        "num_installments": loan_data.num_installments,
+        "collateral": loan_data.collateral,
         "source_treasury_id": loan_data.treasury_account_id,
         "total_repaid": 0,
         "repayment_count": 0,
@@ -4527,6 +4537,20 @@ async def create_loan(loan_data: LoanCreate, user: dict = Depends(get_current_us
         "created_by_name": user["name"]
     }
     await db.treasury_transactions.insert_one(tx_doc)
+    
+    # Record loan transaction
+    await db.loan_transactions.insert_one({
+        "transaction_id": f"ltx_{uuid.uuid4().hex[:12]}",
+        "loan_id": loan_id,
+        "transaction_type": LoanTransactionType.DISBURSEMENT,
+        "amount": loan_data.amount,
+        "currency": loan_data.currency,
+        "treasury_account_id": loan_data.treasury_account_id,
+        "description": f"Loan disbursement to {loan_data.borrower_name}",
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    })
     
     loan_doc.pop("_id", None)
     loan_doc["source_treasury_name"] = treasury["account_name"]
