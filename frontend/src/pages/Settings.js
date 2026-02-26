@@ -431,10 +431,21 @@ export default function Settings() {
   };
 
   const getRoleBadge = (role) => {
-    const isAdmin = role === 'admin';
+    const roleStyles = {
+      admin: 'bg-blue-100 text-blue-700 border border-blue-200',
+      sub_admin: 'bg-slate-100 text-slate-600 border border-slate-200',
+      accountant: 'bg-purple-100 text-purple-700 border border-purple-200',
+      vendor: 'bg-amber-100 text-amber-700 border border-amber-200',
+    };
+    const roleLabels = {
+      admin: 'Admin',
+      sub_admin: 'Sub-Admin',
+      accountant: 'Accountant',
+      vendor: 'Exchanger',
+    };
     return (
-      <Badge className={`${isAdmin ? 'bg-[#66FCF1]/20 text-[#66FCF1] border border-[#66FCF1]/30' : 'bg-white/10 text-[#C5C6C7] border border-slate-200'} text-xs uppercase`}>
-        {role === 'admin' ? 'Admin' : 'Sub-Admin'}
+      <Badge className={`${roleStyles[role] || roleStyles.sub_admin} text-xs uppercase`}>
+        {roleLabels[role] || role}
       </Badge>
     );
   };
