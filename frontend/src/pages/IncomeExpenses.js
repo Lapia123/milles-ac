@@ -1431,7 +1431,7 @@ export default function IncomeExpenses() {
 }
 
 // Entries Table Component with visual distinction & convert-to-loan
-function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCategoryLabel, onConvertToLoan }) {
+function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCategoryLabel, onConvertToLoan, onUploadInvoice, onViewInvoice }) {
   if (loading) {
     return (
       <Card className="bg-white border-slate-200">
