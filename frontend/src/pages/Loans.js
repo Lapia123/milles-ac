@@ -1093,16 +1093,70 @@ export default function Loans() {
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreateLoan} className="space-y-4">
-            {/* Borrower Name */}
+            {/* Vendor/Borrower Selection */}
             <div className="space-y-2">
-              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Borrower Company *</Label>
-              <Input
-                value={loanForm.borrower_name}
-                onChange={(e) => setLoanForm({ ...loanForm, borrower_name: e.target.value })}
-                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
-                placeholder="Company name"
-                data-testid="loan-borrower"
-              />
+              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider flex items-center gap-2">
+                <Building2 className="w-3 h-3" /> Borrower Company *
+              </Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B8D91]" />
+                <Input
+                  value={vendorSearch}
+                  onChange={(e) => setVendorSearch(e.target.value)}
+                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] pl-9"
+                  placeholder="Search vendor or enter new name..."
+                  data-testid="loan-borrower-search"
+                />
+              </div>
+              {vendorSearch && (
+                <div className="bg-[#0B0C10] border border-white/10 rounded-md max-h-32 overflow-y-auto">
+                  <div 
+                    className="px-3 py-2 cursor-pointer hover:bg-[#66FCF1]/10 text-[#66FCF1] flex items-center gap-2 border-b border-white/10 text-sm"
+                    onClick={() => { setLoanForm({ ...loanForm, borrower_name: vendorSearch, vendor_id: '' }); }}
+                  >
+                    <Plus className="w-3 h-3" /> Use "{vendorSearch}" as new borrower
+                  </div>
+                  {vendors.filter(v => v.name.toLowerCase().includes(vendorSearch.toLowerCase())).map((v) => (
+                    <div 
+                      key={v.vendor_id}
+                      className={`px-3 py-2 cursor-pointer hover:bg-white/5 text-white text-sm ${loanForm.vendor_id === v.vendor_id ? 'bg-[#66FCF1]/10' : ''}`}
+                      onClick={() => { 
+                        setLoanForm({ ...loanForm, borrower_name: v.name, vendor_id: v.vendor_id }); 
+                        setVendorSearch(v.name);
+                      }}
+                    >
+                      {v.name}
+                      {v.loan_stats.active_loans > 0 && (
+                        <span className="text-[#8B8D91] text-xs ml-2">({v.loan_stats.active_loans} active loans)</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {loanForm.borrower_name && (
+                <div className="flex items-center gap-2 text-xs text-[#66FCF1]">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Selected: {loanForm.borrower_name}
+                  <Button type="button" variant="ghost" size="sm" onClick={() => { setLoanForm({ ...loanForm, borrower_name: '', vendor_id: '' }); setVendorSearch(''); }} className="h-5 px-1 text-[#8B8D91]">
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Loan Type */}
+            <div className="space-y-2">
+              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Loan Type</Label>
+              <Select value={loanForm.loan_type} onValueChange={(value) => setLoanForm({ ...loanForm, loan_type: value })}>
+                <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1F2833] border-white/10">
+                  {loanTypes.map((lt) => (
+                    <SelectItem key={lt.value} value={lt.value} className="text-white hover:bg-white/5">{lt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Amount & Currency */}
@@ -1140,7 +1194,7 @@ export default function Loans() {
 
             {/* Interest Rate */}
             <div className="space-y-2">
-              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Annual Interest Rate (%)</Label>
+              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Annual Interest Rate (%) - Simple Interest</Label>
               <Input
                 type="number"
                 step="0.01"
