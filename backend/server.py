@@ -4058,19 +4058,40 @@ async def get_income_expense(entry_id: str, user: dict = Depends(get_current_use
 
 @api_router.post("/income-expenses")
 async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = Depends(get_current_user)):
-    """Create a new income or expense entry, optionally linked to a vendor for approval"""
+    """Create a new income or expense entry, optionally linked to a vendor/supplier/client for approval"""
     if entry_data.amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")
     
     if not entry_data.vendor_id and not entry_data.treasury_account_id:
-        raise HTTPException(status_code=400, detail="Either a vendor or treasury account is required")
+        raise HTTPException(status_code=400, detail="Either an exchanger or treasury account is required")
     
-    # Vendor-linked entry: auto-create pending approval in vendor portal
+    # Exchanger-linked entry: auto-create pending approval in vendor portal
     vendor_info = None
     if entry_data.vendor_id:
         vendor_info = await db.vendors.find_one({"vendor_id": entry_data.vendor_id}, {"_id": 0})
         if not vendor_info:
-            raise HTTPException(status_code=404, detail="Vendor not found")
+            raise HTTPException(status_code=404, detail="Exchanger not found")
+    
+    # Vendor Supplier (service supplier like rent, utilities) - lookup for name
+    vendor_supplier_info = None
+    if entry_data.vendor_supplier_id:
+        vendor_supplier_info = await db.vendor_suppliers.find_one({"supplier_id": entry_data.vendor_supplier_id}, {"_id": 0})
+        if not vendor_supplier_info:
+            raise HTTPException(status_code=404, detail="Vendor supplier not found")
+    
+    # Client - lookup for name
+    client_info = None
+    if entry_data.client_id:
+        client_info = await db.clients.find_one({"client_id": entry_data.client_id}, {"_id": 0})
+        if not client_info:
+            raise HTTPException(status_code=404, detail="Client not found")
+    
+    # IE Category - lookup for name
+    ie_category_info = None
+    if entry_data.ie_category_id:
+        ie_category_info = await db.ie_categories.find_one({"category_id": entry_data.ie_category_id}, {"_id": 0})
+        if not ie_category_info:
+            raise HTTPException(status_code=404, detail="Category not found")
     
     treasury = None
     if entry_data.treasury_account_id and not entry_data.vendor_id:
@@ -4085,7 +4106,7 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = De
     # Calculate USD equivalent
     amount_usd = convert_to_usd(entry_data.amount, entry_data.currency)
     
-    # Determine initial status: pending if vendor-linked, completed otherwise
+    # Determine initial status: pending if exchanger-linked, completed otherwise
     status = "pending_vendor" if vendor_info else "completed"
     
     entry_doc = {
@@ -4100,6 +4121,12 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = De
         "treasury_account_name": treasury["account_name"] if treasury else None,
         "vendor_id": entry_data.vendor_id,
         "vendor_name": vendor_info["vendor_name"] if vendor_info else None,
+        "vendor_supplier_id": entry_data.vendor_supplier_id,
+        "vendor_supplier_name": vendor_supplier_info["name"] if vendor_supplier_info else None,
+        "client_id": entry_data.client_id,
+        "client_name": f"{client_info['first_name']} {client_info['last_name']}" if client_info else None,
+        "ie_category_id": entry_data.ie_category_id,
+        "ie_category_name": ie_category_info["name"] if ie_category_info else None,
         "vendor_bank_account_name": entry_data.vendor_bank_account_name,
         "vendor_bank_account_number": entry_data.vendor_bank_account_number,
         "vendor_bank_ifsc": entry_data.vendor_bank_ifsc,
