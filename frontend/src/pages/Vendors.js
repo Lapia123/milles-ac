@@ -423,7 +423,7 @@ export default function Exchangers() {
           <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
             Exchangers
           </h1>
-          <p className="text-slate-500">Manage vendors, commissions, and settlements</p>
+          <p className="text-slate-500">Manage exchangers, commissions, and settlements</p>
         </div>
         {isAdmin && (
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
