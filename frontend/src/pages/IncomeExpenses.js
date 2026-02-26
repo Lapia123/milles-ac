@@ -326,6 +326,92 @@ export default function IncomeExpenses() {
       else { const err = await response.json(); toast.error(err.detail || 'Delete failed'); }
     } catch { toast.error('Delete failed'); }
   };
+  
+  // Bulk Import Handler
+  const handleBulkImport = async () => {
+    if (!importFile) { toast.error('Please select an Excel file'); return; }
+    if (!importTreasuryId) { toast.error('Please select a treasury account'); return; }
+    
+    setImporting(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const formData = new FormData();
+      formData.append('file', importFile);
+      formData.append('treasury_account_id', importTreasuryId);
+      
+      const response = await fetch(`${API_URL}/api/income-expenses/bulk-import`, {
+        method: 'POST',
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: formData
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(`Imported ${result.imported} entries successfully`);
+        if (result.errors?.length > 0) {
+          toast.warning(`${result.errors.length} rows had errors`);
+        }
+        setImportDialog(false);
+        setImportFile(null);
+        setImportTreasuryId('');
+        fetchEntries();
+        fetchSummary();
+        fetchTreasuryAccounts();
+      } else {
+        const err = await response.json();
+        toast.error(err.detail || 'Import failed');
+      }
+    } catch { toast.error('Import failed'); }
+    finally { setImporting(false); }
+  };
+  
+  // Download Template
+  const downloadTemplate = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${API_URL}/api/income-expenses/export-template`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'income_expenses_template.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+    } catch { toast.error('Failed to download template'); }
+  };
+  
+  // Invoice Upload Handler
+  const handleInvoiceUpload = async () => {
+    if (!invoiceFile || !invoiceDialog.entry) { toast.error('Please select a file'); return; }
+    
+    setUploadingInvoice(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const formData = new FormData();
+      formData.append('invoice_file', invoiceFile);
+      
+      const response = await fetch(`${API_URL}/api/income-expenses/${invoiceDialog.entry.entry_id}/upload-invoice`, {
+        method: 'POST',
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: formData
+      });
+      
+      if (response.ok) {
+        toast.success('Invoice uploaded successfully');
+        setInvoiceDialog({ open: false, entry: null });
+        setInvoiceFile(null);
+        fetchEntries();
+      } else {
+        const err = await response.json();
+        toast.error(err.detail || 'Upload failed');
+      }
+    } catch { toast.error('Upload failed'); }
+    finally { setUploadingInvoice(false); }
+  };
 
   const resetForm = () => {
     setFormData({
