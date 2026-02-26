@@ -55,7 +55,7 @@ export default function Layout() {
 
   // Exchanger-specific navigation
   const vendorNavItems = [
-    { to: '/exchanger-portal', icon: Store, label: 'My Portal' },
+    { to: '/vendor-portal', icon: Store, label: 'My Portal' },
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
 
