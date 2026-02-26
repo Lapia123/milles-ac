@@ -51,6 +51,7 @@ export default function Layout() {
   const isAccountantOrAdmin = user?.role === 'admin' || user?.role === 'accountant';
   const isExchanger = user?.role === 'vendor';
   const isAdmin = user?.role === 'admin';
+  const isSubAdmin = user?.role === 'sub_admin';
 
   // Exchanger-specific navigation
   const vendorNavItems = [
@@ -58,7 +59,15 @@ export default function Layout() {
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
 
-  // Admin/Sub-admin navigation
+  // Sub-admin navigation (Clients & Transactions only)
+  const subAdminNavItems = [
+    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/clients', icon: Users, label: 'Clients' },
+    { to: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
+    { to: '/settings', icon: Settings, label: 'Settings' },
+  ];
+
+  // Admin/Accountant navigation (full access)
   const adminNavItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/clients', icon: Users, label: 'Clients' },
@@ -76,7 +85,8 @@ export default function Layout() {
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
 
-  const navItems = isExchanger ? vendorNavItems : adminNavItems;
+  // Select nav items based on role
+  const navItems = isExchanger ? vendorNavItems : isSubAdmin ? subAdminNavItems : adminNavItems;
 
   const NavItem = ({ to, icon: Icon, label }) => (
     <NavLink
