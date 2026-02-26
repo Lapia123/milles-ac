@@ -296,7 +296,7 @@ export default function Reports() {
             <ArrowLeftRight className="w-4 h-4 mr-2" />
             Transactions
           </TabsTrigger>
-          <TabsTrigger value="vendors" className="data-[state=active]:bg-blue-600/20 data-[state=active]:text-blue-400">
+          <TabsTrigger value="exchangers" className="data-[state=active]:bg-blue-600/20 data-[state=active]:text-blue-400">
             <Store className="w-4 h-4 mr-2" />
             Exchangers
           </TabsTrigger>
@@ -498,13 +498,13 @@ export default function Reports() {
         </TabsContent>
 
         {/* ========== EXCHANGERS REPORT ========== */}
-        <TabsContent value="vendors" className="space-y-4">
+        <TabsContent value="exchangers" className="space-y-4">
           {vendorReport && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                   title="Total Exchangers"
-                  value={vendorReport.grand_totals?.total_vendors || 0}
+                  value={vendorReport.grand_totals?.total_exchangers || 0}
                   icon={Store}
                   color="purple"
                 />
