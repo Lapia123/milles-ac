@@ -1311,6 +1311,17 @@ export default function Loans() {
               </Select>
             </div>
 
+            {/* Collateral */}
+            <div className="space-y-2">
+              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Collateral / Security (Optional)</Label>
+              <Input
+                value={loanForm.collateral}
+                onChange={(e) => setLoanForm({ ...loanForm, collateral: e.target.value })}
+                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                placeholder="e.g., Property deed, Bank guarantee..."
+              />
+            </div>
+
             {/* Notes */}
             <div className="space-y-2">
               <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Notes</Label>
