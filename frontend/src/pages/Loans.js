@@ -552,16 +552,20 @@ export default function Loans() {
                         <TableRow key={loan.loan_id} className="border-white/5 hover:bg-white/5">
                           <TableCell>
                             <div className="text-white font-medium">{loan.borrower_name}</div>
-                            <div className="text-[10px] text-[#C5C6C7]">{loan.source_treasury_name}</div>
+                            <div className="text-[10px] text-[#8B8D91]">{loan.source_treasury_name || '—'}</div>
                           </TableCell>
-                          <TableCell className="text-white font-mono text-right text-sm">
-                            {loan.currency === 'USD' ? '$' : ''}{loan.amount?.toLocaleString()}{loan.currency !== 'USD' ? ` ${loan.currency}` : ''}
+                          <TableCell className="text-right">
+                            <div className="text-white font-mono text-sm">
+                              {loan.currency === 'USD' ? '$' : ''}{loan.amount?.toLocaleString()}{loan.currency !== 'USD' ? ` ${loan.currency}` : ''}
+                            </div>
                             {loan.interest_rate > 0 && (
-                              <span className="text-[10px] text-yellow-400 ml-1">({loan.interest_rate}%)</span>
+                              <div className="text-[10px] text-yellow-400/80">@ {loan.interest_rate}% interest</div>
                             )}
                           </TableCell>
-                          <TableCell className="text-[#66FCF1] font-mono text-right text-sm font-semibold">
-                            {loan.currency === 'USD' ? '$' : ''}{loan.outstanding_balance?.toLocaleString()}{loan.currency !== 'USD' ? ` ${loan.currency}` : ''}
+                          <TableCell className="text-right">
+                            <span className="text-[#66FCF1] font-mono text-sm font-semibold">
+                              {loan.currency === 'USD' ? '$' : ''}{loan.outstanding_balance?.toLocaleString()}{loan.currency !== 'USD' ? ` ${loan.currency}` : ''}
+                            </span>
                           </TableCell>
                           <TableCell className="text-white text-sm">{formatDate(loan.due_date)}</TableCell>
                           <TableCell>{getStatusBadge(loan)}</TableCell>
