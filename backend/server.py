@@ -4123,8 +4123,14 @@ class ConvertToLoanRequest(BaseModel):
     borrower_name: str
     interest_rate: float = 0
     due_date: str
-    treasury_account_id: str
+    treasury_account_id: Optional[str] = None  # Optional - will use expense's treasury if not provided
     notes: Optional[str] = None
+
+@api_router.get("/loans/borrowers")
+async def get_loan_borrowers(user: dict = Depends(get_current_user)):
+    """Get unique list of borrower names from existing loans"""
+    borrowers = await db.loans.distinct("borrower_name")
+    return {"borrowers": sorted([b for b in borrowers if b])}
 
 @api_router.post("/income-expenses/{entry_id}/convert-to-loan")
 async def convert_expense_to_loan(entry_id: str, req: ConvertToLoanRequest, user: dict = Depends(get_current_user)):
