@@ -148,4 +148,9 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 ## Future/Backlog
 - P1: Complete Reconciliation Module (CSV/Excel upload + auto-matching)
 - P2: Fix session management redirect issue
-- P2: Refactor server.py monolith into APIRouter modules
+- P2: Refactor server.py monolith into APIRouter modules (now ~7900+ lines)
+
+## Database Collections (Key)
+- `vendor_suppliers`: Service providers (rent, utilities) - distinct from `vendors` (exchangers/money partners)
+- `ie_categories`: Custom income/expense account categories
+- `income_expenses`: Enhanced with vendor_supplier_id, client_id, ie_category_id fields
