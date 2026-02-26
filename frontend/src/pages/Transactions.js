@@ -400,6 +400,148 @@ export default function Transactions() {
     });
   };
 
+  // Download functions
+  const downloadCSV = () => {
+    const headers = ['Date', 'Client', 'Type', 'Amount', 'Currency', 'USD Equivalent', 'Status', 'Destination', 'Reference', 'Description'];
+    const rows = filteredTransactions.map(tx => [
+      formatDate(tx.created_at),
+      tx.client_name || getClientName(tx.client_id),
+      tx.transaction_type,
+      tx.amount,
+      tx.currency,
+      tx.amount_usd || tx.amount,
+      tx.status,
+      tx.destination_type === 'treasury' ? tx.treasury_account_name : 
+        tx.destination_type === 'psp' ? tx.psp_name : 
+        tx.destination_type === 'vendor' ? tx.vendor_name : tx.destination_type,
+      tx.reference || '',
+      tx.description || ''
+    ]);
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `transactions_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    toast.success('CSV report downloaded');
+  };
+
+  const downloadExcel = () => {
+    // Create a simple Excel-compatible HTML table
+    const headers = ['Date', 'Client', 'Type', 'Amount', 'Currency', 'USD Equivalent', 'Status', 'Destination', 'Reference', 'Description'];
+    const rows = filteredTransactions.map(tx => [
+      formatDate(tx.created_at),
+      tx.client_name || getClientName(tx.client_id),
+      tx.transaction_type,
+      tx.amount,
+      tx.currency,
+      tx.amount_usd || tx.amount,
+      tx.status,
+      tx.destination_type === 'treasury' ? tx.treasury_account_name : 
+        tx.destination_type === 'psp' ? tx.psp_name : 
+        tx.destination_type === 'vendor' ? tx.vendor_name : tx.destination_type,
+      tx.reference || '',
+      tx.description || ''
+    ]);
+    
+    const htmlContent = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+      <head><meta charset="UTF-8"></head>
+      <body>
+        <table border="1">
+          <thead><tr>${headers.map(h => `<th style="background:#1F2833;color:#fff;font-weight:bold;">${h}</th>`).join('')}</tr></thead>
+          <tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table>
+      </body>
+      </html>
+    `;
+    
+    const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `transactions_${new Date().toISOString().split('T')[0]}.xls`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    toast.success('Excel report downloaded');
+  };
+
+  const downloadPDF = () => {
+    // Generate a printable HTML page
+    const headers = ['Date', 'Client', 'Type', 'Amount', 'Currency', 'Status', 'Destination'];
+    const rows = filteredTransactions.map(tx => [
+      formatDate(tx.created_at),
+      tx.client_name || getClientName(tx.client_id),
+      tx.transaction_type,
+      `${tx.amount} ${tx.currency}`,
+      tx.amount_usd ? `$${tx.amount_usd}` : '-',
+      tx.status,
+      tx.destination_type === 'treasury' ? tx.treasury_account_name : 
+        tx.destination_type === 'psp' ? tx.psp_name : 
+        tx.destination_type === 'vendor' ? tx.vendor_name : tx.destination_type,
+    ]);
+    
+    // Calculate summary
+    const totalDeposits = filteredTransactions.filter(t => t.transaction_type === 'deposit').reduce((sum, t) => sum + (t.amount_usd || t.amount), 0);
+    const totalWithdrawals = filteredTransactions.filter(t => t.transaction_type === 'withdrawal').reduce((sum, t) => sum + (t.amount_usd || t.amount), 0);
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+      <head>
+        <title>Transactions Report - Miles Capitals</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { color: #1F2833; border-bottom: 2px solid #66FCF1; padding-bottom: 10px; }
+          .summary { display: flex; gap: 30px; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+          .summary-item { }
+          .summary-item label { font-size: 12px; color: #666; display: block; }
+          .summary-item span { font-size: 18px; font-weight: bold; }
+          .deposits { color: #22c55e; }
+          .withdrawals { color: #ef4444; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th { background: #1F2833; color: white; padding: 10px; text-align: left; font-size: 12px; }
+          td { padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 12px; }
+          tr:hover { background: #f5f5f5; }
+          .footer { margin-top: 30px; font-size: 11px; color: #999; text-align: center; }
+          @media print { .no-print { display: none; } }
+        </style>
+      </head>
+      <body>
+        <h1>Transactions Report</h1>
+        <p>Generated: ${new Date().toLocaleString()} | Total Records: ${filteredTransactions.length}</p>
+        <div class="summary">
+          <div class="summary-item">
+            <label>Total Deposits (USD)</label>
+            <span class="deposits">$${totalDeposits.toLocaleString()}</span>
+          </div>
+          <div class="summary-item">
+            <label>Total Withdrawals (USD)</label>
+            <span class="withdrawals">$${totalWithdrawals.toLocaleString()}</span>
+          </div>
+          <div class="summary-item">
+            <label>Net Flow (USD)</label>
+            <span style="color: ${totalDeposits - totalWithdrawals >= 0 ? '#22c55e' : '#ef4444'}">$${(totalDeposits - totalWithdrawals).toLocaleString()}</span>
+          </div>
+        </div>
+        <table>
+          <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+          <tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table>
+        <div class="footer">Miles Capitals - Back Office System</div>
+        <button class="no-print" onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#1F2833;color:white;border:none;cursor:pointer;border-radius:4px;">Print / Save as PDF</button>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    toast.success('PDF report opened in new window');
+  };
+
   return (
     <div className="space-y-6 animate-fade-in" data-testid="transactions-page">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
