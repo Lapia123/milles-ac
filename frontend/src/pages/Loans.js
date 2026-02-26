@@ -540,50 +540,51 @@ export default function Loans() {
                     <TableHeader>
                       <TableRow className="border-white/10 hover:bg-transparent">
                         <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Borrower</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Principal</TableHead>
                         <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Outstanding</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Due Date</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Due</TableHead>
                         <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Treasury</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs w-32">Actions</TableHead>
+                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredLoans.map((loan) => (
                         <TableRow key={loan.loan_id} className="border-white/5 hover:bg-white/5">
-                          <TableCell className="text-white font-medium">{loan.borrower_name}</TableCell>
-                          <TableCell className="text-white font-mono text-right">
-                            {loan.amount?.toLocaleString()} {loan.currency}
+                          <TableCell>
+                            <div className="text-white font-medium">{loan.borrower_name}</div>
+                            <div className="text-[10px] text-[#C5C6C7]">{loan.source_treasury_name}</div>
+                          </TableCell>
+                          <TableCell className="text-white font-mono text-right text-sm">
+                            {loan.currency === 'USD' ? '$' : ''}{loan.amount?.toLocaleString()}{loan.currency !== 'USD' ? ` ${loan.currency}` : ''}
                             {loan.interest_rate > 0 && (
-                              <span className="text-xs text-[#C5C6C7] block">@ {loan.interest_rate}%</span>
+                              <span className="text-[10px] text-yellow-400 ml-1">({loan.interest_rate}%)</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-[#66FCF1] font-mono text-right">
-                            {loan.outstanding_balance?.toLocaleString()} {loan.currency}
+                          <TableCell className="text-[#66FCF1] font-mono text-right text-sm font-semibold">
+                            {loan.currency === 'USD' ? '$' : ''}{loan.outstanding_balance?.toLocaleString()}{loan.currency !== 'USD' ? ` ${loan.currency}` : ''}
                           </TableCell>
                           <TableCell className="text-white text-sm">{formatDate(loan.due_date)}</TableCell>
                           <TableCell>{getStatusBadge(loan)}</TableCell>
-                          <TableCell className="text-[#C5C6C7] text-sm">{loan.source_treasury_name}</TableCell>
                           <TableCell>
-                            <div className="flex gap-1">
+                            <div className="flex gap-0.5 justify-end">
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => fetchLoanDetail(loan.loan_id)}
-                                className="text-[#66FCF1] hover:text-[#66FCF1] hover:bg-[#66FCF1]/10"
+                                className="text-[#66FCF1] hover:text-[#66FCF1] hover:bg-[#66FCF1]/10 h-7 w-7 p-0"
                                 title="View Details"
                               >
-                                <Eye className="w-4 h-4" />
+                                <Eye className="w-3.5 h-3.5" />
                               </Button>
                               {loan.status !== 'fully_paid' && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => openRepaymentDialog(loan)}
-                                  className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
+                                  className="text-green-400 hover:text-green-300 hover:bg-green-500/10 h-7 w-7 p-0"
                                   title="Record Repayment"
                                 >
-                                  <CreditCard className="w-4 h-4" />
+                                  <CreditCard className="w-3.5 h-3.5" />
                                 </Button>
                               )}
                               {isAdmin && loan.repayment_count === 0 && (
@@ -591,10 +592,10 @@ export default function Loans() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleDeleteLoan(loan.loan_id)}
-                                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-7 w-7 p-0"
                                   title="Delete"
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </Button>
                               )}
                             </div>
