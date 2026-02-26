@@ -24,7 +24,7 @@ import {
   TrendingUp, TrendingDown, Plus, DollarSign,
   Trash2, BarChart3, ArrowUpRight, ArrowDownRight,
   Wallet, X, Store, ArrowRightLeft, Clock, Search, Building2,
-  Users, FolderTree, Pencil, User,
+  Users, FolderTree, Pencil, User, Upload, FileSpreadsheet, Download, FileText, Eye,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
