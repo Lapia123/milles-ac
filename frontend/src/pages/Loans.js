@@ -1247,10 +1247,10 @@ export default function Loans() {
             </div>
 
             {/* Installment Details */}
-            {loanForm.repayment_mode === 'installments' && (
-              <div className="grid grid-cols-2 gap-4">
+            {loanForm.repayment_mode === 'emi' && (
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Installment Amount</Label>
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">EMI Amount</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -1259,6 +1259,17 @@ export default function Loans() {
                     onChange={(e) => setLoanForm({ ...loanForm, installment_amount: e.target.value })}
                     className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
                     placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider"># of EMIs</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={loanForm.num_installments}
+                    onChange={(e) => setLoanForm({ ...loanForm, num_installments: e.target.value })}
+                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                    placeholder="12"
                   />
                 </div>
                 <div className="space-y-2">
