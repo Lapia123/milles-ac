@@ -60,12 +60,15 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 - Track company income/expenses, custom categories, treasury integration
 
 ### Loan Management (Enhanced Feb 26, 2026)
-- **Multiple Loans per Company**: Same borrower can have multiple active loans
-- **CSV Export**: Export all loans to CSV for external use
-- **Borrower List API**: New `/api/loans/borrowers` endpoint returns unique borrower names
-- **Improved Table UI**: Cleaner layout with Treasury shown below borrower name
-- Borrower, amount, interest, dates, repayment tracking
-- Converted-from-expense loans tracked with source reference
+- **MAJOR OVERHAUL** - Complete redesign with new tabbed interface
+- **Dashboard Tab**: Portfolio overview, Aging analysis, Top borrowers, Upcoming dues
+- **Borrowers Tab**: Vendor loan statistics (total loans, disbursed, outstanding, active)
+- **All Loans Tab**: Summary cards, filter tabs, enhanced actions (View, Repay, Swap, Delete, Write-off)
+- **Transactions Tab**: Full loan transaction history with types (Disbursement, Repayment, Swap, Write-off)
+- **Create Loan Enhanced**: Searchable borrower dropdown (vendors + new), Loan types (Short/Long/Credit Line), Simple interest, Repayment modes (Lump Sum, EMI, Custom), Collateral field
+- **Loan Swapping**: Transfer to another borrower, adjust terms, full history tracking
+- **Write-off**: Mark as bad debt with amount and reason
+- **CSV Export**: Export all loans data
 
 ### Outstanding Accounts
 - Debtors & Creditors, party linking, interest, payment recording, aging summary
