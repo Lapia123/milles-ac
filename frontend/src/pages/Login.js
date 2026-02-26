@@ -42,10 +42,10 @@ export default function Login() {
           backgroundImage: 'url(https://images.pexels.com/photos/30766684/pexels-photo-30766684.png?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940)'
         }}
       >
-        <div className="absolute inset-0 bg-slate-50/80 backdrop-blur-sm" />
+        <div className="absolute inset-0 bg-blue-900/80 backdrop-blur-sm" />
         <div className="relative z-10 flex flex-col justify-center items-center w-full p-12 text-center">
           <div className="flex items-center gap-3 mb-6">
-            <TrendingUp className="w-12 h-12 text-[#66FCF1]" />
+            <TrendingUp className="w-12 h-12 text-white" />
             <span className="text-4xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
               Miles Capitals
             </span>
@@ -53,7 +53,7 @@ export default function Login() {
           <h1 className="text-5xl font-bold uppercase tracking-tight text-white mb-4" style={{ fontFamily: 'Barlow Condensed' }}>
             Back-Office Portal
           </h1>
-          <p className="text-[#C5C6C7] text-lg max-w-md">
+          <p className="text-blue-100 text-lg max-w-md">
             Comprehensive account management system for FX brokerage operations
           </p>
         </div>
@@ -64,17 +64,17 @@ export default function Login() {
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-            <TrendingUp className="w-10 h-10 text-[#66FCF1]" />
-            <span className="text-3xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
+            <TrendingUp className="w-10 h-10 text-blue-600" />
+            <span className="text-3xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
               Miles Capitals
             </span>
           </div>
 
-          <div className="bg-white rounded-sm border border-slate-200 p-8">
-            <h2 className="text-3xl font-bold uppercase tracking-tight text-white mb-2" style={{ fontFamily: 'Barlow Condensed' }}>
+          <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm">
+            <h2 className="text-3xl font-bold uppercase tracking-tight text-slate-800 mb-2" style={{ fontFamily: 'Barlow Condensed' }}>
               Sign In
             </h2>
-            <p className="text-[#C5C6C7] mb-8">
+            <p className="text-slate-500 mb-8">
               Access your back-office dashboard
             </p>
 
