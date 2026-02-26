@@ -551,16 +551,45 @@ export default function Transactions() {
           </h1>
           <p className="text-slate-500">Transaction ledger and financial operations</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button
-              className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
-              data-testid="add-transaction-btn"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              New Transaction
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          {/* Download Reports Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="border-slate-200 text-slate-600 hover:bg-slate-100"
+                data-testid="download-report-btn"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download Report
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-white border-slate-200">
+              <DropdownMenuItem onClick={downloadCSV} className="cursor-pointer hover:bg-slate-100">
+                <FileText className="w-4 h-4 mr-2 text-green-600" />
+                <span>Download CSV</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={downloadExcel} className="cursor-pointer hover:bg-slate-100">
+                <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
+                <span>Download Excel</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={downloadPDF} className="cursor-pointer hover:bg-slate-100">
+                <FileText className="w-4 h-4 mr-2 text-red-500" />
+                <span>Print / PDF</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
+                data-testid="add-transaction-btn"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                New Transaction
+              </Button>
+            </DialogTrigger>
           <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
