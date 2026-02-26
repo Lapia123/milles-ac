@@ -193,6 +193,41 @@ export default function Loans() {
     }
   };
 
+  const fetchDashboard = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/loans/dashboard`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setDashboard(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard:', error);
+    }
+  };
+
+  const fetchVendors = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/loans/vendors`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setVendors(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching vendors:', error);
+    }
+  };
+
+  const fetchLoanTransactions = async (loanId = null) => {
+    try {
+      let url = `${API_URL}/api/loans/transactions?limit=100`;
+      if (loanId) url += `&loan_id=${loanId}`;
+      const response = await fetch(url, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setLoanTransactions(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    }
+  };
+
   const fetchLoanDetail = async (loanId) => {
     try {
       const response = await fetch(`${API_URL}/api/loans/${loanId}`, { headers: getAuthHeaders(), credentials: 'include' });
@@ -209,6 +244,9 @@ export default function Loans() {
     fetchLoans();
     fetchTreasuryAccounts();
     fetchSummary();
+    fetchDashboard();
+    fetchVendors();
+    fetchLoanTransactions();
   }, []);
 
   useEffect(() => {
