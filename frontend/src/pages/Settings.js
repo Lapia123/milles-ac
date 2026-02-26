@@ -954,7 +954,7 @@ export default function Settings() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Deposit Commission (%)</Label>
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Money In Commission (%)</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -969,7 +969,7 @@ export default function Settings() {
                     <p className="text-xs text-[#C5C6C7]">Applied to all deposit transactions</p>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Withdrawal Commission (%)</Label>
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Money Out Commission (%)</Label>
                     <Input
                       type="number"
                       step="0.01"
