@@ -27,23 +27,23 @@ import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-const StatCard = ({ title, value, subtitle, icon: Icon, trend, trendUp, color = 'cyan' }) => (
-  <Card className="bg-[#1F2833] border-white/5 card-hover">
+const StatCard = ({ title, value, subtitle, icon: Icon, trend, trendUp, color = 'blue' }) => (
+  <Card className="bg-white border-slate-200 shadow-sm card-hover">
     <CardContent className="p-4">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">{title}</p>
-          <p className="text-2xl font-bold text-white font-mono">{value}</p>
-          {subtitle && <p className="text-xs text-[#C5C6C7] mt-1">{subtitle}</p>}
+          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">{title}</p>
+          <p className="text-2xl font-bold text-slate-800 font-mono">{value}</p>
+          {subtitle && <p className="text-xs text-slate-500 mt-1">{subtitle}</p>}
           {trend && (
-            <div className={`flex items-center gap-1 mt-2 ${trendUp ? 'text-green-400' : 'text-red-400'}`}>
+            <div className={`flex items-center gap-1 mt-2 ${trendUp ? 'text-green-600' : 'text-red-600'}`}>
               {trendUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
               <span className="text-xs font-mono">{trend}</span>
             </div>
           )}
         </div>
-        <div className={`p-2 rounded-sm ${color === 'cyan' ? 'bg-[#66FCF1]/10' : color === 'green' ? 'bg-green-500/10' : color === 'yellow' ? 'bg-yellow-500/10' : 'bg-red-500/10'}`}>
-          <Icon className={`w-5 h-5 ${color === 'cyan' ? 'text-[#66FCF1]' : color === 'green' ? 'text-green-400' : color === 'yellow' ? 'text-yellow-400' : 'text-red-400'}`} />
+        <div className={`p-2 rounded-lg ${color === 'blue' ? 'bg-blue-100' : color === 'green' ? 'bg-green-100' : color === 'yellow' ? 'bg-yellow-100' : 'bg-red-100'}`}>
+          <Icon className={`w-5 h-5 ${color === 'blue' ? 'text-blue-600' : color === 'green' ? 'text-green-600' : color === 'yellow' ? 'text-yellow-600' : 'text-red-600'}`} />
         </div>
       </div>
     </CardContent>
@@ -53,8 +53,8 @@ const StatCard = ({ title, value, subtitle, icon: Icon, trend, trendUp, color = 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-[#1F2833]/95 backdrop-blur-md border border-white/10 rounded-sm p-3">
-        <p className="text-xs text-[#C5C6C7] mb-1">{label}</p>
+      <div className="bg-white/95 backdrop-blur-md border border-slate-200 rounded-lg shadow-lg p-3">
+        <p className="text-xs text-slate-500 mb-1">{label}</p>
         {payload.map((entry, index) => (
           <p key={index} className="text-sm font-mono" style={{ color: entry.color }}>
             {entry.name}: ${entry.value?.toLocaleString()}
