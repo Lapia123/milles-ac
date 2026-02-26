@@ -1512,6 +1512,16 @@ function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCate
                     {isAdmin && (
                       <TableCell>
                         <div className="flex gap-1">
+                          {/* Invoice upload/view */}
+                          {entry.invoice_file ? (
+                            <Button variant="ghost" size="sm" onClick={() => onViewInvoice(entry.invoice_file)} className="text-green-600 hover:bg-green-50 h-7 px-2" title="View Invoice">
+                              <Eye className="w-3.5 h-3.5" />
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" size="sm" onClick={() => onUploadInvoice(entry)} className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 h-7 px-2" title="Upload Invoice">
+                              <Upload className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
                           {!isIncome && !isConverted && entry.status !== 'pending_vendor' && (
                             <Button variant="ghost" size="sm" onClick={() => onConvertToLoan(entry)} className="text-blue-600 hover:text-[#45A29E] hover:bg-blue-100 text-xs h-7 px-2" title="Convert to Loan" data-testid={`convert-loan-${entry.entry_id}`}>
                               <ArrowRightLeft className="w-3.5 h-3.5" />
