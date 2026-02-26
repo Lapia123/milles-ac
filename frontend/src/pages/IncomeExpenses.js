@@ -111,6 +111,16 @@ export default function IncomeExpenses() {
     } catch {}
   };
 
+  const fetchBorrowers = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/loans/borrowers`, { headers: getAuthHeaders() });
+      if (response.ok) {
+        const data = await response.json();
+        setBorrowers(data.borrowers || []);
+      }
+    } catch {}
+  };
+
   const fetchSummary = async () => {
     try {
       let url = `${API_URL}/api/income-expenses/reports/summary`;
