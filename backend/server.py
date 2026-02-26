@@ -798,6 +798,28 @@ async def create_user(user_data: UserCreate, admin: dict = Depends(require_admin
         "created_at": now.isoformat()
     }
     
+    # If role is vendor/exchanger, also create a vendor entity
+    if user_data.role == UserRole.VENDOR:
+        vendor_id = f"vendor_{uuid.uuid4().hex[:12]}"
+        user_doc["vendor_id"] = vendor_id  # Link user to vendor
+        
+        vendor_doc = {
+            "vendor_id": vendor_id,
+            "user_id": user_id,
+            "vendor_name": user_data.name,
+            "email": user_data.email,
+            "deposit_commission": user_data.deposit_commission or 0.0,
+            "withdrawal_commission": user_data.withdrawal_commission or 0.0,
+            "description": f"Exchanger created via User Management",
+            "total_volume": 0.0,
+            "total_commission": 0.0,
+            "pending_settlement": 0.0,
+            "status": VendorStatus.ACTIVE,
+            "created_at": now.isoformat(),
+            "updated_at": now.isoformat()
+        }
+        await db.vendors.insert_one(vendor_doc)
+    
     await db.users.insert_one(user_doc)
     
     return {"user_id": user_id, "email": user_data.email, "name": user_data.name, "role": user_data.role}
