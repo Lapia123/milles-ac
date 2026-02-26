@@ -590,7 +590,7 @@ export default function VendorDashboard() {
                   ${vendorInfo?.settlement_by_currency?.reduce((sum, item) => sum + (item.commission_earned_usd || 0), 0).toLocaleString() || '0'}
                 </p>
                 <p className="text-xs text-[#C5C6C7] mt-1">
-                  Rates: {vendorInfo?.deposit_commission || 0}% / {vendorInfo?.withdrawal_commission || 0}%
+                  Rates: {vendorInfo?.deposit_commission || 0}% In / {vendorInfo?.withdrawal_commission || 0}% Out
                 </p>
               </div>
               <div className="p-3 bg-yellow-500/10 rounded-sm">
