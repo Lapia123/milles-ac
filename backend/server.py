@@ -238,7 +238,10 @@ class IncomeExpenseCreate(BaseModel):
     amount: float
     currency: str = "USD"
     treasury_account_id: Optional[str] = None  # Optional when vendor handles it
-    vendor_id: Optional[str] = None  # If linked to a vendor
+    vendor_id: Optional[str] = None  # If linked to an exchanger (money partner)
+    vendor_supplier_id: Optional[str] = None  # If linked to a service supplier (rent, utilities)
+    client_id: Optional[str] = None  # If linked to a client
+    ie_category_id: Optional[str] = None  # Custom account category
     vendor_bank_account_name: Optional[str] = None
     vendor_bank_account_number: Optional[str] = None
     vendor_bank_ifsc: Optional[str] = None
