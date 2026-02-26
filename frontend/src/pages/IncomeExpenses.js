@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -23,7 +23,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   TrendingUp, TrendingDown, Plus, DollarSign, Calendar,
   Filter, Trash2, BarChart3, ArrowUpRight, ArrowDownRight,
-  Wallet, X, Store, ArrowRightLeft, Clock,
+  Wallet, X, Store, ArrowRightLeft, Clock, Search, Building2,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
