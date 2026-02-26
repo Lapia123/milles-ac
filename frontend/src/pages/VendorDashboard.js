@@ -229,38 +229,42 @@ export default function ExchangerDashboard() {
 
     try {
       let response;
+      const isWithdrawal = selectedTransaction.transaction_type === 'withdrawal';
       
       if (actionType === 'approve') {
-        // Must upload proof for ALL transaction approvals
-        if (!proofImage) {
-          toast.error('Please upload proof screenshot before approving');
+        // Only withdrawals require proof upload when approving
+        // Deposits can be approved without proof
+        if (isWithdrawal && !proofImage) {
+          toast.error('Please upload proof screenshot before approving withdrawal');
           return;
         }
         
-        // Upload proof first using vendor-specific endpoint
-        const formData = new FormData();
-        formData.append('proof_image', proofImage);
-        
-        const token = localStorage.getItem('auth_token');
-        const uploadResponse = await fetch(`${API_URL}/api/vendor/transactions/${selectedTransaction.transaction_id}/upload-proof`, {
-          method: 'POST',
-          headers: {
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          },
-          credentials: 'include',
-          body: formData,
-        });
-        
-        if (!uploadResponse.ok) {
-          let errorMessage = 'Failed to upload proof';
-          try {
-            const error = await uploadResponse.json();
-            errorMessage = error.detail || errorMessage;
-          } catch (e) {
-            errorMessage = `Upload failed with status ${uploadResponse.status}`;
+        // Upload proof only if provided (required for withdrawals, optional for deposits)
+        if (proofImage) {
+          const formData = new FormData();
+          formData.append('proof_image', proofImage);
+          
+          const token = localStorage.getItem('auth_token');
+          const uploadResponse = await fetch(`${API_URL}/api/vendor/transactions/${selectedTransaction.transaction_id}/upload-proof`, {
+            method: 'POST',
+            headers: {
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            },
+            credentials: 'include',
+            body: formData,
+          });
+          
+          if (!uploadResponse.ok) {
+            let errorMessage = 'Failed to upload proof';
+            try {
+              const error = await uploadResponse.json();
+              errorMessage = error.detail || errorMessage;
+            } catch (e) {
+              errorMessage = `Upload failed with status ${uploadResponse.status}`;
+            }
+            toast.error(errorMessage);
+            return;
           }
-          toast.error(errorMessage);
-          return;
         }
         
         response = await fetch(`${API_URL}/api/vendor/transactions/${selectedTransaction.transaction_id}/approve`, {
