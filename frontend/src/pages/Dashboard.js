@@ -178,24 +178,24 @@ export default function Dashboard() {
 
       {/* FX Rates Ticker */}
       {fxRates?.rates && (
-        <Card className="bg-[#1F2833] border-white/5" data-testid="fx-rates-ticker">
+        <Card className="bg-white border-slate-200 shadow-sm" data-testid="fx-rates-ticker">
           <CardContent className="py-3 px-4">
             <div className="flex items-center gap-4 overflow-x-auto scrollbar-none">
               <div className="flex items-center gap-2 flex-shrink-0">
-                <TrendingUp className="w-4 h-4 text-[#66FCF1]" />
-                <span className="text-xs text-[#C5C6C7] uppercase tracking-wider font-bold">Live FX</span>
-                <Badge className={`text-[10px] px-1.5 py-0 ${fxRates.source === 'live' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'}`}>
+                <TrendingUp className="w-4 h-4 text-blue-600" />
+                <span className="text-xs text-slate-500 uppercase tracking-wider font-bold">Live FX</span>
+                <Badge className={`text-[10px] px-1.5 py-0 ${fxRates.source === 'live' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'}`}>
                   {fxRates.source === 'live' ? 'LIVE' : 'CACHED'}
                 </Badge>
               </div>
-              <div className="h-4 w-px bg-white/10 flex-shrink-0" />
+              <div className="h-4 w-px bg-slate-200 flex-shrink-0" />
               {['EUR', 'GBP', 'AED', 'INR', 'SAR', 'JPY', 'USDT'].map(code => {
                 const rate = fxRates.rates[code];
                 if (!rate) return null;
                 return (
                   <div key={code} className="flex items-center gap-1.5 flex-shrink-0" data-testid={`dashboard-fx-${code}`}>
-                    <span className="text-white font-mono text-xs font-medium">{code}</span>
-                    <span className="text-[#66FCF1] font-mono text-xs">${rate.toFixed(4)}</span>
+                    <span className="text-slate-700 font-mono text-xs font-medium">{code}</span>
+                    <span className="text-blue-600 font-mono text-xs">${rate.toFixed(4)}</span>
                   </div>
                 );
               })}
@@ -207,10 +207,10 @@ export default function Dashboard() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Transaction Chart */}
-        <Card className="bg-[#1F2833] border-white/5 lg:col-span-2">
+        <Card className="bg-white border-slate-200 shadow-sm lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-              <Activity className="w-5 h-5 text-[#66FCF1]" />
+            <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-blue-600" />
               Transaction Volume (30 Days)
             </CardTitle>
           </CardHeader>
@@ -220,25 +220,25 @@ export default function Dashboard() {
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="depositGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#66FCF1" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#66FCF1" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#2563EB" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#2563EB" stopOpacity={0}/>
                     </linearGradient>
                     <linearGradient id="withdrawalGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#FF3B30" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#FF3B30" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#DC2626" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#DC2626" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
                   <XAxis 
                     dataKey="date" 
-                    stroke="#C5C6C7" 
-                    tick={{ fill: '#C5C6C7', fontSize: 10 }}
-                    axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                    stroke="#64748B" 
+                    tick={{ fill: '#64748B', fontSize: 10 }}
+                    axisLine={{ stroke: '#E2E8F0' }}
                     tickLine={false}
                   />
                   <YAxis 
-                    stroke="#C5C6C7" 
-                    tick={{ fill: '#C5C6C7', fontSize: 10 }}
-                    axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                    stroke="#64748B" 
+                    tick={{ fill: '#64748B', fontSize: 10 }}
+                    axisLine={{ stroke: '#E2E8F0' }}
                     tickLine={false}
                     tickFormatter={(v) => `$${v/1000}k`}
                   />
@@ -247,7 +247,7 @@ export default function Dashboard() {
                     type="monotone"
                     dataKey="deposits"
                     name="Deposits"
-                    stroke="#66FCF1"
+                    stroke="#2563EB"
                     fillOpacity={1}
                     fill="url(#depositGradient)"
                   />
@@ -255,7 +255,7 @@ export default function Dashboard() {
                     type="monotone"
                     dataKey="withdrawals"
                     name="Withdrawals"
-                    stroke="#FF3B30"
+                    stroke="#DC2626"
                     fillOpacity={1}
                     fill="url(#withdrawalGradient)"
                   />
