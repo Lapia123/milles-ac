@@ -4435,6 +4435,194 @@ async def get_vendor_ie_entries(user: dict = Depends(require_vendor)):
     ).sort("created_at", -1).to_list(500)
     return entries
 
+
+# ============== VENDOR SUPPLIERS (Service Suppliers) ROUTES ==============
+
+@api_router.get("/vendor-suppliers")
+async def get_vendor_suppliers(
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Get all vendor suppliers (service providers like rent, utilities)"""
+    query = {}
+    if status:
+        query["status"] = status
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"contact_person": {"$regex": search, "$options": "i"}},
+            {"email": {"$regex": search, "$options": "i"}}
+        ]
+    
+    suppliers = await db.vendor_suppliers.find(query, {"_id": 0}).sort("name", 1).to_list(1000)
+    return suppliers
+
+@api_router.get("/vendor-suppliers/{supplier_id}")
+async def get_vendor_supplier(supplier_id: str, user: dict = Depends(get_current_user)):
+    """Get a specific vendor supplier"""
+    supplier = await db.vendor_suppliers.find_one({"supplier_id": supplier_id}, {"_id": 0})
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Vendor supplier not found")
+    return supplier
+
+@api_router.post("/vendor-suppliers")
+async def create_vendor_supplier(data: VendorSupplierCreate, user: dict = Depends(get_current_user)):
+    """Create a new vendor supplier (for services like rent, utilities)"""
+    # Check for duplicate name
+    existing = await db.vendor_suppliers.find_one({"name": {"$regex": f"^{data.name}$", "$options": "i"}})
+    if existing:
+        raise HTTPException(status_code=400, detail="A supplier with this name already exists")
+    
+    supplier_id = f"vs_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    
+    supplier_doc = {
+        "supplier_id": supplier_id,
+        "name": data.name,
+        "contact_person": data.contact_person,
+        "email": data.email,
+        "phone": data.phone,
+        "address": data.address,
+        "bank_name": data.bank_name,
+        "bank_account_name": data.bank_account_name,
+        "bank_account_number": data.bank_account_number,
+        "bank_ifsc": data.bank_ifsc,
+        "bank_branch": data.bank_branch,
+        "notes": data.notes,
+        "status": VendorSupplierStatus.ACTIVE,
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat(),
+        "created_by": user["user_id"]
+    }
+    
+    await db.vendor_suppliers.insert_one(supplier_doc)
+    supplier_doc.pop("_id", None)
+    return supplier_doc
+
+@api_router.put("/vendor-suppliers/{supplier_id}")
+async def update_vendor_supplier(supplier_id: str, data: VendorSupplierUpdate, user: dict = Depends(get_current_user)):
+    """Update a vendor supplier"""
+    supplier = await db.vendor_suppliers.find_one({"supplier_id": supplier_id})
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Vendor supplier not found")
+    
+    update_dict = {k: v for k, v in data.model_dump().items() if v is not None}
+    if update_dict:
+        update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await db.vendor_suppliers.update_one({"supplier_id": supplier_id}, {"$set": update_dict})
+    
+    updated = await db.vendor_suppliers.find_one({"supplier_id": supplier_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/vendor-suppliers/{supplier_id}")
+async def delete_vendor_supplier(supplier_id: str, user: dict = Depends(get_current_user)):
+    """Delete a vendor supplier"""
+    # Check if there are linked income/expenses
+    linked_entries = await db.income_expenses.count_documents({"vendor_supplier_id": supplier_id})
+    if linked_entries > 0:
+        # Soft delete - mark as inactive instead
+        await db.vendor_suppliers.update_one(
+            {"supplier_id": supplier_id},
+            {"$set": {"status": VendorSupplierStatus.INACTIVE, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        return {"message": "Supplier marked as inactive (has linked entries)"}
+    
+    result = await db.vendor_suppliers.delete_one({"supplier_id": supplier_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Vendor supplier not found")
+    return {"message": "Supplier deleted"}
+
+# ============== IE CATEGORIES (Account Categories) ROUTES ==============
+
+@api_router.get("/ie-categories")
+async def get_ie_categories(
+    category_type: Optional[str] = None,
+    active_only: bool = True,
+    user: dict = Depends(get_current_user)
+):
+    """Get all income/expense account categories"""
+    query = {}
+    if category_type:
+        query["$or"] = [{"category_type": category_type}, {"category_type": "both"}]
+    if active_only:
+        query["is_active"] = True
+    
+    categories = await db.ie_categories.find(query, {"_id": 0}).sort("name", 1).to_list(500)
+    return categories
+
+@api_router.get("/ie-categories/{category_id}")
+async def get_ie_category(category_id: str, user: dict = Depends(get_current_user)):
+    """Get a specific category"""
+    category = await db.ie_categories.find_one({"category_id": category_id}, {"_id": 0})
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return category
+
+@api_router.post("/ie-categories")
+async def create_ie_category(data: IECategoryCreate, user: dict = Depends(get_current_user)):
+    """Create a new income/expense category"""
+    # Check for duplicate name within same type
+    existing = await db.ie_categories.find_one({
+        "name": {"$regex": f"^{data.name}$", "$options": "i"},
+        "$or": [{"category_type": data.category_type}, {"category_type": "both"}]
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="A category with this name already exists")
+    
+    category_id = f"iec_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    
+    category_doc = {
+        "category_id": category_id,
+        "name": data.name,
+        "category_type": data.category_type,
+        "description": data.description,
+        "parent_category_id": data.parent_category_id,
+        "is_active": True,
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat(),
+        "created_by": user["user_id"]
+    }
+    
+    await db.ie_categories.insert_one(category_doc)
+    category_doc.pop("_id", None)
+    return category_doc
+
+@api_router.put("/ie-categories/{category_id}")
+async def update_ie_category(category_id: str, data: IECategoryUpdate, user: dict = Depends(get_current_user)):
+    """Update a category"""
+    category = await db.ie_categories.find_one({"category_id": category_id})
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    update_dict = {k: v for k, v in data.model_dump().items() if v is not None}
+    if update_dict:
+        update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await db.ie_categories.update_one({"category_id": category_id}, {"$set": update_dict})
+    
+    updated = await db.ie_categories.find_one({"category_id": category_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/ie-categories/{category_id}")
+async def delete_ie_category(category_id: str, user: dict = Depends(get_current_user)):
+    """Delete a category (soft delete if linked to entries)"""
+    # Check if there are linked income/expenses
+    linked_entries = await db.income_expenses.count_documents({"ie_category_id": category_id})
+    if linked_entries > 0:
+        # Soft delete - mark as inactive
+        await db.ie_categories.update_one(
+            {"category_id": category_id},
+            {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        return {"message": "Category marked as inactive (has linked entries)"}
+    
+    result = await db.ie_categories.delete_one({"category_id": category_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return {"message": "Category deleted"}
+
+
 # ============== LOAN MANAGEMENT ROUTES ==============
 
 # === Static loan routes (MUST come before /{loan_id} route) ===
