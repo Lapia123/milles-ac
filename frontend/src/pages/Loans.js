@@ -805,10 +805,18 @@ export default function Loans() {
         {/* Borrowers Tab */}
         <TabsContent value="borrowers">
           <Card className="bg-[#1F2833] border-white/5">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-white text-lg flex items-center gap-2">
                 <Users className="w-5 h-5 text-[#66FCF1]" /> Borrower Companies (Vendors)
               </CardTitle>
+              <Button
+                onClick={() => setIsBorrowerDialogOpen(true)}
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm text-xs"
+                data-testid="add-borrower-btn"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Add Borrower
+              </Button>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[500px]">
