@@ -351,7 +351,7 @@ export default function Dashboard() {
                   </div>
                 ))}
                 {(!recentActivity.recent_transactions || recentActivity.recent_transactions.length === 0) && (
-                  <p className="text-center text-[#C5C6C7] py-8">No recent transactions</p>
+                  <p className="text-center text-slate-500 py-8">No recent transactions</p>
                 )}
               </div>
             </ScrollArea>
@@ -359,9 +359,9 @@ export default function Dashboard() {
         </Card>
 
         {/* Recent Clients */}
-        <Card className="bg-[#1F2833] border-white/5">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-semibold text-white">Recent Clients</CardTitle>
+            <CardTitle className="text-lg font-semibold text-slate-800">Recent Clients</CardTitle>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-64">
@@ -369,24 +369,24 @@ export default function Dashboard() {
                 {recentActivity.recent_clients?.map((client) => (
                   <div
                     key={client.client_id}
-                    className="flex items-center justify-between p-3 bg-[#0B0C10] rounded-sm border border-white/5"
+                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#66FCF1]/10 rounded-full flex items-center justify-center">
-                        <span className="text-[#66FCF1] font-bold">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 font-bold">
                           {client.first_name?.charAt(0)}{client.last_name?.charAt(0)}
                         </span>
                       </div>
                       <div>
-                        <p className="text-sm text-white">{client.first_name} {client.last_name}</p>
-                        <p className="text-xs text-[#C5C6C7]">{client.email}</p>
+                        <p className="text-sm text-slate-800">{client.first_name} {client.last_name}</p>
+                        <p className="text-xs text-slate-500">{client.email}</p>
                       </div>
                     </div>
                     {getStatusBadge(client.kyc_status)}
                   </div>
                 ))}
                 {(!recentActivity.recent_clients || recentActivity.recent_clients.length === 0) && (
-                  <p className="text-center text-[#C5C6C7] py-8">No recent clients</p>
+                  <p className="text-center text-slate-500 py-8">No recent clients</p>
                 )}
               </div>
             </ScrollArea>
