@@ -103,6 +103,11 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 - `GET /api/vendor/income-expenses` - Get vendor's IE entries
 
 ### Loans
+- `GET /api/loans/dashboard` - Get comprehensive loan dashboard data
+- `GET /api/loans/transactions` - Get loan transactions log
+- `GET /api/loans/vendors` - Get vendors with loan statistics
+- `POST /api/loans/{id}/swap` - Transfer/swap loan to another borrower
+- `POST /api/loans/{id}/write-off` - Write off loan as bad debt
 - `GET /api/loans/export/csv` - Export loans to CSV
 - `GET /api/loans/borrowers` - Get unique borrower company names
 
