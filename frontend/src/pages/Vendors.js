@@ -732,11 +732,11 @@ export default function Vendors() {
               {/* Vendor Info */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-[#0B0C10] rounded-sm">
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Deposit Commission</p>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Money In Commission</p>
                   <p className="text-xl font-mono text-white">{viewVendor.deposit_commission}%</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Withdrawal Commission</p>
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Money Out Commission</p>
                   <p className="text-xl font-mono text-white">{viewVendor.withdrawal_commission}%</p>
                 </div>
               </div>
