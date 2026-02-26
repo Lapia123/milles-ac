@@ -19,6 +19,7 @@ import Reconciliation from "./pages/Reconciliation";
 import AuditCompliance from "./pages/AuditCompliance";
 import Layout from "./components/Layout";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { ThemeProvider, useTheme } from "./context/ThemeContext";
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
