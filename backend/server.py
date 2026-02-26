@@ -70,6 +70,9 @@ class UserCreate(BaseModel):
     password: str
     name: str
     role: str = UserRole.SUB_ADMIN
+    # Exchanger-specific fields (only used when role is 'vendor')
+    deposit_commission: Optional[float] = 0.0
+    withdrawal_commission: Optional[float] = 0.0
 
 class UserLogin(BaseModel):
     email: EmailStr
