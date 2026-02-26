@@ -329,6 +329,60 @@ class LoanSwapRequest(BaseModel):
     new_interest_rate: Optional[float] = None
     new_due_date: Optional[str] = None
 
+
+# ============== VENDOR SUPPLIER MODELS (Service Suppliers - Rent, Utilities, etc.) ==============
+class VendorSupplierStatus:
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+
+class VendorSupplierCreate(BaseModel):
+    name: str
+    contact_person: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    # Bank details
+    bank_name: Optional[str] = None
+    bank_account_name: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_ifsc: Optional[str] = None
+    bank_branch: Optional[str] = None
+    notes: Optional[str] = None
+
+class VendorSupplierUpdate(BaseModel):
+    name: Optional[str] = None
+    contact_person: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    bank_name: Optional[str] = None
+    bank_account_name: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_ifsc: Optional[str] = None
+    bank_branch: Optional[str] = None
+    notes: Optional[str] = None
+    status: Optional[str] = None
+
+# ============== IE CATEGORY MODELS (Account Categories) ==============
+class IECategoryType:
+    INCOME = "income"
+    EXPENSE = "expense"
+    BOTH = "both"  # Can be used for both income and expense
+
+class IECategoryCreate(BaseModel):
+    name: str
+    category_type: str = IECategoryType.BOTH  # income, expense, or both
+    description: Optional[str] = None
+    parent_category_id: Optional[str] = None  # For subcategories
+
+class IECategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    category_type: Optional[str] = None
+    description: Optional[str] = None
+    parent_category_id: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
 # ============== LIVE FX RATE SERVICE ==============
 FALLBACK_RATES_TO_USD = {
     "USD": 1.0, "EUR": 1.08, "GBP": 1.27, "AED": 0.27,
