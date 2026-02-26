@@ -560,7 +560,13 @@ export default function IncomeExpenses() {
       </Dialog>
 
       {/* Convert to Loan Dialog */}
-      <Dialog open={convertDialog.open} onOpenChange={(open) => { if (!open) setConvertDialog({ open: false, entry: null }); }}>
+      <Dialog open={convertDialog.open} onOpenChange={(open) => { 
+        if (!open) {
+          setConvertDialog({ open: false, entry: null });
+          setBorrowerSearch('');
+          setShowAddBorrower(false);
+        }
+      }}>
         <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
@@ -574,10 +580,80 @@ export default function IncomeExpenses() {
                 <p className="text-lg font-mono text-red-400">{convertDialog.entry.amount?.toLocaleString()} {convertDialog.entry.currency}</p>
                 <p className="text-xs text-[#8B8D91] mt-1">{convertDialog.entry.description}</p>
               </div>
+              
+              {/* Borrower Company Searchable Dropdown */}
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Borrower Company *</Label>
-                <Input value={convertForm.borrower_name} onChange={(e) => setConvertForm({ ...convertForm, borrower_name: e.target.value })} className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]" placeholder="Company name" data-testid="convert-borrower" />
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider flex items-center gap-2">
+                  <Building2 className="w-3 h-3" /> Borrower Company *
+                </Label>
+                {!showAddBorrower ? (
+                  <div className="relative">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B8D91]" />
+                      <Input 
+                        value={borrowerSearch} 
+                        onChange={(e) => setBorrowerSearch(e.target.value)}
+                        className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] pl-9" 
+                        placeholder="Search or select borrower..."
+                        data-testid="convert-borrower-search"
+                      />
+                    </div>
+                    {(borrowerSearch || borrowers.length > 0) && (
+                      <div className="absolute z-50 w-full mt-1 bg-[#0B0C10] border border-white/10 rounded-md max-h-40 overflow-y-auto">
+                        {/* Add New Option */}
+                        <div 
+                          className="px-3 py-2 cursor-pointer hover:bg-[#66FCF1]/10 text-[#66FCF1] flex items-center gap-2 border-b border-white/10"
+                          onClick={() => {
+                            setShowAddBorrower(true);
+                            setConvertForm({ ...convertForm, borrower_name: borrowerSearch });
+                          }}
+                        >
+                          <Plus className="w-4 h-4" /> Add new: "{borrowerSearch || 'New Company'}"
+                        </div>
+                        {/* Existing Borrowers */}
+                        {borrowers
+                          .filter(b => b.toLowerCase().includes(borrowerSearch.toLowerCase()))
+                          .map((borrower, idx) => (
+                            <div 
+                              key={idx}
+                              className={`px-3 py-2 cursor-pointer hover:bg-white/5 text-white ${convertForm.borrower_name === borrower ? 'bg-[#66FCF1]/10' : ''}`}
+                              onClick={() => {
+                                setConvertForm({ ...convertForm, borrower_name: borrower });
+                                setBorrowerSearch(borrower);
+                                setShowAddBorrower(true);
+                              }}
+                            >
+                              <Building2 className="w-3 h-3 inline mr-2 text-[#8B8D91]" />{borrower}
+                            </div>
+                          ))
+                        }
+                        {borrowers.filter(b => b.toLowerCase().includes(borrowerSearch.toLowerCase())).length === 0 && !borrowerSearch && (
+                          <div className="px-3 py-2 text-[#8B8D91] text-sm">No existing borrowers</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input 
+                      value={convertForm.borrower_name} 
+                      onChange={(e) => setConvertForm({ ...convertForm, borrower_name: e.target.value })} 
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] flex-1" 
+                      placeholder="Company name" 
+                      data-testid="convert-borrower"
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => { setShowAddBorrower(false); setBorrowerSearch(''); setConvertForm({ ...convertForm, borrower_name: '' }); }}
+                      className="text-[#8B8D91] hover:text-white"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Interest Rate (%)</Label>
@@ -589,22 +665,11 @@ export default function IncomeExpenses() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Treasury Account *</Label>
-                <Select value={convertForm.treasury_account_id} onValueChange={(v) => setConvertForm({ ...convertForm, treasury_account_id: v })}>
-                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white"><SelectValue placeholder="Select account" /></SelectTrigger>
-                  <SelectContent className="bg-[#1F2833] border-white/10">
-                    {treasuryAccounts.map(a => (
-                      <SelectItem key={a.account_id} value={a.account_id} className="text-white hover:bg-white/5">{a.account_name} ({a.currency})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
                 <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Notes</Label>
                 <Textarea value={convertForm.notes} onChange={(e) => setConvertForm({ ...convertForm, notes: e.target.value })} className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]" rows={2} />
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <Button variant="outline" onClick={() => setConvertDialog({ open: false, entry: null })} className="border-white/10 text-[#C5C6C7] hover:bg-white/5">Cancel</Button>
+                <Button variant="outline" onClick={() => { setConvertDialog({ open: false, entry: null }); setBorrowerSearch(''); setShowAddBorrower(false); }} className="border-white/10 text-[#C5C6C7] hover:bg-white/5">Cancel</Button>
                 <Button onClick={handleConvertToLoan} className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold" data-testid="confirm-convert-btn">Convert to Loan</Button>
               </div>
             </div>
