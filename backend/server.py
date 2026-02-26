@@ -4146,7 +4146,19 @@ async def convert_expense_to_loan(entry_id: str, req: ConvertToLoanRequest, user
     now = datetime.now(timezone.utc)
     loan_id = f"loan_{uuid.uuid4().hex[:12]}"
     
-    # Reverse the expense from treasury (since the loan disbursement will handle it)
+    # Use expense's treasury account if not provided (since money was already taken from vendor)
+    treasury_account_id = req.treasury_account_id or entry.get("treasury_account_id")
+    
+    # Get treasury info for the loan record
+    treasury = None
+    treasury_name = "N/A"
+    if treasury_account_id:
+        treasury = await db.treasury_accounts.find_one({"account_id": treasury_account_id}, {"_id": 0})
+        if treasury:
+            treasury_name = treasury["account_name"]
+    
+    # If expense was already completed and had treasury impact, reverse it
+    # (since converting to loan means the expense tracking should be via loan instead)
     if entry.get("treasury_account_id") and entry.get("status") == "completed":
         await db.treasury_accounts.update_one(
             {"account_id": entry["treasury_account_id"]},
@@ -4154,11 +4166,6 @@ async def convert_expense_to_loan(entry_id: str, req: ConvertToLoanRequest, user
         )
         # Delete old treasury transaction
         await db.treasury_transactions.delete_one({"income_expense_id": entry_id})
-    
-    # Create the loan
-    treasury = await db.treasury_accounts.find_one({"account_id": req.treasury_account_id}, {"_id": 0})
-    if not treasury:
-        raise HTTPException(status_code=404, detail="Treasury account not found")
     
     loan_doc = {
         "loan_id": loan_id,
@@ -4169,8 +4176,8 @@ async def convert_expense_to_loan(entry_id: str, req: ConvertToLoanRequest, user
         "loan_date": entry.get("date", now.isoformat()[:10]),
         "due_date": req.due_date,
         "repayment_mode": "lump_sum",
-        "treasury_account_id": req.treasury_account_id,
-        "source_treasury_name": treasury["account_name"],
+        "treasury_account_id": treasury_account_id,
+        "source_treasury_name": treasury_name,
         "outstanding_balance": entry["amount"],
         "total_repaid": 0,
         "total_interest": 0,
@@ -4183,26 +4190,28 @@ async def convert_expense_to_loan(entry_id: str, req: ConvertToLoanRequest, user
         "created_by_name": user["name"]
     }
     
-    # Deduct from treasury for loan disbursement
-    await db.treasury_accounts.update_one(
-        {"account_id": req.treasury_account_id},
-        {"$inc": {"balance": -entry["amount"]}, "$set": {"updated_at": now.isoformat()}}
-    )
-    
-    # Create treasury transaction for loan
-    await db.treasury_transactions.insert_one({
-        "treasury_transaction_id": f"ttx_{uuid.uuid4().hex[:12]}",
-        "account_id": req.treasury_account_id,
-        "account_name": treasury["account_name"],
-        "transaction_type": "loan_disbursement",
-        "amount": -entry["amount"],
-        "currency": entry.get("currency", "USD"),
-        "reference": f"Loan to {req.borrower_name} (converted from expense {entry_id})",
-        "loan_id": loan_id,
-        "created_at": now.isoformat(),
-        "created_by": user["user_id"],
-        "created_by_name": user["name"]
-    })
+    # Only create treasury disbursement transaction if we have a valid treasury
+    if treasury_account_id and treasury:
+        # Deduct from treasury for loan disbursement
+        await db.treasury_accounts.update_one(
+            {"account_id": treasury_account_id},
+            {"$inc": {"balance": -entry["amount"]}, "$set": {"updated_at": now.isoformat()}}
+        )
+        
+        # Create treasury transaction for loan
+        await db.treasury_transactions.insert_one({
+            "treasury_transaction_id": f"ttx_{uuid.uuid4().hex[:12]}",
+            "account_id": treasury_account_id,
+            "account_name": treasury_name,
+            "transaction_type": "loan_disbursement",
+            "amount": -entry["amount"],
+            "currency": entry.get("currency", "USD"),
+            "reference": f"Loan to {req.borrower_name} (converted from expense {entry_id})",
+            "loan_id": loan_id,
+            "created_at": now.isoformat(),
+            "created_by": user["user_id"],
+            "created_by_name": user["name"]
+        })
     
     await db.loans.insert_one(loan_doc)
     
