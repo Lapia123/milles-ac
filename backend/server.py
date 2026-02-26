@@ -4508,7 +4508,7 @@ async def upload_ie_invoice(entry_id: str, user: dict = Depends(get_current_user
 
 @api_router.post("/income-expenses/bulk-import")
 async def bulk_import_ie_entries(
-    user: dict = Depends(require_admin_or_accountant),
+    user: dict = Depends(require_accountant_or_admin),
     file: UploadFile = File(...),
     treasury_account_id: str = Form(...)
 ):
