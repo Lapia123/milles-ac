@@ -123,22 +123,33 @@ function AppRouter() {
   );
 }
 
+function ThemedToaster() {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  
+  return (
+    <Toaster 
+      position="top-right"
+      toastOptions={{
+        style: {
+          background: isDark ? '#1F2833' : '#FFFFFF',
+          color: isDark ? '#fff' : '#1E293B',
+          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0',
+        },
+      }}
+    />
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <AppRouter />
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            style: {
-              background: '#1F2833',
-              color: '#fff',
-              border: '1px solid rgba(255,255,255,0.1)',
-            },
-          }}
-        />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppRouter />
+          <ThemedToaster />
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }
