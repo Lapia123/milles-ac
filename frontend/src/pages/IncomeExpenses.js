@@ -52,13 +52,16 @@ export default function IncomeExpenses() {
   const [entries, setEntries] = useState([]);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [vendors, setVendors] = useState([]);
+  const [borrowers, setBorrowers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   const [summary, setSummary] = useState(null);
   const [monthlyData, setMonthlyData] = useState([]);
   const [convertDialog, setConvertDialog] = useState({ open: false, entry: null });
-  const [convertForm, setConvertForm] = useState({ borrower_name: '', interest_rate: 0, due_date: '', treasury_account_id: '', notes: '' });
+  const [convertForm, setConvertForm] = useState({ borrower_name: '', interest_rate: 0, due_date: '', notes: '' });
+  const [borrowerSearch, setBorrowerSearch] = useState('');
+  const [showAddBorrower, setShowAddBorrower] = useState(false);
 
   const [filters, setFilters] = useState({ startDate: '', endDate: '', category: '', treasuryAccountId: '' });
 
