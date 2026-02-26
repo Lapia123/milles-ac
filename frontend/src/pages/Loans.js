@@ -96,6 +96,7 @@ export default function Loans() {
   const [isRepaymentDialogOpen, setIsRepaymentDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isSwapDialogOpen, setIsSwapDialogOpen] = useState(false);
+  const [isBorrowerDialogOpen, setIsBorrowerDialogOpen] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
   const [summary, setSummary] = useState(null);
@@ -103,6 +104,15 @@ export default function Loans() {
   
   // Filter
   const [statusFilter, setStatusFilter] = useState('');
+  
+  // Borrower form (for creating new vendor/borrower)
+  const [borrowerForm, setBorrowerForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    contact_person: '',
+  });
   
   // Loan form
   const [loanForm, setLoanForm] = useState({
