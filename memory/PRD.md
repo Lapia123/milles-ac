@@ -43,21 +43,29 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 - **Proof Upload Required**: Vendors MUST upload proof screenshot before approving ANY transaction
 - Settlement History with Statement of Settlement (printable)
 
-### Income & Expenses (Enhanced Feb 25, 2026)
-- **Visual Distinction**: Green left border + green badge for income, Red left border + red badge for expenses
-- **Vendor Integration**: Vendors available in Account dropdown with "Requires Approval" label
-- **Bank Account Field**: When vendor selected, bank account details can be specified
 ### Income & Expenses (Enhanced Feb 26, 2026)
 - **Visual Distinction**: Green left border + green badge for income, Red left border + red badge for expenses
-- **Vendor Integration**: Vendors available in Account dropdown with "Requires Approval" label
-- **Bank Account Field**: When vendor selected, bank account details can be specified
-- **Pending Vendor Status**: Vendor-linked entries start as "pending_vendor", treasury only updates after approval
+- **Exchanger Integration**: Exchangers (money partners) available in Account dropdown with "Requires Approval" label
+- **Bank Account Field**: When exchanger selected, bank account details can be specified
+- **Pending Exchanger Status**: Exchanger-linked entries start as "pending_vendor", treasury only updates after approval
 - **Convert Expense to Loan (Enhanced)**: 
   - Searchable borrower company dropdown with existing borrowers list
   - "Add new" option to add a new company
   - Treasury Account field REMOVED (uses expense's treasury automatically)
 - **No Double Entry**: Converted expenses excluded from reports, marked with "Loan" badge
-- Track company income/expenses, custom categories, treasury integration
+- **NEW: Vendor Suppliers Tab** (Feb 26, 2026):
+  - Separate collection `vendor_suppliers` for service providers (rent, utilities, office supplies)
+  - Distinct from Exchangers (money partners)
+  - Fields: name, contact_person, email, phone, address, bank details (bank_name, account_name, account_number, ifsc, branch)
+  - Full CRUD with soft-delete when linked to entries
+- **NEW: Account Categories Tab** (Feb 26, 2026):
+  - Collection `ie_categories` for custom account categories
+  - Types: income, expense, or both
+  - Full CRUD with soft-delete (mark inactive) when linked to entries
+- **Enhanced Add Entry Form**:
+  - Searchable category dropdown with "+ Add new category" option
+  - Optional linking to Client and Vendor Supplier
+  - Shows custom categories with folder icon, default categories below
 
 ### Loan Management (Enhanced Feb 26, 2026)
 - **MAJOR OVERHAUL** - Complete redesign with new tabbed interface
