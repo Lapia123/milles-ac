@@ -591,16 +591,16 @@ export default function Loans() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
+          <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
             Loan Management
           </h1>
-          <p className="text-[#C5C6C7]">Track loans given to other companies</p>
+          <p className="text-slate-500">Track loans given to other companies</p>
         </div>
         <div className="flex gap-2">
           <Button
             variant="outline"
             onClick={handleExportCSV}
-            className="border-white/10 text-[#C5C6C7] hover:bg-white/5 font-bold uppercase tracking-wider rounded-sm"
+            className="border-slate-200 text-slate-500 hover:bg-slate-100 font-bold uppercase tracking-wider rounded-sm"
             data-testid="export-loans-btn"
           >
             <Download className="w-4 h-4 mr-2" />
@@ -619,17 +619,17 @@ export default function Loans() {
 
       {/* Main Tabs */}
       <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
-        <TabsList className="bg-[#1F2833] border border-white/10 mb-4">
-          <TabsTrigger value="dashboard" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
+        <TabsList className="bg-white border border-slate-200 mb-4">
+          <TabsTrigger value="dashboard" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
             <BarChart3 className="w-4 h-4 mr-2" /> Dashboard
           </TabsTrigger>
-          <TabsTrigger value="borrowers" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
+          <TabsTrigger value="borrowers" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
             <Users className="w-4 h-4 mr-2" /> Borrowers
           </TabsTrigger>
-          <TabsTrigger value="loans" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
+          <TabsTrigger value="loans" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
             <Banknote className="w-4 h-4 mr-2" /> All Loans
           </TabsTrigger>
-          <TabsTrigger value="transactions" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
+          <TabsTrigger value="transactions" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
             <History className="w-4 h-4 mr-2" /> Transactions
           </TabsTrigger>
         </TabsList>
@@ -640,12 +640,12 @@ export default function Loans() {
             <div className="space-y-6">
               {/* Portfolio Overview */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card className="bg-[#1F2833] border-white/5">
+                <Card className="bg-white border-slate-200">
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">Total Disbursed</p>
-                        <p className="text-xl font-bold font-mono text-white">${dashboard.portfolio_overview.total_disbursed_usd?.toLocaleString()}</p>
+                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Total Disbursed</p>
+                        <p className="text-xl font-bold font-mono text-slate-800">${dashboard.portfolio_overview.total_disbursed_usd?.toLocaleString()}</p>
                       </div>
                       <div className="p-2 bg-blue-500/10 rounded-sm">
                         <Banknote className="w-5 h-5 text-blue-400" />
@@ -653,24 +653,24 @@ export default function Loans() {
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="bg-[#1F2833] border-white/5">
+                <Card className="bg-white border-slate-200">
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">Outstanding</p>
-                        <p className="text-xl font-bold font-mono text-[#66FCF1]">${dashboard.portfolio_overview.total_outstanding_usd?.toLocaleString()}</p>
+                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Outstanding</p>
+                        <p className="text-xl font-bold font-mono text-blue-600">${dashboard.portfolio_overview.total_outstanding_usd?.toLocaleString()}</p>
                       </div>
                       <div className="p-2 bg-cyan-500/10 rounded-sm">
-                        <PiggyBank className="w-5 h-5 text-[#66FCF1]" />
+                        <PiggyBank className="w-5 h-5 text-blue-600" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="bg-[#1F2833] border-white/5">
+                <Card className="bg-white border-slate-200">
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">Total Repaid</p>
+                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Total Repaid</p>
                         <p className="text-xl font-bold font-mono text-green-400">${dashboard.portfolio_overview.total_repaid_usd?.toLocaleString()}</p>
                       </div>
                       <div className="p-2 bg-green-500/10 rounded-sm">
@@ -679,11 +679,11 @@ export default function Loans() {
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="bg-[#1F2833] border-white/5">
+                <Card className="bg-white border-slate-200">
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">Collected This Month</p>
+                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Collected This Month</p>
                         <p className="text-xl font-bold font-mono text-yellow-400">${dashboard.collection_this_month?.toLocaleString()}</p>
                       </div>
                       <div className="p-2 bg-yellow-500/10 rounded-sm">
@@ -696,32 +696,32 @@ export default function Loans() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Aging Analysis */}
-                <Card className="bg-[#1F2833] border-white/5">
+                <Card className="bg-white border-slate-200">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-white text-lg flex items-center gap-2">
-                      <Clock className="w-5 h-5 text-[#66FCF1]" /> Aging Analysis
+                    <CardTitle className="text-slate-800 text-lg flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-blue-600" /> Aging Analysis
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-[#C5C6C7] text-sm">Current (Not Due)</span>
+                        <span className="text-slate-500 text-sm">Current (Not Due)</span>
                         <span className="text-green-400 font-mono">${dashboard.aging_analysis.current?.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[#C5C6C7] text-sm">1-30 Days Overdue</span>
+                        <span className="text-slate-500 text-sm">1-30 Days Overdue</span>
                         <span className="text-yellow-400 font-mono">${dashboard.aging_analysis.days_1_30?.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[#C5C6C7] text-sm">31-60 Days Overdue</span>
+                        <span className="text-slate-500 text-sm">31-60 Days Overdue</span>
                         <span className="text-orange-400 font-mono">${dashboard.aging_analysis.days_31_60?.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[#C5C6C7] text-sm">61-90 Days Overdue</span>
+                        <span className="text-slate-500 text-sm">61-90 Days Overdue</span>
                         <span className="text-red-400 font-mono">${dashboard.aging_analysis.days_61_90?.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[#C5C6C7] text-sm">90+ Days Overdue</span>
+                        <span className="text-slate-500 text-sm">90+ Days Overdue</span>
                         <span className="text-red-600 font-mono font-bold">${dashboard.aging_analysis.days_90_plus?.toLocaleString()}</span>
                       </div>
                     </div>
@@ -729,10 +729,10 @@ export default function Loans() {
                 </Card>
 
                 {/* Top Borrowers */}
-                <Card className="bg-[#1F2833] border-white/5">
+                <Card className="bg-white border-slate-200">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-white text-lg flex items-center gap-2">
-                      <Building2 className="w-5 h-5 text-[#66FCF1]" /> Top Borrowers
+                    <CardTitle className="text-slate-800 text-lg flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-blue-600" /> Top Borrowers
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -740,14 +740,14 @@ export default function Loans() {
                       {dashboard.top_borrowers?.map((b, i) => (
                         <div key={i} className="flex justify-between items-center">
                           <div>
-                            <span className="text-white text-sm">{b.name}</span>
-                            <span className="text-[#8B8D91] text-xs ml-2">({b.loan_count} loans)</span>
+                            <span className="text-slate-800 text-sm">{b.name}</span>
+                            <span className="text-slate-400 text-xs ml-2">({b.loan_count} loans)</span>
                           </div>
-                          <span className="text-[#66FCF1] font-mono">${b.outstanding?.toLocaleString()}</span>
+                          <span className="text-blue-600 font-mono">${b.outstanding?.toLocaleString()}</span>
                         </div>
                       ))}
                       {(!dashboard.top_borrowers || dashboard.top_borrowers.length === 0) && (
-                        <p className="text-[#8B8D91] text-sm text-center py-4">No borrowers yet</p>
+                        <p className="text-slate-400 text-sm text-center py-4">No borrowers yet</p>
                       )}
                     </div>
                   </CardContent>
@@ -755,9 +755,9 @@ export default function Loans() {
               </div>
 
               {/* Upcoming Dues */}
-              <Card className="bg-[#1F2833] border-white/5">
+              <Card className="bg-white border-slate-200">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-white text-lg flex items-center gap-2">
+                  <CardTitle className="text-slate-800 text-lg flex items-center gap-2">
                     <AlertTriangle className="w-5 h-5 text-yellow-400" /> Upcoming Dues (Next 30 Days)
                   </CardTitle>
                 </CardHeader>
@@ -765,19 +765,19 @@ export default function Loans() {
                   {dashboard.upcoming_dues?.length > 0 ? (
                     <Table>
                       <TableHeader>
-                        <TableRow className="border-white/10 hover:bg-transparent">
-                          <TableHead className="text-[#C5C6C7] text-xs">Borrower</TableHead>
-                          <TableHead className="text-[#C5C6C7] text-xs text-right">Outstanding</TableHead>
-                          <TableHead className="text-[#C5C6C7] text-xs">Due Date</TableHead>
-                          <TableHead className="text-[#C5C6C7] text-xs text-right">Days Left</TableHead>
+                        <TableRow className="border-slate-200 hover:bg-transparent">
+                          <TableHead className="text-slate-500 text-xs">Borrower</TableHead>
+                          <TableHead className="text-slate-500 text-xs text-right">Outstanding</TableHead>
+                          <TableHead className="text-slate-500 text-xs">Due Date</TableHead>
+                          <TableHead className="text-slate-500 text-xs text-right">Days Left</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {dashboard.upcoming_dues.map((d, i) => (
-                          <TableRow key={i} className="border-white/5 hover:bg-white/5">
-                            <TableCell className="text-white text-sm">{d.borrower}</TableCell>
-                            <TableCell className="text-[#66FCF1] font-mono text-sm text-right">${d.outstanding?.toFixed(2)}</TableCell>
-                            <TableCell className="text-white text-sm">{formatDate(d.due_date)}</TableCell>
+                          <TableRow key={i} className="border-slate-200 hover:bg-slate-100">
+                            <TableCell className="text-slate-800 text-sm">{d.borrower}</TableCell>
+                            <TableCell className="text-blue-600 font-mono text-sm text-right">${d.outstanding?.toFixed(2)}</TableCell>
+                            <TableCell className="text-slate-800 text-sm">{formatDate(d.due_date)}</TableCell>
                             <TableCell className="text-right">
                               <Badge className={d.days_until_due <= 7 ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'}>
                                 {d.days_until_due} days
@@ -788,13 +788,13 @@ export default function Loans() {
                       </TableBody>
                     </Table>
                   ) : (
-                    <p className="text-[#8B8D91] text-sm text-center py-6">No upcoming dues in the next 30 days</p>
+                    <p className="text-slate-400 text-sm text-center py-6">No upcoming dues in the next 30 days</p>
                   )}
                 </CardContent>
               </Card>
             </div>
           ) : (
-            <Card className="bg-[#1F2833] border-white/5">
+            <Card className="bg-white border-slate-200">
               <CardContent className="p-12 flex justify-center">
                 <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
               </CardContent>
@@ -804,10 +804,10 @@ export default function Loans() {
 
         {/* Borrowers Tab */}
         <TabsContent value="borrowers">
-          <Card className="bg-[#1F2833] border-white/5">
+          <Card className="bg-white border-slate-200">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-white text-lg flex items-center gap-2">
-                <Users className="w-5 h-5 text-[#66FCF1]" /> Borrower Companies (Vendors)
+              <CardTitle className="text-slate-800 text-lg flex items-center gap-2">
+                <Users className="w-5 h-5 text-blue-600" /> Borrower Companies (Vendors)
               </CardTitle>
               <Button
                 onClick={() => setIsBorrowerDialogOpen(true)}
@@ -822,25 +822,25 @@ export default function Loans() {
               <ScrollArea className="h-[500px]">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-white/10 hover:bg-transparent">
-                      <TableHead className="text-[#C5C6C7] text-xs">Company</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs text-right">Total Loans</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs text-right">Disbursed</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs text-right">Outstanding</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs text-center">Active</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs">Status</TableHead>
+                    <TableRow className="border-slate-200 hover:bg-transparent">
+                      <TableHead className="text-slate-500 text-xs">Company</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Total Loans</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Disbursed</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Outstanding</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-center">Active</TableHead>
+                      <TableHead className="text-slate-500 text-xs">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {vendors.map((v) => (
-                      <TableRow key={v.vendor_id} className="border-white/5 hover:bg-white/5">
+                      <TableRow key={v.vendor_id} className="border-slate-200 hover:bg-slate-100">
                         <TableCell>
-                          <div className="text-white font-medium">{v.name}</div>
-                          <div className="text-[10px] text-[#8B8D91]">{v.email}</div>
+                          <div className="text-slate-800 font-medium">{v.name}</div>
+                          <div className="text-[10px] text-slate-400">{v.email}</div>
                         </TableCell>
-                        <TableCell className="text-white font-mono text-right">{v.loan_stats.total_loans}</TableCell>
-                        <TableCell className="text-white font-mono text-right">${v.loan_stats.total_disbursed_usd?.toLocaleString()}</TableCell>
-                        <TableCell className="text-[#66FCF1] font-mono text-right font-semibold">${v.loan_stats.total_outstanding_usd?.toLocaleString()}</TableCell>
+                        <TableCell className="text-slate-800 font-mono text-right">{v.loan_stats.total_loans}</TableCell>
+                        <TableCell className="text-slate-800 font-mono text-right">${v.loan_stats.total_disbursed_usd?.toLocaleString()}</TableCell>
+                        <TableCell className="text-blue-600 font-mono text-right font-semibold">${v.loan_stats.total_outstanding_usd?.toLocaleString()}</TableCell>
                         <TableCell className="text-center">
                           <Badge className={v.loan_stats.active_loans > 0 ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-500/20 text-gray-400'}>
                             {v.loan_stats.active_loans}
@@ -855,7 +855,7 @@ export default function Loans() {
                     ))}
                     {vendors.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-[#8B8D91] py-8">
+                        <TableCell colSpan={6} className="text-center text-slate-400 py-8">
                           No vendors found. Add vendors in the Vendors module.
                         </TableCell>
                       </TableRow>
@@ -872,12 +872,12 @@ export default function Loans() {
           {/* Summary Cards */}
           {summary && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-              <Card className="bg-[#1F2833] border-white/5">
+              <Card className="bg-white border-slate-200">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">Total Disbursed</p>
-                      <p className="text-xl font-bold font-mono text-white">${summary.total_disbursed_usd?.toLocaleString()}</p>
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Total Disbursed</p>
+                      <p className="text-xl font-bold font-mono text-slate-800">${summary.total_disbursed_usd?.toLocaleString()}</p>
                     </div>
                     <div className="p-2 bg-blue-500/10 rounded-sm">
                       <Banknote className="w-5 h-5 text-blue-400" />
@@ -885,24 +885,24 @@ export default function Loans() {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-[#1F2833] border-white/5">
+              <Card className="bg-white border-slate-200">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">Outstanding</p>
-                      <p className="text-xl font-bold font-mono text-[#66FCF1]">${summary.total_outstanding_usd?.toLocaleString()}</p>
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Outstanding</p>
+                      <p className="text-xl font-bold font-mono text-blue-600">${summary.total_outstanding_usd?.toLocaleString()}</p>
                     </div>
                     <div className="p-2 bg-cyan-500/10 rounded-sm">
-                      <PiggyBank className="w-5 h-5 text-[#66FCF1]" />
+                      <PiggyBank className="w-5 h-5 text-blue-600" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-[#1F2833] border-white/5">
+              <Card className="bg-white border-slate-200">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">Total Repaid</p>
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Total Repaid</p>
                       <p className="text-xl font-bold font-mono text-green-400">${summary.total_repaid_usd?.toLocaleString()}</p>
                     </div>
                     <div className="p-2 bg-green-500/10 rounded-sm">
@@ -911,11 +911,11 @@ export default function Loans() {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-[#1F2833] border-white/5">
+              <Card className="bg-white border-slate-200">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">Interest Earned</p>
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Interest Earned</p>
                       <p className="text-xl font-bold font-mono text-yellow-400">${summary.total_interest_earned_usd?.toLocaleString()}</p>
                     </div>
                     <div className="p-2 bg-yellow-500/10 rounded-sm">
@@ -947,8 +947,8 @@ export default function Loans() {
 
           {/* Loans Table Filter Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="bg-[#1F2833] border border-white/10">
-              <TabsTrigger value="all" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
+            <TabsList className="bg-white border border-slate-200">
+              <TabsTrigger value="all" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
                 All Loans ({loans.length})
               </TabsTrigger>
               <TabsTrigger value="active" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400">
@@ -965,43 +965,43 @@ export default function Loans() {
             {/* Loans Table */}
             <TabsContent value={activeTab} className="mt-4">
               {loading ? (
-                <Card className="bg-[#1F2833] border-white/5">
+                <Card className="bg-white border-slate-200">
                   <CardContent className="p-12 flex justify-center">
                     <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
                   </CardContent>
                 </Card>
               ) : filteredLoans.length === 0 ? (
-                <Card className="bg-[#1F2833] border-white/5">
+                <Card className="bg-white border-slate-200">
                   <CardContent className="p-12 text-center">
-                    <Banknote className="w-12 h-12 text-[#C5C6C7] mx-auto mb-4" />
-                    <p className="text-[#C5C6C7]">No loans found</p>
-                    <p className="text-sm text-[#C5C6C7]/60 mt-2">Click "New Loan" to create one</p>
+                    <Banknote className="w-12 h-12 text-slate-500 mx-auto mb-4" />
+                    <p className="text-slate-500">No loans found</p>
+                    <p className="text-sm text-slate-500/60 mt-2">Click "New Loan" to create one</p>
                   </CardContent>
                 </Card>
               ) : (
-                <Card className="bg-[#1F2833] border-white/5">
+                <Card className="bg-white border-slate-200">
                   <CardContent className="p-0">
                     <ScrollArea className="h-[500px]">
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-white/10 hover:bg-transparent">
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Borrower</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Principal</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Outstanding</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Due</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
+                          <TableRow className="border-slate-200 hover:bg-transparent">
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Borrower</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Principal</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Outstanding</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Due</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {filteredLoans.map((loan) => (
-                            <TableRow key={loan.loan_id} className="border-white/5 hover:bg-white/5">
+                            <TableRow key={loan.loan_id} className="border-slate-200 hover:bg-slate-100">
                               <TableCell>
-                                <div className="text-white font-medium">{loan.borrower_name}</div>
-                                <div className="text-[10px] text-[#8B8D91]">{loan.source_treasury_name || '—'}</div>
+                                <div className="text-slate-800 font-medium">{loan.borrower_name}</div>
+                                <div className="text-[10px] text-slate-400">{loan.source_treasury_name || '—'}</div>
                               </TableCell>
                               <TableCell className="text-right">
-                                <div className="text-white font-mono text-sm">
+                                <div className="text-slate-800 font-mono text-sm">
                                   {loan.currency === 'USD' ? '$' : ''}{loan.amount?.toLocaleString()}{loan.currency !== 'USD' ? ` ${loan.currency}` : ''}
                                 </div>
                                 {loan.interest_rate > 0 && (
@@ -1009,11 +1009,11 @@ export default function Loans() {
                                 )}
                               </TableCell>
                               <TableCell className="text-right">
-                                <span className="text-[#66FCF1] font-mono text-sm font-semibold">
+                                <span className="text-blue-600 font-mono text-sm font-semibold">
                                   {loan.currency === 'USD' ? '$' : ''}{loan.outstanding_balance?.toLocaleString()}{loan.currency !== 'USD' ? ` ${loan.currency}` : ''}
                                 </span>
                               </TableCell>
-                              <TableCell className="text-white text-sm">{formatDate(loan.due_date)}</TableCell>
+                              <TableCell className="text-slate-800 text-sm">{formatDate(loan.due_date)}</TableCell>
                               <TableCell>{getStatusBadge(loan)}</TableCell>
                               <TableCell>
                                 <div className="flex gap-0.5 justify-end">
@@ -1021,7 +1021,7 @@ export default function Loans() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => fetchLoanDetail(loan.loan_id)}
-                                    className="text-[#66FCF1] hover:text-[#66FCF1] hover:bg-[#66FCF1]/10 h-7 w-7 p-0"
+                                    className="text-blue-600 hover:text-blue-600 hover:bg-blue-100 h-7 w-7 p-0"
                                     title="View Details"
                                   >
                                     <Eye className="w-3.5 h-3.5" />
@@ -1088,28 +1088,28 @@ export default function Loans() {
 
         {/* Transactions Tab */}
         <TabsContent value="transactions">
-          <Card className="bg-[#1F2833] border-white/5">
+          <Card className="bg-white border-slate-200">
             <CardHeader className="pb-3">
-              <CardTitle className="text-white text-lg flex items-center gap-2">
-                <History className="w-5 h-5 text-[#66FCF1]" /> Loan Transactions Log
+              <CardTitle className="text-slate-800 text-lg flex items-center gap-2">
+                <History className="w-5 h-5 text-blue-600" /> Loan Transactions Log
               </CardTitle>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[500px]">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-white/10 hover:bg-transparent">
-                      <TableHead className="text-[#C5C6C7] text-xs">Date</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs">Type</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs">Description</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs text-right">Amount</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs">By</TableHead>
+                    <TableRow className="border-slate-200 hover:bg-transparent">
+                      <TableHead className="text-slate-500 text-xs">Date</TableHead>
+                      <TableHead className="text-slate-500 text-xs">Type</TableHead>
+                      <TableHead className="text-slate-500 text-xs">Description</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Amount</TableHead>
+                      <TableHead className="text-slate-500 text-xs">By</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loanTransactions.map((tx) => (
-                      <TableRow key={tx.transaction_id} className="border-white/5 hover:bg-white/5">
-                        <TableCell className="text-white text-sm">{formatDate(tx.created_at)}</TableCell>
+                      <TableRow key={tx.transaction_id} className="border-slate-200 hover:bg-slate-100">
+                        <TableCell className="text-slate-800 text-sm">{formatDate(tx.created_at)}</TableCell>
                         <TableCell>
                           <Badge className={
                             tx.transaction_type === 'disbursement' ? 'bg-blue-500/20 text-blue-400' :
@@ -1121,16 +1121,16 @@ export default function Loans() {
                             {tx.transaction_type?.replace(/_/g, ' ')}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-[#C5C6C7] text-sm max-w-[300px] truncate">{tx.description}</TableCell>
-                        <TableCell className="text-white font-mono text-sm text-right">
+                        <TableCell className="text-slate-500 text-sm max-w-[300px] truncate">{tx.description}</TableCell>
+                        <TableCell className="text-slate-800 font-mono text-sm text-right">
                           {tx.currency === 'USD' ? '$' : ''}{tx.amount?.toLocaleString()}{tx.currency !== 'USD' ? ` ${tx.currency}` : ''}
                         </TableCell>
-                        <TableCell className="text-[#8B8D91] text-sm">{tx.created_by_name}</TableCell>
+                        <TableCell className="text-slate-400 text-sm">{tx.created_by_name}</TableCell>
                       </TableRow>
                     ))}
                     {loanTransactions.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-[#8B8D91] py-8">
+                        <TableCell colSpan={5} className="text-center text-slate-400 py-8">
                           No transactions yet
                         </TableCell>
                       </TableRow>
@@ -1145,33 +1145,33 @@ export default function Loans() {
 
       {/* Create Loan Dialog */}
       <Dialog open={isLoanDialogOpen} onOpenChange={(open) => { setIsLoanDialogOpen(open); if (!open) resetLoanForm(); }}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
-              <Banknote className="w-6 h-6 text-[#66FCF1]" />
+              <Banknote className="w-6 h-6 text-blue-600" />
               New Loan
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreateLoan} className="space-y-4">
             {/* Vendor/Borrower Selection */}
             <div className="space-y-2">
-              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider flex items-center gap-2">
+              <Label className="text-slate-500 text-xs uppercase tracking-wider flex items-center gap-2">
                 <Building2 className="w-3 h-3" /> Borrower Company *
               </Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B8D91]" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input
                   value={vendorSearch}
                   onChange={(e) => setVendorSearch(e.target.value)}
-                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] pl-9"
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] pl-9"
                   placeholder="Search vendor or enter new name..."
                   data-testid="loan-borrower-search"
                 />
               </div>
               {vendorSearch && (
-                <div className="bg-[#0B0C10] border border-white/10 rounded-md max-h-32 overflow-y-auto">
+                <div className="bg-slate-50 border border-slate-200 rounded-md max-h-32 overflow-y-auto">
                   <div 
-                    className="px-3 py-2 cursor-pointer hover:bg-[#66FCF1]/10 text-[#66FCF1] flex items-center gap-2 border-b border-white/10 text-sm"
+                    className="px-3 py-2 cursor-pointer hover:bg-blue-100 text-blue-600 flex items-center gap-2 border-b border-slate-200 text-sm"
                     onClick={() => { setLoanForm({ ...loanForm, borrower_name: vendorSearch, vendor_id: '' }); }}
                   >
                     <Plus className="w-3 h-3" /> Use "{vendorSearch}" as new borrower
@@ -1179,7 +1179,7 @@ export default function Loans() {
                   {vendors.filter(v => v.name.toLowerCase().includes(vendorSearch.toLowerCase())).map((v) => (
                     <div 
                       key={v.vendor_id}
-                      className={`px-3 py-2 cursor-pointer hover:bg-white/5 text-white text-sm ${loanForm.vendor_id === v.vendor_id ? 'bg-[#66FCF1]/10' : ''}`}
+                      className={`px-3 py-2 cursor-pointer hover:bg-slate-100 text-slate-800 text-sm ${loanForm.vendor_id === v.vendor_id ? 'bg-blue-100' : ''}`}
                       onClick={() => { 
                         setLoanForm({ ...loanForm, borrower_name: v.name, vendor_id: v.vendor_id }); 
                         setVendorSearch(v.name);
@@ -1187,17 +1187,17 @@ export default function Loans() {
                     >
                       {v.name}
                       {v.loan_stats.active_loans > 0 && (
-                        <span className="text-[#8B8D91] text-xs ml-2">({v.loan_stats.active_loans} active loans)</span>
+                        <span className="text-slate-400 text-xs ml-2">({v.loan_stats.active_loans} active loans)</span>
                       )}
                     </div>
                   ))}
                 </div>
               )}
               {loanForm.borrower_name && (
-                <div className="flex items-center gap-2 text-xs text-[#66FCF1]">
+                <div className="flex items-center gap-2 text-xs text-blue-600">
                   <CheckCircle2 className="w-3 h-3" />
                   Selected: {loanForm.borrower_name}
-                  <Button type="button" variant="ghost" size="sm" onClick={() => { setLoanForm({ ...loanForm, borrower_name: '', vendor_id: '' }); setVendorSearch(''); }} className="h-5 px-1 text-[#8B8D91]">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => { setLoanForm({ ...loanForm, borrower_name: '', vendor_id: '' }); setVendorSearch(''); }} className="h-5 px-1 text-slate-400">
                     <X className="w-3 h-3" />
                   </Button>
                 </div>
@@ -1206,14 +1206,14 @@ export default function Loans() {
 
             {/* Loan Type */}
             <div className="space-y-2">
-              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Loan Type</Label>
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Loan Type</Label>
               <Select value={loanForm.loan_type} onValueChange={(value) => setLoanForm({ ...loanForm, loan_type: value })}>
-                <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white">
+                <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1F2833] border-white/10">
+                <SelectContent className="bg-white border-slate-200">
                   {loanTypes.map((lt) => (
-                    <SelectItem key={lt.value} value={lt.value} className="text-white hover:bg-white/5">{lt.label}</SelectItem>
+                    <SelectItem key={lt.value} value={lt.value} className="text-slate-800 hover:bg-slate-100">{lt.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1222,30 +1222,30 @@ export default function Loans() {
             {/* Amount & Currency */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Amount *</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Amount *</Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={loanForm.amount}
                   onChange={(e) => setLoanForm({ ...loanForm, amount: e.target.value })}
-                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                   placeholder="0.00"
                   data-testid="loan-amount"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Currency</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Currency</Label>
                 <Select
                   value={loanForm.currency}
                   onValueChange={(value) => setLoanForm({ ...loanForm, currency: value })}
                 >
-                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white">
+                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1F2833] border-white/10">
+                  <SelectContent className="bg-white border-slate-200">
                     {currencies.map((cur) => (
-                      <SelectItem key={cur} value={cur} className="text-white hover:bg-white/5">{cur}</SelectItem>
+                      <SelectItem key={cur} value={cur} className="text-slate-800 hover:bg-slate-100">{cur}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1254,14 +1254,14 @@ export default function Loans() {
 
             {/* Interest Rate */}
             <div className="space-y-2">
-              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Annual Interest Rate (%) - Simple Interest</Label>
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Annual Interest Rate (%) - Simple Interest</Label>
               <Input
                 type="number"
                 step="0.01"
                 min="0"
                 value={loanForm.interest_rate}
                 onChange={(e) => setLoanForm({ ...loanForm, interest_rate: e.target.value })}
-                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                 placeholder="0"
               />
             </div>
@@ -1269,38 +1269,38 @@ export default function Loans() {
             {/* Dates */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Loan Date *</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Loan Date *</Label>
                 <Input
                   type="date"
                   value={loanForm.loan_date}
                   onChange={(e) => setLoanForm({ ...loanForm, loan_date: e.target.value })}
-                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Due Date *</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Due Date *</Label>
                 <Input
                   type="date"
                   value={loanForm.due_date}
                   onChange={(e) => setLoanForm({ ...loanForm, due_date: e.target.value })}
-                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                 />
               </div>
             </div>
 
             {/* Repayment Mode */}
             <div className="space-y-2">
-              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Repayment Mode</Label>
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Repayment Mode</Label>
               <Select
                 value={loanForm.repayment_mode}
                 onValueChange={(value) => setLoanForm({ ...loanForm, repayment_mode: value })}
               >
-                <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white">
+                <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1F2833] border-white/10">
+                <SelectContent className="bg-white border-slate-200">
                   {repaymentModes.map((mode) => (
-                    <SelectItem key={mode.value} value={mode.value} className="text-white hover:bg-white/5">{mode.label}</SelectItem>
+                    <SelectItem key={mode.value} value={mode.value} className="text-slate-800 hover:bg-slate-100">{mode.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1310,40 +1310,40 @@ export default function Loans() {
             {loanForm.repayment_mode === 'emi' && (
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">EMI Amount</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">EMI Amount</Label>
                   <Input
                     type="number"
                     step="0.01"
                     min="0"
                     value={loanForm.installment_amount}
                     onChange={(e) => setLoanForm({ ...loanForm, installment_amount: e.target.value })}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                     placeholder="0.00"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider"># of EMIs</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider"># of EMIs</Label>
                   <Input
                     type="number"
                     min="1"
                     value={loanForm.num_installments}
                     onChange={(e) => setLoanForm({ ...loanForm, num_installments: e.target.value })}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                     placeholder="12"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Frequency</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Frequency</Label>
                   <Select
                     value={loanForm.installment_frequency}
                     onValueChange={(value) => setLoanForm({ ...loanForm, installment_frequency: value })}
                   >
-                    <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white">
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1F2833] border-white/10">
+                    <SelectContent className="bg-white border-slate-200">
                       {installmentFrequencies.map((freq) => (
-                        <SelectItem key={freq.value} value={freq.value} className="text-white hover:bg-white/5">{freq.label}</SelectItem>
+                        <SelectItem key={freq.value} value={freq.value} className="text-slate-800 hover:bg-slate-100">{freq.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1353,17 +1353,17 @@ export default function Loans() {
 
             {/* Treasury Account */}
             <div className="space-y-2">
-              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Disburse From Treasury *</Label>
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Disburse From Treasury *</Label>
               <Select
                 value={loanForm.treasury_account_id}
                 onValueChange={(value) => setLoanForm({ ...loanForm, treasury_account_id: value })}
               >
-                <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="loan-treasury">
+                <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="loan-treasury">
                   <SelectValue placeholder="Select treasury account" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1F2833] border-white/10">
+                <SelectContent className="bg-white border-slate-200">
                   {treasuryAccounts.map((acc) => (
-                    <SelectItem key={acc.account_id} value={acc.account_id} className="text-white hover:bg-white/5">
+                    <SelectItem key={acc.account_id} value={acc.account_id} className="text-slate-800 hover:bg-slate-100">
                       {acc.account_name} ({acc.balance?.toLocaleString()} {acc.currency})
                     </SelectItem>
                   ))}
@@ -1373,22 +1373,22 @@ export default function Loans() {
 
             {/* Collateral */}
             <div className="space-y-2">
-              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Collateral / Security (Optional)</Label>
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Collateral / Security (Optional)</Label>
               <Input
                 value={loanForm.collateral}
                 onChange={(e) => setLoanForm({ ...loanForm, collateral: e.target.value })}
-                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                 placeholder="e.g., Property deed, Bank guarantee..."
               />
             </div>
 
             {/* Notes */}
             <div className="space-y-2">
-              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Notes</Label>
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Notes</Label>
               <Textarea
                 value={loanForm.notes}
                 onChange={(e) => setLoanForm({ ...loanForm, notes: e.target.value })}
-                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                 rows={2}
                 placeholder="Additional notes..."
               />
@@ -1400,7 +1400,7 @@ export default function Loans() {
                 type="button"
                 variant="outline"
                 onClick={() => { setIsLoanDialogOpen(false); resetLoanForm(); }}
-                className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                className="border-slate-200 text-slate-500 hover:bg-slate-100"
               >
                 Cancel
               </Button>
@@ -1418,7 +1418,7 @@ export default function Loans() {
 
       {/* Record Repayment Dialog */}
       <Dialog open={isRepaymentDialogOpen} onOpenChange={(open) => { setIsRepaymentDialogOpen(open); if (!open) resetRepaymentForm(); }}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
               <CreditCard className="w-6 h-6 text-green-400" />
@@ -1427,16 +1427,16 @@ export default function Loans() {
           </DialogHeader>
           
           {selectedLoan && (
-            <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10 mb-4">
-              <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Loan Details</p>
+            <div className="p-4 bg-slate-50 rounded-sm border border-slate-200 mb-4">
+              <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Loan Details</p>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-[#C5C6C7]">Borrower:</span>
-                  <span className="text-white">{selectedLoan.borrower_name}</span>
+                  <span className="text-slate-500">Borrower:</span>
+                  <span className="text-slate-800">{selectedLoan.borrower_name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#C5C6C7]">Outstanding:</span>
-                  <span className="text-[#66FCF1] font-mono">{selectedLoan.outstanding_balance?.toLocaleString()} {selectedLoan.currency}</span>
+                  <span className="text-slate-500">Outstanding:</span>
+                  <span className="text-blue-600 font-mono">{selectedLoan.outstanding_balance?.toLocaleString()} {selectedLoan.currency}</span>
                 </div>
               </div>
             </div>
@@ -1446,30 +1446,30 @@ export default function Loans() {
             {/* Amount & Currency */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Amount *</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Amount *</Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={repaymentForm.amount}
                   onChange={(e) => setRepaymentForm({ ...repaymentForm, amount: e.target.value })}
-                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                   placeholder="0.00"
                   data-testid="repayment-amount"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Currency</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Currency</Label>
                 <Select
                   value={repaymentForm.currency}
                   onValueChange={(value) => setRepaymentForm({ ...repaymentForm, currency: value })}
                 >
-                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white">
+                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1F2833] border-white/10">
+                  <SelectContent className="bg-white border-slate-200">
                     {currencies.map((cur) => (
-                      <SelectItem key={cur} value={cur} className="text-white hover:bg-white/5">{cur}</SelectItem>
+                      <SelectItem key={cur} value={cur} className="text-slate-800 hover:bg-slate-100">{cur}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1478,17 +1478,17 @@ export default function Loans() {
 
             {/* Treasury Account */}
             <div className="space-y-2">
-              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Credit to Treasury *</Label>
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Credit to Treasury *</Label>
               <Select
                 value={repaymentForm.treasury_account_id}
                 onValueChange={(value) => setRepaymentForm({ ...repaymentForm, treasury_account_id: value })}
               >
-                <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="repayment-treasury">
+                <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="repayment-treasury">
                   <SelectValue placeholder="Select treasury account" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1F2833] border-white/10">
+                <SelectContent className="bg-white border-slate-200">
                   {treasuryAccounts.map((acc) => (
-                    <SelectItem key={acc.account_id} value={acc.account_id} className="text-white hover:bg-white/5">
+                    <SelectItem key={acc.account_id} value={acc.account_id} className="text-slate-800 hover:bg-slate-100">
                       {acc.account_name} ({acc.currency})
                     </SelectItem>
                   ))}
@@ -1498,22 +1498,22 @@ export default function Loans() {
 
             {/* Payment Date */}
             <div className="space-y-2">
-              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Payment Date</Label>
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Payment Date</Label>
               <Input
                 type="date"
                 value={repaymentForm.payment_date}
                 onChange={(e) => setRepaymentForm({ ...repaymentForm, payment_date: e.target.value })}
-                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
               />
             </div>
 
             {/* Reference */}
             <div className="space-y-2">
-              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Reference</Label>
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Reference</Label>
               <Input
                 value={repaymentForm.reference}
                 onChange={(e) => setRepaymentForm({ ...repaymentForm, reference: e.target.value })}
-                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                 placeholder="Payment reference..."
               />
             </div>
@@ -1524,13 +1524,13 @@ export default function Loans() {
                 type="button"
                 variant="outline"
                 onClick={() => { setIsRepaymentDialogOpen(false); resetRepaymentForm(); }}
-                className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                className="border-slate-200 text-slate-500 hover:bg-slate-100"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                className="bg-green-500 hover:bg-green-600 text-white font-bold uppercase tracking-wider"
+                className="bg-green-500 hover:bg-green-600 text-slate-800 font-bold uppercase tracking-wider"
                 data-testid="record-repayment-btn"
               >
                 Record Payment
@@ -1542,7 +1542,7 @@ export default function Loans() {
 
       {/* Loan Detail Dialog */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
               Loan Details
@@ -1553,69 +1553,69 @@ export default function Loans() {
             <div className="space-y-6">
               {/* Loan Info */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Borrower</p>
-                  <p className="text-white font-medium">{selectedLoan.borrower_name}</p>
+                <div className="p-4 bg-slate-50 rounded-sm border border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Borrower</p>
+                  <p className="text-slate-800 font-medium">{selectedLoan.borrower_name}</p>
                 </div>
-                <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Status</p>
+                <div className="p-4 bg-slate-50 rounded-sm border border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Status</p>
                   {getStatusBadge(selectedLoan)}
                 </div>
-                <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Loan Amount</p>
-                  <p className="text-white font-mono">{selectedLoan.amount?.toLocaleString()} {selectedLoan.currency}</p>
+                <div className="p-4 bg-slate-50 rounded-sm border border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Loan Amount</p>
+                  <p className="text-slate-800 font-mono">{selectedLoan.amount?.toLocaleString()} {selectedLoan.currency}</p>
                 </div>
-                <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Interest Rate</p>
-                  <p className="text-white font-mono">{selectedLoan.interest_rate}%</p>
+                <div className="p-4 bg-slate-50 rounded-sm border border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Interest Rate</p>
+                  <p className="text-slate-800 font-mono">{selectedLoan.interest_rate}%</p>
                 </div>
-                <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Total Interest</p>
+                <div className="p-4 bg-slate-50 rounded-sm border border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total Interest</p>
                   <p className="text-yellow-400 font-mono">{selectedLoan.total_interest?.toLocaleString()} {selectedLoan.currency}</p>
                 </div>
-                <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Outstanding</p>
-                  <p className="text-[#66FCF1] font-mono">{selectedLoan.outstanding_balance?.toLocaleString()} {selectedLoan.currency}</p>
+                <div className="p-4 bg-slate-50 rounded-sm border border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Outstanding</p>
+                  <p className="text-blue-600 font-mono">{selectedLoan.outstanding_balance?.toLocaleString()} {selectedLoan.currency}</p>
                 </div>
-                <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Loan Date</p>
-                  <p className="text-white">{formatDate(selectedLoan.loan_date)}</p>
+                <div className="p-4 bg-slate-50 rounded-sm border border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Loan Date</p>
+                  <p className="text-slate-800">{formatDate(selectedLoan.loan_date)}</p>
                 </div>
-                <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Due Date</p>
-                  <p className="text-white">{formatDate(selectedLoan.due_date)}</p>
+                <div className="p-4 bg-slate-50 rounded-sm border border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Due Date</p>
+                  <p className="text-slate-800">{formatDate(selectedLoan.due_date)}</p>
                 </div>
               </div>
 
               {/* Repayment History */}
               <div>
-                <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                  <Receipt className="w-5 h-5 text-[#66FCF1]" />
+                <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                  <Receipt className="w-5 h-5 text-blue-600" />
                   Repayment History ({selectedLoan.repayments?.length || 0})
                 </h3>
                 {selectedLoan.repayments?.length > 0 ? (
                   <Table>
                     <TableHeader>
-                      <TableRow className="border-white/10 hover:bg-transparent">
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Date</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Treasury</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                      <TableRow className="border-slate-200 hover:bg-transparent">
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Treasury</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {selectedLoan.repayments.map((rep) => (
-                        <TableRow key={rep.repayment_id} className="border-white/5 hover:bg-white/5">
-                          <TableCell className="text-white text-sm">{formatDate(rep.payment_date)}</TableCell>
+                        <TableRow key={rep.repayment_id} className="border-slate-200 hover:bg-slate-100">
+                          <TableCell className="text-slate-800 text-sm">{formatDate(rep.payment_date)}</TableCell>
                           <TableCell className="text-green-400 font-mono text-right">+{rep.amount?.toLocaleString()} {rep.currency}</TableCell>
-                          <TableCell className="text-[#C5C6C7] text-sm">{rep.treasury_account_name}</TableCell>
-                          <TableCell className="text-[#C5C6C7] text-sm">{rep.reference || '-'}</TableCell>
+                          <TableCell className="text-slate-500 text-sm">{rep.treasury_account_name}</TableCell>
+                          <TableCell className="text-slate-500 text-sm">{rep.reference || '-'}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 ) : (
-                  <p className="text-[#C5C6C7] text-sm">No repayments recorded yet</p>
+                  <p className="text-slate-500 text-sm">No repayments recorded yet</p>
                 )}
               </div>
 
@@ -1624,7 +1624,7 @@ export default function Loans() {
                 <div className="flex justify-end">
                   <Button
                     onClick={() => { setIsDetailDialogOpen(false); openRepaymentDialog(selectedLoan); }}
-                    className="bg-green-500 hover:bg-green-600 text-white font-bold uppercase tracking-wider"
+                    className="bg-green-500 hover:bg-green-600 text-slate-800 font-bold uppercase tracking-wider"
                   >
                     <CreditCard className="w-4 h-4 mr-2" />
                     Record Repayment
@@ -1638,7 +1638,7 @@ export default function Loans() {
 
       {/* Swap Loan Dialog */}
       <Dialog open={isSwapDialogOpen} onOpenChange={(open) => { setIsSwapDialogOpen(open); if (!open) setSwapForm({ target_vendor_id: '', target_borrower_name: '', reason: '', adjust_terms: false, new_interest_rate: '', new_due_date: '' }); }}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
               <ArrowRightLeft className="w-6 h-6 text-purple-400" />
@@ -1648,32 +1648,32 @@ export default function Loans() {
           
           {selectedLoan && (
             <div className="space-y-4">
-              <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Current Loan</p>
-                <p className="text-white font-medium">{selectedLoan.borrower_name}</p>
-                <p className="text-[#66FCF1] font-mono">
+              <div className="p-4 bg-slate-50 rounded-sm border border-slate-200">
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Current Loan</p>
+                <p className="text-slate-800 font-medium">{selectedLoan.borrower_name}</p>
+                <p className="text-blue-600 font-mono">
                   Outstanding: {selectedLoan.currency === 'USD' ? '$' : ''}{selectedLoan.outstanding_balance?.toLocaleString()}{selectedLoan.currency !== 'USD' ? ` ${selectedLoan.currency}` : ''}
                 </p>
               </div>
 
               {/* New Borrower */}
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Transfer To (New Borrower) *</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Transfer To (New Borrower) *</Label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B8D91]" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input
                     value={swapForm.target_borrower_name}
                     onChange={(e) => setSwapForm({ ...swapForm, target_borrower_name: e.target.value, target_vendor_id: '' })}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] pl-9"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] pl-9"
                     placeholder="New borrower name..."
                   />
                 </div>
                 {swapForm.target_borrower_name && vendors.filter(v => v.name.toLowerCase().includes(swapForm.target_borrower_name.toLowerCase())).length > 0 && (
-                  <div className="bg-[#0B0C10] border border-white/10 rounded-md max-h-24 overflow-y-auto">
+                  <div className="bg-slate-50 border border-slate-200 rounded-md max-h-24 overflow-y-auto">
                     {vendors.filter(v => v.name.toLowerCase().includes(swapForm.target_borrower_name.toLowerCase())).map((v) => (
                       <div 
                         key={v.vendor_id}
-                        className="px-3 py-1.5 cursor-pointer hover:bg-white/5 text-white text-sm"
+                        className="px-3 py-1.5 cursor-pointer hover:bg-slate-100 text-slate-800 text-sm"
                         onClick={() => setSwapForm({ ...swapForm, target_borrower_name: v.name, target_vendor_id: v.vendor_id })}
                       >
                         {v.name}
@@ -1685,11 +1685,11 @@ export default function Loans() {
 
               {/* Reason */}
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Reason for Transfer</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Reason for Transfer</Label>
                 <Textarea
                   value={swapForm.reason}
                   onChange={(e) => setSwapForm({ ...swapForm, reason: e.target.value })}
-                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                   rows={2}
                   placeholder="Business restructuring, ownership change, etc."
                 />
@@ -1702,31 +1702,31 @@ export default function Loans() {
                   id="adjustTerms"
                   checked={swapForm.adjust_terms}
                   onChange={(e) => setSwapForm({ ...swapForm, adjust_terms: e.target.checked })}
-                  className="rounded border-white/10 bg-[#0B0C10]"
+                  className="rounded border-slate-200 bg-slate-50"
                 />
-                <Label htmlFor="adjustTerms" className="text-[#C5C6C7] text-sm cursor-pointer">Adjust loan terms</Label>
+                <Label htmlFor="adjustTerms" className="text-slate-500 text-sm cursor-pointer">Adjust loan terms</Label>
               </div>
 
               {swapForm.adjust_terms && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">New Interest Rate (%)</Label>
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">New Interest Rate (%)</Label>
                     <Input
                       type="number"
                       step="0.01"
                       value={swapForm.new_interest_rate}
                       onChange={(e) => setSwapForm({ ...swapForm, new_interest_rate: e.target.value })}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                       placeholder={selectedLoan.interest_rate?.toString()}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">New Due Date</Label>
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">New Due Date</Label>
                     <Input
                       type="date"
                       value={swapForm.new_due_date}
                       onChange={(e) => setSwapForm({ ...swapForm, new_due_date: e.target.value })}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                     />
                   </div>
                 </div>
@@ -1737,13 +1737,13 @@ export default function Loans() {
                 <Button
                   variant="outline"
                   onClick={() => setIsSwapDialogOpen(false)}
-                  className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                  className="border-slate-200 text-slate-500 hover:bg-slate-100"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSwapLoan}
-                  className="bg-purple-500 hover:bg-purple-600 text-white font-bold uppercase tracking-wider"
+                  className="bg-purple-500 hover:bg-purple-600 text-slate-800 font-bold uppercase tracking-wider"
                 >
                   <ArrowRightLeft className="w-4 h-4 mr-2" />
                   Transfer Loan
@@ -1756,10 +1756,10 @@ export default function Loans() {
 
       {/* Add Borrower Dialog */}
       <Dialog open={isBorrowerDialogOpen} onOpenChange={(open) => { setIsBorrowerDialogOpen(open); if (!open) setBorrowerForm({ name: '', email: '', phone: '', address: '', contact_person: '' }); }}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
-              <Building2 className="w-6 h-6 text-[#66FCF1]" />
+              <Building2 className="w-6 h-6 text-blue-600" />
               Add Borrower Company
             </DialogTitle>
           </DialogHeader>
@@ -1767,11 +1767,11 @@ export default function Loans() {
           <form onSubmit={handleCreateBorrower} className="space-y-4">
             {/* Company Name */}
             <div className="space-y-2">
-              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Company Name *</Label>
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Company Name *</Label>
               <Input
                 value={borrowerForm.name}
                 onChange={(e) => setBorrowerForm({ ...borrowerForm, name: e.target.value })}
-                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                 placeholder="ABC Company Ltd"
                 data-testid="borrower-name"
               />
@@ -1779,11 +1779,11 @@ export default function Loans() {
 
             {/* Contact Person */}
             <div className="space-y-2">
-              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Contact Person</Label>
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Contact Person</Label>
               <Input
                 value={borrowerForm.contact_person}
                 onChange={(e) => setBorrowerForm({ ...borrowerForm, contact_person: e.target.value })}
-                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                 placeholder="John Doe"
               />
             </div>
@@ -1791,21 +1791,21 @@ export default function Loans() {
             {/* Email & Phone */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Email</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Email</Label>
                 <Input
                   type="email"
                   value={borrowerForm.email}
                   onChange={(e) => setBorrowerForm({ ...borrowerForm, email: e.target.value })}
-                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                   placeholder="contact@company.com"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Phone</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Phone</Label>
                 <Input
                   value={borrowerForm.phone}
                   onChange={(e) => setBorrowerForm({ ...borrowerForm, phone: e.target.value })}
-                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                   placeholder="+971 50 123 4567"
                 />
               </div>
@@ -1813,11 +1813,11 @@ export default function Loans() {
 
             {/* Address */}
             <div className="space-y-2">
-              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Address</Label>
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Address</Label>
               <Textarea
                 value={borrowerForm.address}
                 onChange={(e) => setBorrowerForm({ ...borrowerForm, address: e.target.value })}
-                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                 rows={2}
                 placeholder="Business address..."
               />
@@ -1829,7 +1829,7 @@ export default function Loans() {
                 type="button"
                 variant="outline"
                 onClick={() => setIsBorrowerDialogOpen(false)}
-                className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                className="border-slate-200 text-slate-500 hover:bg-slate-100"
               >
                 Cancel
               </Button>
