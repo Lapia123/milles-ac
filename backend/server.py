@@ -236,7 +236,7 @@ class ExpenseCategory:
 
 class IncomeExpenseCreate(BaseModel):
     entry_type: str  # income or expense
-    category: str
+    category: Optional[str] = None
     custom_category: Optional[str] = None
     amount: float
     currency: str = "USD"
