@@ -318,6 +318,8 @@ export default function Settings() {
       password: '',
       name: '',
       role: 'sub_admin',
+      deposit_commission: 0,
+      withdrawal_commission: 0,
     });
   };
   
