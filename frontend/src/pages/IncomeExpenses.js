@@ -60,6 +60,16 @@ export default function IncomeExpenses() {
   // IE Categories state
   const [categoryDialog, setCategoryDialog] = useState({ open: false, mode: 'create', data: null });
   const [categoryForm, setCategoryForm] = useState({ name: '', category_type: 'both', description: '' });
+  
+  // Import/Upload state
+  const [importDialog, setImportDialog] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importTreasuryId, setImportTreasuryId] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [invoiceDialog, setInvoiceDialog] = useState({ open: false, entry: null });
+  const [invoiceFile, setInvoiceFile] = useState(null);
+  const [uploadingInvoice, setUploadingInvoice] = useState(false);
+  const [viewInvoiceDialog, setViewInvoiceDialog] = useState({ open: false, file: null });
 
   const [filters, setFilters] = useState({ startDate: '', endDate: '', category: '', treasuryAccountId: '' });
 
