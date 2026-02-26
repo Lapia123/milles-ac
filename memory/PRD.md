@@ -47,14 +47,23 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 - **Visual Distinction**: Green left border + green badge for income, Red left border + red badge for expenses
 - **Vendor Integration**: Vendors available in Account dropdown with "Requires Approval" label
 - **Bank Account Field**: When vendor selected, bank account details can be specified
+### Income & Expenses (Enhanced Feb 26, 2026)
+- **Visual Distinction**: Green left border + green badge for income, Red left border + red badge for expenses
+- **Vendor Integration**: Vendors available in Account dropdown with "Requires Approval" label
+- **Bank Account Field**: When vendor selected, bank account details can be specified
 - **Pending Vendor Status**: Vendor-linked entries start as "pending_vendor", treasury only updates after approval
-- **Convert Expense to Loan**: Button on expense rows to convert to loan with borrower selection
+- **Convert Expense to Loan (Enhanced)**: 
+  - Searchable borrower company dropdown with existing borrowers list
+  - "Add new" option to add a new company
+  - Treasury Account field REMOVED (uses expense's treasury automatically)
 - **No Double Entry**: Converted expenses excluded from reports, marked with "Loan" badge
 - Track company income/expenses, custom categories, treasury integration
 
-### Loan Management (Enhanced Feb 25, 2026)
+### Loan Management (Enhanced Feb 26, 2026)
 - **Multiple Loans per Company**: Same borrower can have multiple active loans
 - **CSV Export**: Export all loans to CSV for external use
+- **Borrower List API**: New `/api/loans/borrowers` endpoint returns unique borrower names
+- **Improved Table UI**: Cleaner layout with Treasury shown below borrower name
 - Borrower, amount, interest, dates, repayment tracking
 - Converted-from-expense loans tracked with source reference
 
