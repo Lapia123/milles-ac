@@ -102,8 +102,22 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 
 ## Key API Endpoints (New/Updated)
 
+### Vendor Suppliers (NEW Feb 26, 2026)
+- `GET /api/vendor-suppliers` - List all service vendors with search/status filter
+- `GET /api/vendor-suppliers/{supplier_id}` - Get vendor details
+- `POST /api/vendor-suppliers` - Create vendor supplier
+- `PUT /api/vendor-suppliers/{supplier_id}` - Update vendor
+- `DELETE /api/vendor-suppliers/{supplier_id}` - Delete/deactivate vendor
+
+### IE Categories (NEW Feb 26, 2026)
+- `GET /api/ie-categories` - List categories with type/active filter
+- `GET /api/ie-categories/{category_id}` - Get category details
+- `POST /api/ie-categories` - Create category
+- `PUT /api/ie-categories/{category_id}` - Update category
+- `DELETE /api/ie-categories/{category_id}` - Delete/deactivate category
+
 ### Income & Expenses
-- `POST /api/income-expenses` - Create entry (with optional vendor_id, vendor_bank_account)
+- `POST /api/income-expenses` - Create entry (now with vendor_supplier_id, client_id, ie_category_id)
 - `POST /api/income-expenses/{id}/convert-to-loan` - Convert expense to loan (treasury_account_id now optional)
 - `POST /api/income-expenses/{id}/vendor-approve` - Vendor approves entry
 - `POST /api/income-expenses/{id}/vendor-reject` - Vendor rejects entry
