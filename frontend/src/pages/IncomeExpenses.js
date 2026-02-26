@@ -484,9 +484,14 @@ export default function IncomeExpenses() {
           <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>Income & Expenses</h1>
           <p className="text-slate-500">Track and manage your business income and expenses</p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)} className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan" data-testid="add-entry-btn">
-          <Plus className="w-4 h-4 mr-2" /> Add Entry
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setImportDialog(true)} className="border-slate-200 text-slate-600 hover:bg-slate-100" data-testid="import-btn">
+            <FileSpreadsheet className="w-4 h-4 mr-2" /> Import Excel
+          </Button>
+          <Button onClick={() => setIsDialogOpen(true)} className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan" data-testid="add-entry-btn">
+            <Plus className="w-4 h-4 mr-2" /> Add Entry
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
