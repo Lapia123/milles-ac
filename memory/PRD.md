@@ -93,7 +93,7 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 
 ### Income & Expenses
 - `POST /api/income-expenses` - Create entry (with optional vendor_id, vendor_bank_account)
-- `POST /api/income-expenses/{id}/convert-to-loan` - Convert expense to loan
+- `POST /api/income-expenses/{id}/convert-to-loan` - Convert expense to loan (treasury_account_id now optional)
 - `POST /api/income-expenses/{id}/vendor-approve` - Vendor approves entry
 - `POST /api/income-expenses/{id}/vendor-reject` - Vendor rejects entry
 - `POST /api/income-expenses/{id}/vendor-upload-proof` - Upload proof for IE entry
@@ -101,6 +101,7 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 
 ### Loans
 - `GET /api/loans/export/csv` - Export loans to CSV
+- `GET /api/loans/borrowers` - Get unique borrower company names
 
 ## Test Credentials
 - **Admin**: admin@fxbroker.com / password
