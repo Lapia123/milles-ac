@@ -4261,6 +4261,9 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = De
     if entry_data.amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")
     
+    if not entry_data.category and not entry_data.ie_category_id:
+        raise HTTPException(status_code=400, detail="Either a category or custom category is required")
+    
     if not entry_data.vendor_id and not entry_data.treasury_account_id:
         raise HTTPException(status_code=400, detail="Either an exchanger or treasury account is required")
     
