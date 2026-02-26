@@ -4367,13 +4367,16 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = De
         tx_type = "income" if entry_data.entry_type == IncomeExpenseType.INCOME else "expense"
         tx_amount = entry_data.amount if entry_data.entry_type == IncomeExpenseType.INCOME else -entry_data.amount
         
+        # Build reference from category name (either standard category or custom ie_category)
+        category_label = entry_data.category.replace('_', ' ').title() if entry_data.category else (ie_category_info["name"] if ie_category_info else "Other")
+        
         tx_doc = {
             "treasury_transaction_id": tx_id,
             "account_id": entry_data.treasury_account_id,
             "transaction_type": tx_type,
             "amount": tx_amount,
             "currency": entry_data.currency,
-            "reference": f"{entry_data.category.replace('_', ' ').title()}: {entry_data.description or 'N/A'}",
+            "reference": f"{category_label}: {entry_data.description or 'N/A'}",
             "income_expense_id": entry_id,
             "created_at": now.isoformat(),
             "created_by": user["user_id"],
