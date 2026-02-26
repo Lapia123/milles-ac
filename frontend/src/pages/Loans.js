@@ -1082,53 +1082,6 @@ export default function Loans() {
           </Card>
         </TabsContent>
       </Tabs>
-                          <TableCell className="text-white text-sm">{formatDate(loan.due_date)}</TableCell>
-                          <TableCell>{getStatusBadge(loan)}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-0.5 justify-end">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => fetchLoanDetail(loan.loan_id)}
-                                className="text-[#66FCF1] hover:text-[#66FCF1] hover:bg-[#66FCF1]/10 h-7 w-7 p-0"
-                                title="View Details"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                              </Button>
-                              {loan.status !== 'fully_paid' && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openRepaymentDialog(loan)}
-                                  className="text-green-400 hover:text-green-300 hover:bg-green-500/10 h-7 w-7 p-0"
-                                  title="Record Repayment"
-                                >
-                                  <CreditCard className="w-3.5 h-3.5" />
-                                </Button>
-                              )}
-                              {isAdmin && loan.repayment_count === 0 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDeleteLoan(loan.loan_id)}
-                                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-7 w-7 p-0"
-                                  title="Delete"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
 
       {/* Create Loan Dialog */}
       <Dialog open={isLoanDialogOpen} onOpenChange={(open) => { setIsLoanDialogOpen(open); if (!open) resetLoanForm(); }}>
