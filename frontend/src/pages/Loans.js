@@ -1575,6 +1575,124 @@ export default function Loans() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Swap Loan Dialog */}
+      <Dialog open={isSwapDialogOpen} onOpenChange={(open) => { setIsSwapDialogOpen(open); if (!open) setSwapForm({ target_vendor_id: '', target_borrower_name: '', reason: '', adjust_terms: false, new_interest_rate: '', new_due_date: '' }); }}>
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+              <ArrowRightLeft className="w-6 h-6 text-purple-400" />
+              Swap / Transfer Loan
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedLoan && (
+            <div className="space-y-4">
+              <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
+                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Current Loan</p>
+                <p className="text-white font-medium">{selectedLoan.borrower_name}</p>
+                <p className="text-[#66FCF1] font-mono">
+                  Outstanding: {selectedLoan.currency === 'USD' ? '$' : ''}{selectedLoan.outstanding_balance?.toLocaleString()}{selectedLoan.currency !== 'USD' ? ` ${selectedLoan.currency}` : ''}
+                </p>
+              </div>
+
+              {/* New Borrower */}
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Transfer To (New Borrower) *</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B8D91]" />
+                  <Input
+                    value={swapForm.target_borrower_name}
+                    onChange={(e) => setSwapForm({ ...swapForm, target_borrower_name: e.target.value, target_vendor_id: '' })}
+                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] pl-9"
+                    placeholder="New borrower name..."
+                  />
+                </div>
+                {swapForm.target_borrower_name && vendors.filter(v => v.name.toLowerCase().includes(swapForm.target_borrower_name.toLowerCase())).length > 0 && (
+                  <div className="bg-[#0B0C10] border border-white/10 rounded-md max-h-24 overflow-y-auto">
+                    {vendors.filter(v => v.name.toLowerCase().includes(swapForm.target_borrower_name.toLowerCase())).map((v) => (
+                      <div 
+                        key={v.vendor_id}
+                        className="px-3 py-1.5 cursor-pointer hover:bg-white/5 text-white text-sm"
+                        onClick={() => setSwapForm({ ...swapForm, target_borrower_name: v.name, target_vendor_id: v.vendor_id })}
+                      >
+                        {v.name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Reason */}
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Reason for Transfer</Label>
+                <Textarea
+                  value={swapForm.reason}
+                  onChange={(e) => setSwapForm({ ...swapForm, reason: e.target.value })}
+                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                  rows={2}
+                  placeholder="Business restructuring, ownership change, etc."
+                />
+              </div>
+
+              {/* Adjust Terms */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="adjustTerms"
+                  checked={swapForm.adjust_terms}
+                  onChange={(e) => setSwapForm({ ...swapForm, adjust_terms: e.target.checked })}
+                  className="rounded border-white/10 bg-[#0B0C10]"
+                />
+                <Label htmlFor="adjustTerms" className="text-[#C5C6C7] text-sm cursor-pointer">Adjust loan terms</Label>
+              </div>
+
+              {swapForm.adjust_terms && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">New Interest Rate (%)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={swapForm.new_interest_rate}
+                      onChange={(e) => setSwapForm({ ...swapForm, new_interest_rate: e.target.value })}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      placeholder={selectedLoan.interest_rate?.toString()}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">New Due Date</Label>
+                    <Input
+                      type="date"
+                      value={swapForm.new_due_date}
+                      onChange={(e) => setSwapForm({ ...swapForm, new_due_date: e.target.value })}
+                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Buttons */}
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsSwapDialogOpen(false)}
+                  className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSwapLoan}
+                  className="bg-purple-500 hover:bg-purple-600 text-white font-bold uppercase tracking-wider"
+                >
+                  <ArrowRightLeft className="w-4 h-4 mr-2" />
+                  Transfer Loan
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
