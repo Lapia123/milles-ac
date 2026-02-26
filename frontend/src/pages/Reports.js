@@ -573,7 +573,7 @@ export default function Reports() {
                             <TableCell>
                               <div>
                                 <p className="text-white font-medium">{vendor.vendor_name}</p>
-                                <p className="text-xs text-[#94A3B8]">D: {vendor.deposit_commission_rate}% / W: {vendor.withdrawal_commission_rate}%</p>
+                                <p className="text-xs text-[#94A3B8]">In: {vendor.deposit_commission_rate}% / Out: {vendor.withdrawal_commission_rate}%</p>
                               </div>
                             </TableCell>
                             <TableCell className="text-emerald-400 font-mono text-right">${(vendor.totals?.deposits_usd || 0).toLocaleString()}</TableCell>
@@ -638,8 +638,8 @@ export default function Reports() {
                     onClick={() => downloadCSV(commissionReport.vendors || [], 'vendor_commissions', [
                       { key: 'vendor_name', label: 'Vendor' },
                       { key: 'total_commission_usd', label: 'Total Commission (USD)' },
-                      { key: 'deposit_commissions', label: 'Deposit Commissions' },
-                      { key: 'withdrawal_commissions', label: 'Withdrawal Commissions' },
+                      { key: 'deposit_commissions', label: 'Money In Commissions' },
+                      { key: 'withdrawal_commissions', label: 'Money Out Commissions' },
                       { key: 'transaction_count', label: 'Transactions' }
                     ])}
                   >
