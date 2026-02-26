@@ -1753,6 +1753,97 @@ export default function Loans() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Add Borrower Dialog */}
+      <Dialog open={isBorrowerDialogOpen} onOpenChange={(open) => { setIsBorrowerDialogOpen(open); if (!open) setBorrowerForm({ name: '', email: '', phone: '', address: '', contact_person: '' }); }}>
+        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+              <Building2 className="w-6 h-6 text-[#66FCF1]" />
+              Add Borrower Company
+            </DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={handleCreateBorrower} className="space-y-4">
+            {/* Company Name */}
+            <div className="space-y-2">
+              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Company Name *</Label>
+              <Input
+                value={borrowerForm.name}
+                onChange={(e) => setBorrowerForm({ ...borrowerForm, name: e.target.value })}
+                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                placeholder="ABC Company Ltd"
+                data-testid="borrower-name"
+              />
+            </div>
+
+            {/* Contact Person */}
+            <div className="space-y-2">
+              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Contact Person</Label>
+              <Input
+                value={borrowerForm.contact_person}
+                onChange={(e) => setBorrowerForm({ ...borrowerForm, contact_person: e.target.value })}
+                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                placeholder="John Doe"
+              />
+            </div>
+
+            {/* Email & Phone */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Email</Label>
+                <Input
+                  type="email"
+                  value={borrowerForm.email}
+                  onChange={(e) => setBorrowerForm({ ...borrowerForm, email: e.target.value })}
+                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                  placeholder="contact@company.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Phone</Label>
+                <Input
+                  value={borrowerForm.phone}
+                  onChange={(e) => setBorrowerForm({ ...borrowerForm, phone: e.target.value })}
+                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                  placeholder="+971 50 123 4567"
+                />
+              </div>
+            </div>
+
+            {/* Address */}
+            <div className="space-y-2">
+              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Address</Label>
+              <Textarea
+                value={borrowerForm.address}
+                onChange={(e) => setBorrowerForm({ ...borrowerForm, address: e.target.value })}
+                className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                rows={2}
+                placeholder="Business address..."
+              />
+            </div>
+
+            {/* Buttons */}
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsBorrowerDialogOpen(false)}
+                className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create Borrower
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
