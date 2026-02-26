@@ -148,7 +148,7 @@ export default function IncomeExpenses() {
     e.preventDefault();
     if (!formData.category) { toast.error('Please select a category'); return; }
     if (!formData.amount || parseFloat(formData.amount) <= 0) { toast.error('Please enter a valid amount'); return; }
-    if (!formData.treasury_account_id && !formData.vendor_id) { toast.error('Please select an account or vendor'); return; }
+    if (!formData.treasury_account_id && !formData.vendor_id) { toast.error('Please select an account or exchanger'); return; }
 
     try {
       const payload = { ...formData, amount: parseFloat(formData.amount) };
@@ -159,7 +159,7 @@ export default function IncomeExpenses() {
         delete payload.vendor_bank_ifsc;
         delete payload.vendor_bank_branch;
       } else {
-        // When vendor is selected, clear treasury_account_id
+        // When exchanger is selected, clear treasury_account_id
         delete payload.treasury_account_id;
       }
       const response = await fetch(`${API_URL}/api/income-expenses`, {
@@ -167,7 +167,7 @@ export default function IncomeExpenses() {
       });
       if (response.ok) {
         const msg = formData.vendor_id
-          ? `${formData.entry_type === 'income' ? 'Income' : 'Expense'} sent to vendor for approval`
+          ? `${formData.entry_type === 'income' ? 'Income' : 'Expense'} sent to exchanger for approval`
           : `${formData.entry_type === 'income' ? 'Income' : 'Expense'} recorded successfully`;
         toast.success(msg);
         setIsDialogOpen(false); resetForm(); fetchEntries(); fetchSummary(); fetchTreasuryAccounts();
@@ -504,7 +504,7 @@ export default function IncomeExpenses() {
             {formData.vendor_id && (
               <>
                 <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded text-xs text-amber-400">
-                  <Clock className="w-3 h-3 inline mr-1" /> This entry will be sent to vendor for approval before treasury is updated
+                  <Clock className="w-3 h-3 inline mr-1" /> This entry will be sent to exchanger for approval before treasury is updated
                 </div>
                 <div className="space-y-3 p-3 bg-slate-50/50 border border-slate-200 rounded">
                   <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Exchanger Bank Details</p>
