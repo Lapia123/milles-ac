@@ -141,7 +141,7 @@ export default function IncomeExpenses() {
     } catch {}
   };
 
-  useEffect(() => { fetchEntries(); fetchTreasuryAccounts(); fetchVendors(); fetchSummary(); fetchMonthlyData(); }, []);
+  useEffect(() => { fetchEntries(); fetchTreasuryAccounts(); fetchVendors(); fetchBorrowers(); fetchSummary(); fetchMonthlyData(); }, []);
   useEffect(() => { fetchEntries(); fetchSummary(); }, [fetchEntries]);
 
   const handleSubmit = async (e) => {
