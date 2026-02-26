@@ -428,7 +428,7 @@ export default function VendorDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0B0C10] flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -438,23 +438,23 @@ export default function VendorDashboard() {
     <div className="space-y-6 animate-fade-in" data-testid="vendor-dashboard">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
+          <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
             Vendor Portal
           </h1>
-          <p className="text-[#C5C6C7]">Welcome, {vendorInfo?.vendor_name}</p>
+          <p className="text-slate-500">Welcome, {vendorInfo?.vendor_name}</p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-[#1F2833] rounded-sm border border-white/10">
-          <Store className="w-5 h-5 text-[#66FCF1]" />
-          <span className="text-white font-medium">{vendorInfo?.vendor_name}</span>
+        <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-sm border border-slate-200">
+          <Store className="w-5 h-5 text-blue-600" />
+          <span className="text-slate-800 font-medium">{vendorInfo?.vendor_name}</span>
         </div>
       </div>
 
       {/* Summary Cards - Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Settlement Balance - Highlighted */}
-        <Card className="bg-[#1F2833] border-white/5 border-l-4 border-l-[#66FCF1] lg:col-span-2">
+        <Card className="bg-white border-slate-200 border-l-4 border-l-[#66FCF1] lg:col-span-2">
           <CardContent className="p-6">
-            <p className="text-xs text-[#66FCF1] uppercase tracking-wider mb-3">Settlement Balance (Money In - Money Out - Commission)</p>
+            <p className="text-xs text-blue-600 uppercase tracking-wider mb-3">Settlement Balance (Money In - Money Out - Commission)</p>
             {vendorInfo?.settlement_by_currency && vendorInfo.settlement_by_currency.length > 0 ? (
               <div className="space-y-3">
                 {vendorInfo.settlement_by_currency.map((item, idx) => (
@@ -473,15 +473,15 @@ export default function VendorDashboard() {
                         </Badge>
                       </div>
                       <div className="text-right">
-                        <span className={`text-2xl font-bold font-mono ${item.amount >= 0 ? 'text-[#66FCF1]' : 'text-red-400'}`}>
+                        <span className={`text-2xl font-bold font-mono ${item.amount >= 0 ? 'text-blue-600' : 'text-red-400'}`}>
                           {item.amount >= 0 ? '+' : ''}{item.amount?.toLocaleString()}
                         </span>
                         {item.currency !== 'USD' && (
-                          <span className="text-xs text-[#C5C6C7] block">≈ ${item.usd_equivalent?.toLocaleString()} USD</span>
+                          <span className="text-xs text-slate-500 block">≈ ${item.usd_equivalent?.toLocaleString()} USD</span>
                         )}
                       </div>
                     </div>
-                    <div className="flex justify-between text-xs text-[#C5C6C7] pl-2">
+                    <div className="flex justify-between text-xs text-slate-500 pl-2">
                       <span className="text-green-400">+{item.deposit_amount?.toLocaleString()} deposits ({item.deposit_count})</span>
                       <span className="text-red-400">-{item.withdrawal_amount?.toLocaleString()} withdrawals ({item.withdrawal_count})</span>
                     </div>
@@ -489,31 +489,31 @@ export default function VendorDashboard() {
                       <div className="text-xs text-yellow-400 pl-2">
                         Commission earned: ${item.commission_earned_usd?.toLocaleString()}
                         {item.currency !== 'USD' && item.commission_earned_base > 0 && (
-                          <span className="text-[#C5C6C7]"> ({item.commission_earned_base?.toLocaleString()} {item.currency})</span>
+                          <span className="text-slate-500"> ({item.commission_earned_base?.toLocaleString()} {item.currency})</span>
                         )}
                       </div>
                     )}
                   </div>
                 ))}
-                <div className="border-t border-white/10 pt-3 mt-3 flex justify-between items-center">
-                  <span className="text-[#C5C6C7] text-sm">Total USD Equivalent:</span>
-                  <span className={`text-2xl font-bold font-mono ${vendorInfo.settlement_by_currency.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0) >= 0 ? 'text-white' : 'text-red-400'}`}>
+                <div className="border-t border-slate-200 pt-3 mt-3 flex justify-between items-center">
+                  <span className="text-slate-500 text-sm">Total USD Equivalent:</span>
+                  <span className={`text-2xl font-bold font-mono ${vendorInfo.settlement_by_currency.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0) >= 0 ? 'text-slate-800' : 'text-red-400'}`}>
                     ${vendorInfo.settlement_by_currency.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString()}
                   </span>
                 </div>
               </div>
             ) : (
-              <p className="text-3xl font-bold font-mono text-[#C5C6C7]">No pending settlement</p>
+              <p className="text-3xl font-bold font-mono text-slate-500">No pending settlement</p>
             )}
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1F2833] border-white/5">
+        <Card className="bg-white border-slate-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Pending Actions</p>
-                <p className="text-3xl font-bold font-mono text-white">{pendingCount}</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Pending Actions</p>
+                <p className="text-3xl font-bold font-mono text-slate-800">{pendingCount}</p>
               </div>
               <div className="p-3 bg-yellow-500/10 rounded-sm">
                 <Clock className="w-6 h-6 text-yellow-500" />
@@ -522,11 +522,11 @@ export default function VendorDashboard() {
           </CardContent>
         </Card>
         
-        <Card className={`bg-[#1F2833] border-white/5 ${approvedWithdrawals.length > 0 ? 'border-l-2 border-l-orange-500' : ''}`}>
+        <Card className={`bg-white border-slate-200 ${approvedWithdrawals.length > 0 ? 'border-l-2 border-l-orange-500' : ''}`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Awaiting Proof</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Awaiting Proof</p>
                 <p className="text-3xl font-bold font-mono text-orange-400">{approvedWithdrawals.length}</p>
                 <p className="text-xs text-orange-400 mt-1">Withdrawals to complete</p>
               </div>
@@ -540,11 +540,11 @@ export default function VendorDashboard() {
 
       {/* Summary Cards - Row 2 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-[#1F2833] border-white/5">
+        <Card className="bg-white border-slate-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Pending Deposits</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Pending Deposits</p>
                 <p className="text-3xl font-bold font-mono text-green-400">{pendingDeposits.length}</p>
               </div>
               <div className="p-3 bg-green-500/10 rounded-sm">
@@ -554,11 +554,11 @@ export default function VendorDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1F2833] border-white/5">
+        <Card className="bg-white border-slate-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Pending Withdrawals</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Pending Withdrawals</p>
                 <p className="text-3xl font-bold font-mono text-red-400">{pendingWithdrawals.length}</p>
               </div>
               <div className="p-3 bg-red-500/10 rounded-sm">
@@ -568,12 +568,12 @@ export default function VendorDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1F2833] border-white/5">
+        <Card className="bg-white border-slate-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Total Volume</p>
-                <p className="text-2xl font-bold font-mono text-white">
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total Volume</p>
+                <p className="text-2xl font-bold font-mono text-slate-800">
                   ${vendorInfo?.total_volume?.toLocaleString() || '0'}
                 </p>
               </div>
@@ -581,7 +581,7 @@ export default function VendorDashboard() {
           </CardContent>
         </Card>
         
-        <Card className="bg-[#1F2833] border-white/5 border-l-2 border-l-yellow-500">
+        <Card className="bg-white border-slate-200 border-l-2 border-l-yellow-500">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -589,7 +589,7 @@ export default function VendorDashboard() {
                 <p className="text-2xl font-bold font-mono text-yellow-400">
                   ${vendorInfo?.settlement_by_currency?.reduce((sum, item) => sum + (item.commission_earned_usd || 0), 0).toLocaleString() || '0'}
                 </p>
-                <p className="text-xs text-[#C5C6C7] mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   Rates: {vendorInfo?.deposit_commission || 0}% In / {vendorInfo?.withdrawal_commission || 0}% Out
                 </p>
               </div>
@@ -603,14 +603,14 @@ export default function VendorDashboard() {
 
       {/* Tabbed Content: Transactions, Income/Expenses, Settlements */}
       <Tabs value={activeVendorTab} onValueChange={setActiveVendorTab}>
-        <TabsList className="bg-[#1F2833] border border-white/10">
-          <TabsTrigger value="transactions" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
+        <TabsList className="bg-white border border-slate-200">
+          <TabsTrigger value="transactions" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
             Transactions {pendingCount > 0 && <Badge className="ml-1 bg-yellow-500/30 text-yellow-400 text-[10px]">{pendingCount}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="income-expenses" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
+          <TabsTrigger value="income-expenses" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
             Income/Expenses {pendingIeCount > 0 && <Badge className="ml-1 bg-amber-500/30 text-amber-400 text-[10px]">{pendingIeCount}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="settlements" className="data-[state=active]:bg-[#66FCF1]/20 data-[state=active]:text-[#66FCF1]">
+          <TabsTrigger value="settlements" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
             Settlement History
           </TabsTrigger>
         </TabsList>
@@ -618,9 +618,9 @@ export default function VendorDashboard() {
         {/* Transactions Tab */}
         <TabsContent value="transactions" className="mt-4">
       {/* Transactions Table */}
-      <Card className="bg-[#1F2833] border-white/5">
+      <Card className="bg-white border-slate-200">
         <CardHeader>
-          <CardTitle className="text-xl text-white uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+          <CardTitle className="text-xl text-slate-800 uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
             Assigned Transactions
           </CardTitle>
         </CardHeader>
@@ -628,22 +628,22 @@ export default function VendorDashboard() {
           <ScrollArea className="h-[500px]">
             <Table>
               <TableHeader>
-                <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Reference</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Type</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Client</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Amount</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Currency</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Commission</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Date</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
+                <TableRow className="border-slate-200 hover:bg-transparent">
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Client</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Amount</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Currency</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Commission</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {transactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-[#C5C6C7]">
+                    <TableCell colSpan={9} className="text-center py-8 text-slate-500">
                       No transactions assigned to you
                     </TableCell>
                   </TableRow>
@@ -654,11 +654,11 @@ export default function VendorDashboard() {
                     const displayAmount = tx.base_amount || tx.amount;
                     
                     return (
-                    <TableRow key={tx.transaction_id} className="border-white/5 hover:bg-white/5">
+                    <TableRow key={tx.transaction_id} className="border-slate-200 hover:bg-slate-100">
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-white">{tx.reference}</span>
-                          {tx.proof_image && <ImageIcon className="w-4 h-4 text-[#66FCF1]" />}
+                          <span className="font-mono text-slate-800">{tx.reference}</span>
+                          {tx.proof_image && <ImageIcon className="w-4 h-4 text-blue-600" />}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -667,7 +667,7 @@ export default function VendorDashboard() {
                           <span className="capitalize">{tx.transaction_type}</span>
                         </span>
                       </TableCell>
-                      <TableCell className="text-white">{tx.client_name}</TableCell>
+                      <TableCell className="text-slate-800">{tx.client_name}</TableCell>
                       <TableCell className={`font-mono font-medium ${tx.transaction_type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
                         {tx.transaction_type === 'deposit' ? '+' : '-'}{displayAmount?.toLocaleString()}
                       </TableCell>
@@ -688,22 +688,22 @@ export default function VendorDashboard() {
                           <div className="font-mono text-yellow-400">
                             <span>${tx.vendor_commission_amount?.toLocaleString()}</span>
                             {tx.vendor_commission_base_currency && tx.vendor_commission_base_currency !== 'USD' && tx.vendor_commission_base_amount && (
-                              <span className="text-[#C5C6C7] text-xs block">({tx.vendor_commission_base_amount?.toLocaleString()} {tx.vendor_commission_base_currency})</span>
+                              <span className="text-slate-500 text-xs block">({tx.vendor_commission_base_amount?.toLocaleString()} {tx.vendor_commission_base_currency})</span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-[#C5C6C7] text-xs">-</span>
+                          <span className="text-slate-500 text-xs">-</span>
                         )}
                       </TableCell>
                       <TableCell>{getStatusBadge(tx.status)}</TableCell>
-                      <TableCell className="text-[#C5C6C7] text-sm">{formatDate(tx.created_at)}</TableCell>
+                      <TableCell className="text-slate-500 text-sm">{formatDate(tx.created_at)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button 
                             variant="ghost" 
                             size="sm" 
                             onClick={() => setViewTransaction(tx)}
-                            className="text-[#C5C6C7] hover:text-white hover:bg-white/5"
+                            className="text-slate-500 hover:text-slate-800 hover:bg-slate-100"
                             data-testid={`view-tx-${tx.transaction_id}`}
                           >
                             <Eye className="w-4 h-4" />
@@ -754,15 +754,15 @@ export default function VendorDashboard() {
 
         {/* Income/Expenses Tab */}
         <TabsContent value="income-expenses" className="mt-4">
-          <Card className="bg-[#1F2833] border-white/5" data-testid="vendor-ie-entries">
+          <Card className="bg-white border-slate-200" data-testid="vendor-ie-entries">
             <CardHeader>
-              <CardTitle className="text-xl text-white uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+              <CardTitle className="text-xl text-slate-800 uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
                 Income & Expense Entries
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {ieEntries.length === 0 ? (
-                <div className="text-center py-10 text-[#C5C6C7]">
+                <div className="text-center py-10 text-slate-500">
                   <Receipt className="w-10 h-10 mx-auto mb-3 opacity-30" />
                   <p className="text-sm">No income/expense entries assigned to you</p>
                 </div>
@@ -770,31 +770,31 @@ export default function VendorDashboard() {
                 <ScrollArea className="h-[500px]">
                   <Table>
                     <TableHeader>
-                      <TableRow className="border-white/10 hover:bg-transparent">
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Date</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Type</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Category</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Description</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Bank Account</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
+                      <TableRow className="border-slate-200 hover:bg-transparent">
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Category</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Description</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Bank Account</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {ieEntries.map((entry) => {
                         const isIncome = entry.entry_type === 'income';
                         return (
-                          <TableRow key={entry.entry_id} className={`border-white/5 hover:bg-white/5 border-l-4 ${isIncome ? 'border-l-green-500' : 'border-l-red-500'}`}>
-                            <TableCell className="text-white text-sm">{entry.date ? new Date(entry.date).toLocaleDateString() : '-'}</TableCell>
+                          <TableRow key={entry.entry_id} className={`border-slate-200 hover:bg-slate-100 border-l-4 ${isIncome ? 'border-l-green-500' : 'border-l-red-500'}`}>
+                            <TableCell className="text-slate-800 text-sm">{entry.date ? new Date(entry.date).toLocaleDateString() : '-'}</TableCell>
                             <TableCell>
                               <Badge className={isIncome ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}>
                                 {isIncome ? 'Income' : 'Expense'}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-[#C5C6C7] text-sm capitalize">{entry.category?.replace('_', ' ')}</TableCell>
-                            <TableCell className="text-white text-sm max-w-[200px] truncate">{entry.description || '-'}</TableCell>
-                            <TableCell className="text-[#C5C6C7] text-sm">
+                            <TableCell className="text-slate-500 text-sm capitalize">{entry.category?.replace('_', ' ')}</TableCell>
+                            <TableCell className="text-slate-800 text-sm max-w-[200px] truncate">{entry.description || '-'}</TableCell>
+                            <TableCell className="text-slate-500 text-sm">
                               {entry.vendor_bank_account_number ? (
                                 <div className="text-[10px] space-y-0.5">
                                   <p>A/C: {entry.vendor_bank_account_number}</p>
@@ -824,7 +824,7 @@ export default function VendorDashboard() {
                                 </div>
                               )}
                               {entry.status === 'completed' && entry.vendor_commission_amount > 0 && (
-                                <span className="text-[10px] text-[#66FCF1]">Commission: ${entry.vendor_commission_amount?.toFixed(2)}</span>
+                                <span className="text-[10px] text-blue-600">Commission: ${entry.vendor_commission_amount?.toFixed(2)}</span>
                               )}
                               {entry.vendor_proof_image && <Badge className="bg-blue-500/10 text-blue-400 text-[10px] ml-1"><ImageIcon className="w-2.5 h-2.5 mr-1" />Proof</Badge>}
                             </TableCell>
@@ -842,19 +842,19 @@ export default function VendorDashboard() {
         {/* Settlements Tab */}
         <TabsContent value="settlements" className="mt-4">
       {/* Settlement History */}
-      <Card className="bg-[#1F2833] border-white/5" data-testid="vendor-settlement-history">
+      <Card className="bg-white border-slate-200" data-testid="vendor-settlement-history">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-xl text-white uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
-              <Receipt className="w-5 h-5 text-[#66FCF1]" />
+            <CardTitle className="text-xl text-slate-800 uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+              <Receipt className="w-5 h-5 text-blue-600" />
               Settlement History
             </CardTitle>
-            <Badge className="bg-[#66FCF1]/10 text-[#66FCF1] border-[#66FCF1]/20">{settlements.length} settlements</Badge>
+            <Badge className="bg-blue-100 text-blue-600 border-[#66FCF1]/20">{settlements.length} settlements</Badge>
           </div>
         </CardHeader>
         <CardContent className="p-0">
           {settlements.length === 0 ? (
-            <div className="text-center py-10 text-[#C5C6C7]">
+            <div className="text-center py-10 text-slate-500">
               <Receipt className="w-10 h-10 mx-auto mb-3 opacity-30" />
               <p className="text-sm">No settlements yet</p>
             </div>
@@ -862,27 +862,27 @@ export default function VendorDashboard() {
             <ScrollArea className="h-[400px]">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-white/10 hover:bg-transparent">
-                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">ID</TableHead>
-                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Type</TableHead>
-                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Gross</TableHead>
-                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Deductions</TableHead>
-                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Net Settled</TableHead>
-                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Date</TableHead>
-                    <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Statement</TableHead>
+                  <TableRow className="border-slate-200 hover:bg-transparent">
+                    <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">ID</TableHead>
+                    <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
+                    <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Gross</TableHead>
+                    <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Deductions</TableHead>
+                    <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Net Settled</TableHead>
+                    <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                    <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                    <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Statement</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {settlements.map((s) => (
-                    <TableRow key={s.settlement_id} className="border-white/5 hover:bg-white/5">
-                      <TableCell className="font-mono text-white text-xs">{s.settlement_id}</TableCell>
+                    <TableRow key={s.settlement_id} className="border-slate-200 hover:bg-slate-100">
+                      <TableCell className="font-mono text-slate-800 text-xs">{s.settlement_id}</TableCell>
                       <TableCell>
                         <Badge className={s.settlement_type === 'bank' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}>
                           {s.settlement_type}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-mono text-white">
+                      <TableCell className="font-mono text-slate-800">
                         {s.source_currency && s.source_currency !== 'USD'
                           ? `${s.source_currency} ${s.gross_amount?.toLocaleString()}`
                           : `$${s.gross_amount?.toLocaleString()}`}
@@ -909,13 +909,13 @@ export default function VendorDashboard() {
                           {s.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-[#C5C6C7] text-xs">{formatDate(s.settled_at || s.created_at)}</TableCell>
+                      <TableCell className="text-slate-500 text-xs">{formatDate(s.settled_at || s.created_at)}</TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => openStatement(s.settlement_id)}
-                          className="text-[#66FCF1] hover:bg-[#66FCF1]/10 h-7 px-2"
+                          className="text-blue-600 hover:bg-blue-100 h-7 px-2"
                           data-testid={`vendor-statement-${s.settlement_id}`}
                         >
                           <FileText className="w-3.5 h-3.5 mr-1" />
@@ -935,7 +935,7 @@ export default function VendorDashboard() {
 
       {/* View Transaction Dialog */}
       <Dialog open={!!viewTransaction} onOpenChange={() => setViewTransaction(null)}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
               Transaction Details
@@ -950,31 +950,31 @@ export default function VendorDashboard() {
               <>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reference</p>
-                  <p className="text-white font-mono text-lg">{viewTransaction.reference}</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Reference</p>
+                  <p className="text-slate-800 font-mono text-lg">{viewTransaction.reference}</p>
                 </div>
                 {getStatusBadge(viewTransaction.status)}
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Client</p>
-                  <p className="text-white">{viewTransaction.client_name}</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Client</p>
+                  <p className="text-slate-800">{viewTransaction.client_name}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Type</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Type</p>
                   <span className={`flex items-center gap-1 ${viewTransaction.transaction_type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
                     {viewTransaction.transaction_type === 'deposit' ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
                     <span className="capitalize">{viewTransaction.transaction_type}</span>
                   </span>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Amount</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Amount</p>
                   <p className={`font-mono text-xl ${viewTransaction.transaction_type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
                     {viewTransaction.transaction_type === 'deposit' ? '+' : '-'}{displayAmount?.toLocaleString()} {displayCurrency}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Currency</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Currency</p>
                   <Badge className={`${
                     displayCurrency === 'USD' ? 'bg-green-500/20 text-green-400' :
                     displayCurrency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
@@ -988,50 +988,50 @@ export default function VendorDashboard() {
                 </div>
                 {viewTransaction.base_currency && viewTransaction.base_currency !== viewTransaction.currency && (
                   <div className="col-span-2">
-                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">USD Equivalent</p>
-                    <p className="text-white font-mono">${viewTransaction.amount?.toLocaleString()} USD</p>
+                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">USD Equivalent</p>
+                    <p className="text-slate-800 font-mono">${viewTransaction.amount?.toLocaleString()} USD</p>
                   </div>
                 )}
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created</p>
-                  <p className="text-white text-sm">{formatDate(viewTransaction.created_at)}</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Created</p>
+                  <p className="text-slate-800 text-sm">{formatDate(viewTransaction.created_at)}</p>
                 </div>
               </div>
               {viewTransaction.description && (
-                <div className="pt-4 border-t border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Description</p>
-                  <p className="text-white">{viewTransaction.description}</p>
+                <div className="pt-4 border-t border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Description</p>
+                  <p className="text-slate-800">{viewTransaction.description}</p>
                 </div>
               )}
               {/* Client Bank Details for Withdrawals */}
               {viewTransaction.transaction_type === 'withdrawal' && viewTransaction.client_bank_name && (
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-slate-200">
                   <div className="flex items-center gap-2 mb-3">
-                    <Building2 className="w-4 h-4 text-[#66FCF1]" />
-                    <p className="text-xs text-[#66FCF1] uppercase tracking-wider font-bold">Client Bank Details (Send To)</p>
+                    <Building2 className="w-4 h-4 text-blue-600" />
+                    <p className="text-xs text-blue-600 uppercase tracking-wider font-bold">Client Bank Details (Send To)</p>
                   </div>
-                  <div className="bg-[#0B0C10] p-4 rounded-sm space-y-2">
+                  <div className="bg-slate-50 p-4 rounded-sm space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-[#C5C6C7] text-sm">Bank Name:</span>
-                      <span className="text-white font-medium">{viewTransaction.client_bank_name}</span>
+                      <span className="text-slate-500 text-sm">Bank Name:</span>
+                      <span className="text-slate-800 font-medium">{viewTransaction.client_bank_name}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[#C5C6C7] text-sm">Account Name:</span>
-                      <span className="text-white font-medium">{viewTransaction.client_bank_account_name}</span>
+                      <span className="text-slate-500 text-sm">Account Name:</span>
+                      <span className="text-slate-800 font-medium">{viewTransaction.client_bank_account_name}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[#C5C6C7] text-sm">Account Number:</span>
-                      <span className="text-white font-mono">{viewTransaction.client_bank_account_number}</span>
+                      <span className="text-slate-500 text-sm">Account Number:</span>
+                      <span className="text-slate-800 font-mono">{viewTransaction.client_bank_account_number}</span>
                     </div>
                     {viewTransaction.client_bank_swift_iban && (
                       <div className="flex justify-between">
-                        <span className="text-[#C5C6C7] text-sm">SWIFT/BIC:</span>
-                        <span className="text-white font-mono">{viewTransaction.client_bank_swift_iban}</span>
+                        <span className="text-slate-500 text-sm">SWIFT/BIC:</span>
+                        <span className="text-slate-800 font-mono">{viewTransaction.client_bank_swift_iban}</span>
                       </div>
                     )}
                     {viewTransaction.client_bank_currency && (
                       <div className="flex justify-between">
-                        <span className="text-[#C5C6C7] text-sm">Currency:</span>
+                        <span className="text-slate-500 text-sm">Currency:</span>
                         <Badge className={`${
                           viewTransaction.client_bank_currency === 'USD' ? 'bg-green-500/20 text-green-400' :
                           viewTransaction.client_bank_currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
@@ -1048,22 +1048,22 @@ export default function VendorDashboard() {
                 </div>
               )}
               {viewTransaction.proof_image && (
-                <div className="pt-4 border-t border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Proof of Payment</p>
+                <div className="pt-4 border-t border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Proof of Payment</p>
                   <img 
                     src={`data:image/png;base64,${viewTransaction.proof_image}`} 
                     alt="Proof of payment" 
-                    className="max-w-full rounded border border-white/10"
+                    className="max-w-full rounded border border-slate-200"
                   />
                 </div>
               )}
               {viewTransaction.vendor_proof_image && (
-                <div className="pt-4 border-t border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Vendor Proof (Withdrawal)</p>
+                <div className="pt-4 border-t border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Vendor Proof (Withdrawal)</p>
                   <img 
                     src={`data:image/png;base64,${viewTransaction.vendor_proof_image}`} 
                     alt="Vendor proof" 
-                    className="max-w-full rounded border border-white/10"
+                    className="max-w-full rounded border border-slate-200"
                   />
                 </div>
               )}
@@ -1077,7 +1077,7 @@ export default function VendorDashboard() {
 
       {/* Action Dialog (Approve/Reject/Complete) */}
       <Dialog open={actionDialogOpen} onOpenChange={() => { setActionDialogOpen(false); setSelectedTransaction(null); }}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
               {actionType === 'approve' && 'Approve Transaction'}
@@ -1092,27 +1092,27 @@ export default function VendorDashboard() {
                 const displayAmount = selectedTransaction.base_amount || selectedTransaction.amount;
                 return (
               <>
-              <div className="p-4 bg-[#0B0C10] rounded-sm space-y-2">
+              <div className="p-4 bg-slate-50 rounded-sm space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-[#C5C6C7]">Reference</span>
-                  <span className="text-white font-mono">{selectedTransaction.reference}</span>
+                  <span className="text-slate-500">Reference</span>
+                  <span className="text-slate-800 font-mono">{selectedTransaction.reference}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#C5C6C7]">Client</span>
-                  <span className="text-white">{selectedTransaction.client_name}</span>
+                  <span className="text-slate-500">Client</span>
+                  <span className="text-slate-800">{selectedTransaction.client_name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#C5C6C7]">Type</span>
+                  <span className="text-slate-500">Type</span>
                   <span className={selectedTransaction.transaction_type === 'deposit' ? 'text-green-400' : 'text-red-400'}>
                     {selectedTransaction.transaction_type}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#C5C6C7]">Amount</span>
-                  <span className="text-white font-mono">{displayAmount?.toLocaleString()} {displayCurrency}</span>
+                  <span className="text-slate-500">Amount</span>
+                  <span className="text-slate-800 font-mono">{displayAmount?.toLocaleString()} {displayCurrency}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#C5C6C7]">Currency</span>
+                  <span className="text-slate-500">Currency</span>
                   <Badge className={`${
                     displayCurrency === 'USD' ? 'bg-green-500/20 text-green-400' :
                     displayCurrency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
@@ -1125,20 +1125,20 @@ export default function VendorDashboard() {
                   </Badge>
                 </div>
                 {selectedTransaction.base_currency && selectedTransaction.base_currency !== selectedTransaction.currency && (
-                  <div className="flex justify-between border-t border-white/10 pt-2 mt-2">
-                    <span className="text-[#C5C6C7]">USD Equivalent</span>
-                    <span className="text-[#66FCF1] font-mono">${selectedTransaction.amount?.toLocaleString()}</span>
+                  <div className="flex justify-between border-t border-slate-200 pt-2 mt-2">
+                    <span className="text-slate-500">USD Equivalent</span>
+                    <span className="text-blue-600 font-mono">${selectedTransaction.amount?.toLocaleString()}</span>
                   </div>
                 )}
               </div>
 
               {actionType === 'reject' && (
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Rejection Reason</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Rejection Reason</Label>
                   <Input
                     value={rejectionReason}
                     onChange={(e) => setRejectionReason(e.target.value)}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                     placeholder="Enter reason for rejection"
                     data-testid="rejection-reason"
                   />
@@ -1148,10 +1148,10 @@ export default function VendorDashboard() {
               {/* Screenshot upload for withdrawal approval or complete */}
               {(actionType === 'complete' || (actionType === 'approve' && selectedTransaction.transaction_type === 'withdrawal')) && (
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
                     Upload Proof of Payment {actionType === 'approve' ? '(Required for Withdrawal)' : ''} *
                   </Label>
-                  <div className="border-2 border-dashed border-white/10 rounded-sm p-4 text-center hover:border-[#66FCF1]/50 transition-colors">
+                  <div className="border-2 border-dashed border-slate-200 rounded-sm p-4 text-center hover:border-[#66FCF1]/50 transition-colors">
                     <input
                       type="file"
                       accept="image/*"
@@ -1164,13 +1164,13 @@ export default function VendorDashboard() {
                       {proofPreview ? (
                         <div className="space-y-2">
                           <img src={proofPreview} alt="Proof preview" className="max-h-32 mx-auto rounded" />
-                          <p className="text-xs text-[#66FCF1]">Click to change</p>
+                          <p className="text-xs text-blue-600">Click to change</p>
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          <Upload className="w-8 h-8 mx-auto text-[#C5C6C7]" />
-                          <p className="text-sm text-[#C5C6C7]">Click to upload proof screenshot</p>
-                          <p className="text-xs text-[#C5C6C7]/60">PNG, JPG up to 5MB</p>
+                          <Upload className="w-8 h-8 mx-auto text-slate-500" />
+                          <p className="text-sm text-slate-500">Click to upload proof screenshot</p>
+                          <p className="text-xs text-slate-500/60">PNG, JPG up to 5MB</p>
                         </div>
                       )}
                     </label>
@@ -1179,19 +1179,19 @@ export default function VendorDashboard() {
               )}
 
               {/* Captcha */}
-              <div className="p-4 bg-[#0B0C10] rounded-sm border border-white/10">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider mb-2 block">
+              <div className="p-4 bg-slate-50 rounded-sm border border-slate-200">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider mb-2 block">
                   Security Verification
                 </Label>
                 <div className="flex items-center gap-4">
-                  <span className="text-xl font-mono text-[#66FCF1]">
+                  <span className="text-xl font-mono text-blue-600">
                     {captchaQuestion.num1} + {captchaQuestion.num2} = ?
                   </span>
                   <Input
                     type="number"
                     value={captchaAnswer}
                     onChange={(e) => setCaptchaAnswer(e.target.value)}
-                    className="w-24 bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono text-center"
+                    className="w-24 bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono text-center"
                     placeholder="?"
                     data-testid="captcha-answer"
                   />
@@ -1203,7 +1203,7 @@ export default function VendorDashboard() {
                   type="button"
                   variant="outline"
                   onClick={() => { setActionDialogOpen(false); setSelectedTransaction(null); }}
-                  className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                  className="border-slate-200 text-slate-500 hover:bg-slate-100"
                 >
                   Cancel
                 </Button>
@@ -1213,7 +1213,7 @@ export default function VendorDashboard() {
                     actionType === 'approve' ? 'bg-green-500 hover:bg-green-600' :
                     actionType === 'reject' ? 'bg-red-500 hover:bg-red-600' :
                     'bg-orange-500 hover:bg-orange-600'
-                  } text-white`}
+                  } text-slate-800`}
                   data-testid="confirm-action-btn"
                 >
                   {actionType === 'approve' && <><CheckCircle2 className="w-4 h-4 mr-2" /> Approve</>}
@@ -1350,7 +1350,7 @@ export default function VendorDashboard() {
 
       {/* IE Action Dialog (Approve/Reject with Captcha) */}
       <Dialog open={ieActionDialog.open} onOpenChange={(open) => { if (!open) { setIeActionDialog({ open: false, entry: null, type: '' }); resetIeActionState(); } }}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
               {ieActionDialog.type === 'approve' ? 'Approve' : 'Reject'} Entry
@@ -1368,10 +1368,10 @@ export default function VendorDashboard() {
                     {ieActionDialog.entry.amount?.toLocaleString()} {ieActionDialog.entry.currency}
                   </span>
                 </div>
-                <p className="text-sm text-[#C5C6C7] mt-2 capitalize">{ieActionDialog.entry.category?.replace('_', ' ')}</p>
-                {ieActionDialog.entry.description && <p className="text-xs text-[#8B8D91] mt-1">{ieActionDialog.entry.description}</p>}
+                <p className="text-sm text-slate-500 mt-2 capitalize">{ieActionDialog.entry.category?.replace('_', ' ')}</p>
+                {ieActionDialog.entry.description && <p className="text-xs text-slate-400 mt-1">{ieActionDialog.entry.description}</p>}
                 {ieActionDialog.entry.vendor_bank_account_number && (
-                  <div className="mt-2 text-[10px] text-[#8B8D91] space-y-0.5">
+                  <div className="mt-2 text-[10px] text-slate-400 space-y-0.5">
                     {ieActionDialog.entry.vendor_bank_account_name && <p>Name: {ieActionDialog.entry.vendor_bank_account_name}</p>}
                     <p>A/C: {ieActionDialog.entry.vendor_bank_account_number}</p>
                     {ieActionDialog.entry.vendor_bank_ifsc && <p>IFSC: {ieActionDialog.entry.vendor_bank_ifsc}</p>}
@@ -1379,7 +1379,7 @@ export default function VendorDashboard() {
                   </div>
                 )}
                 {vendorInfo && (
-                  <div className="mt-2 pt-2 border-t border-white/10 text-xs text-[#66FCF1]">
+                  <div className="mt-2 pt-2 border-t border-slate-200 text-xs text-blue-600">
                     Commission: {ieActionDialog.entry.entry_type === 'income'
                       ? `${vendorInfo.deposit_commission || 0}% (Money In rate)`
                       : `${vendorInfo.withdrawal_commission || 0}% (Money Out rate)`
@@ -1391,16 +1391,16 @@ export default function VendorDashboard() {
               {/* Proof Upload (approve only) */}
               {ieActionDialog.type === 'approve' && (
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Upload Proof Screenshot *</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Upload Proof Screenshot *</Label>
                   <input type="file" accept="image/*" onChange={(e) => {
                     const file = e.target.files[0];
                     if (file) {
                       setIeProofImage(file);
                       setIeProofPreview(URL.createObjectURL(file));
                     }
-                  }} className="block w-full text-xs text-[#C5C6C7] file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-[#66FCF1]/10 file:text-[#66FCF1] file:text-xs hover:file:bg-[#66FCF1]/20" data-testid="ie-proof-upload" />
+                  }} className="block w-full text-xs text-slate-500 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-blue-100 file:text-blue-600 file:text-xs hover:file:bg-blue-100" data-testid="ie-proof-upload" />
                   {ieProofPreview && (
-                    <img src={ieProofPreview} alt="Proof" className="w-full max-h-32 object-contain rounded border border-white/10 mt-1" />
+                    <img src={ieProofPreview} alt="Proof" className="w-full max-h-32 object-contain rounded border border-slate-200 mt-1" />
                   )}
                 </div>
               )}
@@ -1408,22 +1408,22 @@ export default function VendorDashboard() {
               {/* Rejection Reason (reject only) */}
               {ieActionDialog.type === 'reject' && (
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Rejection Reason</Label>
-                  <Textarea value={ieRejectionReason} onChange={(e) => setIeRejectionReason(e.target.value)} className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]" rows={2} placeholder="Enter reason..." data-testid="ie-rejection-reason" />
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Rejection Reason</Label>
+                  <Textarea value={ieRejectionReason} onChange={(e) => setIeRejectionReason(e.target.value)} className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]" rows={2} placeholder="Enter reason..." data-testid="ie-rejection-reason" />
                 </div>
               )}
 
               {/* Math Captcha */}
-              <div className="space-y-2 p-3 bg-[#0B0C10] border border-white/10 rounded">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Verification: What is {ieCaptcha.num1} + {ieCaptcha.num2}?</Label>
-                <Input type="number" value={ieCaptchaAnswer} onChange={(e) => setIeCaptchaAnswer(e.target.value)} className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono text-center text-lg" placeholder="?" data-testid="ie-captcha-answer" />
+              <div className="space-y-2 p-3 bg-slate-50 border border-slate-200 rounded">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Verification: What is {ieCaptcha.num1} + {ieCaptcha.num2}?</Label>
+                <Input type="number" value={ieCaptchaAnswer} onChange={(e) => setIeCaptchaAnswer(e.target.value)} className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono text-center text-lg" placeholder="?" data-testid="ie-captcha-answer" />
               </div>
 
               {/* Action Buttons */}
               <div className="flex justify-end gap-3 pt-2">
-                <Button variant="outline" onClick={() => { setIeActionDialog({ open: false, entry: null, type: '' }); resetIeActionState(); }} className="border-white/10 text-[#C5C6C7] hover:bg-white/5">Cancel</Button>
+                <Button variant="outline" onClick={() => { setIeActionDialog({ open: false, entry: null, type: '' }); resetIeActionState(); }} className="border-slate-200 text-slate-500 hover:bg-slate-100">Cancel</Button>
                 <Button onClick={executeIeAction}
-                  className={ieActionDialog.type === 'approve' ? 'bg-green-500 hover:bg-green-600 text-white font-bold' : 'bg-red-500 hover:bg-red-600 text-white font-bold'}
+                  className={ieActionDialog.type === 'approve' ? 'bg-green-500 hover:bg-green-600 text-slate-800 font-bold' : 'bg-red-500 hover:bg-red-600 text-slate-800 font-bold'}
                   data-testid="ie-confirm-action">
                   {ieActionDialog.type === 'approve' ? 'Confirm Approve' : 'Confirm Reject'}
                 </Button>

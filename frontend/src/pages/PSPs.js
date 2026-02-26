@@ -503,10 +503,10 @@ export default function PSPs() {
     <div className="space-y-6 animate-fade-in" data-testid="psp-page">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
+          <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
             Payment Service Providers
           </h1>
-          <p className="text-[#C5C6C7]">Manage PSPs, commissions, and settlements</p>
+          <p className="text-slate-500">Manage PSPs, commissions, and settlements</p>
         </div>
         {isAdmin && (
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
@@ -519,7 +519,7 @@ export default function PSPs() {
                 Add PSP
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg">
+            <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
                   {selectedPsp ? 'Edit PSP' : 'Add Payment Service Provider'}
@@ -527,11 +527,11 @@ export default function PSPs() {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">PSP Name *</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">PSP Name *</Label>
                   <Input
                     value={formData.psp_name}
                     onChange={(e) => setFormData({ ...formData, psp_name: e.target.value })}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                     placeholder="e.g., Stripe, PayPal"
                     data-testid="psp-name"
                     required
@@ -540,27 +540,27 @@ export default function PSPs() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Commission Rate (%) *</Label>
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Commission Rate (%) *</Label>
                     <Input
                       type="number"
                       step="0.01"
                       value={formData.commission_rate}
                       onChange={(e) => setFormData({ ...formData, commission_rate: e.target.value })}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                       placeholder="2.5"
                       data-testid="psp-commission"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Reserve Fund % *</Label>
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Reserve Fund % *</Label>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
                       value={formData.reserve_fund_rate}
                       onChange={(e) => setFormData({ ...formData, reserve_fund_rate: e.target.value })}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                       placeholder="0"
                       data-testid="psp-reserve-fund"
                     />
@@ -570,40 +570,40 @@ export default function PSPs() {
                 {/* New PSP Fee Fields */}
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Gateway Fee (per tx)</Label>
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Gateway Fee (per tx)</Label>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
                       value={formData.gateway_fee}
                       onChange={(e) => setFormData({ ...formData, gateway_fee: e.target.value })}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                       placeholder="0.00"
                       data-testid="psp-gateway-fee"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Refund Fee</Label>
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Refund Fee</Label>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
                       value={formData.refund_fee}
                       onChange={(e) => setFormData({ ...formData, refund_fee: e.target.value })}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                       placeholder="0.00"
                       data-testid="psp-refund-fee"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Monthly Min Fee</Label>
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Monthly Min Fee</Label>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
                       value={formData.monthly_minimum_fee}
                       onChange={(e) => setFormData({ ...formData, monthly_minimum_fee: e.target.value })}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                       placeholder="0.00"
                       data-testid="psp-monthly-min-fee"
                     />
@@ -612,25 +612,25 @@ export default function PSPs() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Holding Days</Label>
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Holding Days</Label>
                     <Input
                       type="number"
                       min="0"
                       value={formData.holding_days}
                       onChange={(e) => setFormData({ ...formData, holding_days: e.target.value })}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                       placeholder="0"
                       data-testid="psp-holding-days"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Settlement Days *</Label>
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Settlement Days *</Label>
                     <Input
                       type="number"
                       min="1"
                       value={formData.settlement_days}
                       onChange={(e) => setFormData({ ...formData, settlement_days: e.target.value })}
-                      className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                       placeholder="T+1"
                       data-testid="psp-settlement-days"
                       required
@@ -639,17 +639,17 @@ export default function PSPs() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Settlement Destination *</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Settlement Destination *</Label>
                   <Select
                     value={formData.settlement_destination_id}
                     onValueChange={(value) => setFormData({ ...formData, settlement_destination_id: value })}
                   >
-                    <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="psp-destination">
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="psp-destination">
                       <SelectValue placeholder="Select treasury account" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1F2833] border-white/10">
+                    <SelectContent className="bg-white border-slate-200">
                       {treasuryAccounts.map((account) => (
-                        <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
+                        <SelectItem key={account.account_id} value={account.account_id} className="text-slate-800 hover:bg-slate-100">
                           {account.account_name} - {account.bank_name} ({account.currency})
                         </SelectItem>
                       ))}
@@ -658,13 +658,13 @@ export default function PSPs() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Min Settlement Amount</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Min Settlement Amount</Label>
                   <Input
                     type="number"
                     step="0.01"
                     value={formData.min_settlement_amount}
                     onChange={(e) => setFormData({ ...formData, min_settlement_amount: e.target.value })}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                     placeholder="0"
                     data-testid="psp-min-amount"
                   />
@@ -672,28 +672,28 @@ export default function PSPs() {
                 
                 {selectedPsp && (
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Status</Label>
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Status</Label>
                     <Select
                       value={formData.status}
                       onValueChange={(value) => setFormData({ ...formData, status: value })}
                     >
-                      <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="psp-status">
+                      <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="psp-status">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#1F2833] border-white/10">
-                        <SelectItem value="active" className="text-white hover:bg-white/5">Active</SelectItem>
-                        <SelectItem value="inactive" className="text-white hover:bg-white/5">Inactive</SelectItem>
+                      <SelectContent className="bg-white border-slate-200">
+                        <SelectItem value="active" className="text-slate-800 hover:bg-slate-100">Active</SelectItem>
+                        <SelectItem value="inactive" className="text-slate-800 hover:bg-slate-100">Inactive</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 )}
                 
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Description</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Description</Label>
                   <Textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                     rows={2}
                     data-testid="psp-description"
                   />
@@ -704,7 +704,7 @@ export default function PSPs() {
                     type="button"
                     variant="outline"
                     onClick={() => { setIsDialogOpen(false); resetForm(); }}
-                    className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                    className="border-slate-200 text-slate-500 hover:bg-slate-100"
                   >
                     Cancel
                   </Button>
@@ -724,26 +724,26 @@ export default function PSPs() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-[#1F2833] border-white/5">
+        <Card className="bg-white border-slate-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Total PSPs</p>
-                <p className="text-3xl font-bold font-mono text-white">{psps.length}</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total PSPs</p>
+                <p className="text-3xl font-bold font-mono text-slate-800">{psps.length}</p>
               </div>
-              <div className="p-3 bg-[#66FCF1]/10 rounded-sm">
-                <CreditCard className="w-6 h-6 text-[#66FCF1]" />
+              <div className="p-3 bg-blue-100 rounded-sm">
+                <CreditCard className="w-6 h-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-[#1F2833] border-white/5">
+        <Card className="bg-white border-slate-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Pending Settlement</p>
-                <p className="text-3xl font-bold font-mono text-white">${totalPendingAmount.toLocaleString()}</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Pending Settlement</p>
+                <p className="text-3xl font-bold font-mono text-slate-800">${totalPendingAmount.toLocaleString()}</p>
               </div>
               <div className="p-3 bg-yellow-500/10 rounded-sm">
                 <Clock className="w-6 h-6 text-yellow-500" />
@@ -752,11 +752,11 @@ export default function PSPs() {
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1F2833] border-white/5 border-l-2 border-l-orange-500/50" data-testid="total-reserve-fund-card">
+        <Card className="bg-white border-slate-200 border-l-2 border-l-orange-500/50" data-testid="total-reserve-fund-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reserve Fund Held</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Reserve Fund Held</p>
                 <p className="text-3xl font-bold font-mono text-orange-400">${(globalReserveSummary?.total_held || 0).toLocaleString()}</p>
                 {globalReserveSummary?.due_for_release > 0 && (
                   <p className="text-xs text-yellow-400 mt-1">${globalReserveSummary.due_for_release.toLocaleString()} due for release</p>
@@ -769,12 +769,12 @@ export default function PSPs() {
           </CardContent>
         </Card>
         
-        <Card className={`bg-[#1F2833] border-white/5 ${totalOverdue > 0 ? 'border-red-500/30' : ''}`}>
+        <Card className={`bg-white border-slate-200 ${totalOverdue > 0 ? 'border-red-500/30' : ''}`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Overdue Settlements</p>
-                <p className={`text-3xl font-bold font-mono ${totalOverdue > 0 ? 'text-red-400' : 'text-white'}`}>{totalOverdue}</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Overdue Settlements</p>
+                <p className={`text-3xl font-bold font-mono ${totalOverdue > 0 ? 'text-red-400' : 'text-slate-800'}`}>{totalOverdue}</p>
               </div>
               <div className={`p-3 rounded-sm ${totalOverdue > 0 ? 'bg-red-500/10' : 'bg-green-500/10'}`}>
                 {totalOverdue > 0 ? (
@@ -796,43 +796,43 @@ export default function PSPs() {
           </div>
         ) : psps.length === 0 ? (
           <div className="col-span-full text-center py-12">
-            <CreditCard className="w-12 h-12 text-[#C5C6C7] mx-auto mb-4" />
-            <p className="text-[#C5C6C7]">No PSPs found</p>
-            {isAdmin && <p className="text-sm text-[#C5C6C7]/60 mt-2">Click "Add PSP" to create one</p>}
+            <CreditCard className="w-12 h-12 text-slate-500 mx-auto mb-4" />
+            <p className="text-slate-500">No PSPs found</p>
+            {isAdmin && <p className="text-sm text-slate-500/60 mt-2">Click "Add PSP" to create one</p>}
           </div>
         ) : (
           psps.map((psp) => (
             <Card 
               key={psp.psp_id} 
-              className={`bg-[#1F2833] border-white/5 card-hover cursor-pointer ${psp.overdue_count > 0 ? 'border-l-2 border-l-red-500' : ''}`}
+              className={`bg-white border-slate-200 card-hover cursor-pointer ${psp.overdue_count > 0 ? 'border-l-2 border-l-red-500' : ''}`}
               onClick={() => setViewPsp(psp)}
             >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-sm ${psp.overdue_count > 0 ? 'bg-red-500/10' : 'bg-[#66FCF1]/10'}`}>
-                      <CreditCard className={`w-5 h-5 ${psp.overdue_count > 0 ? 'text-red-500' : 'text-[#66FCF1]'}`} />
+                    <div className={`p-2 rounded-sm ${psp.overdue_count > 0 ? 'bg-red-500/10' : 'bg-blue-100'}`}>
+                      <CreditCard className={`w-5 h-5 ${psp.overdue_count > 0 ? 'text-red-500' : 'text-blue-600'}`} />
                     </div>
                     <div>
-                      <CardTitle className="text-lg text-white">{psp.psp_name}</CardTitle>
-                      <p className="text-xs text-[#C5C6C7]">{psp.description || 'No description'}</p>
+                      <CardTitle className="text-lg text-slate-800">{psp.psp_name}</CardTitle>
+                      <p className="text-xs text-slate-500">{psp.description || 'No description'}</p>
                     </div>
                   </div>
                   {isAdmin && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" className="text-[#C5C6C7] hover:text-white hover:bg-white/5" data-testid={`psp-actions-${psp.psp_id}`}>
+                        <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" data-testid={`psp-actions-${psp.psp_id}`}>
                           <MoreVertical className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-[#1F2833] border-white/10">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setViewPsp(psp); }} className="text-white hover:bg-white/5 cursor-pointer">
+                      <DropdownMenuContent align="end" className="bg-white border-slate-200">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setViewPsp(psp); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
                           <Eye className="w-4 h-4 mr-2" /> View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(psp); }} className="text-white hover:bg-white/5 cursor-pointer">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(psp); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
                           <Edit className="w-4 h-4 mr-2" /> Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(psp.psp_id); }} className="text-red-400 hover:bg-white/5 cursor-pointer">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(psp.psp_id); }} className="text-red-400 hover:bg-slate-100 cursor-pointer">
                           <Trash2 className="w-4 h-4 mr-2" /> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -843,51 +843,51 @@ export default function PSPs() {
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-[#C5C6C7] text-sm flex items-center gap-1">
+                    <span className="text-slate-500 text-sm flex items-center gap-1">
                       <Percent className="w-3 h-3" /> Commission
                     </span>
-                    <span className="text-white font-mono">{psp.commission_rate}%</span>
+                    <span className="text-slate-800 font-mono">{psp.commission_rate}%</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[#C5C6C7] text-sm flex items-center gap-1">
+                    <span className="text-slate-500 text-sm flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3" /> Reserve Fund
                     </span>
-                    <span className="text-white font-mono">{psp.reserve_fund_rate || psp.chargeback_rate || 0}%</span>
+                    <span className="text-slate-800 font-mono">{psp.reserve_fund_rate || psp.chargeback_rate || 0}%</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[#C5C6C7] text-sm flex items-center gap-1">
+                    <span className="text-slate-500 text-sm flex items-center gap-1">
                       <Clock className="w-3 h-3" /> Holding
                     </span>
-                    <span className="text-white font-mono">{psp.holding_days || 0} days</span>
+                    <span className="text-slate-800 font-mono">{psp.holding_days || 0} days</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[#C5C6C7] text-sm flex items-center gap-1">
+                    <span className="text-slate-500 text-sm flex items-center gap-1">
                       <Calendar className="w-3 h-3" /> Settlement
                     </span>
-                    <span className="text-white font-mono">T+{psp.settlement_days}</span>
+                    <span className="text-slate-800 font-mono">T+{psp.settlement_days}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[#C5C6C7] text-sm">Pending</span>
+                    <span className="text-slate-500 text-sm">Pending</span>
                     <span className="text-yellow-400 font-mono">${(psp.pending_amount || 0).toLocaleString()}</span>
                   </div>
                   {psp.total_reserve_fund_held > 0 && (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-[#C5C6C7] flex items-center gap-1">
+                      <span className="text-slate-500 flex items-center gap-1">
                         <Shield className="w-3 h-3" /> Reserve Held
                       </span>
                       <span className="text-orange-400 font-mono">${(psp.total_reserve_fund_held || 0).toLocaleString()}</span>
                     </div>
                   )}
                   {psp.overdue_count > 0 && (
-                    <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-200">
                       <span className="text-red-400 text-sm flex items-center gap-1">
                         <AlertTriangle className="w-3 h-3" /> Overdue
                       </span>
                       <Badge className="bg-red-500/20 text-red-400 border-red-500/30">{psp.overdue_count} transactions</Badge>
                     </div>
                   )}
-                  <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                    <span className="text-[#C5C6C7] text-sm">Status</span>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                    <span className="text-slate-500 text-sm">Status</span>
                     {getStatusBadge(psp.status)}
                   </div>
                 </div>
@@ -899,64 +899,64 @@ export default function PSPs() {
 
       {/* View PSP Details Dialog */}
       <Dialog open={!!viewPsp} onOpenChange={() => { setViewPsp(null); setPendingTransactions([]); setSettlements([]); }}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-4xl max-h-[90vh] overflow-hidden">
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-4xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-3" style={{ fontFamily: 'Barlow Condensed' }}>
-              <CreditCard className="w-6 h-6 text-[#66FCF1]" />
+              <CreditCard className="w-6 h-6 text-blue-600" />
               {viewPsp?.psp_name}
             </DialogTitle>
           </DialogHeader>
           {viewPsp && (
             <div className="space-y-4">
               {/* PSP Info */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-[#0B0C10] rounded-sm">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-slate-50 rounded-sm">
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Commission Rate</p>
-                  <p className="text-xl font-mono text-white">{viewPsp.commission_rate}%</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Commission Rate</p>
+                  <p className="text-xl font-mono text-slate-800">{viewPsp.commission_rate}%</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reserve Fund Rate</p>
-                  <p className="text-xl font-mono text-white">{viewPsp.reserve_fund_rate || viewPsp.chargeback_rate || 0}%</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Reserve Fund Rate</p>
+                  <p className="text-xl font-mono text-slate-800">{viewPsp.reserve_fund_rate || viewPsp.chargeback_rate || 0}%</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Holding Time</p>
-                  <p className="text-xl font-mono text-white">{viewPsp.holding_days || 0} days</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Holding Time</p>
+                  <p className="text-xl font-mono text-slate-800">{viewPsp.holding_days || 0} days</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Settlement Time</p>
-                  <p className="text-xl font-mono text-white">T+{viewPsp.settlement_days}</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Settlement Time</p>
+                  <p className="text-xl font-mono text-slate-800">T+{viewPsp.settlement_days}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Pending Amount</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Pending Amount</p>
                   <p className="text-xl font-mono text-yellow-400">${(viewPsp.pending_amount || 0).toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Settlement To</p>
-                  <p className="text-sm text-white">{viewPsp.settlement_destination_name}</p>
-                  <p className="text-xs text-[#C5C6C7]">{viewPsp.settlement_destination_bank}</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Settlement To</p>
+                  <p className="text-sm text-slate-800">{viewPsp.settlement_destination_name}</p>
+                  <p className="text-xs text-slate-500">{viewPsp.settlement_destination_bank}</p>
                 </div>
               </div>
               {/* Fee Details Row */}
               {(viewPsp.gateway_fee > 0 || viewPsp.refund_fee > 0 || viewPsp.monthly_minimum_fee > 0) && (
-                <div className="grid grid-cols-3 gap-4 p-3 bg-[#0B0C10] rounded-sm border border-white/5 mt-3">
+                <div className="grid grid-cols-3 gap-4 p-3 bg-slate-50 rounded-sm border border-slate-200 mt-3">
                   <div>
-                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Gateway Fee</p>
-                    <p className="text-lg font-mono text-white">${(viewPsp.gateway_fee || 0).toLocaleString()}<span className="text-xs text-[#C5C6C7]">/tx</span></p>
+                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Gateway Fee</p>
+                    <p className="text-lg font-mono text-slate-800">${(viewPsp.gateway_fee || 0).toLocaleString()}<span className="text-xs text-slate-500">/tx</span></p>
                   </div>
                   <div>
-                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Refund Fee</p>
-                    <p className="text-lg font-mono text-white">${(viewPsp.refund_fee || 0).toLocaleString()}</p>
+                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Refund Fee</p>
+                    <p className="text-lg font-mono text-slate-800">${(viewPsp.refund_fee || 0).toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Monthly Min Fee</p>
-                    <p className="text-lg font-mono text-white">${(viewPsp.monthly_minimum_fee || 0).toLocaleString()}</p>
+                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Monthly Min Fee</p>
+                    <p className="text-lg font-mono text-slate-800">${(viewPsp.monthly_minimum_fee || 0).toLocaleString()}</p>
                   </div>
                 </div>
               )}
 
               {/* Tabs */}
               <Tabs defaultValue="pending" className="w-full">
-                <TabsList className="bg-[#0B0C10] border border-white/10">
+                <TabsList className="bg-slate-50 border border-slate-200">
                   <TabsTrigger value="pending" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
                     Pending Settlements ({pendingTransactions.length})
                   </TabsTrigger>
@@ -971,22 +971,22 @@ export default function PSPs() {
                 <TabsContent value="pending" className="mt-4">
                   <ScrollArea className="h-[350px]">
                     {pendingTransactions.length === 0 ? (
-                      <div className="text-center py-8 text-[#C5C6C7]">
+                      <div className="text-center py-8 text-slate-500">
                         <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
                         No pending settlements
                       </div>
                     ) : (
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-white/10 hover:bg-transparent">
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Reference</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Gross</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Deductions</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Net</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Holding</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Release Date</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
+                          <TableRow className="border-slate-200 hover:bg-transparent">
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Gross</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Deductions</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Net</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Holding</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Release Date</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -998,49 +998,49 @@ export default function PSPs() {
                             const holdingDays = tx.psp_holding_days || viewPsp?.holding_days || 0;
                             const isReleased = tx.psp_holding_release_date && new Date(tx.psp_holding_release_date) <= new Date();
                             return (
-                              <TableRow key={tx.transaction_id} className={`border-white/5 hover:bg-white/5 ${overdue ? 'bg-red-500/5' : ''}`}>
+                              <TableRow key={tx.transaction_id} className={`border-slate-200 hover:bg-slate-100 ${overdue ? 'bg-red-500/5' : ''}`}>
                                 <TableCell>
                                   <div>
-                                    <span className="font-mono text-white text-xs">{tx.reference}</span>
-                                    <p className="text-[10px] text-[#C5C6C7]">{tx.client_name}</p>
+                                    <span className="font-mono text-slate-800 text-xs">{tx.reference}</span>
+                                    <p className="text-[10px] text-slate-500">{tx.client_name}</p>
                                   </div>
                                 </TableCell>
-                                <TableCell className="font-mono text-white">${tx.amount?.toLocaleString()}</TableCell>
+                                <TableCell className="font-mono text-slate-800">${tx.amount?.toLocaleString()}</TableCell>
                                 <TableCell>
                                   <div className="text-xs">
                                     <div className="flex justify-between">
-                                      <span className="text-[#C5C6C7]">Comm:</span>
+                                      <span className="text-slate-500">Comm:</span>
                                       <span className="font-mono text-yellow-400">-${(tx.psp_commission_amount || 0).toLocaleString()}</span>
                                     </div>
                                     {(tx.psp_reserve_fund_amount || tx.psp_chargeback_amount) > 0 && (
                                       <div className="flex justify-between">
-                                        <span className="text-[#C5C6C7]">Reserve:</span>
+                                        <span className="text-slate-500">Reserve:</span>
                                         <span className="font-mono text-red-400">-${(tx.psp_reserve_fund_amount || tx.psp_chargeback_amount).toLocaleString()}</span>
                                       </div>
                                     )}
                                     {tx.psp_extra_charges > 0 && (
                                       <div className="flex justify-between">
-                                        <span className="text-[#C5C6C7]">Extra:</span>
+                                        <span className="text-slate-500">Extra:</span>
                                         <span className="font-mono text-red-400">-${tx.psp_extra_charges.toLocaleString()}</span>
                                       </div>
                                     )}
                                   </div>
                                 </TableCell>
-                                <TableCell className="font-mono text-[#66FCF1] font-bold">${netAmount.toLocaleString()}</TableCell>
+                                <TableCell className="font-mono text-blue-600 font-bold">${netAmount.toLocaleString()}</TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-1">
-                                    <Timer className="w-3 h-3 text-[#C5C6C7]" />
-                                    <span className="text-white font-mono text-xs">{holdingDays} days</span>
+                                    <Timer className="w-3 h-3 text-slate-500" />
+                                    <span className="text-slate-800 font-mono text-xs">{holdingDays} days</span>
                                   </div>
                                 </TableCell>
                                 <TableCell>
                                   {tx.psp_holding_release_date ? (
-                                    <span className={`flex items-center gap-1 text-xs ${isReleased ? 'text-green-400' : 'text-[#C5C6C7]'}`}>
+                                    <span className={`flex items-center gap-1 text-xs ${isReleased ? 'text-green-400' : 'text-slate-500'}`}>
                                       {isReleased ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                                       {formatDate(tx.psp_holding_release_date)}
                                     </span>
                                   ) : (
-                                    <span className="text-[#C5C6C7] text-xs">-</span>
+                                    <span className="text-slate-500 text-xs">-</span>
                                   )}
                                 </TableCell>
                                 <TableCell>
@@ -1058,7 +1058,7 @@ export default function PSPs() {
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => openChargesDialog(tx)}
-                                      className="text-[#C5C6C7] hover:text-white hover:bg-white/10 px-2"
+                                      className="text-slate-500 hover:text-slate-800 hover:bg-white/10 px-2"
                                       title="Record Charges (Reserve Fund/Extra)"
                                     >
                                       <Receipt className="w-3 h-3" />
@@ -1095,21 +1095,21 @@ export default function PSPs() {
                     <>
                       {/* Summary Cards */}
                       <div className="grid grid-cols-4 gap-3 mb-4">
-                        <div className="p-3 bg-[#0B0C10] rounded-sm border border-white/5 text-center">
-                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider">Total Held</p>
+                        <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
+                          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Total Held</p>
                           <p className="text-lg font-mono text-orange-400 font-bold">${reserveFundLedger.summary.total_held.toLocaleString()}</p>
                         </div>
-                        <div className="p-3 bg-[#0B0C10] rounded-sm border border-white/5 text-center">
-                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider">Due This Week</p>
+                        <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
+                          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Due This Week</p>
                           <p className="text-lg font-mono text-yellow-400 font-bold">${reserveFundLedger.summary.due_this_week.toLocaleString()}</p>
                         </div>
-                        <div className="p-3 bg-[#0B0C10] rounded-sm border border-white/5 text-center">
-                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider">Released</p>
+                        <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
+                          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Released</p>
                           <p className="text-lg font-mono text-green-400 font-bold">${reserveFundLedger.summary.total_released.toLocaleString()}</p>
                         </div>
-                        <div className="p-3 bg-[#0B0C10] rounded-sm border border-white/5 text-center">
-                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider">Holding Period</p>
-                          <p className="text-lg font-mono text-white font-bold">{reserveFundLedger.summary.holding_days} days</p>
+                        <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
+                          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Holding Period</p>
+                          <p className="text-lg font-mono text-slate-800 font-bold">{reserveFundLedger.summary.holding_days} days</p>
                         </div>
                       </div>
 
@@ -1117,10 +1117,10 @@ export default function PSPs() {
                       {selectedReleaseIds.length > 0 && (
                         <div className="flex items-center gap-3 mb-3 p-2 bg-orange-500/10 border border-orange-500/20 rounded-sm">
                           <span className="text-orange-400 text-sm">{selectedReleaseIds.length} selected</span>
-                          <Button size="sm" onClick={handleBulkRelease} className="bg-green-600 hover:bg-green-700 text-white h-7 text-xs" data-testid="bulk-release-btn">
+                          <Button size="sm" onClick={handleBulkRelease} className="bg-green-600 hover:bg-green-700 text-slate-800 h-7 text-xs" data-testid="bulk-release-btn">
                             Release Selected
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setSelectedReleaseIds([])} className="text-[#C5C6C7] h-7 text-xs">
+                          <Button size="sm" variant="ghost" onClick={() => setSelectedReleaseIds([])} className="text-slate-500 h-7 text-xs">
                             Clear
                           </Button>
                         </div>
@@ -1128,12 +1128,12 @@ export default function PSPs() {
 
                       <ScrollArea className="h-[300px]">
                         {reserveFundLedger.ledger.length === 0 ? (
-                          <div className="text-center py-8 text-[#C5C6C7]">No reserve fund entries</div>
+                          <div className="text-center py-8 text-slate-500">No reserve fund entries</div>
                         ) : (
                           <Table>
                             <TableHeader>
-                              <TableRow className="border-white/10 hover:bg-transparent">
-                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs w-8">
+                              <TableRow className="border-slate-200 hover:bg-transparent">
+                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs w-8">
                                   <input
                                     type="checkbox"
                                     className="rounded border-white/20"
@@ -1147,20 +1147,20 @@ export default function PSPs() {
                                     }}
                                   />
                                 </TableHead>
-                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Reference</TableHead>
-                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Client</TableHead>
-                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Tx Amount</TableHead>
-                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Reserve Held</TableHead>
-                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Hold Date</TableHead>
-                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Release Date</TableHead>
-                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Days Left</TableHead>
-                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                                <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Action</TableHead>
+                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Client</TableHead>
+                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Tx Amount</TableHead>
+                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reserve Held</TableHead>
+                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Hold Date</TableHead>
+                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Release Date</TableHead>
+                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Days Left</TableHead>
+                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Action</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
                               {reserveFundLedger.ledger.map((entry) => (
-                                <TableRow key={entry.transaction_id} className={`border-white/5 hover:bg-white/5 ${entry.status === 'due' ? 'bg-yellow-500/5' : ''}`}>
+                                <TableRow key={entry.transaction_id} className={`border-slate-200 hover:bg-slate-100 ${entry.status === 'due' ? 'bg-yellow-500/5' : ''}`}>
                                   <TableCell>
                                     {entry.status !== 'released' && (
                                       <input
@@ -1177,13 +1177,13 @@ export default function PSPs() {
                                       />
                                     )}
                                   </TableCell>
-                                  <TableCell className="font-mono text-white text-xs">{entry.reference}</TableCell>
-                                  <TableCell className="text-[#C5C6C7] text-xs">{entry.client_name || '-'}</TableCell>
-                                  <TableCell className="font-mono text-white text-xs">${entry.amount?.toLocaleString()}</TableCell>
+                                  <TableCell className="font-mono text-slate-800 text-xs">{entry.reference}</TableCell>
+                                  <TableCell className="text-slate-500 text-xs">{entry.client_name || '-'}</TableCell>
+                                  <TableCell className="font-mono text-slate-800 text-xs">${entry.amount?.toLocaleString()}</TableCell>
                                   <TableCell className="font-mono text-orange-400 font-bold">${entry.reserve_fund_amount.toLocaleString()}</TableCell>
-                                  <TableCell className="text-[#C5C6C7] text-xs">{formatDate(entry.hold_date)}</TableCell>
-                                  <TableCell className="text-[#C5C6C7] text-xs">{formatDate(entry.release_date)}</TableCell>
-                                  <TableCell className="font-mono text-white text-xs">
+                                  <TableCell className="text-slate-500 text-xs">{formatDate(entry.hold_date)}</TableCell>
+                                  <TableCell className="text-slate-500 text-xs">{formatDate(entry.release_date)}</TableCell>
+                                  <TableCell className="font-mono text-slate-800 text-xs">
                                     {entry.status === 'released' ? '-' : entry.days_remaining === 0 ? (
                                       <span className="text-yellow-400">Due now</span>
                                     ) : (
@@ -1211,7 +1211,7 @@ export default function PSPs() {
                                         Release
                                       </Button>
                                     ) : (
-                                      <span className="text-xs text-[#C5C6C7]">{entry.released_by_name}</span>
+                                      <span className="text-xs text-slate-500">{entry.released_by_name}</span>
                                     )}
                                   </TableCell>
                                 </TableRow>
@@ -1222,34 +1222,34 @@ export default function PSPs() {
                       </ScrollArea>
                     </>
                   ) : (
-                    <div className="text-center py-8 text-[#C5C6C7]">No data available</div>
+                    <div className="text-center py-8 text-slate-500">No data available</div>
                   )}
                 </TabsContent>
 
                 <TabsContent value="history" className="mt-4">
                   <ScrollArea className="h-[300px]">
                     {settlements.length === 0 ? (
-                      <div className="text-center py-8 text-[#C5C6C7]">
+                      <div className="text-center py-8 text-slate-500">
                         No settlement history
                       </div>
                     ) : (
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-white/10 hover:bg-transparent">
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Settlement ID</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Gross</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Commission</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Reserve Fund</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Extra</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Net</TableHead>
-                            <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                          <TableRow className="border-slate-200 hover:bg-transparent">
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Settlement ID</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Gross</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Commission</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reserve Fund</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Extra</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Net</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {settlements.map((settlement) => (
-                            <TableRow key={settlement.settlement_id} className="border-white/5 hover:bg-white/5">
-                              <TableCell className="font-mono text-white text-xs">{settlement.settlement_id}</TableCell>
-                              <TableCell className="font-mono text-white">${settlement.gross_amount?.toLocaleString()}</TableCell>
+                            <TableRow key={settlement.settlement_id} className="border-slate-200 hover:bg-slate-100">
+                              <TableCell className="font-mono text-slate-800 text-xs">{settlement.settlement_id}</TableCell>
+                              <TableCell className="font-mono text-slate-800">${settlement.gross_amount?.toLocaleString()}</TableCell>
                               <TableCell className="font-mono text-yellow-400">-${(settlement.commission_amount || 0).toLocaleString()}</TableCell>
                               <TableCell className="font-mono text-red-400">
                                 {settlement.chargeback_amount || settlement.reserve_fund_amount ? `-$${(settlement.reserve_fund_amount || settlement.chargeback_amount).toLocaleString()}` : '-'}
@@ -1257,7 +1257,7 @@ export default function PSPs() {
                               <TableCell className="font-mono text-red-400">
                                 {settlement.extra_charges ? `-$${settlement.extra_charges.toLocaleString()}` : '-'}
                               </TableCell>
-                              <TableCell className="font-mono text-[#66FCF1] font-bold">${settlement.net_amount?.toLocaleString()}</TableCell>
+                              <TableCell className="font-mono text-blue-600 font-bold">${settlement.net_amount?.toLocaleString()}</TableCell>
                               <TableCell>{getStatusBadge(settlement.status)}</TableCell>
                             </TableRow>
                           ))}
@@ -1274,7 +1274,7 @@ export default function PSPs() {
 
       {/* Settle Transaction Dialog */}
       <Dialog open={settleDialogOpen} onOpenChange={() => { setSettleDialogOpen(false); setSelectedTransaction(null); setSettlementDestination(''); }}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
               Confirm Settlement
@@ -1282,41 +1282,41 @@ export default function PSPs() {
           </DialogHeader>
           {selectedTransaction && (
             <div className="space-y-4">
-              <div className="p-4 bg-[#0B0C10] rounded-sm space-y-3">
+              <div className="p-4 bg-slate-50 rounded-sm space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-[#C5C6C7]">Reference</span>
-                  <span className="text-white font-mono">{selectedTransaction.reference}</span>
+                  <span className="text-slate-500">Reference</span>
+                  <span className="text-slate-800 font-mono">{selectedTransaction.reference}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#C5C6C7]">Client</span>
-                  <span className="text-white">{selectedTransaction.client_name}</span>
+                  <span className="text-slate-500">Client</span>
+                  <span className="text-slate-800">{selectedTransaction.client_name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#C5C6C7]">Gross Amount</span>
-                  <span className="text-white font-mono">${selectedTransaction.amount?.toLocaleString()}</span>
+                  <span className="text-slate-500">Gross Amount</span>
+                  <span className="text-slate-800 font-mono">${selectedTransaction.amount?.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#C5C6C7]">Commission ({selectedTransaction.psp_commission_paid_by === 'client' ? 'Client pays' : 'Broker pays'})</span>
+                  <span className="text-slate-500">Commission ({selectedTransaction.psp_commission_paid_by === 'client' ? 'Client pays' : 'Broker pays'})</span>
                   <span className="text-red-400 font-mono">-${selectedTransaction.psp_commission_amount?.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between pt-2 border-t border-white/10">
-                  <span className="text-[#C5C6C7] font-medium">Net to Settle</span>
+                <div className="flex justify-between pt-2 border-t border-slate-200">
+                  <span className="text-slate-500 font-medium">Net to Settle</span>
                   <span className="text-green-400 font-mono text-lg">${selectedTransaction.psp_net_amount?.toLocaleString()}</span>
                 </div>
               </div>
               
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Settlement Destination</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Settlement Destination</Label>
                 <Select
                   value={settlementDestination || (psps.find(p => p.psp_id === selectedTransaction.psp_id)?.settlement_destination_id || '')}
                   onValueChange={setSettlementDestination}
                 >
-                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white">
+                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
                     <SelectValue placeholder="Select treasury account" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1F2833] border-white/10">
+                  <SelectContent className="bg-white border-slate-200">
                     {treasuryAccounts.map((account) => (
-                      <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
+                      <SelectItem key={account.account_id} value={account.account_id} className="text-slate-800 hover:bg-slate-100">
                         {account.account_name} - {account.bank_name}
                       </SelectItem>
                     ))}
@@ -1329,13 +1329,13 @@ export default function PSPs() {
                   type="button"
                   variant="outline"
                   onClick={() => { setSettleDialogOpen(false); setSelectedTransaction(null); setSettlementDestination(''); }}
-                  className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                  className="border-slate-200 text-slate-500 hover:bg-slate-100"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSettleTransaction}
-                  className="bg-green-500 text-white hover:bg-green-600 font-bold uppercase tracking-wider"
+                  className="bg-green-500 text-slate-800 hover:bg-green-600 font-bold uppercase tracking-wider"
                   data-testid="confirm-settle-btn"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
@@ -1349,7 +1349,7 @@ export default function PSPs() {
 
       {/* Record Charges Dialog */}
       <Dialog open={chargesDialogOpen} onOpenChange={(open) => { if (!open) { setChargesDialogOpen(false); setSelectedTransaction(null); } }}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
               Record Charges
@@ -1357,71 +1357,71 @@ export default function PSPs() {
           </DialogHeader>
           {selectedTransaction && (
             <form onSubmit={handleRecordCharges} className="space-y-4">
-              <div className="p-3 bg-[#0B0C10] rounded-lg">
-                <p className="text-sm text-[#C5C6C7]">Transaction: <span className="text-white font-mono">{selectedTransaction.transaction_id}</span></p>
-                <p className="text-sm text-[#C5C6C7]">Amount: <span className="text-white font-mono">${selectedTransaction.amount?.toLocaleString()}</span></p>
-                <p className="text-sm text-[#C5C6C7]">Commission: <span className="text-yellow-400 font-mono">-${(selectedTransaction.psp_commission_amount || 0).toLocaleString()}</span></p>
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-sm text-slate-500">Transaction: <span className="text-slate-800 font-mono">{selectedTransaction.transaction_id}</span></p>
+                <p className="text-sm text-slate-500">Amount: <span className="text-slate-800 font-mono">${selectedTransaction.amount?.toLocaleString()}</span></p>
+                <p className="text-sm text-slate-500">Commission: <span className="text-yellow-400 font-mono">-${(selectedTransaction.psp_commission_amount || 0).toLocaleString()}</span></p>
               </div>
               
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Reserve Fund Amount (USD)</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Reserve Fund Amount (USD)</Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={chargesForm.reserve_fund_amount}
                   onChange={(e) => setChargesForm({ ...chargesForm, reserve_fund_amount: e.target.value })}
-                  className="bg-[#0B0C10] border-white/10 text-white font-mono"
+                  className="bg-slate-50 border-slate-200 text-slate-800 font-mono"
                   placeholder="0.00"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Extra Charges (USD)</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Extra Charges (USD)</Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={chargesForm.extra_charges}
                   onChange={(e) => setChargesForm({ ...chargesForm, extra_charges: e.target.value })}
-                  className="bg-[#0B0C10] border-white/10 text-white font-mono"
+                  className="bg-slate-50 border-slate-200 text-slate-800 font-mono"
                   placeholder="0.00"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Description</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Description</Label>
                 <Input
                   value={chargesForm.charges_description}
                   onChange={(e) => setChargesForm({ ...chargesForm, charges_description: e.target.value })}
-                  className="bg-[#0B0C10] border-white/10 text-white"
+                  className="bg-slate-50 border-slate-200 text-slate-800"
                   placeholder="Reason for charges..."
                 />
               </div>
               
               {/* Settlement Preview */}
-              <div className="p-3 bg-[#0B0C10] rounded-lg border border-white/10">
-                <p className="text-xs text-[#C5C6C7] uppercase mb-2">Settlement Preview</p>
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <p className="text-xs text-slate-500 uppercase mb-2">Settlement Preview</p>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-[#C5C6C7]">Gross Amount</span>
-                    <span className="text-white font-mono">${(selectedTransaction.amount || 0).toLocaleString()}</span>
+                    <span className="text-slate-500">Gross Amount</span>
+                    <span className="text-slate-800 font-mono">${(selectedTransaction.amount || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#C5C6C7]">Commission</span>
+                    <span className="text-slate-500">Commission</span>
                     <span className="text-red-400 font-mono">-${(selectedTransaction.psp_commission_amount || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#C5C6C7]">Reserve Fund</span>
+                    <span className="text-slate-500">Reserve Fund</span>
                     <span className="text-red-400 font-mono">-${parseFloat(chargesForm.reserve_fund_amount || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#C5C6C7]">Extra Charges</span>
+                    <span className="text-slate-500">Extra Charges</span>
                     <span className="text-red-400 font-mono">-${parseFloat(chargesForm.extra_charges || 0).toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between pt-2 border-t border-white/10">
-                    <span className="text-white font-bold">Net Settlement</span>
-                    <span className="text-[#66FCF1] font-mono font-bold">
+                  <div className="flex justify-between pt-2 border-t border-slate-200">
+                    <span className="text-slate-800 font-bold">Net Settlement</span>
+                    <span className="text-blue-600 font-mono font-bold">
                       ${((selectedTransaction.amount || 0) - (selectedTransaction.psp_commission_amount || 0) - parseFloat(chargesForm.reserve_fund_amount || 0) - parseFloat(chargesForm.extra_charges || 0)).toLocaleString()}
                     </span>
                   </div>
@@ -1429,7 +1429,7 @@ export default function PSPs() {
               </div>
               
               <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={() => setChargesDialogOpen(false)} className="border-white/10 text-[#C5C6C7]">
+                <Button type="button" variant="outline" onClick={() => setChargesDialogOpen(false)} className="border-slate-200 text-slate-500">
                   Cancel
                 </Button>
                 <Button type="submit" className="bg-[#66FCF1] hover:bg-[#66FCF1]/90 text-[#0B0C10] font-bold uppercase">
@@ -1443,7 +1443,7 @@ export default function PSPs() {
 
       {/* Record Payment Received Dialog */}
       <Dialog open={recordPaymentDialogOpen} onOpenChange={(open) => { if (!open) { setRecordPaymentDialogOpen(false); setSelectedTransaction(null); } }}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-md">
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
               <Wallet className="w-5 h-5 text-green-400" />
@@ -1453,43 +1453,43 @@ export default function PSPs() {
           {selectedTransaction && (
             <div className="space-y-4">
               {/* Transaction Summary */}
-              <div className="p-4 bg-[#0B0C10] rounded-lg space-y-2">
+              <div className="p-4 bg-slate-50 rounded-lg space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-[#C5C6C7]">Reference</span>
-                  <span className="text-white font-mono">{selectedTransaction.reference}</span>
+                  <span className="text-slate-500">Reference</span>
+                  <span className="text-slate-800 font-mono">{selectedTransaction.reference}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-[#C5C6C7]">Client</span>
-                  <span className="text-white">{selectedTransaction.client_name}</span>
+                  <span className="text-slate-500">Client</span>
+                  <span className="text-slate-800">{selectedTransaction.client_name}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-[#C5C6C7]">PSP</span>
-                  <span className="text-white">{selectedTransaction.psp_name}</span>
+                  <span className="text-slate-500">PSP</span>
+                  <span className="text-slate-800">{selectedTransaction.psp_name}</span>
                 </div>
-                <div className="border-t border-white/10 pt-2 mt-2">
+                <div className="border-t border-slate-200 pt-2 mt-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-[#C5C6C7]">Gross Amount</span>
-                    <span className="text-white font-mono">${(selectedTransaction.amount || 0).toLocaleString()}</span>
+                    <span className="text-slate-500">Gross Amount</span>
+                    <span className="text-slate-800 font-mono">${(selectedTransaction.amount || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-[#C5C6C7]">Commission</span>
+                    <span className="text-slate-500">Commission</span>
                     <span className="text-yellow-400 font-mono">-${(selectedTransaction.psp_commission_amount || 0).toLocaleString()}</span>
                   </div>
                   {(selectedTransaction.psp_reserve_fund_amount || selectedTransaction.psp_chargeback_amount) > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-[#C5C6C7]">Reserve Fund</span>
+                      <span className="text-slate-500">Reserve Fund</span>
                       <span className="text-red-400 font-mono">-${(selectedTransaction.psp_reserve_fund_amount || selectedTransaction.psp_chargeback_amount).toLocaleString()}</span>
                     </div>
                   )}
                   {selectedTransaction.psp_extra_charges > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-[#C5C6C7]">Extra Charges</span>
+                      <span className="text-slate-500">Extra Charges</span>
                       <span className="text-red-400 font-mono">-${selectedTransaction.psp_extra_charges.toLocaleString()}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm pt-2 border-t border-white/10 mt-2">
-                    <span className="text-white font-bold">Expected Net</span>
-                    <span className="text-[#66FCF1] font-mono font-bold">
+                  <div className="flex justify-between text-sm pt-2 border-t border-slate-200 mt-2">
+                    <span className="text-slate-800 font-bold">Expected Net</span>
+                    <span className="text-blue-600 font-mono font-bold">
                       ${((selectedTransaction.amount || 0) - (selectedTransaction.psp_commission_amount || 0) - (selectedTransaction.psp_reserve_fund_amount || selectedTransaction.psp_chargeback_amount || 0) - (selectedTransaction.psp_extra_charges || 0)).toLocaleString()}
                     </span>
                   </div>
@@ -1504,7 +1504,7 @@ export default function PSPs() {
                     <span>Holding Period: {selectedTransaction.psp_holding_days} days</span>
                   </div>
                   {selectedTransaction.psp_holding_release_date && (
-                    <p className="text-xs text-[#C5C6C7] mt-1 ml-6">
+                    <p className="text-xs text-slate-500 mt-1 ml-6">
                       Release Date: {formatDate(selectedTransaction.psp_holding_release_date)}
                     </p>
                   )}
@@ -1513,33 +1513,33 @@ export default function PSPs() {
 
               {/* Actual Amount Received */}
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Actual Amount Received (USD)</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Actual Amount Received (USD)</Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={paymentForm.actual_amount_received}
                   onChange={(e) => setPaymentForm({ ...paymentForm, actual_amount_received: e.target.value })}
-                  className="bg-[#0B0C10] border-white/10 text-white font-mono text-lg"
+                  className="bg-slate-50 border-slate-200 text-slate-800 font-mono text-lg"
                   placeholder="Enter actual amount received"
                   data-testid="actual-amount-received"
                 />
-                <p className="text-xs text-[#C5C6C7]">Leave as-is if the amount matches the expected net settlement</p>
+                <p className="text-xs text-slate-500">Leave as-is if the amount matches the expected net settlement</p>
               </div>
 
               {/* Settlement Destination */}
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Credit to Treasury Account</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Credit to Treasury Account</Label>
                 <Select
                   value={paymentForm.destination_account_id || (psps.find(p => p.psp_id === selectedTransaction.psp_id)?.settlement_destination_id || '')}
                   onValueChange={(value) => setPaymentForm({ ...paymentForm, destination_account_id: value })}
                 >
-                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white">
+                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
                     <SelectValue placeholder="Select treasury account" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1F2833] border-white/10">
+                  <SelectContent className="bg-white border-slate-200">
                     {treasuryAccounts.map((account) => (
-                      <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
+                      <SelectItem key={account.account_id} value={account.account_id} className="text-slate-800 hover:bg-slate-100">
                         {account.account_name} - {account.bank_name} ({account.currency})
                       </SelectItem>
                     ))}
@@ -1564,13 +1564,13 @@ export default function PSPs() {
                   type="button"
                   variant="outline"
                   onClick={() => { setRecordPaymentDialogOpen(false); setSelectedTransaction(null); }}
-                  className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                  className="border-slate-200 text-slate-500 hover:bg-slate-100"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleRecordPayment}
-                  className="bg-green-500 text-white hover:bg-green-600 font-bold uppercase tracking-wider"
+                  className="bg-green-500 text-slate-800 hover:bg-green-600 font-bold uppercase tracking-wider"
                   data-testid="confirm-record-payment-btn"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" />

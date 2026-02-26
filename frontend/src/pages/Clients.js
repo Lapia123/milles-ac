@@ -313,10 +313,10 @@ export default function Clients() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
+          <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
             Clients
           </h1>
-          <p className="text-[#C5C6C7]">Manage client accounts and KYC status</p>
+          <p className="text-slate-500">Manage client accounts and KYC status</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
@@ -328,7 +328,7 @@ export default function Clients() {
               Add Client
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg">
+          <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
                 {selectedClient ? 'Edit Client' : 'Add New Client'}
@@ -337,74 +337,74 @@ export default function Clients() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">First Name</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">First Name</Label>
                   <Input
                     value={formData.first_name}
                     onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                     data-testid="client-first-name"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Last Name</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Last Name</Label>
                   <Input
                     value={formData.last_name}
                     onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                     data-testid="client-last-name"
                     required
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Email</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Email</Label>
                 <Input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                   data-testid="client-email"
                   required
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Phone</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Phone</Label>
                   <Input
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                     data-testid="client-phone"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Country</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Country</Label>
                   <Input
                     value={formData.country}
                     onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                     data-testid="client-country"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">MT5 Number</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">MT5 Number</Label>
                   <Input
                     value={formData.mt5_number}
                     onChange={(e) => setFormData({ ...formData, mt5_number: e.target.value })}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                     placeholder="e.g., 12345678"
                     data-testid="client-mt5"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">CRM Customer ID</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">CRM Customer ID</Label>
                   <Input
                     value={formData.crm_customer_id}
                     onChange={(e) => setFormData({ ...formData, crm_customer_id: e.target.value })}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                     placeholder="e.g., CRM-001"
                     data-testid="client-crm-id"
                   />
@@ -412,17 +412,17 @@ export default function Clients() {
               </div>
               {selectedClient && (
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">KYC Status</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">KYC Status</Label>
                   <Select
                     value={formData.kyc_status}
                     onValueChange={(value) => setFormData({ ...formData, kyc_status: value })}
                   >
-                    <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="client-status-select">
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="client-status-select">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1F2833] border-white/10">
+                    <SelectContent className="bg-white border-slate-200">
                       {statusOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value} className="text-white hover:bg-white/5">
+                        <SelectItem key={option.value} value={option.value} className="text-slate-800 hover:bg-slate-100">
                           {option.label}
                         </SelectItem>
                       ))}
@@ -431,11 +431,11 @@ export default function Clients() {
                 </div>
               )}
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Notes</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Notes</Label>
                 <Textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                   rows={3}
                   data-testid="client-notes"
                 />
@@ -445,7 +445,7 @@ export default function Clients() {
                   type="button"
                   variant="outline"
                   onClick={() => { setIsDialogOpen(false); resetForm(); }}
-                  className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                  className="border-slate-200 text-slate-500 hover:bg-slate-100"
                 >
                   Cancel
                 </Button>
@@ -463,42 +463,42 @@ export default function Clients() {
       </div>
 
       {/* Filters */}
-      <Card className="bg-[#1F2833] border-white/5">
+      <Card className="bg-white border-slate-200">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-end gap-4">
             <div className="relative flex-1 min-w-48">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C5C6C7]" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <Input
                 placeholder="Search clients..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-[#0B0C10] border-white/10 text-white placeholder:text-white/30 focus:border-[#66FCF1]"
+                className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-800/30 focus:border-[#66FCF1]"
                 data-testid="search-clients"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40 bg-[#0B0C10] border-white/10 text-white" data-testid="filter-status">
-                <Filter className="w-4 h-4 mr-2 text-[#C5C6C7]" />
+              <SelectTrigger className="w-40 bg-slate-50 border-slate-200 text-slate-800" data-testid="filter-status">
+                <Filter className="w-4 h-4 mr-2 text-slate-500" />
                 <SelectValue placeholder="KYC Status" />
               </SelectTrigger>
-              <SelectContent className="bg-[#1F2833] border-white/10">
-                <SelectItem value="all" className="text-white hover:bg-white/5">All Status</SelectItem>
+              <SelectContent className="bg-white border-slate-200">
+                <SelectItem value="all" className="text-slate-800 hover:bg-slate-100">All Status</SelectItem>
                 {statusOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value} className="text-white hover:bg-white/5">
+                  <SelectItem key={option.value} value={option.value} className="text-slate-800 hover:bg-slate-100">
                     {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={txTypeFilter} onValueChange={setTxTypeFilter}>
-              <SelectTrigger className="w-44 bg-[#0B0C10] border-white/10 text-white" data-testid="filter-tx-type">
+              <SelectTrigger className="w-44 bg-slate-50 border-slate-200 text-slate-800" data-testid="filter-tx-type">
                 <SelectValue placeholder="Transaction Type" />
               </SelectTrigger>
-              <SelectContent className="bg-[#1F2833] border-white/10">
-                <SelectItem value="all" className="text-white hover:bg-white/5">All Transactions</SelectItem>
-                <SelectItem value="deposits_only" className="text-white hover:bg-white/5">Deposits Only</SelectItem>
-                <SelectItem value="withdrawals_only" className="text-white hover:bg-white/5">Withdrawals Only</SelectItem>
-                <SelectItem value="no_transactions" className="text-white hover:bg-white/5">No Transactions</SelectItem>
+              <SelectContent className="bg-white border-slate-200">
+                <SelectItem value="all" className="text-slate-800 hover:bg-slate-100">All Transactions</SelectItem>
+                <SelectItem value="deposits_only" className="text-slate-800 hover:bg-slate-100">Deposits Only</SelectItem>
+                <SelectItem value="withdrawals_only" className="text-slate-800 hover:bg-slate-100">Withdrawals Only</SelectItem>
+                <SelectItem value="no_transactions" className="text-slate-800 hover:bg-slate-100">No Transactions</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex items-center gap-2">
@@ -506,19 +506,19 @@ export default function Clients() {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
-                    className="border-[#66FCF1]/30 text-[#66FCF1] hover:bg-[#66FCF1]/10 font-bold uppercase tracking-wider rounded-sm"
+                    className="border-[#66FCF1]/30 text-blue-600 hover:bg-blue-100 font-bold uppercase tracking-wider rounded-sm"
                     data-testid="download-btn"
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Export
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-[#1F2833] border-white/10">
-                  <DropdownMenuItem onClick={downloadCSV} className="text-white hover:bg-white/5 cursor-pointer">
+                <DropdownMenuContent align="end" className="bg-white border-slate-200">
+                  <DropdownMenuItem onClick={downloadCSV} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
                     <FileSpreadsheet className="w-4 h-4 mr-2" />
                     Export Clients (CSV)
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={downloadTransactionsCSV} className="text-white hover:bg-white/5 cursor-pointer">
+                  <DropdownMenuItem onClick={downloadTransactionsCSV} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
                     <FileSpreadsheet className="w-4 h-4 mr-2" />
                     Export All Transactions (CSV)
                   </DropdownMenuItem>
@@ -527,26 +527,26 @@ export default function Clients() {
             </div>
           </div>
           {/* Balance Filter Row */}
-          <div className="flex flex-wrap items-end gap-4 mt-3 pt-3 border-t border-white/5">
+          <div className="flex flex-wrap items-end gap-4 mt-3 pt-3 border-t border-slate-200">
             <div className="space-y-1">
-              <Label className="text-xs text-[#C5C6C7] uppercase">Min Balance</Label>
+              <Label className="text-xs text-slate-500 uppercase">Min Balance</Label>
               <Input
                 type="number"
                 placeholder="0"
                 value={minBalance}
                 onChange={(e) => setMinBalance(e.target.value)}
-                className="w-32 bg-[#0B0C10] border-white/10 text-white font-mono"
+                className="w-32 bg-slate-50 border-slate-200 text-slate-800 font-mono"
                 data-testid="min-balance"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-[#C5C6C7] uppercase">Max Balance</Label>
+              <Label className="text-xs text-slate-500 uppercase">Max Balance</Label>
               <Input
                 type="number"
                 placeholder="Any"
                 value={maxBalance}
                 onChange={(e) => setMaxBalance(e.target.value)}
-                className="w-32 bg-[#0B0C10] border-white/10 text-white font-mono"
+                className="w-32 bg-slate-50 border-slate-200 text-slate-800 font-mono"
                 data-testid="max-balance"
               />
             </div>
@@ -555,12 +555,12 @@ export default function Clients() {
                 variant="ghost"
                 size="sm"
                 onClick={() => { setMinBalance(''); setMaxBalance(''); setTxTypeFilter('all'); }}
-                className="text-[#C5C6C7] hover:text-white"
+                className="text-slate-500 hover:text-slate-800"
               >
                 Clear Filters
               </Button>
             )}
-            <div className="flex-1 text-right text-sm text-[#C5C6C7]">
+            <div className="flex-1 text-right text-sm text-slate-500">
               Showing {filteredClients.length} of {clients.length} clients
             </div>
           </div>
@@ -568,19 +568,19 @@ export default function Clients() {
       </Card>
 
       {/* Table */}
-      <Card className="bg-[#1F2833] border-white/5">
+      <Card className="bg-white border-slate-200">
         <CardContent className="p-0">
           <ScrollArea className="h-[600px]">
             <Table>
               <TableHeader>
-                <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Client</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Contact</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Country</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Transactions</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Net Balance</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">KYC Status</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
+                <TableRow className="border-slate-200 hover:bg-transparent">
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Client</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Contact</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Country</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Transactions</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Net Balance</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">KYC Status</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -592,47 +592,47 @@ export default function Clients() {
                   </TableRow>
                 ) : filteredClients.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-[#C5C6C7]">
+                    <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                       No clients found
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredClients.map((client) => (
-                    <TableRow key={client.client_id} className="border-white/5 hover:bg-white/5">
+                    <TableRow key={client.client_id} className="border-slate-200 hover:bg-slate-100">
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-[#66FCF1]/10 rounded-full flex items-center justify-center">
-                            <span className="text-[#66FCF1] font-bold text-sm">
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span className="text-blue-600 font-bold text-sm">
                               {client.first_name?.charAt(0)}{client.last_name?.charAt(0)}
                             </span>
                           </div>
                           <div>
-                            <p className="text-white font-medium">{client.first_name} {client.last_name}</p>
-                            <p className="text-xs text-[#C5C6C7] font-mono">{client.client_id}</p>
+                            <p className="text-slate-800 font-medium">{client.first_name} {client.last_name}</p>
+                            <p className="text-xs text-slate-500 font-mono">{client.client_id}</p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <p className="text-white font-mono text-sm">{client.email}</p>
-                        <p className="text-xs text-[#C5C6C7] font-mono">{client.phone || '-'}</p>
+                        <p className="text-slate-800 font-mono text-sm">{client.email}</p>
+                        <p className="text-xs text-slate-500 font-mono">{client.phone || '-'}</p>
                       </TableCell>
-                      <TableCell className="text-white">{client.country || '-'}</TableCell>
+                      <TableCell className="text-slate-800">{client.country || '-'}</TableCell>
                       <TableCell>
                         <div className="text-xs space-y-1">
                           <div className="flex items-center gap-1 text-green-400">
                             <ArrowDownRight className="w-3 h-3" />
                             <span className="font-mono">${(client.total_deposits || 0).toLocaleString()}</span>
-                            <span className="text-[#C5C6C7]">({client.deposit_count || 0})</span>
+                            <span className="text-slate-500">({client.deposit_count || 0})</span>
                           </div>
                           <div className="flex items-center gap-1 text-red-400">
                             <ArrowUpRight className="w-3 h-3" />
                             <span className="font-mono">${(client.total_withdrawals || 0).toLocaleString()}</span>
-                            <span className="text-[#C5C6C7]">({client.withdrawal_count || 0})</span>
+                            <span className="text-slate-500">({client.withdrawal_count || 0})</span>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className={`font-mono font-bold ${(client.net_balance || 0) >= 0 ? 'text-[#66FCF1]' : 'text-red-400'}`}>
+                        <span className={`font-mono font-bold ${(client.net_balance || 0) >= 0 ? 'text-blue-600' : 'text-red-400'}`}>
                           ${(client.net_balance || 0).toLocaleString()}
                         </span>
                       </TableCell>
@@ -640,18 +640,18 @@ export default function Clients() {
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="text-[#C5C6C7] hover:text-white hover:bg-white/5" data-testid={`client-actions-${client.client_id}`}>
+                            <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" data-testid={`client-actions-${client.client_id}`}>
                               <MoreVertical className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-[#1F2833] border-white/10">
-                            <DropdownMenuItem onClick={() => fetchClientDetails(client.client_id)} className="text-white hover:bg-white/5 cursor-pointer">
+                          <DropdownMenuContent align="end" className="bg-white border-slate-200">
+                            <DropdownMenuItem onClick={() => fetchClientDetails(client.client_id)} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
                               <Eye className="w-4 h-4 mr-2" /> View
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(client)} className="text-white hover:bg-white/5 cursor-pointer">
+                            <DropdownMenuItem onClick={() => handleEdit(client)} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
                               <Edit className="w-4 h-4 mr-2" /> Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDelete(client.client_id)} className="text-red-400 hover:bg-white/5 cursor-pointer">
+                            <DropdownMenuItem onClick={() => handleDelete(client.client_id)} className="text-red-400 hover:bg-slate-100 cursor-pointer">
                               <Trash2 className="w-4 h-4 mr-2" /> Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -668,7 +668,7 @@ export default function Clients() {
 
       {/* View Client Dialog */}
       <Dialog open={!!viewClient} onOpenChange={() => setViewClient(null)}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
               Client Details
@@ -677,74 +677,74 @@ export default function Clients() {
           {viewClient && (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-[#66FCF1]/10 rounded-full flex items-center justify-center">
-                  <span className="text-[#66FCF1] font-bold text-xl">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-blue-600 font-bold text-xl">
                     {viewClient.first_name?.charAt(0)}{viewClient.last_name?.charAt(0)}
                   </span>
                 </div>
                 <div>
-                  <h3 className="text-xl text-white font-medium">{viewClient.first_name} {viewClient.last_name}</h3>
-                  <p className="text-[#C5C6C7] font-mono text-sm">{viewClient.client_id}</p>
+                  <h3 className="text-xl text-slate-800 font-medium">{viewClient.first_name} {viewClient.last_name}</h3>
+                  <p className="text-slate-500 font-mono text-sm">{viewClient.client_id}</p>
                 </div>
               </div>
               
               {/* Transaction Summary Cards */}
-              <div className="grid grid-cols-3 gap-3 pt-4 border-t border-white/10">
-                <div className="bg-[#0B0C10] p-3 rounded-sm border-l-2 border-l-green-500">
+              <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-200">
+                <div className="bg-slate-50 p-3 rounded-sm border-l-2 border-l-green-500">
                   <div className="flex items-center gap-2 mb-1">
                     <ArrowDownRight className="w-4 h-4 text-green-400" />
-                    <span className="text-xs text-[#C5C6C7] uppercase">Deposits</span>
+                    <span className="text-xs text-slate-500 uppercase">Deposits</span>
                   </div>
                   <p className="text-lg font-mono text-green-400">${(viewClient.total_deposits || 0).toLocaleString()}</p>
-                  <p className="text-xs text-[#C5C6C7]">{viewClient.deposit_count || 0} transactions</p>
+                  <p className="text-xs text-slate-500">{viewClient.deposit_count || 0} transactions</p>
                 </div>
-                <div className="bg-[#0B0C10] p-3 rounded-sm border-l-2 border-l-red-500">
+                <div className="bg-slate-50 p-3 rounded-sm border-l-2 border-l-red-500">
                   <div className="flex items-center gap-2 mb-1">
                     <ArrowUpRight className="w-4 h-4 text-red-400" />
-                    <span className="text-xs text-[#C5C6C7] uppercase">Withdrawals</span>
+                    <span className="text-xs text-slate-500 uppercase">Withdrawals</span>
                   </div>
                   <p className="text-lg font-mono text-red-400">${(viewClient.total_withdrawals || 0).toLocaleString()}</p>
-                  <p className="text-xs text-[#C5C6C7]">{viewClient.withdrawal_count || 0} transactions</p>
+                  <p className="text-xs text-slate-500">{viewClient.withdrawal_count || 0} transactions</p>
                 </div>
-                <div className="bg-[#0B0C10] p-3 rounded-sm border-l-2 border-l-[#66FCF1]">
+                <div className="bg-slate-50 p-3 rounded-sm border-l-2 border-l-[#66FCF1]">
                   <div className="flex items-center gap-2 mb-1">
-                    <Wallet className="w-4 h-4 text-[#66FCF1]" />
-                    <span className="text-xs text-[#C5C6C7] uppercase">Net Balance</span>
+                    <Wallet className="w-4 h-4 text-blue-600" />
+                    <span className="text-xs text-slate-500 uppercase">Net Balance</span>
                   </div>
-                  <p className={`text-lg font-mono ${(viewClient.net_balance || 0) >= 0 ? 'text-[#66FCF1]' : 'text-red-400'}`}>
+                  <p className={`text-lg font-mono ${(viewClient.net_balance || 0) >= 0 ? 'text-blue-600' : 'text-red-400'}`}>
                     ${(viewClient.net_balance || 0).toLocaleString()}
                   </p>
-                  <p className="text-xs text-[#C5C6C7]">{viewClient.transaction_count || 0} total</p>
+                  <p className="text-xs text-slate-500">{viewClient.transaction_count || 0} total</p>
                 </div>
               </div>
               
               {/* Client Info */}
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Email</p>
-                  <p className="text-white font-mono">{viewClient.email}</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Email</p>
+                  <p className="text-slate-800 font-mono">{viewClient.email}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Phone</p>
-                  <p className="text-white font-mono">{viewClient.phone || '-'}</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Phone</p>
+                  <p className="text-slate-800 font-mono">{viewClient.phone || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Country</p>
-                  <p className="text-white">{viewClient.country || '-'}</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Country</p>
+                  <p className="text-slate-800">{viewClient.country || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">KYC Status</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">KYC Status</p>
                   {getStatusBadge(viewClient.kyc_status)}
                 </div>
               </div>
               
               {/* Recent Transactions */}
               {viewClient.recent_transactions && viewClient.recent_transactions.length > 0 && (
-                <div className="pt-4 border-t border-white/10">
-                  <p className="text-xs text-[#66FCF1] uppercase tracking-wider mb-3">Recent Transactions</p>
+                <div className="pt-4 border-t border-slate-200">
+                  <p className="text-xs text-blue-600 uppercase tracking-wider mb-3">Recent Transactions</p>
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {viewClient.recent_transactions.map((tx) => (
-                      <div key={tx.transaction_id} className="flex items-center justify-between p-2 bg-[#0B0C10] rounded">
+                      <div key={tx.transaction_id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
                         <div className="flex items-center gap-2">
                           {tx.transaction_type === 'deposit' ? (
                             <ArrowDownRight className="w-4 h-4 text-green-400" />
@@ -752,15 +752,15 @@ export default function Clients() {
                             <ArrowUpRight className="w-4 h-4 text-red-400" />
                           )}
                           <div>
-                            <p className="text-white text-sm font-mono">{tx.reference}</p>
-                            <p className="text-[#C5C6C7] text-xs">{tx.transaction_type}</p>
+                            <p className="text-slate-800 text-sm font-mono">{tx.reference}</p>
+                            <p className="text-slate-500 text-xs">{tx.transaction_type}</p>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className={`font-mono ${tx.transaction_type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
                             {tx.transaction_type === 'deposit' ? '+' : '-'}${tx.amount?.toLocaleString()}
                           </p>
-                          <p className="text-[#C5C6C7] text-xs">{tx.status}</p>
+                          <p className="text-slate-500 text-xs">{tx.status}</p>
                         </div>
                       </div>
                     ))}
@@ -769,9 +769,9 @@ export default function Clients() {
               )}
               
               {viewClient.notes && (
-                <div className="pt-4 border-t border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Notes</p>
-                  <p className="text-white">{viewClient.notes}</p>
+                <div className="pt-4 border-t border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Notes</p>
+                  <p className="text-slate-800">{viewClient.notes}</p>
                 </div>
               )}
             </div>

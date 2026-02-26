@@ -401,10 +401,10 @@ export default function Transactions() {
     <div className="space-y-6 animate-fade-in" data-testid="transactions-page">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
+          <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
             Transactions
           </h1>
-          <p className="text-[#C5C6C7]">Transaction ledger and financial operations</p>
+          <p className="text-slate-500">Transaction ledger and financial operations</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
@@ -416,7 +416,7 @@ export default function Transactions() {
               New Transaction
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
                 Create Transaction
@@ -424,14 +424,14 @@ export default function Transactions() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Client *</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Client *</Label>
                 <Popover open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       role="combobox"
                       aria-expanded={clientSearchOpen}
-                      className="w-full justify-between bg-[#0B0C10] border-white/10 text-white hover:bg-[#0B0C10] hover:text-white"
+                      className="w-full justify-between bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-50 hover:text-slate-800"
                       data-testid="select-client"
                     >
                       {formData.client_id
@@ -443,11 +443,11 @@ export default function Transactions() {
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-[#1F2833] border-white/10" align="start">
-                    <Command className="bg-[#1F2833]">
-                      <CommandInput placeholder="Search by name, email, ID..." className="text-white" data-testid="client-search-input" />
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-white border-slate-200" align="start">
+                    <Command className="bg-white">
+                      <CommandInput placeholder="Search by name, email, ID..." className="text-slate-800" data-testid="client-search-input" />
                       <CommandList>
-                        <CommandEmpty className="text-[#C5C6C7] text-sm py-4 text-center">No client found.</CommandEmpty>
+                        <CommandEmpty className="text-slate-500 text-sm py-4 text-center">No client found.</CommandEmpty>
                         <CommandGroup className="max-h-60 overflow-y-auto">
                           {clients.map((client) => (
                             <CommandItem
@@ -457,13 +457,13 @@ export default function Transactions() {
                                 setFormData({ ...formData, client_id: client.client_id });
                                 setClientSearchOpen(false);
                               }}
-                              className="text-white hover:bg-white/5 cursor-pointer"
+                              className="text-slate-800 hover:bg-slate-100 cursor-pointer"
                               data-testid={`client-option-${client.client_id}`}
                             >
-                              <Check className={`mr-2 h-4 w-4 ${formData.client_id === client.client_id ? 'opacity-100 text-[#66FCF1]' : 'opacity-0'}`} />
+                              <Check className={`mr-2 h-4 w-4 ${formData.client_id === client.client_id ? 'opacity-100 text-blue-600' : 'opacity-0'}`} />
                               <div>
                                 <span className="font-medium">{client.first_name} {client.last_name}</span>
-                                <span className="text-[#C5C6C7] text-xs ml-2">{client.email}</span>
+                                <span className="text-slate-500 text-xs ml-2">{client.email}</span>
                               </div>
                             </CommandItem>
                           ))}
@@ -476,17 +476,17 @@ export default function Transactions() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Type *</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Type *</Label>
                   <Select
                     value={formData.transaction_type}
                     onValueChange={(value) => setFormData({ ...formData, transaction_type: value })}
                   >
-                    <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-tx-type">
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="select-tx-type">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1F2833] border-white/10">
+                    <SelectContent className="bg-white border-slate-200">
                       {transactionTypes.map((type) => (
-                        <SelectItem key={type.value} value={type.value} className="text-white hover:bg-white/5">
+                        <SelectItem key={type.value} value={type.value} className="text-slate-800 hover:bg-slate-100">
                           {type.label}
                         </SelectItem>
                       ))}
@@ -494,7 +494,7 @@ export default function Transactions() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Payment Currency</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Payment Currency</Label>
                   <Select
                     value={formData.base_currency}
                     onValueChange={(value) => {
@@ -506,12 +506,12 @@ export default function Transactions() {
                       }
                     }}
                   >
-                    <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-base-currency">
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="select-base-currency">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1F2833] border-white/10">
+                    <SelectContent className="bg-white border-slate-200">
                       {currencies.map((cur) => (
-                        <SelectItem key={cur} value={cur} className="text-white hover:bg-white/5">
+                        <SelectItem key={cur} value={cur} className="text-slate-800 hover:bg-slate-100">
                           {cur}
                         </SelectItem>
                       ))}
@@ -522,7 +522,7 @@ export default function Transactions() {
               
               {formData.base_currency !== 'USD' && (
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Amount in {formData.base_currency} *</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Amount in {formData.base_currency} *</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -532,7 +532,7 @@ export default function Transactions() {
                       const usdAmount = baseAmt ? (parseFloat(baseAmt) * exchangeRates[formData.base_currency]).toFixed(2) : '';
                       setFormData({ ...formData, base_amount: baseAmt, amount: usdAmount });
                     }}
-                    className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                     placeholder={`0.00 ${formData.base_currency}`}
                     data-testid="tx-base-amount"
                     required
@@ -541,7 +541,7 @@ export default function Transactions() {
               )}
               
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">
                   {formData.base_currency !== 'USD' ? 'Amount in USD (Auto-calculated)' : 'Amount in USD *'}
                 </Label>
                 <Input
@@ -549,14 +549,14 @@ export default function Transactions() {
                   step="0.01"
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                   placeholder="0.00 USD"
                   data-testid="tx-amount"
                   readOnly={formData.base_currency !== 'USD'}
                   required
                 />
                 {formData.base_currency !== 'USD' && formData.base_amount && (
-                  <p className="text-xs text-[#66FCF1]">
+                  <p className="text-xs text-blue-600">
                     Rate: 1 {formData.base_currency} = {exchangeRates[formData.base_currency]} USD
                   </p>
                 )}
@@ -564,20 +564,20 @@ export default function Transactions() {
               
               {/* Destination Type Selection */}
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Destination Type *</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Destination Type *</Label>
                 <Select
                   value={formData.destination_type}
                   onValueChange={(value) => setFormData({ ...formData, destination_type: value, destination_account_id: '', psp_id: '', vendor_id: '' })}
                 >
-                  <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-dest-type">
+                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="select-dest-type">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1F2833] border-white/10">
-                    <SelectItem value="treasury" className="text-white hover:bg-white/5">Treasury / Bank Account</SelectItem>
-                    <SelectItem value="bank" className="text-white hover:bg-white/5">Client Bank (Withdrawal)</SelectItem>
-                    <SelectItem value="usdt" className="text-white hover:bg-white/5">USDT</SelectItem>
-                    <SelectItem value="psp" className="text-white hover:bg-white/5">Payment Service Provider (PSP)</SelectItem>
-                    <SelectItem value="vendor" className="text-white hover:bg-white/5">Vendor</SelectItem>
+                  <SelectContent className="bg-white border-slate-200">
+                    <SelectItem value="treasury" className="text-slate-800 hover:bg-slate-100">Treasury / Bank Account</SelectItem>
+                    <SelectItem value="bank" className="text-slate-800 hover:bg-slate-100">Client Bank (Withdrawal)</SelectItem>
+                    <SelectItem value="usdt" className="text-slate-800 hover:bg-slate-100">USDT</SelectItem>
+                    <SelectItem value="psp" className="text-slate-800 hover:bg-slate-100">Payment Service Provider (PSP)</SelectItem>
+                    <SelectItem value="vendor" className="text-slate-800 hover:bg-slate-100">Vendor</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -585,17 +585,17 @@ export default function Transactions() {
               {/* Treasury Destination (for deposits or non-bank transactions) */}
               {formData.destination_type === 'treasury' && (
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Destination (Bank/Treasury) *</Label>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Destination (Bank/Treasury) *</Label>
                   <Select
                     value={formData.destination_account_id}
                     onValueChange={(value) => setFormData({ ...formData, destination_account_id: value })}
                   >
-                    <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-destination">
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="select-destination">
                       <SelectValue placeholder="Select destination account" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1F2833] border-white/10">
+                    <SelectContent className="bg-white border-slate-200">
                       {treasuryAccounts.filter(a => a.account_type !== 'usdt').map((account) => (
-                        <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
+                        <SelectItem key={account.account_id} value={account.account_id} className="text-slate-800 hover:bg-slate-100">
                           {account.account_name} - {account.bank_name} ({account.currency})
                         </SelectItem>
                       ))}
@@ -606,8 +606,8 @@ export default function Transactions() {
               
               {/* Client Bank Details (for withdrawal to bank) */}
               {formData.destination_type === 'bank' && (
-                <div className="space-y-4 p-4 bg-[#0B0C10] rounded-sm border border-white/10">
-                  <div className="flex items-center gap-2 text-[#66FCF1] mb-2">
+                <div className="space-y-4 p-4 bg-slate-50 rounded-sm border border-slate-200">
+                  <div className="flex items-center gap-2 text-blue-600 mb-2">
                     <Building2 className="w-4 h-4" />
                     <span className="text-xs uppercase tracking-wider font-bold">Client Bank Details</span>
                   </div>
@@ -615,7 +615,7 @@ export default function Transactions() {
                   {/* Saved Bank Accounts Dropdown */}
                   {clientBankAccounts.length > 0 && (
                     <div className="space-y-2">
-                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Saved Bank Accounts</Label>
+                      <Label className="text-slate-500 text-xs uppercase tracking-wider">Saved Bank Accounts</Label>
                       <Select
                         value={selectedBankAccount}
                         onValueChange={(value) => {
@@ -644,13 +644,13 @@ export default function Transactions() {
                           }
                         }}
                       >
-                        <SelectTrigger className="bg-[#1F2833] border-white/10 text-white">
+                        <SelectTrigger className="bg-white border-slate-200 text-slate-800">
                           <SelectValue placeholder="Select saved bank or add new" />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#1F2833] border-white/10">
-                          <SelectItem value="new" className="text-[#66FCF1] hover:bg-white/5">+ Add New Bank Account</SelectItem>
+                        <SelectContent className="bg-white border-slate-200">
+                          <SelectItem value="new" className="text-blue-600 hover:bg-slate-100">+ Add New Bank Account</SelectItem>
                           {clientBankAccounts.map((bank) => (
-                            <SelectItem key={bank.bank_account_id} value={bank.bank_account_id} className="text-white hover:bg-white/5">
+                            <SelectItem key={bank.bank_account_id} value={bank.bank_account_id} className="text-slate-800 hover:bg-slate-100">
                               {bank.bank_name} - {bank.account_number} ({bank.currency})
                             </SelectItem>
                           ))}
@@ -661,57 +661,57 @@ export default function Transactions() {
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Bank Name *</Label>
+                      <Label className="text-slate-500 text-xs uppercase tracking-wider">Bank Name *</Label>
                       <Input
                         value={formData.client_bank_name}
                         onChange={(e) => setFormData({ ...formData, client_bank_name: e.target.value })}
-                        className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1]"
+                        className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                         placeholder="e.g., Chase Bank"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Name *</Label>
+                      <Label className="text-slate-500 text-xs uppercase tracking-wider">Account Name *</Label>
                       <Input
                         value={formData.client_bank_account_name}
                         onChange={(e) => setFormData({ ...formData, client_bank_account_name: e.target.value })}
-                        className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1]"
+                        className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                         placeholder="Account holder name"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Number *</Label>
+                      <Label className="text-slate-500 text-xs uppercase tracking-wider">Account Number *</Label>
                       <Input
                         value={formData.client_bank_account_number}
                         onChange={(e) => setFormData({ ...formData, client_bank_account_number: e.target.value })}
-                        className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                        className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                         placeholder="Account number"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">SWIFT / IBAN</Label>
+                      <Label className="text-slate-500 text-xs uppercase tracking-wider">SWIFT / IBAN</Label>
                       <Input
                         value={formData.client_bank_swift_iban}
                         onChange={(e) => setFormData({ ...formData, client_bank_swift_iban: e.target.value })}
-                        className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                        className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                         placeholder="SWIFT or IBAN code"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Currency *</Label>
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Currency *</Label>
                     <Select
                       value={formData.client_bank_currency}
                       onValueChange={(value) => setFormData({ ...formData, client_bank_currency: value })}
                     >
-                      <SelectTrigger className="bg-[#1F2833] border-white/10 text-white">
+                      <SelectTrigger className="bg-white border-slate-200 text-slate-800">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#1F2833] border-white/10">
+                      <SelectContent className="bg-white border-slate-200">
                         {currencies.map((cur) => (
-                          <SelectItem key={cur} value={cur} className="text-white hover:bg-white/5">
+                          <SelectItem key={cur} value={cur} className="text-slate-800 hover:bg-slate-100">
                             {cur}
                           </SelectItem>
                         ))}
@@ -719,7 +719,7 @@ export default function Transactions() {
                     </Select>
                   </div>
                   {selectedBankAccount === 'new' && (
-                    <p className="text-xs text-[#66FCF1]">
+                    <p className="text-xs text-blue-600">
                       This bank account will be saved to the client's profile for future use.
                     </p>
                   )}
@@ -732,17 +732,17 @@ export default function Transactions() {
                   {/* For deposits - select USDT treasury account */}
                   {formData.transaction_type === 'deposit' && (
                     <div className="space-y-2">
-                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">USDT Treasury Account *</Label>
+                      <Label className="text-slate-500 text-xs uppercase tracking-wider">USDT Treasury Account *</Label>
                       <Select
                         value={formData.destination_account_id}
                         onValueChange={(value) => setFormData({ ...formData, destination_account_id: value })}
                       >
-                        <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-usdt-treasury">
+                        <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="select-usdt-treasury">
                           <SelectValue placeholder="Select USDT wallet" />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#1F2833] border-white/10">
+                        <SelectContent className="bg-white border-slate-200">
                           {treasuryAccounts.filter(a => a.account_type === 'usdt').map((account) => (
-                            <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
+                            <SelectItem key={account.account_id} value={account.account_id} className="text-slate-800 hover:bg-slate-100">
                               {account.account_name} ({account.usdt_network || 'USDT'})
                             </SelectItem>
                           ))}
@@ -753,34 +753,34 @@ export default function Transactions() {
                   
                   {/* For withdrawals - enter client USDT address */}
                   {formData.transaction_type === 'withdrawal' && (
-                    <div className="space-y-4 p-4 bg-[#0B0C10] rounded-sm border border-white/10">
-                      <div className="flex items-center gap-2 text-[#66FCF1] mb-2">
+                    <div className="space-y-4 p-4 bg-slate-50 rounded-sm border border-slate-200">
+                      <div className="flex items-center gap-2 text-blue-600 mb-2">
                         <Wallet className="w-4 h-4" />
                         <span className="text-xs uppercase tracking-wider font-bold">Client USDT Details</span>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">USDT Address *</Label>
+                        <Label className="text-slate-500 text-xs uppercase tracking-wider">USDT Address *</Label>
                         <Input
                           value={formData.client_usdt_address}
                           onChange={(e) => setFormData({ ...formData, client_usdt_address: e.target.value })}
-                          className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                          className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                           placeholder="Enter USDT wallet address"
                           required
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Network *</Label>
+                        <Label className="text-slate-500 text-xs uppercase tracking-wider">Network *</Label>
                         <Select
                           value={formData.client_usdt_network}
                           onValueChange={(value) => setFormData({ ...formData, client_usdt_network: value })}
                         >
-                          <SelectTrigger className="bg-[#1F2833] border-white/10 text-white">
+                          <SelectTrigger className="bg-white border-slate-200 text-slate-800">
                             <SelectValue placeholder="Select network" />
                           </SelectTrigger>
-                          <SelectContent className="bg-[#1F2833] border-white/10">
-                            <SelectItem value="TRC20" className="text-white hover:bg-white/5">TRC20 (Tron)</SelectItem>
-                            <SelectItem value="ERC20" className="text-white hover:bg-white/5">ERC20 (Ethereum)</SelectItem>
-                            <SelectItem value="BEP20" className="text-white hover:bg-white/5">BEP20 (BSC)</SelectItem>
+                          <SelectContent className="bg-white border-slate-200">
+                            <SelectItem value="TRC20" className="text-slate-800 hover:bg-slate-100">TRC20 (Tron)</SelectItem>
+                            <SelectItem value="ERC20" className="text-slate-800 hover:bg-slate-100">ERC20 (Ethereum)</SelectItem>
+                            <SelectItem value="BEP20" className="text-slate-800 hover:bg-slate-100">BEP20 (BSC)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -793,17 +793,17 @@ export default function Transactions() {
               {formData.destination_type === 'vendor' && (
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Select Vendor *</Label>
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Select Vendor *</Label>
                     <Select
                       value={formData.vendor_id}
                       onValueChange={(value) => setFormData({ ...formData, vendor_id: value })}
                     >
-                      <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-vendor">
+                      <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="select-vendor">
                         <SelectValue placeholder="Select vendor" />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#1F2833] border-white/10">
+                      <SelectContent className="bg-white border-slate-200">
                         {vendors.filter(v => v.status === 'active').map((vendor) => (
-                          <SelectItem key={vendor.vendor_id} value={vendor.vendor_id} className="text-white hover:bg-white/5">
+                          <SelectItem key={vendor.vendor_id} value={vendor.vendor_id} className="text-slate-800 hover:bg-slate-100">
                             {vendor.vendor_name}
                           </SelectItem>
                         ))}
@@ -813,8 +813,8 @@ export default function Transactions() {
                   
                   {/* For withdrawals via vendor - enter client bank details */}
                   {formData.transaction_type === 'withdrawal' && (
-                    <div className="space-y-4 p-4 bg-[#0B0C10] rounded-sm border border-white/10 mt-2">
-                      <div className="flex items-center gap-2 text-[#66FCF1] mb-2">
+                    <div className="space-y-4 p-4 bg-slate-50 rounded-sm border border-slate-200 mt-2">
+                      <div className="flex items-center gap-2 text-blue-600 mb-2">
                         <Building2 className="w-4 h-4" />
                         <span className="text-xs uppercase tracking-wider font-bold">Client Bank Details (Destination)</span>
                       </div>
@@ -822,7 +822,7 @@ export default function Transactions() {
                       {/* Select from saved client banks */}
                       {clientBankAccounts.length > 0 && (
                         <div className="space-y-2">
-                          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Select Saved Bank Account</Label>
+                          <Label className="text-slate-500 text-xs uppercase tracking-wider">Select Saved Bank Account</Label>
                           <Select
                             onValueChange={(value) => {
                               if (value === 'new') {
@@ -849,13 +849,13 @@ export default function Transactions() {
                               }
                             }}
                           >
-                            <SelectTrigger className="bg-[#1F2833] border-white/10 text-white">
+                            <SelectTrigger className="bg-white border-slate-200 text-slate-800">
                               <SelectValue placeholder="Select saved bank or enter new" />
                             </SelectTrigger>
-                            <SelectContent className="bg-[#1F2833] border-white/10">
-                              <SelectItem value="new" className="text-white hover:bg-white/5">+ Enter New Bank Details</SelectItem>
+                            <SelectContent className="bg-white border-slate-200">
+                              <SelectItem value="new" className="text-slate-800 hover:bg-slate-100">+ Enter New Bank Details</SelectItem>
                               {clientBankAccounts.map((bank) => (
-                                <SelectItem key={bank.bank_account_id} value={bank.bank_account_id} className="text-white hover:bg-white/5">
+                                <SelectItem key={bank.bank_account_id} value={bank.bank_account_id} className="text-slate-800 hover:bg-slate-100">
                                   {bank.bank_name} - {bank.account_number} ({bank.currency})
                                 </SelectItem>
                               ))}
@@ -866,21 +866,21 @@ export default function Transactions() {
                       
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Bank Name *</Label>
+                          <Label className="text-slate-500 text-xs uppercase tracking-wider">Bank Name *</Label>
                           <Input
                             value={formData.client_bank_name}
                             onChange={(e) => setFormData({ ...formData, client_bank_name: e.target.value })}
-                            className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1]"
+                            className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                             placeholder="Bank name"
                             required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Name *</Label>
+                          <Label className="text-slate-500 text-xs uppercase tracking-wider">Account Name *</Label>
                           <Input
                             value={formData.client_bank_account_name}
                             onChange={(e) => setFormData({ ...formData, client_bank_account_name: e.target.value })}
-                            className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1]"
+                            className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                             placeholder="Account holder name"
                             required
                           />
@@ -888,40 +888,40 @@ export default function Transactions() {
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Account Number *</Label>
+                          <Label className="text-slate-500 text-xs uppercase tracking-wider">Account Number *</Label>
                           <Input
                             value={formData.client_bank_account_number}
                             onChange={(e) => setFormData({ ...formData, client_bank_account_number: e.target.value })}
-                            className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                            className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                             placeholder="Account number / IBAN"
                             required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">SWIFT/BIC Code</Label>
+                          <Label className="text-slate-500 text-xs uppercase tracking-wider">SWIFT/BIC Code</Label>
                           <Input
                             value={formData.client_bank_swift_iban}
                             onChange={(e) => setFormData({ ...formData, client_bank_swift_iban: e.target.value })}
-                            className="bg-[#1F2833] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                            className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                             placeholder="SWIFT code (optional)"
                           />
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Currency *</Label>
+                        <Label className="text-slate-500 text-xs uppercase tracking-wider">Currency *</Label>
                         <Select
                           value={formData.client_bank_currency}
                           onValueChange={(value) => setFormData({ ...formData, client_bank_currency: value })}
                         >
-                          <SelectTrigger className="bg-[#1F2833] border-white/10 text-white">
+                          <SelectTrigger className="bg-white border-slate-200 text-slate-800">
                             <SelectValue placeholder="Select currency" />
                           </SelectTrigger>
-                          <SelectContent className="bg-[#1F2833] border-white/10">
-                            <SelectItem value="USD" className="text-white hover:bg-white/5">USD - US Dollar</SelectItem>
-                            <SelectItem value="EUR" className="text-white hover:bg-white/5">EUR - Euro</SelectItem>
-                            <SelectItem value="GBP" className="text-white hover:bg-white/5">GBP - British Pound</SelectItem>
-                            <SelectItem value="AED" className="text-white hover:bg-white/5">AED - UAE Dirham</SelectItem>
-                            <SelectItem value="INR" className="text-white hover:bg-white/5">INR - Indian Rupee</SelectItem>
+                          <SelectContent className="bg-white border-slate-200">
+                            <SelectItem value="USD" className="text-slate-800 hover:bg-slate-100">USD - US Dollar</SelectItem>
+                            <SelectItem value="EUR" className="text-slate-800 hover:bg-slate-100">EUR - Euro</SelectItem>
+                            <SelectItem value="GBP" className="text-slate-800 hover:bg-slate-100">GBP - British Pound</SelectItem>
+                            <SelectItem value="AED" className="text-slate-800 hover:bg-slate-100">AED - UAE Dirham</SelectItem>
+                            <SelectItem value="INR" className="text-slate-800 hover:bg-slate-100">INR - Indian Rupee</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -934,17 +934,17 @@ export default function Transactions() {
               {formData.destination_type === 'psp' && (
                 <>
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Select PSP *</Label>
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Select PSP *</Label>
                     <Select
                       value={formData.psp_id}
                       onValueChange={(value) => setFormData({ ...formData, psp_id: value })}
                     >
-                      <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-psp">
+                      <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="select-psp">
                         <SelectValue placeholder="Select PSP" />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#1F2833] border-white/10">
+                      <SelectContent className="bg-white border-slate-200">
                         {psps.filter(p => p.status === 'active').map((psp) => (
-                          <SelectItem key={psp.psp_id} value={psp.psp_id} className="text-white hover:bg-white/5">
+                          <SelectItem key={psp.psp_id} value={psp.psp_id} className="text-slate-800 hover:bg-slate-100">
                             {psp.psp_name} ({psp.commission_rate}% commission, T+{psp.settlement_days})
                           </SelectItem>
                         ))}
@@ -953,24 +953,24 @@ export default function Transactions() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Commission Paid By *</Label>
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Commission Paid By *</Label>
                     <Select
                       value={formData.commission_paid_by}
                       onValueChange={(value) => setFormData({ ...formData, commission_paid_by: value })}
                     >
-                      <SelectTrigger className="bg-[#0B0C10] border-white/10 text-white" data-testid="select-commission-paid-by">
+                      <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="select-commission-paid-by">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#1F2833] border-white/10">
-                        <SelectItem value="client" className="text-white hover:bg-white/5">Client (deducted from deposit)</SelectItem>
-                        <SelectItem value="broker" className="text-white hover:bg-white/5">Broker (absorbs commission)</SelectItem>
+                      <SelectContent className="bg-white border-slate-200">
+                        <SelectItem value="client" className="text-slate-800 hover:bg-slate-100">Client (deducted from deposit)</SelectItem>
+                        <SelectItem value="broker" className="text-slate-800 hover:bg-slate-100">Broker (absorbs commission)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   
                   {/* Commission Preview */}
                   {formData.psp_id && formData.amount && (
-                    <div className="p-3 bg-[#0B0C10] rounded-sm border border-white/10">
+                    <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
                       {(() => {
                         const selectedPsp = psps.find(p => p.psp_id === formData.psp_id);
                         if (!selectedPsp) return null;
@@ -983,22 +983,22 @@ export default function Transactions() {
                         return (
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
-                              <span className="text-[#C5C6C7]">Gross Amount</span>
-                              <span className="text-white font-mono">${grossAmount.toLocaleString()}</span>
+                              <span className="text-slate-500">Gross Amount</span>
+                              <span className="text-slate-800 font-mono">${grossAmount.toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-[#C5C6C7]">PSP Commission ({selectedPsp.commission_rate}%)</span>
+                              <span className="text-slate-500">PSP Commission ({selectedPsp.commission_rate}%)</span>
                               <span className="text-red-400 font-mono">-${commissionAmount}</span>
                             </div>
-                            <div className="flex justify-between pt-2 border-t border-white/10">
-                              <span className="text-[#C5C6C7]">
+                            <div className="flex justify-between pt-2 border-t border-slate-200">
+                              <span className="text-slate-500">
                                 {formData.commission_paid_by === 'client' ? 'Client Receives' : 'Client Receives (Broker pays commission)'}
                               </span>
                               <span className="text-green-400 font-mono">${netAmount}</span>
                             </div>
                             <div className="flex justify-between text-xs">
-                              <span className="text-[#C5C6C7]">Expected Settlement</span>
-                              <span className="text-[#66FCF1]">T+{selectedPsp.settlement_days} days</span>
+                              <span className="text-slate-500">Expected Settlement</span>
+                              <span className="text-blue-600">T+{selectedPsp.settlement_days} days</span>
                             </div>
                           </div>
                         );
@@ -1009,30 +1009,30 @@ export default function Transactions() {
               )}
               
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Reference (Optional)</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Reference (Optional)</Label>
                 <Input
                   value={formData.reference}
                   onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1] font-mono"
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                   placeholder="Auto-generated if empty"
                   data-testid="tx-reference"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Description</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Description</Label>
                 <Textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="bg-[#0B0C10] border-white/10 text-white focus:border-[#66FCF1]"
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                   rows={2}
                   data-testid="tx-description"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Proof of Payment (Screenshot)</Label>
-                <div className="border-2 border-dashed border-white/10 rounded-sm p-4 text-center hover:border-[#66FCF1]/50 transition-colors">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Proof of Payment (Screenshot)</Label>
+                <div className="border-2 border-dashed border-slate-200 rounded-sm p-4 text-center hover:border-[#66FCF1]/50 transition-colors">
                   <input
                     type="file"
                     accept="image/*"
@@ -1045,13 +1045,13 @@ export default function Transactions() {
                     {proofPreview ? (
                       <div className="space-y-2">
                         <img src={proofPreview} alt="Proof preview" className="max-h-32 mx-auto rounded" />
-                        <p className="text-xs text-[#66FCF1]">Click to change</p>
+                        <p className="text-xs text-blue-600">Click to change</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <Upload className="w-8 h-8 mx-auto text-[#C5C6C7]" />
-                        <p className="text-sm text-[#C5C6C7]">Click to upload proof of payment</p>
-                        <p className="text-xs text-[#C5C6C7]/60">PNG, JPG up to 5MB</p>
+                        <Upload className="w-8 h-8 mx-auto text-slate-500" />
+                        <p className="text-sm text-slate-500">Click to upload proof of payment</p>
+                        <p className="text-xs text-slate-500/60">PNG, JPG up to 5MB</p>
                       </div>
                     )}
                   </label>
@@ -1063,7 +1063,7 @@ export default function Transactions() {
                   type="button"
                   variant="outline"
                   onClick={() => { setIsDialogOpen(false); resetForm(); }}
-                  className="border-white/10 text-[#C5C6C7] hover:bg-white/5"
+                  className="border-slate-200 text-slate-500 hover:bg-slate-100"
                 >
                   Cancel
                 </Button>
@@ -1083,37 +1083,37 @@ export default function Transactions() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C5C6C7]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <Input
             placeholder="Search by client or reference..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-[#1F2833] border-white/10 text-white placeholder:text-white/30 focus:border-[#66FCF1]"
+            className="pl-10 bg-white border-slate-200 text-slate-800 placeholder:text-slate-800/30 focus:border-[#66FCF1]"
             data-testid="search-transactions"
           />
         </div>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-full sm:w-40 bg-[#1F2833] border-white/10 text-white" data-testid="filter-tx-type">
+          <SelectTrigger className="w-full sm:w-40 bg-white border-slate-200 text-slate-800" data-testid="filter-tx-type">
             <SelectValue placeholder="Type" />
           </SelectTrigger>
-          <SelectContent className="bg-[#1F2833] border-white/10">
-            <SelectItem value="all" className="text-white hover:bg-white/5">All Types</SelectItem>
+          <SelectContent className="bg-white border-slate-200">
+            <SelectItem value="all" className="text-slate-800 hover:bg-slate-100">All Types</SelectItem>
             {transactionTypes.map((type) => (
-              <SelectItem key={type.value} value={type.value} className="text-white hover:bg-white/5">
+              <SelectItem key={type.value} value={type.value} className="text-slate-800 hover:bg-slate-100">
                 {type.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-40 bg-[#1F2833] border-white/10 text-white" data-testid="filter-tx-status">
-            <Filter className="w-4 h-4 mr-2 text-[#C5C6C7]" />
+          <SelectTrigger className="w-full sm:w-40 bg-white border-slate-200 text-slate-800" data-testid="filter-tx-status">
+            <Filter className="w-4 h-4 mr-2 text-slate-500" />
             <SelectValue placeholder="Status" />
           </SelectTrigger>
-          <SelectContent className="bg-[#1F2833] border-white/10">
-            <SelectItem value="all" className="text-white hover:bg-white/5">All Status</SelectItem>
+          <SelectContent className="bg-white border-slate-200">
+            <SelectItem value="all" className="text-slate-800 hover:bg-slate-100">All Status</SelectItem>
             {statusOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value} className="text-white hover:bg-white/5">
+              <SelectItem key={option.value} value={option.value} className="text-slate-800 hover:bg-slate-100">
                 {option.label}
               </SelectItem>
             ))}
@@ -1122,19 +1122,19 @@ export default function Transactions() {
       </div>
 
       {/* Table */}
-      <Card className="bg-[#1F2833] border-white/5">
+      <Card className="bg-white border-slate-200">
         <CardContent className="p-0">
           <ScrollArea className="h-[600px]">
             <Table>
               <TableHeader>
-                <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Reference</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Client</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Type</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Amount</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Destination</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                  <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
+                <TableRow className="border-slate-200 hover:bg-transparent">
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Client</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Amount</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Destination</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1146,24 +1146,24 @@ export default function Transactions() {
                   </TableRow>
                 ) : filteredTransactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-[#C5C6C7]">
+                    <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                       No transactions found
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredTransactions.map((tx) => (
-                    <TableRow key={tx.transaction_id} className="border-white/5 hover:bg-white/5">
+                    <TableRow key={tx.transaction_id} className="border-slate-200 hover:bg-slate-100">
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-white">{tx.reference}</span>
+                          <span className="font-mono text-slate-800">{tx.reference}</span>
                           {tx.proof_image && (
                             <span title="Client Proof">
-                              <ImageIcon className="w-4 h-4 text-[#C5C6C7]" />
+                              <ImageIcon className="w-4 h-4 text-slate-500" />
                             </span>
                           )}
                           {tx.accountant_proof_image && (
                             <span title="Accountant Approval Proof" className="flex items-center">
-                              <ImageIcon className="w-4 h-4 text-[#66FCF1]" />
+                              <ImageIcon className="w-4 h-4 text-blue-600" />
                             </span>
                           )}
                           {tx.vendor_proof_image && (
@@ -1173,12 +1173,12 @@ export default function Transactions() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-white">{tx.client_name || getClientName(tx.client_id)}</TableCell>
+                      <TableCell className="text-slate-800">{tx.client_name || getClientName(tx.client_id)}</TableCell>
                       <TableCell>{getTypeBadge(tx.transaction_type)}</TableCell>
                       <TableCell className={`font-mono font-medium ${['deposit', 'rebate'].includes(tx.transaction_type) ? 'text-green-400' : 'text-red-400'}`}>
                         {['deposit', 'rebate'].includes(tx.transaction_type) ? '+' : '-'}${tx.amount?.toLocaleString()} {tx.currency}
                       </TableCell>
-                      <TableCell className="text-[#C5C6C7]">
+                      <TableCell className="text-slate-500">
                         {tx.destination_bank_name ? (
                           <span>{tx.destination_account_name}<br/><span className="text-xs">{tx.destination_bank_name}</span></span>
                         ) : '-'}
@@ -1189,7 +1189,7 @@ export default function Transactions() {
                           variant="ghost" 
                           size="sm" 
                           onClick={() => setViewTransaction(tx)}
-                          className="text-[#C5C6C7] hover:text-white hover:bg-white/5" 
+                          className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" 
                           data-testid={`tx-view-${tx.transaction_id}`}
                         >
                           <Eye className="w-4 h-4" />
@@ -1206,7 +1206,7 @@ export default function Transactions() {
 
       {/* View Transaction Dialog */}
       <Dialog open={!!viewTransaction} onOpenChange={() => setViewTransaction(null)}>
-        <DialogContent className="bg-[#1F2833] border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
               Transaction Details
@@ -1216,59 +1216,59 @@ export default function Transactions() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reference</p>
-                  <p className="text-white font-mono text-lg">{viewTransaction.reference}</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Reference</p>
+                  <p className="text-slate-800 font-mono text-lg">{viewTransaction.reference}</p>
                 </div>
                 {getStatusBadge(viewTransaction.status)}
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Client</p>
-                  <p className="text-white">{viewTransaction.client_name}</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Client</p>
+                  <p className="text-slate-800">{viewTransaction.client_name}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Type</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Type</p>
                   {getTypeBadge(viewTransaction.transaction_type)}
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Amount</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Amount</p>
                   <p className={`font-mono text-xl ${['deposit', 'rebate'].includes(viewTransaction.transaction_type) ? 'text-green-400' : 'text-red-400'}`}>
                     {['deposit', 'rebate'].includes(viewTransaction.transaction_type) ? '+' : '-'}${viewTransaction.amount?.toLocaleString()} {viewTransaction.currency}
                   </p>
                   {viewTransaction.base_currency && viewTransaction.base_currency !== 'USD' && viewTransaction.base_amount && (
-                    <p className="text-sm text-[#C5C6C7] font-mono mt-1">
+                    <p className="text-sm text-slate-500 font-mono mt-1">
                       {viewTransaction.base_amount?.toLocaleString()} {viewTransaction.base_currency}
                     </p>
                   )}
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created</p>
-                  <p className="text-white text-sm">{formatDate(viewTransaction.created_at)}</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Created</p>
+                  <p className="text-slate-800 text-sm">{formatDate(viewTransaction.created_at)}</p>
                 </div>
               </div>
               {viewTransaction.destination_account_name && (
-                <div className="pt-4 border-t border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Destination</p>
-                  <p className="text-white">{viewTransaction.destination_account_name}</p>
-                  <p className="text-sm text-[#C5C6C7]">{viewTransaction.destination_bank_name}</p>
+                <div className="pt-4 border-t border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Destination</p>
+                  <p className="text-slate-800">{viewTransaction.destination_account_name}</p>
+                  <p className="text-sm text-slate-500">{viewTransaction.destination_bank_name}</p>
                 </div>
               )}
               {/* Broker Commission */}
               {viewTransaction.broker_commission_amount > 0 && (
-                <div className="pt-4 border-t border-white/10" data-testid="broker-commission-detail">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Broker Commission</p>
-                  <div className="grid grid-cols-2 gap-3 p-3 bg-[#0B0C10] rounded-sm border border-white/5">
+                <div className="pt-4 border-t border-slate-200" data-testid="broker-commission-detail">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Broker Commission</p>
+                  <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-sm border border-slate-200">
                     <div>
-                      <p className="text-xs text-[#C5C6C7]">Rate</p>
-                      <p className="text-white font-mono">{viewTransaction.broker_commission_rate}%</p>
+                      <p className="text-xs text-slate-500">Rate</p>
+                      <p className="text-slate-800 font-mono">{viewTransaction.broker_commission_rate}%</p>
                     </div>
                     <div>
-                      <p className="text-xs text-[#C5C6C7]">Amount (USD)</p>
+                      <p className="text-xs text-slate-500">Amount (USD)</p>
                       <p className="text-yellow-400 font-mono">${viewTransaction.broker_commission_amount?.toLocaleString()}</p>
                     </div>
                     {viewTransaction.broker_commission_base_currency !== 'USD' && (
                       <div className="col-span-2">
-                        <p className="text-xs text-[#C5C6C7]">Amount ({viewTransaction.broker_commission_base_currency})</p>
+                        <p className="text-xs text-slate-500">Amount ({viewTransaction.broker_commission_base_currency})</p>
                         <p className="text-yellow-400 font-mono">{viewTransaction.broker_commission_base_amount?.toLocaleString()} {viewTransaction.broker_commission_base_currency}</p>
                       </div>
                     )}
@@ -1276,25 +1276,25 @@ export default function Transactions() {
                 </div>
               )}
               {viewTransaction.description && (
-                <div className="pt-4 border-t border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Description</p>
-                  <p className="text-white">{viewTransaction.description}</p>
+                <div className="pt-4 border-t border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Description</p>
+                  <p className="text-slate-800">{viewTransaction.description}</p>
                 </div>
               )}
               {viewTransaction.proof_image && (
-                <div className="pt-4 border-t border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Client Proof of Payment</p>
+                <div className="pt-4 border-t border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Client Proof of Payment</p>
                   <img 
                     src={`data:image/png;base64,${viewTransaction.proof_image}`} 
                     alt="Client proof of payment" 
-                    className="max-w-full rounded border border-white/10"
+                    className="max-w-full rounded border border-slate-200"
                   />
                 </div>
               )}
               {/* Accountant Approval Proof - Thumbnail Preview */}
               {viewTransaction.accountant_proof_image && (
-                <div className="pt-4 border-t border-white/10">
-                  <p className="text-xs text-[#66FCF1] uppercase tracking-wider mb-2 flex items-center gap-2">
+                <div className="pt-4 border-t border-slate-200">
+                  <p className="text-xs text-blue-600 uppercase tracking-wider mb-2 flex items-center gap-2">
                     <ImageIcon className="w-4 h-4" />
                     Accountant Approval Proof
                   </p>
@@ -1302,16 +1302,16 @@ export default function Transactions() {
                     <img 
                       src={`data:image/png;base64,${viewTransaction.accountant_proof_image}`} 
                       alt="Accountant approval proof" 
-                      className="w-full max-h-48 object-contain rounded border border-[#66FCF1]/30 bg-[#0B0C10] cursor-pointer hover:border-[#66FCF1]"
+                      className="w-full max-h-48 object-contain rounded border border-[#66FCF1]/30 bg-slate-50 cursor-pointer hover:border-[#66FCF1]"
                       onClick={() => window.open(`data:image/png;base64,${viewTransaction.accountant_proof_image}`, '_blank')}
                       data-testid="accountant-proof-thumbnail"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded">
-                      <span className="text-white text-sm">Click to view full size</span>
+                      <span className="text-slate-800 text-sm">Click to view full size</span>
                     </div>
                   </div>
                   {viewTransaction.proof_uploaded_at && (
-                    <p className="text-xs text-[#C5C6C7] mt-2">
+                    <p className="text-xs text-slate-500 mt-2">
                       Uploaded: {formatDate(viewTransaction.proof_uploaded_at)} by {viewTransaction.proof_uploaded_by_name}
                     </p>
                   )}
@@ -1319,7 +1319,7 @@ export default function Transactions() {
               )}
               {/* Vendor Proof - For Withdrawals */}
               {viewTransaction.vendor_proof_image && (
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-slate-200">
                   <p className="text-xs text-orange-400 uppercase tracking-wider mb-2 flex items-center gap-2">
                     <ImageIcon className="w-4 h-4" />
                     Vendor Payment Proof
@@ -1328,31 +1328,31 @@ export default function Transactions() {
                     <img 
                       src={`data:image/png;base64,${viewTransaction.vendor_proof_image}`} 
                       alt="Vendor payment proof" 
-                      className="w-full max-h-48 object-contain rounded border border-orange-400/30 bg-[#0B0C10] cursor-pointer hover:border-orange-400"
+                      className="w-full max-h-48 object-contain rounded border border-orange-400/30 bg-slate-50 cursor-pointer hover:border-orange-400"
                       onClick={() => window.open(`data:image/png;base64,${viewTransaction.vendor_proof_image}`, '_blank')}
                       data-testid="vendor-proof-thumbnail"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded">
-                      <span className="text-white text-sm">Click to view full size</span>
+                      <span className="text-slate-800 text-sm">Click to view full size</span>
                     </div>
                   </div>
                   {viewTransaction.vendor_proof_uploaded_at && (
-                    <p className="text-xs text-[#C5C6C7] mt-2">
+                    <p className="text-xs text-slate-500 mt-2">
                       Uploaded: {formatDate(viewTransaction.vendor_proof_uploaded_at)} by {viewTransaction.vendor_proof_uploaded_by_name}
                     </p>
                   )}
                 </div>
               )}
               {viewTransaction.rejection_reason && (
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-slate-200">
                   <p className="text-xs text-red-400 uppercase tracking-wider mb-1">Rejection Reason</p>
-                  <p className="text-white">{viewTransaction.rejection_reason}</p>
+                  <p className="text-slate-800">{viewTransaction.rejection_reason}</p>
                 </div>
               )}
               {viewTransaction.processed_at && (
-                <div className="pt-4 border-t border-white/10">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Processed</p>
-                  <p className="text-white text-sm">{formatDate(viewTransaction.processed_at)} by {viewTransaction.processed_by_name}</p>
+                <div className="pt-4 border-t border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Processed</p>
+                  <p className="text-slate-800 text-sm">{formatDate(viewTransaction.processed_at)} by {viewTransaction.processed_by_name}</p>
                 </div>
               )}
             </div>
