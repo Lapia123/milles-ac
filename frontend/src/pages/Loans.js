@@ -279,6 +279,8 @@ export default function Loans() {
         amount: parseFloat(loanForm.amount),
         interest_rate: parseFloat(loanForm.interest_rate) || 0,
         installment_amount: loanForm.installment_amount ? parseFloat(loanForm.installment_amount) : null,
+        num_installments: loanForm.num_installments ? parseInt(loanForm.num_installments) : null,
+        vendor_id: loanForm.vendor_id || null,
       };
       
       const response = await fetch(`${API_URL}/api/loans`, {
@@ -294,13 +296,80 @@ export default function Loans() {
         resetLoanForm();
         fetchLoans();
         fetchSummary();
+        fetchDashboard();
         fetchTreasuryAccounts();
+        fetchLoanTransactions();
       } else {
         const error = await response.json();
         toast.error(error.detail || 'Failed to create loan');
       }
     } catch (error) {
       toast.error('Failed to create loan');
+    }
+  };
+
+  const handleSwapLoan = async () => {
+    if (!swapForm.target_borrower_name) {
+      toast.error('Please enter new borrower name');
+      return;
+    }
+    
+    try {
+      const payload = {
+        target_vendor_id: swapForm.target_vendor_id || null,
+        target_borrower_name: swapForm.target_borrower_name,
+        reason: swapForm.reason,
+        adjust_terms: swapForm.adjust_terms,
+        new_interest_rate: swapForm.adjust_terms && swapForm.new_interest_rate ? parseFloat(swapForm.new_interest_rate) : null,
+        new_due_date: swapForm.adjust_terms ? swapForm.new_due_date : null,
+      };
+      
+      const response = await fetch(`${API_URL}/api/loans/${selectedLoan.loan_id}/swap`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        toast.success('Loan swapped successfully');
+        setIsSwapDialogOpen(false);
+        setSwapForm({ target_vendor_id: '', target_borrower_name: '', reason: '', adjust_terms: false, new_interest_rate: '', new_due_date: '' });
+        fetchLoans();
+        fetchDashboard();
+        fetchLoanTransactions();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to swap loan');
+      }
+    } catch (error) {
+      toast.error('Failed to swap loan');
+    }
+  };
+
+  const handleWriteOff = async (loanId) => {
+    if (!window.confirm('Are you sure you want to write off this loan as bad debt? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API_URL}/api/loans/${loanId}/write-off?reason=Bad%20debt`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        toast.success('Loan written off successfully');
+        fetchLoans();
+        fetchDashboard();
+        fetchLoanTransactions();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to write off loan');
+      }
+    } catch (error) {
+      toast.error('Failed to write off loan');
     }
   };
 
