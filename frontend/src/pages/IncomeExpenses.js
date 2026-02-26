@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -21,29 +21,13 @@ import { ScrollArea } from '../components/ui/scroll-area';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import {
-  TrendingUp, TrendingDown, Plus, DollarSign, Calendar,
-  Filter, Trash2, BarChart3, ArrowUpRight, ArrowDownRight,
+  TrendingUp, TrendingDown, Plus, DollarSign,
+  Trash2, BarChart3, ArrowUpRight, ArrowDownRight,
   Wallet, X, Store, ArrowRightLeft, Clock, Search, Building2,
+  Users, FolderTree, Pencil, User,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
-
-const incomeCategories = [
-  { value: 'commission', label: 'Commission Income' },
-  { value: 'service_fee', label: 'Service Fees' },
-  { value: 'interest', label: 'Interest Income' },
-  { value: 'other', label: 'Other Income' },
-];
-
-const expenseCategories = [
-  { value: 'bank_fee', label: 'Bank Fees' },
-  { value: 'transfer_charge', label: 'Transfer Charges' },
-  { value: 'vendor_payment', label: 'Exchanger Payments' },
-  { value: 'operational', label: 'Operational Costs' },
-  { value: 'marketing', label: 'Marketing' },
-  { value: 'software', label: 'Software/Subscriptions' },
-  { value: 'other', label: 'Other Expenses' },
-];
 
 const currencies = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY', 'USDT'];
 
@@ -51,7 +35,10 @@ export default function IncomeExpenses() {
   const { user } = useAuth();
   const [entries, setEntries] = useState([]);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
-  const [vendors, setExchangers] = useState([]);
+  const [exchangers, setExchangers] = useState([]);
+  const [vendorSuppliers, setVendorSuppliers] = useState([]);
+  const [ieCategories, setIeCategories] = useState([]);
+  const [clients, setClients] = useState([]);
   const [borrowers, setBorrowers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -62,16 +49,34 @@ export default function IncomeExpenses() {
   const [convertForm, setConvertForm] = useState({ borrower_name: '', interest_rate: 0, due_date: '', notes: '' });
   const [borrowerSearch, setBorrowerSearch] = useState('');
   const [showAddBorrower, setShowAddBorrower] = useState(false);
+  
+  // Vendor Suppliers state
+  const [vendorSupplierDialog, setVendorSupplierDialog] = useState({ open: false, mode: 'create', data: null });
+  const [vendorSupplierForm, setVendorSupplierForm] = useState({
+    name: '', contact_person: '', email: '', phone: '', address: '',
+    bank_name: '', bank_account_name: '', bank_account_number: '', bank_ifsc: '', bank_branch: '', notes: ''
+  });
+  
+  // IE Categories state
+  const [categoryDialog, setCategoryDialog] = useState({ open: false, mode: 'create', data: null });
+  const [categoryForm, setCategoryForm] = useState({ name: '', category_type: 'both', description: '' });
 
   const [filters, setFilters] = useState({ startDate: '', endDate: '', category: '', treasuryAccountId: '' });
 
   const [formData, setFormData] = useState({
     entry_type: 'income', category: '', custom_category: '', amount: '',
     currency: 'USD', treasury_account_id: '', vendor_id: '',
+    vendor_supplier_id: '', client_id: '', ie_category_id: '',
     vendor_bank_account_name: '', vendor_bank_account_number: '',
     vendor_bank_ifsc: '', vendor_bank_branch: '',
     description: '', reference: '', date: new Date().toISOString().split('T')[0],
   });
+  
+  // Search states for dropdowns
+  const [exchangerSearch, setExchangerSearch] = useState('');
+  const [vendorSearch, setVendorSearch] = useState('');
+  const [clientSearch, setClientSearch] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
 
   const isAdmin = user?.role === 'admin';
 
@@ -83,7 +88,7 @@ export default function IncomeExpenses() {
   const fetchEntries = useCallback(async () => {
     try {
       let url = `${API_URL}/api/income-expenses?limit=200`;
-      if (activeTab !== 'all' && activeTab !== 'reports') url += `&entry_type=${activeTab}`;
+      if (activeTab !== 'all' && activeTab !== 'reports' && activeTab !== 'vendors' && activeTab !== 'categories') url += `&entry_type=${activeTab}`;
       if (filters.startDate) url += `&start_date=${filters.startDate}`;
       if (filters.endDate) url += `&end_date=${filters.endDate}`;
       if (filters.category) url += `&category=${filters.category}`;
@@ -108,6 +113,27 @@ export default function IncomeExpenses() {
     try {
       const response = await fetch(`${API_URL}/api/vendors`, { headers: getAuthHeaders() });
       if (response.ok) setExchangers(await response.json());
+    } catch {}
+  };
+  
+  const fetchVendorSuppliers = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/vendor-suppliers`, { headers: getAuthHeaders() });
+      if (response.ok) setVendorSuppliers(await response.json());
+    } catch {}
+  };
+  
+  const fetchIeCategories = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/ie-categories?active_only=false`, { headers: getAuthHeaders() });
+      if (response.ok) setIeCategories(await response.json());
+    } catch {}
+  };
+  
+  const fetchClients = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/clients?limit=500`, { headers: getAuthHeaders() });
+      if (response.ok) setClients(await response.json());
     } catch {}
   };
 
@@ -141,17 +167,27 @@ export default function IncomeExpenses() {
     } catch {}
   };
 
-  useEffect(() => { fetchEntries(); fetchTreasuryAccounts(); fetchExchangers(); fetchBorrowers(); fetchSummary(); fetchMonthlyData(); }, []);
+  useEffect(() => { 
+    fetchEntries(); fetchTreasuryAccounts(); fetchExchangers(); 
+    fetchVendorSuppliers(); fetchIeCategories(); fetchClients();
+    fetchBorrowers(); fetchSummary(); fetchMonthlyData(); 
+  }, []);
+  
   useEffect(() => { fetchEntries(); fetchSummary(); }, [fetchEntries]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.category) { toast.error('Please select a category'); return; }
+    if (!formData.category && !formData.ie_category_id) { toast.error('Please select a category'); return; }
     if (!formData.amount || parseFloat(formData.amount) <= 0) { toast.error('Please enter a valid amount'); return; }
     if (!formData.treasury_account_id && !formData.vendor_id) { toast.error('Please select an account or exchanger'); return; }
 
     try {
       const payload = { ...formData, amount: parseFloat(formData.amount) };
+      // Clean up empty fields
+      Object.keys(payload).forEach(key => {
+        if (payload[key] === '' || payload[key] === null) delete payload[key];
+      });
+      
       if (!payload.vendor_id) {
         delete payload.vendor_id;
         delete payload.vendor_bank_account_name;
@@ -159,9 +195,9 @@ export default function IncomeExpenses() {
         delete payload.vendor_bank_ifsc;
         delete payload.vendor_bank_branch;
       } else {
-        // When exchanger is selected, clear treasury_account_id
         delete payload.treasury_account_id;
       }
+      
       const response = await fetch(`${API_URL}/api/income-expenses`, {
         method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload),
       });
@@ -208,15 +244,100 @@ export default function IncomeExpenses() {
       }
     } catch { toast.error('Conversion failed'); }
   };
+  
+  // Vendor Supplier CRUD
+  const handleVendorSupplierSubmit = async (e) => {
+    e.preventDefault();
+    if (!vendorSupplierForm.name) { toast.error('Name is required'); return; }
+    
+    try {
+      const method = vendorSupplierDialog.mode === 'edit' ? 'PUT' : 'POST';
+      const url = vendorSupplierDialog.mode === 'edit' 
+        ? `${API_URL}/api/vendor-suppliers/${vendorSupplierDialog.data.supplier_id}`
+        : `${API_URL}/api/vendor-suppliers`;
+      
+      const response = await fetch(url, {
+        method, headers: getAuthHeaders(), body: JSON.stringify(vendorSupplierForm)
+      });
+      
+      if (response.ok) {
+        toast.success(vendorSupplierDialog.mode === 'edit' ? 'Vendor updated' : 'Vendor created');
+        setVendorSupplierDialog({ open: false, mode: 'create', data: null });
+        resetVendorSupplierForm();
+        fetchVendorSuppliers();
+      } else {
+        const err = await response.json();
+        toast.error(err.detail || 'Failed to save vendor');
+      }
+    } catch { toast.error('Failed to save vendor'); }
+  };
+  
+  const handleDeleteVendorSupplier = async (supplierId) => {
+    if (!window.confirm('Delete this vendor?')) return;
+    try {
+      const response = await fetch(`${API_URL}/api/vendor-suppliers/${supplierId}`, { method: 'DELETE', headers: getAuthHeaders() });
+      if (response.ok) { toast.success('Vendor deleted'); fetchVendorSuppliers(); }
+      else { const err = await response.json(); toast.error(err.detail || 'Delete failed'); }
+    } catch { toast.error('Delete failed'); }
+  };
+  
+  // IE Category CRUD
+  const handleCategorySubmit = async (e) => {
+    e.preventDefault();
+    if (!categoryForm.name) { toast.error('Name is required'); return; }
+    
+    try {
+      const method = categoryDialog.mode === 'edit' ? 'PUT' : 'POST';
+      const url = categoryDialog.mode === 'edit' 
+        ? `${API_URL}/api/ie-categories/${categoryDialog.data.category_id}`
+        : `${API_URL}/api/ie-categories`;
+      
+      const response = await fetch(url, {
+        method, headers: getAuthHeaders(), body: JSON.stringify(categoryForm)
+      });
+      
+      if (response.ok) {
+        toast.success(categoryDialog.mode === 'edit' ? 'Category updated' : 'Category created');
+        setCategoryDialog({ open: false, mode: 'create', data: null });
+        resetCategoryForm();
+        fetchIeCategories();
+      } else {
+        const err = await response.json();
+        toast.error(err.detail || 'Failed to save category');
+      }
+    } catch { toast.error('Failed to save category'); }
+  };
+  
+  const handleDeleteCategory = async (categoryId) => {
+    if (!window.confirm('Delete this category?')) return;
+    try {
+      const response = await fetch(`${API_URL}/api/ie-categories/${categoryId}`, { method: 'DELETE', headers: getAuthHeaders() });
+      if (response.ok) { toast.success('Category deleted'); fetchIeCategories(); }
+      else { const err = await response.json(); toast.error(err.detail || 'Delete failed'); }
+    } catch { toast.error('Delete failed'); }
+  };
 
   const resetForm = () => {
     setFormData({
       entry_type: 'income', category: '', custom_category: '', amount: '',
       currency: 'USD', treasury_account_id: '', vendor_id: '',
+      vendor_supplier_id: '', client_id: '', ie_category_id: '',
       vendor_bank_account_name: '', vendor_bank_account_number: '',
       vendor_bank_ifsc: '', vendor_bank_branch: '',
       description: '', reference: '', date: new Date().toISOString().split('T')[0],
     });
+    setExchangerSearch(''); setVendorSearch(''); setClientSearch(''); setCategorySearch('');
+  };
+  
+  const resetVendorSupplierForm = () => {
+    setVendorSupplierForm({
+      name: '', contact_person: '', email: '', phone: '', address: '',
+      bank_name: '', bank_account_name: '', bank_account_number: '', bank_ifsc: '', bank_branch: '', notes: ''
+    });
+  };
+  
+  const resetCategoryForm = () => {
+    setCategoryForm({ name: '', category_type: 'both', description: '' });
   };
 
   const clearFilters = () => setFilters({ startDate: '', endDate: '', category: '', treasuryAccountId: '' });
@@ -226,14 +347,38 @@ export default function IncomeExpenses() {
     return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
-  const getCategoryLabel = (category, customCategory) => {
-    if (customCategory) return customCategory;
-    const allCats = [...incomeCategories, ...expenseCategories];
-    const found = allCats.find(c => c.value === category);
-    return found ? found.label : category;
+  const getCategoryLabel = (entry) => {
+    if (entry.ie_category_name) return entry.ie_category_name;
+    if (entry.custom_category) return entry.custom_category;
+    return entry.category?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || '-';
   };
 
-  const currentCategories = formData.entry_type === 'income' ? incomeCategories : expenseCategories;
+  // Default categories (used if no custom categories exist)
+  const defaultIncomeCategories = [
+    { value: 'commission', label: 'Commission Income' },
+    { value: 'service_fee', label: 'Service Fees' },
+    { value: 'interest', label: 'Interest Income' },
+    { value: 'other', label: 'Other Income' },
+  ];
+
+  const defaultExpenseCategories = [
+    { value: 'bank_fee', label: 'Bank Fees' },
+    { value: 'transfer_charge', label: 'Transfer Charges' },
+    { value: 'vendor_payment', label: 'Exchanger Payments' },
+    { value: 'operational', label: 'Operational Costs' },
+    { value: 'marketing', label: 'Marketing' },
+    { value: 'software', label: 'Software/Subscriptions' },
+    { value: 'other', label: 'Other Expenses' },
+  ];
+  
+  // Get categories based on entry type
+  const getAvailableCategories = () => {
+    const customCats = ieCategories.filter(c => 
+      c.is_active && (c.category_type === formData.entry_type || c.category_type === 'both')
+    );
+    if (customCats.length > 0) return customCats;
+    return formData.entry_type === 'income' ? defaultIncomeCategories : defaultExpenseCategories;
+  };
 
   return (
     <div className="space-y-6 animate-fade-in" data-testid="income-expenses-page">
@@ -293,13 +438,19 @@ export default function IncomeExpenses() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white border border-slate-200">
           <TabsTrigger value="all" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">All Entries</TabsTrigger>
-          <TabsTrigger value="income" className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400">Income</TabsTrigger>
-          <TabsTrigger value="expense" className="data-[state=active]:bg-red-500/20 data-[state=active]:text-red-400">Expenses</TabsTrigger>
+          <TabsTrigger value="income" className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-600">Income</TabsTrigger>
+          <TabsTrigger value="expense" className="data-[state=active]:bg-red-500/20 data-[state=active]:text-red-600">Expenses</TabsTrigger>
+          <TabsTrigger value="vendors" className="data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-600">
+            <Users className="w-4 h-4 mr-1" /> Vendors
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-600">
+            <FolderTree className="w-4 h-4 mr-1" /> Categories
+          </TabsTrigger>
           <TabsTrigger value="reports" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">Reports</TabsTrigger>
         </TabsList>
 
-        {/* Filters */}
-        {activeTab !== 'reports' && (
+        {/* Filters for entry tabs */}
+        {['all', 'income', 'expense'].includes(activeTab) && (
           <Card className="bg-white border-slate-200 mt-4">
             <CardContent className="p-4">
               <div className="flex flex-wrap items-end gap-4">
@@ -329,6 +480,7 @@ export default function IncomeExpenses() {
           </Card>
         )}
 
+        {/* Entry Tabs Content */}
         {['all', 'income', 'expense'].map(tabVal => (
           <TabsContent key={tabVal} value={tabVal} className="mt-4">
             <EntriesTable entries={entries} loading={loading} onDelete={handleDelete} isAdmin={isAdmin}
@@ -336,6 +488,158 @@ export default function IncomeExpenses() {
               onConvertToLoan={(entry) => { setConvertDialog({ open: true, entry }); setConvertForm({ ...convertForm, borrower_name: entry.description || '', treasury_account_id: entry.treasury_account_id || '' }); }} />
           </TabsContent>
         ))}
+        
+        {/* Vendors Tab */}
+        <TabsContent value="vendors" className="mt-4">
+          <Card className="bg-white border-slate-200">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
+                <Users className="w-5 h-5 text-purple-500" /> Service Vendors (Suppliers)
+              </CardTitle>
+              <Button onClick={() => { resetVendorSupplierForm(); setVendorSupplierDialog({ open: true, mode: 'create', data: null }); }} className="bg-purple-500 hover:bg-purple-600 text-white" data-testid="add-vendor-btn">
+                <Plus className="w-4 h-4 mr-2" /> Add Vendor
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-slate-500 mb-4">Manage vendors for services like rent, utilities, office supplies, etc. These are different from Exchangers (money partners).</p>
+              {vendorSuppliers.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                  <p className="text-slate-500">No vendors yet</p>
+                  <p className="text-sm text-slate-400 mt-1">Click "Add Vendor" to create your first service vendor</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-200">
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Name</TableHead>
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Contact</TableHead>
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Bank Details</TableHead>
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs w-24">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {vendorSuppliers.map((v) => (
+                      <TableRow key={v.supplier_id} className="border-slate-200 hover:bg-slate-50">
+                        <TableCell>
+                          <div className="font-medium text-slate-800">{v.name}</div>
+                          {v.notes && <p className="text-xs text-slate-400 mt-0.5">{v.notes}</p>}
+                        </TableCell>
+                        <TableCell>
+                          {v.contact_person && <p className="text-sm text-slate-800">{v.contact_person}</p>}
+                          {v.email && <p className="text-xs text-slate-500">{v.email}</p>}
+                          {v.phone && <p className="text-xs text-slate-500">{v.phone}</p>}
+                        </TableCell>
+                        <TableCell>
+                          {v.bank_name && <p className="text-sm text-slate-800">{v.bank_name}</p>}
+                          {v.bank_account_number && <p className="text-xs text-slate-500">A/C: {v.bank_account_number}</p>}
+                          {v.bank_ifsc && <p className="text-xs text-slate-500">IFSC: {v.bank_ifsc}</p>}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={v.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}>
+                            {v.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => {
+                              setVendorSupplierForm({
+                                name: v.name || '', contact_person: v.contact_person || '', email: v.email || '',
+                                phone: v.phone || '', address: v.address || '', bank_name: v.bank_name || '',
+                                bank_account_name: v.bank_account_name || '', bank_account_number: v.bank_account_number || '',
+                                bank_ifsc: v.bank_ifsc || '', bank_branch: v.bank_branch || '', notes: v.notes || ''
+                              });
+                              setVendorSupplierDialog({ open: true, mode: 'edit', data: v });
+                            }} className="text-blue-600 hover:bg-blue-50 h-8 w-8 p-0">
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteVendorSupplier(v.supplier_id)} className="text-red-500 hover:bg-red-50 h-8 w-8 p-0">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Categories Tab */}
+        <TabsContent value="categories" className="mt-4">
+          <Card className="bg-white border-slate-200">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
+                <FolderTree className="w-5 h-5 text-amber-500" /> Account Categories
+              </CardTitle>
+              <Button onClick={() => { resetCategoryForm(); setCategoryDialog({ open: true, mode: 'create', data: null }); }} className="bg-amber-500 hover:bg-amber-600 text-white" data-testid="add-category-btn">
+                <Plus className="w-4 h-4 mr-2" /> Add Category
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-slate-500 mb-4">Create custom categories to better organize your income and expenses.</p>
+              {ieCategories.length === 0 ? (
+                <div className="text-center py-12">
+                  <FolderTree className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                  <p className="text-slate-500">No custom categories yet</p>
+                  <p className="text-sm text-slate-400 mt-1">Click "Add Category" to create your first category</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-200">
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Name</TableHead>
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Description</TableHead>
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs w-24">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {ieCategories.map((c) => (
+                      <TableRow key={c.category_id} className="border-slate-200 hover:bg-slate-50">
+                        <TableCell className="font-medium text-slate-800">{c.name}</TableCell>
+                        <TableCell>
+                          <Badge className={
+                            c.category_type === 'income' ? 'bg-green-100 text-green-700' :
+                            c.category_type === 'expense' ? 'bg-red-100 text-red-700' :
+                            'bg-blue-100 text-blue-700'
+                          }>
+                            {c.category_type === 'both' ? 'Income & Expense' : c.category_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-slate-500 text-sm">{c.description || '-'}</TableCell>
+                        <TableCell>
+                          <Badge className={c.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}>
+                            {c.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => {
+                              setCategoryForm({
+                                name: c.name || '', category_type: c.category_type || 'both', description: c.description || ''
+                              });
+                              setCategoryDialog({ open: true, mode: 'edit', data: c });
+                            }} className="text-blue-600 hover:bg-blue-50 h-8 w-8 p-0">
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteCategory(c.category_id)} className="text-red-500 hover:bg-red-50 h-8 w-8 p-0">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Reports Tab */}
         <TabsContent value="reports" className="mt-4 space-y-6">
@@ -413,38 +717,69 @@ export default function IncomeExpenses() {
             {/* Entry Type Toggle */}
             <div className="flex gap-2">
               <Button type="button" variant={formData.entry_type === 'income' ? 'default' : 'outline'}
-                onClick={() => setFormData({ ...formData, entry_type: 'income', category: '' })}
-                className={formData.entry_type === 'income' ? 'bg-green-500 hover:bg-green-600 text-slate-800 flex-1' : 'border-slate-200 text-slate-500 hover:bg-slate-100 flex-1'}
+                onClick={() => setFormData({ ...formData, entry_type: 'income', category: '', ie_category_id: '' })}
+                className={formData.entry_type === 'income' ? 'bg-green-500 hover:bg-green-600 text-white flex-1' : 'border-slate-200 text-slate-500 hover:bg-slate-100 flex-1'}
                 data-testid="toggle-income">
                 <TrendingUp className="w-4 h-4 mr-2" />Income
               </Button>
               <Button type="button" variant={formData.entry_type === 'expense' ? 'default' : 'outline'}
-                onClick={() => setFormData({ ...formData, entry_type: 'expense', category: '' })}
-                className={formData.entry_type === 'expense' ? 'bg-red-500 hover:bg-red-600 text-slate-800 flex-1' : 'border-slate-200 text-slate-500 hover:bg-slate-100 flex-1'}
+                onClick={() => setFormData({ ...formData, entry_type: 'expense', category: '', ie_category_id: '' })}
+                className={formData.entry_type === 'expense' ? 'bg-red-500 hover:bg-red-600 text-white flex-1' : 'border-slate-200 text-slate-500 hover:bg-slate-100 flex-1'}
                 data-testid="toggle-expense">
                 <TrendingDown className="w-4 h-4 mr-2" />Expense
               </Button>
             </div>
 
-            {/* Category */}
+            {/* Category Selection - Searchable */}
             <div className="space-y-2">
               <Label className="text-slate-500 text-xs uppercase tracking-wider">Category *</Label>
-              <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="entry-category"><SelectValue placeholder="Select category" /></SelectTrigger>
-                <SelectContent className="bg-white border-slate-200">
-                  {currentCategories.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value} className="text-slate-800 hover:bg-slate-100">{cat.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {formData.category === 'other' && (
-              <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Custom Category</Label>
-                <Input value={formData.custom_category} onChange={(e) => setFormData({ ...formData, custom_category: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]" placeholder="Enter custom category name" />
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  value={categorySearch}
+                  onChange={(e) => setCategorySearch(e.target.value)}
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] pl-9"
+                  placeholder="Search category..."
+                  data-testid="entry-category-search"
+                />
               </div>
-            )}
+              <div className="max-h-32 overflow-y-auto border border-slate-200 rounded-md bg-slate-50">
+                {/* Add New Category Option */}
+                <div
+                  className="px-3 py-2 cursor-pointer hover:bg-amber-50 text-amber-600 flex items-center gap-2 border-b border-slate-200"
+                  onClick={() => { setCategoryDialog({ open: true, mode: 'create', data: null }); }}
+                >
+                  <Plus className="w-4 h-4" /> Add new category
+                </div>
+                {/* Custom Categories */}
+                {ieCategories
+                  .filter(c => c.is_active && (c.category_type === formData.entry_type || c.category_type === 'both'))
+                  .filter(c => c.name.toLowerCase().includes(categorySearch.toLowerCase()))
+                  .map(c => (
+                    <div
+                      key={c.category_id}
+                      className={`px-3 py-2 cursor-pointer hover:bg-slate-100 ${formData.ie_category_id === c.category_id ? 'bg-blue-50 text-blue-700' : 'text-slate-700'}`}
+                      onClick={() => { setFormData({ ...formData, ie_category_id: c.category_id, category: '' }); setCategorySearch(c.name); }}
+                    >
+                      <FolderTree className="w-3 h-3 inline mr-2 text-amber-500" />{c.name}
+                    </div>
+                  ))
+                }
+                {/* Default Categories */}
+                {(formData.entry_type === 'income' ? defaultIncomeCategories : defaultExpenseCategories)
+                  .filter(c => c.label.toLowerCase().includes(categorySearch.toLowerCase()))
+                  .map(c => (
+                    <div
+                      key={c.value}
+                      className={`px-3 py-2 cursor-pointer hover:bg-slate-100 ${formData.category === c.value ? 'bg-blue-50 text-blue-700' : 'text-slate-700'}`}
+                      onClick={() => { setFormData({ ...formData, category: c.value, ie_category_id: '' }); setCategorySearch(c.label); }}
+                    >
+                      {c.label}
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
 
             {/* Amount & Currency */}
             <div className="grid grid-cols-2 gap-4">
@@ -477,7 +812,7 @@ export default function IncomeExpenses() {
                   }
                 }}>
                 <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="entry-account">
-                  <SelectValue placeholder="Select account or vendor" />
+                  <SelectValue placeholder="Select account or exchanger" />
                 </SelectTrigger>
                 <SelectContent className="bg-white border-slate-200">
                   <div className="px-2 py-1 text-xs text-blue-600 font-semibold uppercase tracking-wider">Treasury Accounts</div>
@@ -486,12 +821,12 @@ export default function IncomeExpenses() {
                       {acc.account_name} ({acc.balance?.toLocaleString()} {acc.currency})
                     </SelectItem>
                   ))}
-                  {vendors.length > 0 && (
+                  {exchangers.length > 0 && (
                     <>
-                      <div className="px-2 py-1 text-xs text-amber-400 font-semibold uppercase tracking-wider mt-2 border-t border-slate-200 pt-2">Exchangers (Requires Approval)</div>
-                      {vendors.map((v) => (
+                      <div className="px-2 py-1 text-xs text-amber-500 font-semibold uppercase tracking-wider mt-2 border-t border-slate-200 pt-2">Exchangers (Requires Approval)</div>
+                      {exchangers.map((v) => (
                         <SelectItem key={v.vendor_id} value={`vendor_${v.vendor_id}`} className="text-slate-800 hover:bg-slate-100">
-                          <span className="flex items-center gap-2"><Store className="w-3 h-3 text-amber-400" />{v.vendor_name}</span>
+                          <span className="flex items-center gap-2"><Store className="w-3 h-3 text-amber-500" />{v.vendor_name}</span>
                         </SelectItem>
                       ))}
                     </>
@@ -503,7 +838,7 @@ export default function IncomeExpenses() {
             {/* Exchanger Bank Account (when vendor selected) */}
             {formData.vendor_id && (
               <>
-                <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded text-xs text-amber-400">
+                <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded text-xs text-amber-600">
                   <Clock className="w-3 h-3 inline mr-1" /> This entry will be sent to exchanger for approval before treasury is updated
                 </div>
                 <div className="space-y-3 p-3 bg-slate-50/50 border border-slate-200 rounded">
@@ -511,24 +846,71 @@ export default function IncomeExpenses() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <Label className="text-slate-400 text-[10px] uppercase">Account Holder Name</Label>
-                      <Input value={formData.vendor_bank_account_name} onChange={(e) => setFormData({ ...formData, vendor_bank_account_name: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] h-8 text-sm" placeholder="Name" data-testid="vendor-bank-name" />
+                      <Input value={formData.vendor_bank_account_name} onChange={(e) => setFormData({ ...formData, vendor_bank_account_name: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] h-8 text-sm" placeholder="Name" />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-slate-400 text-[10px] uppercase">Account Number</Label>
-                      <Input value={formData.vendor_bank_account_number} onChange={(e) => setFormData({ ...formData, vendor_bank_account_number: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] h-8 text-sm" placeholder="Account number" data-testid="vendor-bank-number" />
+                      <Input value={formData.vendor_bank_account_number} onChange={(e) => setFormData({ ...formData, vendor_bank_account_number: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] h-8 text-sm" placeholder="Account number" />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-slate-400 text-[10px] uppercase">IFSC Code</Label>
-                      <Input value={formData.vendor_bank_ifsc} onChange={(e) => setFormData({ ...formData, vendor_bank_ifsc: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] h-8 text-sm" placeholder="IFSC code" data-testid="vendor-bank-ifsc" />
+                      <Input value={formData.vendor_bank_ifsc} onChange={(e) => setFormData({ ...formData, vendor_bank_ifsc: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] h-8 text-sm" placeholder="IFSC code" />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-slate-400 text-[10px] uppercase">Branch</Label>
-                      <Input value={formData.vendor_bank_branch} onChange={(e) => setFormData({ ...formData, vendor_bank_branch: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] h-8 text-sm" placeholder="Branch name" data-testid="vendor-bank-branch" />
+                      <Input value={formData.vendor_bank_branch} onChange={(e) => setFormData({ ...formData, vendor_bank_branch: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] h-8 text-sm" placeholder="Branch name" />
                     </div>
                   </div>
                 </div>
               </>
             )}
+            
+            {/* Linked Entities (Client, Vendor Supplier) - Optional */}
+            <div className="space-y-2 border-t border-slate-200 pt-4">
+              <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Link to (Optional)</p>
+              <div className="grid grid-cols-2 gap-3">
+                {/* Client */}
+                <div className="space-y-1">
+                  <Label className="text-slate-400 text-[10px] uppercase flex items-center gap-1"><User className="w-3 h-3" />Client</Label>
+                  <Select value={formData.client_id || 'none'} onValueChange={(v) => setFormData({ ...formData, client_id: v === 'none' ? '' : v })}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800 h-8 text-sm">
+                      <SelectValue placeholder="Select client" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-slate-200 max-h-48">
+                      <SelectItem value="none" className="text-slate-400">None</SelectItem>
+                      {clients.map(c => (
+                        <SelectItem key={c.client_id} value={c.client_id} className="text-slate-800">
+                          {c.first_name} {c.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* Vendor Supplier */}
+                <div className="space-y-1">
+                  <Label className="text-slate-400 text-[10px] uppercase flex items-center gap-1"><Users className="w-3 h-3" />Vendor (Supplier)</Label>
+                  <Select value={formData.vendor_supplier_id || 'none'} onValueChange={(v) => setFormData({ ...formData, vendor_supplier_id: v === 'none' ? '' : v })}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800 h-8 text-sm">
+                      <SelectValue placeholder="Select vendor" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-slate-200 max-h-48">
+                      <SelectItem value="none" className="text-slate-400">None</SelectItem>
+                      <div 
+                        className="px-2 py-1.5 text-xs text-purple-600 cursor-pointer hover:bg-purple-50 flex items-center gap-1"
+                        onClick={() => setVendorSupplierDialog({ open: true, mode: 'create', data: null })}
+                      >
+                        <Plus className="w-3 h-3" /> Add new vendor
+                      </div>
+                      {vendorSuppliers.filter(v => v.status === 'active').map(v => (
+                        <SelectItem key={v.supplier_id} value={v.supplier_id} className="text-slate-800">
+                          {v.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
 
             {/* Date */}
             <div className="space-y-2">
@@ -551,7 +933,7 @@ export default function IncomeExpenses() {
             {/* Buttons */}
             <div className="flex justify-end gap-3 pt-4">
               <Button type="button" variant="outline" onClick={() => { setIsDialogOpen(false); resetForm(); }} className="border-slate-200 text-slate-500 hover:bg-slate-100">Cancel</Button>
-              <Button type="submit" className={formData.entry_type === 'income' ? 'bg-green-500 hover:bg-green-600 text-slate-800 font-bold uppercase tracking-wider' : 'bg-red-500 hover:bg-red-600 text-slate-800 font-bold uppercase tracking-wider'} data-testid="save-entry-btn">
+              <Button type="submit" className={formData.entry_type === 'income' ? 'bg-green-500 hover:bg-green-600 text-white font-bold uppercase tracking-wider' : 'bg-red-500 hover:bg-red-600 text-white font-bold uppercase tracking-wider'} data-testid="save-entry-btn">
                 {formData.vendor_id ? 'Send for Approval' : `Save ${formData.entry_type === 'income' ? 'Income' : 'Expense'}`}
               </Button>
             </div>
@@ -600,7 +982,6 @@ export default function IncomeExpenses() {
                     </div>
                     {(borrowerSearch || borrowers.length > 0) && (
                       <div className="absolute z-50 w-full mt-1 bg-slate-50 border border-slate-200 rounded-md max-h-40 overflow-y-auto">
-                        {/* Add New Option */}
                         <div 
                           className="px-3 py-2 cursor-pointer hover:bg-blue-100 text-blue-600 flex items-center gap-2 border-b border-slate-200"
                           onClick={() => {
@@ -610,7 +991,6 @@ export default function IncomeExpenses() {
                         >
                           <Plus className="w-4 h-4" /> Add new: "{borrowerSearch || 'New Company'}"
                         </div>
-                        {/* Existing Borrowers */}
                         {borrowers
                           .filter(b => b.toLowerCase().includes(borrowerSearch.toLowerCase()))
                           .map((borrower, idx) => (
@@ -676,6 +1056,124 @@ export default function IncomeExpenses() {
           )}
         </DialogContent>
       </Dialog>
+      
+      {/* Add/Edit Vendor Supplier Dialog */}
+      <Dialog open={vendorSupplierDialog.open} onOpenChange={(open) => { if (!open) { setVendorSupplierDialog({ open: false, mode: 'create', data: null }); resetVendorSupplierForm(); } }}>
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Users className="w-5 h-5 text-purple-500" /> {vendorSupplierDialog.mode === 'edit' ? 'Edit' : 'Add'} Vendor (Supplier)
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleVendorSupplierSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Name *</Label>
+              <Input value={vendorSupplierForm.name} onChange={(e) => setVendorSupplierForm({ ...vendorSupplierForm, name: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800" placeholder="e.g., Office Rent - Building A" data-testid="vendor-name" />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Contact Person</Label>
+                <Input value={vendorSupplierForm.contact_person} onChange={(e) => setVendorSupplierForm({ ...vendorSupplierForm, contact_person: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800" placeholder="John Smith" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Phone</Label>
+                <Input value={vendorSupplierForm.phone} onChange={(e) => setVendorSupplierForm({ ...vendorSupplierForm, phone: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800" placeholder="+1234567890" />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Email</Label>
+              <Input type="email" value={vendorSupplierForm.email} onChange={(e) => setVendorSupplierForm({ ...vendorSupplierForm, email: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800" placeholder="vendor@example.com" />
+            </div>
+            
+            <div className="border-t border-slate-200 pt-4">
+              <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-3">Bank Details</p>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-slate-400 text-[10px] uppercase">Bank Name</Label>
+                    <Input value={vendorSupplierForm.bank_name} onChange={(e) => setVendorSupplierForm({ ...vendorSupplierForm, bank_name: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 h-8 text-sm" placeholder="HSBC" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-slate-400 text-[10px] uppercase">Account Holder</Label>
+                    <Input value={vendorSupplierForm.bank_account_name} onChange={(e) => setVendorSupplierForm({ ...vendorSupplierForm, bank_account_name: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 h-8 text-sm" placeholder="Account holder name" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-slate-400 text-[10px] uppercase">Account Number</Label>
+                    <Input value={vendorSupplierForm.bank_account_number} onChange={(e) => setVendorSupplierForm({ ...vendorSupplierForm, bank_account_number: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 h-8 text-sm" placeholder="1234567890" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-slate-400 text-[10px] uppercase">IFSC Code</Label>
+                    <Input value={vendorSupplierForm.bank_ifsc} onChange={(e) => setVendorSupplierForm({ ...vendorSupplierForm, bank_ifsc: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 h-8 text-sm" placeholder="HSBC001" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-slate-400 text-[10px] uppercase">Branch</Label>
+                  <Input value={vendorSupplierForm.bank_branch} onChange={(e) => setVendorSupplierForm({ ...vendorSupplierForm, bank_branch: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 h-8 text-sm" placeholder="Main Branch" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Notes</Label>
+              <Textarea value={vendorSupplierForm.notes} onChange={(e) => setVendorSupplierForm({ ...vendorSupplierForm, notes: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800" rows={2} placeholder="Additional notes..." />
+            </div>
+            
+            <div className="flex justify-end gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={() => { setVendorSupplierDialog({ open: false, mode: 'create', data: null }); resetVendorSupplierForm(); }} className="border-slate-200 text-slate-500 hover:bg-slate-100">Cancel</Button>
+              <Button type="submit" className="bg-purple-500 hover:bg-purple-600 text-white font-bold" data-testid="save-vendor-btn">
+                {vendorSupplierDialog.mode === 'edit' ? 'Update' : 'Create'} Vendor
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Add/Edit Category Dialog */}
+      <Dialog open={categoryDialog.open} onOpenChange={(open) => { if (!open) { setCategoryDialog({ open: false, mode: 'create', data: null }); resetCategoryForm(); } }}>
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <FolderTree className="w-5 h-5 text-amber-500" /> {categoryDialog.mode === 'edit' ? 'Edit' : 'Add'} Category
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCategorySubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Name *</Label>
+              <Input value={categoryForm.name} onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800" placeholder="e.g., Office Supplies" data-testid="category-name" />
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Type</Label>
+              <Select value={categoryForm.category_type} onValueChange={(v) => setCategoryForm({ ...categoryForm, category_type: v })}>
+                <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-slate-200">
+                  <SelectItem value="both" className="text-slate-800">Both (Income & Expense)</SelectItem>
+                  <SelectItem value="income" className="text-slate-800">Income Only</SelectItem>
+                  <SelectItem value="expense" className="text-slate-800">Expense Only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Description</Label>
+              <Textarea value={categoryForm.description} onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800" rows={2} placeholder="Optional description..." />
+            </div>
+            
+            <div className="flex justify-end gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={() => { setCategoryDialog({ open: false, mode: 'create', data: null }); resetCategoryForm(); }} className="border-slate-200 text-slate-500 hover:bg-slate-100">Cancel</Button>
+              <Button type="submit" className="bg-amber-500 hover:bg-amber-600 text-white font-bold" data-testid="save-category-btn">
+                {categoryDialog.mode === 'edit' ? 'Update' : 'Create'} Category
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -704,9 +1202,9 @@ function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCate
   }
 
   const getStatusBadge = (entry) => {
-    if (entry.converted_to_loan) return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px]">Loan</Badge>;
-    if (entry.status === 'pending_vendor') return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px]"><Clock className="w-2.5 h-2.5 mr-1" />Pending</Badge>;
-    if (entry.status === 'rejected') return <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]">Rejected</Badge>;
+    if (entry.converted_to_loan) return <Badge className="bg-purple-500/20 text-purple-600 border-purple-500/30 text-[10px]">Loan</Badge>;
+    if (entry.status === 'pending_vendor') return <Badge className="bg-amber-500/20 text-amber-600 border-amber-500/30 text-[10px]"><Clock className="w-2.5 h-2.5 mr-1" />Pending</Badge>;
+    if (entry.status === 'rejected') return <Badge className="bg-red-500/20 text-red-600 border-red-500/30 text-[10px]">Rejected</Badge>;
     return null;
   };
 
@@ -721,7 +1219,7 @@ function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCate
                 <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
                 <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Category</TableHead>
                 <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Description</TableHead>
-                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Account / Exchanger</TableHead>
+                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Account / Linked</TableHead>
                 <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
                 <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
                 {isAdmin && <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs w-24">Actions</TableHead>}
@@ -736,29 +1234,27 @@ function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCate
                   <TableRow key={entry.entry_id} className={`border-slate-200 hover:bg-slate-100 border-l-4 ${borderColor} ${isConverted ? 'opacity-50' : ''}`} data-testid={`entry-row-${entry.entry_id}`}>
                     <TableCell className="text-slate-800 text-sm">{formatDate(entry.date)}</TableCell>
                     <TableCell>
-                      <Badge className={isIncome ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}>
+                      <Badge className={isIncome ? 'bg-green-500/20 text-green-600 border-green-500/30' : 'bg-red-500/20 text-red-600 border-red-500/30'}>
                         {isIncome ? <><ArrowDownRight className="w-3 h-3 mr-1" /> Income</> : <><ArrowUpRight className="w-3 h-3 mr-1" /> Expense</>}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-slate-500 text-sm">{getCategoryLabel(entry.category, entry.custom_category)}</TableCell>
+                    <TableCell className="text-slate-500 text-sm">{getCategoryLabel(entry)}</TableCell>
                     <TableCell className="text-slate-800 text-sm max-w-[200px] truncate">{entry.description || '-'}</TableCell>
                     <TableCell className="text-sm">
                       {entry.vendor_name ? (
                         <div>
-                          <span className="flex items-center gap-1 text-amber-400"><Store className="w-3 h-3" />{entry.vendor_name}</span>
+                          <span className="flex items-center gap-1 text-amber-500"><Store className="w-3 h-3" />{entry.vendor_name}</span>
                           {entry.vendor_bank_account_number && <p className="text-[10px] text-slate-400 mt-0.5">A/C: {entry.vendor_bank_account_number}</p>}
-                          {entry.vendor_bank_ifsc && <p className="text-[10px] text-slate-400">IFSC: {entry.vendor_bank_ifsc}</p>}
-                          {entry.vendor_bank_branch && <p className="text-[10px] text-slate-400">Branch: {entry.vendor_bank_branch}</p>}
-                          {entry.vendor_bank_account_name && <p className="text-[10px] text-slate-400">Name: {entry.vendor_bank_account_name}</p>}
-                          {/* Legacy single field fallback */}
-                          {entry.vendor_bank_account && !entry.vendor_bank_account_number && <p className="text-[10px] text-slate-400 mt-0.5">{entry.vendor_bank_account}</p>}
                         </div>
-                      ) : (
-                        <span className="text-blue-600">{entry.treasury_account_name || '-'}</span>
-                      )}
+                      ) : entry.treasury_account_name ? (
+                        <span className="text-blue-600">{entry.treasury_account_name}</span>
+                      ) : '-'}
+                      {/* Show linked entities */}
+                      {entry.client_name && <p className="text-[10px] text-slate-400 mt-0.5">Client: {entry.client_name}</p>}
+                      {entry.vendor_supplier_name && <p className="text-[10px] text-purple-500 mt-0.5">Vendor: {entry.vendor_supplier_name}</p>}
                     </TableCell>
                     <TableCell>{getStatusBadge(entry)}</TableCell>
-                    <TableCell className={`font-mono text-right ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
+                    <TableCell className={`font-mono text-right ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
                       {isIncome ? '+' : '-'}{entry.amount?.toLocaleString()} {entry.currency}
                     </TableCell>
                     {isAdmin && (
@@ -769,7 +1265,7 @@ function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCate
                               <ArrowRightLeft className="w-3.5 h-3.5" />
                             </Button>
                           )}
-                          <Button variant="ghost" size="sm" onClick={() => onDelete(entry.entry_id)} className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-7 px-2" data-testid={`delete-entry-${entry.entry_id}`}>
+                          <Button variant="ghost" size="sm" onClick={() => onDelete(entry.entry_id)} className="text-red-400 hover:text-red-500 hover:bg-red-500/10 h-7 px-2" data-testid={`delete-entry-${entry.entry_id}`}>
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>
