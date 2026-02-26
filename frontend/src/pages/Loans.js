@@ -52,15 +52,28 @@ import {
   Receipt,
   X,
   Download,
+  ArrowRightLeft,
+  Users,
+  BarChart3,
+  History,
+  Search,
+  FileX,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const currencies = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY', 'USDT'];
 
+const loanTypes = [
+  { value: 'short_term', label: 'Short Term (< 1 year)' },
+  { value: 'long_term', label: 'Long Term (> 1 year)' },
+  { value: 'credit_line', label: 'Credit Line (Revolving)' },
+];
+
 const repaymentModes = [
   { value: 'lump_sum', label: 'Lump Sum (Single Payment)' },
-  { value: 'installments', label: 'Installments' },
+  { value: 'emi', label: 'EMI (Monthly Installments)' },
+  { value: 'custom', label: 'Custom Schedule' },
 ];
 
 const installmentFrequencies = [
@@ -74,10 +87,15 @@ export default function Loans() {
   const { user } = useAuth();
   const [loans, setLoans] = useState([]);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [dashboard, setDashboard] = useState(null);
+  const [loanTransactions, setLoanTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mainTab, setMainTab] = useState('dashboard');
   const [isLoanDialogOpen, setIsLoanDialogOpen] = useState(false);
   const [isRepaymentDialogOpen, setIsRepaymentDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [isSwapDialogOpen, setIsSwapDialogOpen] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
   const [summary, setSummary] = useState(null);
