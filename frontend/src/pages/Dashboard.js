@@ -121,12 +121,12 @@ export default function Dashboard() {
     return <Badge className={`${styles[status] || 'status-pending'} text-xs uppercase`}>{status}</Badge>;
   };
 
-  const COLORS = ['#66FCF1', '#00C853', '#FFD600', '#FF3B30'];
+  const COLORS = ['#2563EB', '#16A34A', '#CA8A04', '#DC2626'];
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
