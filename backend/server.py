@@ -260,31 +260,56 @@ class LoanStatus:
     PARTIALLY_PAID = "partially_paid"
     FULLY_PAID = "fully_paid"
     OVERDUE = "overdue"
+    PENDING_APPROVAL = "pending_approval"
+    WRITTEN_OFF = "written_off"
+
+class LoanType:
+    SHORT_TERM = "short_term"  # < 1 year
+    LONG_TERM = "long_term"    # > 1 year
+    CREDIT_LINE = "credit_line"  # Revolving
 
 class RepaymentMode:
     LUMP_SUM = "lump_sum"
-    INSTALLMENTS = "installments"
+    EMI = "emi"  # Monthly installments
+    CUSTOM = "custom"  # Custom schedule
+
+class LoanTransactionType:
+    DISBURSEMENT = "disbursement"
+    REPAYMENT = "repayment"
+    INTEREST_PAYMENT = "interest_payment"
+    PENALTY = "penalty"
+    SWAP_OUT = "swap_out"  # Transferred to another borrower
+    SWAP_IN = "swap_in"    # Received from another borrower
+    WRITE_OFF = "write_off"
+    REFINANCE = "refinance"
 
 class LoanCreate(BaseModel):
+    vendor_id: Optional[str] = None  # Link to vendor (borrower company)
     borrower_name: str
     amount: float
     currency: str = "USD"
-    interest_rate: float = 0  # Annual percentage
+    interest_rate: float = 0  # Annual percentage (Simple interest)
+    loan_type: str = LoanType.SHORT_TERM
     loan_date: str  # ISO date
     due_date: str  # ISO date
     repayment_mode: str = RepaymentMode.LUMP_SUM
-    installment_amount: Optional[float] = None  # For installment mode
+    installment_amount: Optional[float] = None  # For EMI mode
     installment_frequency: Optional[str] = None  # monthly, weekly, etc.
+    num_installments: Optional[int] = None  # Number of EMIs
     treasury_account_id: str  # Source treasury account
+    collateral: Optional[str] = None  # Security/collateral description
     notes: Optional[str] = None
 
 class LoanUpdate(BaseModel):
     borrower_name: Optional[str] = None
     interest_rate: Optional[float] = None
+    loan_type: Optional[str] = None
     due_date: Optional[str] = None
     repayment_mode: Optional[str] = None
     installment_amount: Optional[float] = None
     installment_frequency: Optional[str] = None
+    num_installments: Optional[int] = None
+    collateral: Optional[str] = None
     notes: Optional[str] = None
 
 class LoanRepaymentCreate(BaseModel):
@@ -294,6 +319,15 @@ class LoanRepaymentCreate(BaseModel):
     payment_date: Optional[str] = None
     reference: Optional[str] = None
     notes: Optional[str] = None
+    include_interest: bool = False  # If true, part of payment goes to interest
+
+class LoanSwapRequest(BaseModel):
+    target_vendor_id: Optional[str] = None  # New borrower vendor
+    target_borrower_name: str  # New borrower name
+    reason: Optional[str] = None
+    adjust_terms: bool = False  # If true, allows term changes
+    new_interest_rate: Optional[float] = None
+    new_due_date: Optional[str] = None
 
 # ============== LIVE FX RATE SERVICE ==============
 FALLBACK_RATES_TO_USD = {
