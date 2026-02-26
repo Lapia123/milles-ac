@@ -79,8 +79,8 @@ export default function Layout() {
       className={({ isActive }) =>
         `flex items-center gap-3 px-4 py-3 text-sm font-medium uppercase tracking-wider transition-all duration-200 ${
           isActive
-            ? 'bg-[#66FCF1]/10 text-[#66FCF1] border-l-2 border-[#66FCF1]'
-            : 'text-[#C5C6C7] hover:text-white hover:bg-white/5 border-l-2 border-transparent'
+            ? 'bg-blue-50 text-blue-600 border-l-2 border-blue-600'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border-l-2 border-transparent'
         }`
       }
       data-testid={`nav-${label.toLowerCase().replace(' ', '-')}`}
@@ -91,32 +91,32 @@ export default function Layout() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0F172A] flex">
+    <div className="min-h-screen bg-[#F8FAFC] flex">
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/30 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#1E293B] border-r border-white/5 transform transition-transform duration-200 ${
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 shadow-sm transform transition-transform duration-200 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between h-16 px-4 border-b border-white/5">
+          <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-[#3B82F6] rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
+              <span className="text-xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
                 Miles Capitals
               </span>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden text-[#94A3B8] hover:text-white"
+              className="lg:hidden text-slate-500 hover:text-slate-700"
             >
               <X className="w-6 h-6" />
             </button>
@@ -128,17 +128,17 @@ export default function Layout() {
             ))}
           </nav>
 
-          <div className="p-4 border-t border-white/5">
+          <div className="p-4 border-t border-slate-200">
             <div className="flex items-center gap-3">
-              <Avatar className="w-10 h-10 border border-[#3B82F6]/30">
+              <Avatar className="w-10 h-10 border border-blue-200">
                 <AvatarImage src={user?.picture} />
-                <AvatarFallback className="bg-[#3B82F6]/20 text-[#3B82F6]">
+                <AvatarFallback className="bg-blue-100 text-blue-600">
                   {user?.name?.charAt(0) || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-                <p className="text-xs text-[#94A3B8] truncate capitalize">{user?.role?.replace('_', ' ')}</p>
+                <p className="text-sm font-medium text-slate-800 truncate">{user?.name}</p>
+                <p className="text-xs text-slate-500 truncate capitalize">{user?.role?.replace('_', ' ')}</p>
               </div>
             </div>
           </div>
@@ -146,11 +146,11 @@ export default function Layout() {
       </aside>
 
       <div className="flex-1 flex flex-col min-h-screen">
-        <header className="sticky top-0 z-30 h-16 bg-[#0F172A]/80 backdrop-blur-md border-b border-white/10">
+        <header className="sticky top-0 z-30 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200">
           <div className="flex items-center justify-between h-full px-4 md:px-6">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-[#94A3B8] hover:text-white"
+              className="lg:hidden text-slate-500 hover:text-slate-700"
               data-testid="mobile-menu-btn"
             >
               <Menu className="w-6 h-6" />
@@ -162,12 +162,12 @@ export default function Layout() {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="flex items-center gap-2 text-[#94A3B8] hover:text-white hover:bg-white/5"
+                  className="flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                   data-testid="user-menu-btn"
                 >
-                  <Avatar className="w-8 h-8 border border-[#3B82F6]/30">
+                  <Avatar className="w-8 h-8 border border-blue-200">
                     <AvatarImage src={user?.picture} />
-                    <AvatarFallback className="bg-[#3B82F6]/20 text-[#3B82F6] text-xs">
+                    <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
                       {user?.name?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
@@ -177,24 +177,24 @@ export default function Layout() {
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-56 bg-[#1E293B] border-white/10 text-white"
+                className="w-56 bg-white border-slate-200 text-slate-800"
               >
                 <div className="px-3 py-2">
                   <p className="text-sm font-medium">{user?.name}</p>
-                  <p className="text-xs text-[#94A3B8]">{user?.email}</p>
+                  <p className="text-xs text-slate-500">{user?.email}</p>
                 </div>
-                <DropdownMenuSeparator className="bg-white/10" />
+                <DropdownMenuSeparator className="bg-slate-200" />
                 <DropdownMenuItem
                   onClick={() => navigate('/settings')}
-                  className="cursor-pointer hover:bg-white/5 focus:bg-white/5"
+                  className="cursor-pointer hover:bg-slate-100 focus:bg-slate-100"
                 >
                   <Settings className="w-4 h-4 mr-2" />
                   Settings
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-white/10" />
+                <DropdownMenuSeparator className="bg-slate-200" />
                 <DropdownMenuItem
                   onClick={handleLogout}
-                  className="cursor-pointer text-red-400 hover:bg-white/5 focus:bg-white/5"
+                  className="cursor-pointer text-red-600 hover:bg-slate-100 focus:bg-slate-100"
                   data-testid="logout-btn"
                 >
                   <LogOut className="w-4 h-4 mr-2" />
