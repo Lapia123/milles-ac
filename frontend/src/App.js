@@ -23,12 +23,14 @@ import { ThemeProvider, useTheme } from "./context/ThemeContext";
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
+  const { theme } = useTheme();
   const location = useLocation();
+  const isDark = theme === 'dark';
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0B0C10] flex items-center justify-center">
-        <div className="text-[#66FCF1] text-lg">Loading...</div>
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#0B0C10]' : 'bg-[#F8FAFC]'}`}>
+        <div className={`text-lg ${isDark ? 'text-[#66FCF1]' : 'text-blue-600'}`}>Loading...</div>
       </div>
     );
   }
