@@ -664,13 +664,13 @@ export default function Vendors() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[#C5C6C7] text-sm flex items-center gap-1">
-                      <ArrowDownRight className="w-3 h-3 text-green-400" /> Deposit
+                      <ArrowDownRight className="w-3 h-3 text-green-400" /> Money In
                     </span>
                     <span className="text-white font-mono">{vendor.deposit_commission}%</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[#C5C6C7] text-sm flex items-center gap-1">
-                      <ArrowUpRight className="w-3 h-3 text-red-400" /> Withdrawal
+                      <ArrowUpRight className="w-3 h-3 text-red-400" /> Money Out
                     </span>
                     <span className="text-white font-mono">{vendor.withdrawal_commission}%</span>
                   </div>
