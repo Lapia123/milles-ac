@@ -93,7 +93,7 @@ export default function ExchangerDashboard() {
       }
     } catch (error) {
       console.error('Error fetching vendor info:', error);
-      toast.error('Failed to load vendor info');
+      toast.error('Failed to load exchanger info');
     } finally {
       setLoading(false);
     }
