@@ -581,7 +581,7 @@ export default function Settings() {
                             </SelectTrigger>
                             <SelectContent className="bg-white border-slate-200">
                               {roleOptions.map((role) => (
-                                <SelectItem key={role.value} value={role.value} className="text-white hover:bg-white/5">
+                                <SelectItem key={role.value} value={role.value} className="text-slate-800 hover:bg-slate-100">
                                   {role.label}
                                 </SelectItem>
                               ))}
