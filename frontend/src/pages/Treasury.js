@@ -321,11 +321,18 @@ export default function Treasury() {
         : `${API_URL}/api/treasury`;
       const method = selectedAccount ? 'PUT' : 'POST';
 
+      const payload = { ...formData };
+      if (!selectedAccount) {
+        payload.opening_balance = parseFloat(formData.opening_balance) || 0;
+      } else {
+        delete payload.opening_balance;
+      }
+
       const response = await fetch(url, {
         method,
         headers: getAuthHeaders(),
         credentials: 'include',
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
