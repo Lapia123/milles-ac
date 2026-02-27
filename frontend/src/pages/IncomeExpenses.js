@@ -1098,6 +1098,7 @@ export default function IncomeExpenses() {
                   </div>
                 )}
 
+                {formData.transaction_mode !== 'cash' && (
                 <div className="space-y-3 p-3 bg-slate-50/50 border border-slate-200 rounded">
                   <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Exchanger Bank Details</p>
                   <div className="grid grid-cols-2 gap-3">
