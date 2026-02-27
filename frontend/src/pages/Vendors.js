@@ -406,6 +406,8 @@ export default function Exchangers() {
       password: '',
       deposit_commission: '',
       withdrawal_commission: '',
+      deposit_commission_cash: '',
+      withdrawal_commission_cash: '',
       description: '',
       status: 'active',
     });
