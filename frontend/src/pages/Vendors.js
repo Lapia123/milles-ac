@@ -748,14 +748,22 @@ export default function Exchangers() {
           {viewExchanger && (
             <div className="space-y-4">
               {/* Exchanger Info */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-sm">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-sm">
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money In Commission</p>
-                  <p className="text-xl font-mono text-slate-800">{viewExchanger.deposit_commission}%</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money In (Bank)</p>
+                  <p className="text-xl font-mono text-slate-800">{viewExchanger.deposit_commission || 0}%</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money Out Commission</p>
-                  <p className="text-xl font-mono text-slate-800">{viewExchanger.withdrawal_commission}%</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money In (Cash)</p>
+                  <p className="text-xl font-mono text-amber-600">{viewExchanger.deposit_commission_cash || 0}%</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money Out (Bank)</p>
+                  <p className="text-xl font-mono text-slate-800">{viewExchanger.withdrawal_commission || 0}%</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money Out (Cash)</p>
+                  <p className="text-xl font-mono text-amber-600">{viewExchanger.withdrawal_commission_cash || 0}%</p>
                 </div>
               </div>
               
