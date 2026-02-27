@@ -631,6 +631,9 @@ class TransactionCreate(BaseModel):
     commission_paid_by: Optional[str] = None  # "client" or "broker"
     description: Optional[str] = None
     reference: Optional[str] = None
+    transaction_mode: Optional[str] = None  # "bank" or "cash"
+    collecting_person_name: Optional[str] = None
+    collecting_person_number: Optional[str] = None
     # Client bank details (for withdrawal to bank)
     client_bank_name: Optional[str] = None
     client_bank_account_name: Optional[str] = None
