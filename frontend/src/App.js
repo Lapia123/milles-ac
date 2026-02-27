@@ -65,6 +65,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 const RoleBasedRedirect = () => {
   const { user } = useAuth();
   if (user?.role === 'vendor') return <Navigate to="/vendor-portal" replace />;
+  if (user?.role === 'sub_admin') return <Navigate to="/clients" replace />;
   return <Navigate to="/dashboard" replace />;
 };
 
