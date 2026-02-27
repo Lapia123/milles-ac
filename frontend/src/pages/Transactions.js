@@ -1273,8 +1273,8 @@ export default function Transactions() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <Input
             placeholder="Search by client or reference..."
@@ -1311,6 +1311,38 @@ export default function Transactions() {
             ))}
           </SelectContent>
         </Select>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-slate-500">From:</span>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-[140px] bg-white border-slate-200 text-slate-800"
+              data-testid="filter-date-from"
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-slate-500">To:</span>
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-[140px] bg-white border-slate-200 text-slate-800"
+              data-testid="filter-date-to"
+            />
+          </div>
+          {(dateFrom || dateTo) && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => { setDateFrom(''); setDateTo(''); }}
+              className="text-slate-500 hover:text-red-500"
+            >
+              Clear
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Table */}
