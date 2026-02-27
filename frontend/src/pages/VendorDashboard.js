@@ -708,7 +708,10 @@ export default function ExchangerDashboard() {
                           {tx.transaction_mode === 'cash' ? 'Cash' : 'Bank'}
                         </Badge>
                         {tx.transaction_mode === 'cash' && tx.collecting_person_name && (
-                          <p className="text-[10px] text-slate-500 mt-0.5">{tx.collecting_person_name}</p>
+                          <div className="text-[10px] text-slate-600 mt-0.5 space-y-0.5">
+                            <p className="font-medium">{tx.collecting_person_name}</p>
+                            {tx.collecting_person_number && <p className="text-slate-500">{tx.collecting_person_number}</p>}
+                          </div>
                         )}
                       </TableCell>
                       <TableCell>{getStatusBadge(tx.status)}</TableCell>
