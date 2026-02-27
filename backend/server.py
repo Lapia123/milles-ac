@@ -175,7 +175,6 @@ class LPAccountUpdate(BaseModel):
     notes: Optional[str] = None
 
 class LPTransactionCreate(BaseModel):
-    transaction_type: str  # deposit or withdrawal
     amount: float
     currency: str = "USD"
     treasury_account_id: Optional[str] = None  # Source/destination treasury
