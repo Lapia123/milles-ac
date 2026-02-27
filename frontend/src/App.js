@@ -39,7 +39,16 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Redirect exchangers away from admin routes
+  if (user.role === 'vendor' && location.pathname === '/dashboard') {
+    return <Navigate to="/vendor-portal" replace />;
+  }
+
   if (allowedRoles && !allowedRoles.includes(user.role)) {
+    // Redirect to appropriate page based on role
+    if (user.role === 'vendor') {
+      return <Navigate to="/vendor-portal" replace />;
+    }
     return <Navigate to="/dashboard" replace />;
   }
 
