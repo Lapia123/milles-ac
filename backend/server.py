@@ -759,18 +759,60 @@ async def register(user_data: UserCreate):
     )
 
 @api_router.post("/auth/login", response_model=TokenResponse)
-async def login(credentials: UserLogin):
+async def login(credentials: UserLogin, request: Request):
     user = await db.users.find_one({"email": credentials.email}, {"_id": 0})
+    ip_address = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent", "")
+    
     if not user:
+        # Log failed login attempt
+        await create_log(
+            log_type="auth",
+            action="login_failed",
+            module="authentication",
+            user_email=credentials.email,
+            description=f"Failed login attempt: User not found",
+            ip_address=ip_address,
+            user_agent=user_agent,
+            status="failed"
+        )
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     if not verify_password(credentials.password, user.get("password_hash", "")):
+        # Log failed login attempt
+        await create_log(
+            log_type="auth",
+            action="login_failed",
+            module="authentication",
+            user_id=user.get("user_id"),
+            user_email=credentials.email,
+            user_name=user.get("name"),
+            description=f"Failed login attempt: Invalid password",
+            ip_address=ip_address,
+            user_agent=user_agent,
+            status="failed"
+        )
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     if not user.get("is_active", True):
         raise HTTPException(status_code=403, detail="Account is disabled")
     
     token = create_jwt_token(user["user_id"], user["email"], user["role"])
+    
+    # Log successful login
+    await create_log(
+        log_type="auth",
+        action="login",
+        module="authentication",
+        user_id=user["user_id"],
+        user_email=user["email"],
+        user_name=user["name"],
+        user_role=user["role"],
+        description=f"User logged in successfully",
+        ip_address=ip_address,
+        user_agent=user_agent,
+        status="success"
+    )
     
     return TokenResponse(
         access_token=token,
