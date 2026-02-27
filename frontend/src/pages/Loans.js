@@ -1074,17 +1074,6 @@ export default function Loans() {
                                       )}
                                     </>
                                   )}
-                                  {isAdmin && loan.repayment_count === 0 && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleDeleteLoan(loan.loan_id)}
-                                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-7 w-7 p-0"
-                                      title="Delete"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </Button>
-                                  )}
                                   {isAdmin && loan.status !== 'fully_paid' && loan.status !== 'written_off' && (
                                     <Button
                                       variant="ghost"
