@@ -633,6 +633,19 @@ export default function Reports() {
                               <TableCell className="text-[#94A3B8] text-right">{item.count}</TableCell>
                             </TableRow>
                           ))}
+                          {/* Total Row */}
+                          {transactionReport.withdrawals_by_currency?.length > 0 && (
+                            <TableRow className="border-t-2 border-red-500 bg-red-500/10">
+                              <TableCell className="text-red-400 font-bold">TOTAL</TableCell>
+                              <TableCell className="text-red-400 font-mono text-right font-bold">-</TableCell>
+                              <TableCell className="text-red-400 font-mono text-right font-bold">
+                                ${transactionReport.withdrawals_by_currency.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString()}
+                              </TableCell>
+                              <TableCell className="text-red-400 text-right font-bold">
+                                {transactionReport.withdrawals_by_currency.reduce((sum, item) => sum + (item.count || 0), 0)}
+                              </TableCell>
+                            </TableRow>
+                          )}
                           {(!transactionReport.withdrawals_by_currency || transactionReport.withdrawals_by_currency.length === 0) && (
                             <TableRow><TableCell colSpan={4} className="text-center text-[#94A3B8]">No data</TableCell></TableRow>
                           )}
