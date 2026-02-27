@@ -102,8 +102,13 @@ export default function Loans() {
   const [summary, setSummary] = useState(null);
   const [vendorSearch, setExchangerSearch] = useState('');
   
-  // Filter
+  // Filters for All Loans tab
   const [statusFilter, setStatusFilter] = useState('');
+  const [borrowerFilter, setBorrowerFilter] = useState('');
+  const [principalMinFilter, setPrincipalMinFilter] = useState('');
+  const [principalMaxFilter, setPrincipalMaxFilter] = useState('');
+  const [outstandingMinFilter, setOutstandingMinFilter] = useState('');
+  const [outstandingMaxFilter, setOutstandingMaxFilter] = useState('');
   
   // Borrower form (for creating new vendor/borrower)
   const [borrowerForm, setBorrowerForm] = useState({
