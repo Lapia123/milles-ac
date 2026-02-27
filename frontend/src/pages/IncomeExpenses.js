@@ -1463,7 +1463,9 @@ function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCate
     if (entry.converted_to_loan) return <Badge className="bg-purple-500/20 text-purple-600 border-purple-500/30 text-[10px]">Loan</Badge>;
     if (entry.status === 'pending_vendor') return <Badge className="bg-amber-500/20 text-amber-600 border-amber-500/30 text-[10px]"><Clock className="w-2.5 h-2.5 mr-1" />Pending</Badge>;
     if (entry.status === 'rejected') return <Badge className="bg-red-500/20 text-red-600 border-red-500/30 text-[10px]">Rejected</Badge>;
-    return null;
+    if (entry.status === 'completed') return <Badge className="bg-green-500/20 text-green-600 border-green-500/30 text-[10px]">Completed</Badge>;
+    if (entry.status === 'active') return <Badge className="bg-blue-500/20 text-blue-600 border-blue-500/30 text-[10px]">Active</Badge>;
+    return <Badge className="bg-slate-200 text-slate-600 text-[10px]">{entry.status || '-'}</Badge>;
   };
 
   return (
