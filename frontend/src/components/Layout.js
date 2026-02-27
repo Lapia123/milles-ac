@@ -33,6 +33,7 @@ import {
   ShieldCheck,
   Sun,
   Moon,
+  ScrollText,
 } from 'lucide-react';
 
 export default function Layout() {
