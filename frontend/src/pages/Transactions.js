@@ -1418,13 +1418,13 @@ export default function Transactions() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
+                    <TableCell colSpan={9} className="text-center py-8">
                       <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : filteredTransactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-slate-500">
+                    <TableCell colSpan={9} className="text-center py-8 text-slate-500">
                       No transactions found
                     </TableCell>
                   </TableRow>
@@ -1452,6 +1452,7 @@ export default function Transactions() {
                         </div>
                       </TableCell>
                       <TableCell className="text-slate-800">{tx.client_name || getClientName(tx.client_id)}</TableCell>
+                      <TableCell className="text-slate-600 text-sm">{tx.client_email || '-'}</TableCell>
                       <TableCell>{getTypeBadge(tx.transaction_type)}</TableCell>
                       <TableCell className={`font-mono font-medium ${['deposit', 'rebate'].includes(tx.transaction_type) ? 'text-green-400' : 'text-red-400'}`}>
                         {['deposit', 'rebate'].includes(tx.transaction_type) ? '+' : '-'}${tx.amount?.toLocaleString()} {tx.currency}
