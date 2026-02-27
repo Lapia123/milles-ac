@@ -1066,6 +1066,14 @@ export default function Exchangers() {
                                   ) : <span className="text-slate-400 text-xs">-</span>}
                                 </TableCell>
                                 <TableCell>
+                                  <Badge className={entry.transaction_mode === 'cash' ? 'bg-amber-100 text-amber-700 text-[10px]' : 'bg-blue-100 text-blue-700 text-[10px]'}>
+                                    {entry.transaction_mode === 'cash' ? 'Cash' : 'Bank'}
+                                  </Badge>
+                                  {entry.transaction_mode === 'cash' && entry.collecting_person_name && (
+                                    <p className="text-[10px] text-slate-500 mt-0.5">{entry.collecting_person_name}</p>
+                                  )}
+                                </TableCell>
+                                <TableCell>
                                   {entry.status === 'pending_vendor' && <Badge className="bg-amber-100 text-amber-700 text-[10px]">Pending</Badge>}
                                   {entry.status === 'completed' && <Badge className="bg-green-100 text-green-700 text-[10px]">Completed</Badge>}
                                   {entry.status === 'rejected' && <Badge className="bg-red-100 text-red-700 text-[10px]">Rejected</Badge>}
