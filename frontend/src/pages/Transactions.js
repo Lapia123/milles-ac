@@ -112,6 +112,9 @@ export default function Transactions() {
     commission_paid_by: 'client',
     description: '',
     reference: '',
+    transaction_mode: 'bank',
+    collecting_person_name: '',
+    collecting_person_number: '',
     // Client bank details (for withdrawal to bank)
     client_bank_name: '',
     client_bank_account_name: '',
