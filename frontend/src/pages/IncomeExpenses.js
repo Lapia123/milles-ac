@@ -476,6 +476,62 @@ export default function IncomeExpenses() {
     return formData.entry_type === 'income' ? defaultIncomeCategories : defaultExpenseCategories;
   };
 
+  // Export functions
+  const exportCSV = (data) => {
+    if (!data.length) { toast.error('No data to export'); return; }
+    const headers = ['Date', 'Type', 'Category', 'Description', 'Account/Linked', 'Status', 'Amount', 'Currency'];
+    const rows = data.map(e => [
+      formatDate(e.date), e.entry_type, getCategoryLabel(e), e.description || '',
+      e.vendor_name || e.treasury_account_name || '', e.status || '',
+      e.entry_type === 'income' ? e.amount : -e.amount, e.currency
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'income_expenses.csv'; a.click();
+    URL.revokeObjectURL(url);
+    toast.success('CSV exported');
+  };
+
+  const exportExcel = async (data) => {
+    if (!data.length) { toast.error('No data to export'); return; }
+    const XLSX = await import('xlsx');
+    const ws_data = [
+      ['Date', 'Type', 'Category', 'Description', 'Account/Linked', 'Status', 'Amount', 'Currency'],
+      ...data.map(e => [
+        formatDate(e.date), e.entry_type, getCategoryLabel(e), e.description || '',
+        e.vendor_name || e.treasury_account_name || '', e.status || '',
+        e.entry_type === 'income' ? e.amount : -e.amount, e.currency
+      ])
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Income & Expenses');
+    XLSX.writeFile(wb, 'income_expenses.xlsx');
+    toast.success('Excel exported');
+  };
+
+  const exportPDF = async (data) => {
+    if (!data.length) { toast.error('No data to export'); return; }
+    const { default: jsPDF } = await import('jspdf');
+    const autoTable = (await import('jspdf-autotable')).default;
+    const doc = new jsPDF('l', 'mm', 'a4');
+    doc.setFontSize(16); doc.text('Income & Expenses Report', 14, 15);
+    doc.setFontSize(9); doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 22);
+    const tableData = data.map(e => [
+      formatDate(e.date), e.entry_type, getCategoryLabel(e), (e.description || '').substring(0, 30),
+      e.vendor_name || e.treasury_account_name || '', e.status || '',
+      `${e.entry_type === 'income' ? '+' : '-'}${e.amount?.toLocaleString()} ${e.currency}`
+    ]);
+    autoTable(doc, {
+      head: [['Date', 'Type', 'Category', 'Description', 'Account', 'Status', 'Amount']],
+      body: tableData, startY: 28, styles: { fontSize: 8 },
+      headStyles: { fillColor: [11, 61, 145] },
+    });
+    doc.save('income_expenses.pdf');
+    toast.success('PDF exported');
+  };
+
   return (
     <div className="space-y-6 animate-fade-in" data-testid="income-expenses-page">
       {/* Header */}
