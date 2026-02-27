@@ -81,6 +81,7 @@ export default function Layout() {
     ...(isAdmin ? [{ to: '/vendors', icon: Store, label: 'Exchangers' }] : []),
     { to: '/reconciliation', icon: ArrowUpDown, label: 'Reconciliation' },
     ...(isAdmin ? [{ to: '/audit', icon: ShieldCheck, label: 'Audit' }] : []),
+    ...(isAdmin ? [{ to: '/logs', icon: ScrollText, label: 'Logs' }] : []),
     { to: '/reports', icon: BarChart3, label: 'Reports' },
     ...(isAccountantOrAdmin ? [{ to: '/accountant', icon: ClipboardCheck, label: 'Approvals' }] : []),
     { to: '/settings', icon: Settings, label: 'Settings' },
