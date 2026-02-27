@@ -873,6 +873,7 @@ export default function Exchangers() {
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Amount</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Currency</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Commission</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Mode</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Settled</TableHead>
                           </TableRow>
