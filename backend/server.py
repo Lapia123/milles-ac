@@ -433,6 +433,8 @@ class LoanRepaymentCreate(BaseModel):
     reference: Optional[str] = None
     notes: Optional[str] = None
     include_interest: bool = False  # If true, part of payment goes to interest
+    exchange_rate: Optional[float] = None  # Custom exchange rate (payment currency -> loan currency)
+    amount_in_loan_currency: Optional[float] = None  # Pre-calculated equivalent in loan currency
 
 class LoanSwapRequest(BaseModel):
     target_vendor_id: Optional[str] = None  # New borrower vendor
