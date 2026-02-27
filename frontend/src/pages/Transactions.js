@@ -1406,6 +1406,7 @@ export default function Transactions() {
                 <TableRow className="border-slate-200 hover:bg-transparent">
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Client</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Email</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Amount (USD)</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Payment Currency</TableHead>
