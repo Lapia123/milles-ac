@@ -95,6 +95,11 @@ function AppRouter() {
         <Route path="clients" element={<Clients />} />
         <Route path="transactions" element={<Transactions />} />
         <Route path="treasury" element={<Treasury />} />
+        <Route path="lp-accounts" element={
+            <ProtectedRoute allowedRoles={['admin', 'accountant']}>
+              <LPAccounts />
+            </ProtectedRoute>
+          } />
         <Route path="psp" element={<PSPs />} />
         <Route path="vendors" element={
             <ProtectedRoute allowedRoles={['admin', 'accountant']}>
