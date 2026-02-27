@@ -4690,6 +4690,26 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = De
     # Determine initial status: pending if exchanger-linked, completed otherwise
     status = "pending_vendor" if vendor_info else "completed"
     
+    # Calculate vendor commission at creation time
+    ie_commission_rate = 0.0
+    ie_commission_amount = 0.0
+    ie_commission_base_amount = 0.0
+    if vendor_info:
+        tx_mode = entry_data.transaction_mode or "bank"
+        if entry_data.entry_type == "income":
+            if tx_mode == "cash":
+                ie_commission_rate = vendor_info.get("deposit_commission_cash", vendor_info.get("deposit_commission", 0))
+            else:
+                ie_commission_rate = vendor_info.get("deposit_commission", 0)
+        else:
+            if tx_mode == "cash":
+                ie_commission_rate = vendor_info.get("withdrawal_commission_cash", vendor_info.get("withdrawal_commission", 0))
+            else:
+                ie_commission_rate = vendor_info.get("withdrawal_commission", 0)
+        if ie_commission_rate > 0:
+            ie_commission_amount = round(amount_usd * ie_commission_rate / 100, 2)
+            ie_commission_base_amount = round(entry_data.amount * ie_commission_rate / 100, 2)
+
     entry_doc = {
         "entry_id": entry_id,
         "entry_type": entry_data.entry_type,
@@ -4718,6 +4738,10 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = De
         "transaction_mode": entry_data.transaction_mode or "bank",
         "collecting_person_name": entry_data.collecting_person_name if entry_data.transaction_mode == "cash" else None,
         "collecting_person_number": entry_data.collecting_person_number if entry_data.transaction_mode == "cash" else None,
+        "vendor_commission_rate": ie_commission_rate if ie_commission_rate > 0 else None,
+        "vendor_commission_amount": ie_commission_amount if ie_commission_amount > 0 else None,
+        "vendor_commission_base_amount": ie_commission_base_amount if ie_commission_base_amount > 0 else None,
+        "vendor_commission_base_currency": entry_data.currency if ie_commission_base_amount > 0 else None,
         "status": status,
         "converted_to_loan": False,
         "loan_id": None,
