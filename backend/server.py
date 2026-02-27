@@ -4245,6 +4245,7 @@ async def get_income_expenses(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     treasury_account_id: Optional[str] = None,
+    vendor_id: Optional[str] = None,
     limit: int = 100,
     user: dict = Depends(get_current_user)
 ):
@@ -4257,6 +4258,8 @@ async def get_income_expenses(
         query["category"] = category
     if treasury_account_id:
         query["treasury_account_id"] = treasury_account_id
+    if vendor_id:
+        query["vendor_id"] = vendor_id
     if start_date:
         query["date"] = {"$gte": start_date}
     if end_date:
