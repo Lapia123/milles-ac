@@ -327,6 +327,8 @@ export default function Exchangers() {
       password: '',
       deposit_commission: vendor.deposit_commission?.toString() || '',
       withdrawal_commission: vendor.withdrawal_commission?.toString() || '',
+      deposit_commission_cash: vendor.deposit_commission_cash?.toString() || '',
+      withdrawal_commission_cash: vendor.withdrawal_commission_cash?.toString() || '',
       description: vendor.description || '',
       status: vendor.status,
     });
