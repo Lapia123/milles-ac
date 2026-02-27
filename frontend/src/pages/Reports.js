@@ -844,6 +844,25 @@ export default function Reports() {
                             </TableCell>
                           </TableRow>
                         ))}
+                        {/* Total Row */}
+                        {vendorReport.vendors?.length > 0 && (
+                          <TableRow className="border-t-2 border-purple-500 bg-purple-500/10 font-bold">
+                            <TableCell className="text-purple-400 font-bold">GRAND TOTAL ({vendorReport.vendors.length} Exchangers)</TableCell>
+                            <TableCell className="text-emerald-400 font-mono text-right font-bold">
+                              ${vendorReport.vendors.reduce((sum, v) => sum + (v.totals?.deposits_usd || 0), 0).toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-red-400 font-mono text-right font-bold">
+                              ${vendorReport.vendors.reduce((sum, v) => sum + (v.totals?.withdrawals_usd || 0), 0).toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-amber-400 font-mono text-right font-bold">
+                              ${vendorReport.vendors.reduce((sum, v) => sum + (v.totals?.commission_usd || 0), 0).toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-blue-400 font-mono text-right font-bold">
+                              ${vendorReport.vendors.reduce((sum, v) => sum + (v.totals?.net_settlement_usd || 0), 0).toLocaleString()}
+                            </TableCell>
+                            <TableCell></TableCell>
+                          </TableRow>
+                        )}
                         {(!vendorReport.vendors || vendorReport.vendors.length === 0) && (
                           <TableRow><TableCell colSpan={6} className="text-center text-[#94A3B8] py-8">No vendor data</TableCell></TableRow>
                         )}
