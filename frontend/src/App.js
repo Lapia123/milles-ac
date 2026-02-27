@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Transactions from "./pages/Transactions";
 import Treasury from "./pages/Treasury";
+import LPAccounts from "./pages/LPAccounts";
 import PSPs from "./pages/PSPs";
 import Vendors from "./pages/Vendors";
 import VendorDashboard from "./pages/VendorDashboard";
