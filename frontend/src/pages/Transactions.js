@@ -1490,7 +1490,7 @@ export default function Transactions() {
                       </TableCell>
                     </TableRow>
                   ))
-                )}}
+                )}
               </TableBody>
             </Table>
           </ScrollArea>
