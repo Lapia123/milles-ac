@@ -990,6 +990,73 @@ export default function Exchangers() {
                     )}
                   </ScrollArea>
                 </TabsContent>
+
+                <TabsContent value="ie" className="mt-4">
+                  <ScrollArea className="h-[300px]">
+                    {vendorIeEntries.length === 0 ? (
+                      <div className="text-center py-8 text-slate-500">
+                        <p>No income/expense entries for this exchanger</p>
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-slate-200">
+                            <TableHead className="text-slate-500 text-xs uppercase">Reference</TableHead>
+                            <TableHead className="text-slate-500 text-xs uppercase">Type</TableHead>
+                            <TableHead className="text-slate-500 text-xs uppercase">Category</TableHead>
+                            <TableHead className="text-slate-500 text-xs uppercase">Amount</TableHead>
+                            <TableHead className="text-slate-500 text-xs uppercase">Currency</TableHead>
+                            <TableHead className="text-slate-500 text-xs uppercase">Commission</TableHead>
+                            <TableHead className="text-slate-500 text-xs uppercase">Status</TableHead>
+                            <TableHead className="text-slate-500 text-xs uppercase">Date</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {vendorIeEntries.map((entry) => {
+                            const isIncome = entry.entry_type === 'income';
+                            return (
+                              <TableRow key={entry.entry_id} className="border-slate-200 hover:bg-slate-50">
+                                <TableCell className="font-mono text-xs text-slate-800">{entry.entry_id?.slice(-10)?.toUpperCase()}</TableCell>
+                                <TableCell>
+                                  <span className={`flex items-center gap-1 text-xs ${isIncome ? 'text-green-600' : 'text-red-500'}`}>
+                                    {isIncome ? <ArrowDownRight className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
+                                    {isIncome ? 'Income' : 'Expense'}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-slate-600 text-xs capitalize">{entry.category?.replace('_', ' ') || '-'}</TableCell>
+                                <TableCell className={`font-mono text-xs ${isIncome ? 'text-green-600' : 'text-red-500'}`}>
+                                  {isIncome ? '+' : '-'}{entry.amount?.toLocaleString()}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className="text-[10px] bg-slate-100 text-slate-600">{entry.currency || 'USD'}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {entry.vendor_commission_amount ? (
+                                    <span className="font-mono text-xs text-yellow-600">
+                                      ${entry.vendor_commission_amount?.toLocaleString()}
+                                      {entry.vendor_commission_base_amount && entry.currency !== 'USD' && (
+                                        <span className="text-slate-400 block text-[10px]">({entry.vendor_commission_base_amount?.toLocaleString()} {entry.currency})</span>
+                                      )}
+                                    </span>
+                                  ) : <span className="text-slate-400 text-xs">-</span>}
+                                </TableCell>
+                                <TableCell>
+                                  {entry.status === 'pending_vendor' && <Badge className="bg-amber-100 text-amber-700 text-[10px]">Pending</Badge>}
+                                  {entry.status === 'completed' && <Badge className="bg-green-100 text-green-700 text-[10px]">Completed</Badge>}
+                                  {entry.status === 'rejected' && <Badge className="bg-red-100 text-red-700 text-[10px]">Rejected</Badge>}
+                                  {entry.status === 'active' && <Badge className="bg-blue-100 text-blue-700 text-[10px]">Active</Badge>}
+                                </TableCell>
+                                <TableCell className="text-slate-500 text-xs">
+                                  {entry.date ? new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </ScrollArea>
+                </TabsContent>
               </Tabs>
             </div>
           )}
