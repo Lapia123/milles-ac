@@ -144,7 +144,6 @@ export default function Loans() {
     exchange_rate: '',
     amount_in_loan_currency: '',
   });
-  const [fetchingRate, setFetchingRate] = useState(false);
   
   // Swap form
   const [swapForm, setSwapForm] = useState({
