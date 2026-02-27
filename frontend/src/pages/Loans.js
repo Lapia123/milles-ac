@@ -1542,25 +1542,7 @@ export default function Loans() {
             {/* Exchange Rate Section - only shown when currencies differ */}
             {selectedLoan && repaymentForm.currency !== selectedLoan.currency && (
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-sm space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-amber-700 uppercase tracking-wider font-semibold">Currency Conversion</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fetchExchangeRate(repaymentForm.currency, selectedLoan.currency)}
-                    className="border-amber-300 text-amber-700 hover:bg-amber-100 h-7 px-2 text-xs"
-                    disabled={fetchingRate}
-                    data-testid="fetch-rate-btn"
-                  >
-                    {fetchingRate ? (
-                      <div className="w-3 h-3 border border-amber-600 border-t-transparent rounded-full animate-spin mr-1" />
-                    ) : (
-                      <ArrowRightLeft className="w-3 h-3 mr-1" />
-                    )}
-                    Fetch Live Rate
-                  </Button>
-                </div>
+                <p className="text-xs text-amber-700 uppercase tracking-wider font-semibold">Currency Conversion</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-amber-700 text-[10px] uppercase">
