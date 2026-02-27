@@ -71,6 +71,7 @@ export default function Exchangers() {
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [pendingTransactions, setPendingTransactions] = useState([]);
   const [settlements, setSettlements] = useState([]);
+  const [vendorIeEntries, setVendorIeEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedExchanger, setSelectedExchanger] = useState(null);
