@@ -594,7 +594,10 @@ export default function ExchangerDashboard() {
                   ${vendorInfo?.settlement_by_currency?.reduce((sum, item) => sum + (item.commission_earned_usd || 0), 0).toLocaleString() || '0'}
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
-                  Rates: {vendorInfo?.deposit_commission || 0}% In / {vendorInfo?.withdrawal_commission || 0}% Out
+                  <span className="text-blue-400">Bank:</span> {vendorInfo?.deposit_commission || 0}% In / {vendorInfo?.withdrawal_commission || 0}% Out
+                </p>
+                <p className="text-xs text-slate-500">
+                  <span className="text-amber-400">Cash:</span> {vendorInfo?.deposit_commission_cash || 0}% In / {vendorInfo?.withdrawal_commission_cash || 0}% Out
                 </p>
               </div>
               <div className="p-3 bg-yellow-500/10 rounded-sm">
