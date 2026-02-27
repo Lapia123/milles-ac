@@ -2954,12 +2954,19 @@ async def vendor_approve_transaction(transaction_id: str, user: dict = Depends(r
     
     now = datetime.now(timezone.utc)
     
-    # Calculate commission based on transaction type
+    # Calculate commission based on transaction type and mode
+    tx_mode = tx.get("transaction_mode", "bank")
     commission_rate = 0.0
     if tx["transaction_type"] == TransactionType.DEPOSIT:
-        commission_rate = vendor.get("deposit_commission", 0) / 100
+        if tx_mode == "cash":
+            commission_rate = vendor.get("deposit_commission_cash", vendor.get("deposit_commission", 0)) / 100
+        else:
+            commission_rate = vendor.get("deposit_commission", 0) / 100
     elif tx["transaction_type"] == TransactionType.WITHDRAWAL:
-        commission_rate = vendor.get("withdrawal_commission", 0) / 100
+        if tx_mode == "cash":
+            commission_rate = vendor.get("withdrawal_commission_cash", vendor.get("withdrawal_commission", 0)) / 100
+        else:
+            commission_rate = vendor.get("withdrawal_commission", 0) / 100
     
     # Calculate commission on the USD amount
     commission_amount_usd = round(tx["amount"] * commission_rate, 2)
