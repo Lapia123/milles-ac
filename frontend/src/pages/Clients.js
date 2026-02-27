@@ -651,9 +651,6 @@ export default function Clients() {
                             <DropdownMenuItem onClick={() => handleEdit(client)} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
                               <Edit className="w-4 h-4 mr-2" /> Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDelete(client.client_id)} className="text-red-400 hover:bg-slate-100 cursor-pointer">
-                              <Trash2 className="w-4 h-4 mr-2" /> Delete
-                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

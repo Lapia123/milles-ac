@@ -832,9 +832,6 @@ export default function PSPs() {
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(psp); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
                           <Edit className="w-4 h-4 mr-2" /> Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(psp.psp_id); }} className="text-red-400 hover:bg-slate-100 cursor-pointer">
-                          <Trash2 className="w-4 h-4 mr-2" /> Delete
-                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
