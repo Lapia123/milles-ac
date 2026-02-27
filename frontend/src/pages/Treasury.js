@@ -655,6 +655,22 @@ export default function Treasury() {
                     data-testid="treasury-description"
                   />
                 </div>
+
+                {!selectedAccount && (
+                  <div className="space-y-2">
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Opening Balance</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.opening_balance}
+                      onChange={(e) => setFormData({ ...formData, opening_balance: e.target.value })}
+                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                      placeholder="0.00"
+                      data-testid="treasury-opening-balance"
+                    />
+                  </div>
+                )}
                 
                 <div className="flex justify-end gap-3 pt-4">
                   <Button
