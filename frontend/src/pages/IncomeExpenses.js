@@ -436,7 +436,7 @@ export default function IncomeExpenses() {
     setCategoryForm({ name: '', category_type: 'both', description: '' });
   };
 
-  const clearFilters = () => setFilters({ startDate: '', endDate: '', category: '', treasuryAccountId: '' });
+  const clearFilters = () => setFilters({ startDate: '', endDate: '', category: '', treasuryAccountId: '', status: '', vendorId: '', entryType: '' });
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
