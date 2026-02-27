@@ -1254,7 +1254,7 @@ async def get_treasury_account(account_id: str, user: dict = Depends(get_current
     return account
 
 @api_router.post("/treasury")
-async def create_treasury_account(account_data: TreasuryAccountCreate, user: dict = Depends(require_admin)):
+async def create_treasury_account(account_data: TreasuryAccountCreate, user: dict = Depends(require_accountant_or_admin)):
     account_id = f"treasury_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
     
@@ -1272,7 +1272,7 @@ async def create_treasury_account(account_data: TreasuryAccountCreate, user: dic
     return await db.treasury_accounts.find_one({"account_id": account_id}, {"_id": 0})
 
 @api_router.put("/treasury/{account_id}")
-async def update_treasury_account(account_id: str, update_data: TreasuryAccountUpdate, user: dict = Depends(require_admin)):
+async def update_treasury_account(account_id: str, update_data: TreasuryAccountUpdate, user: dict = Depends(require_accountant_or_admin)):
     updates = {k: v for k, v in update_data.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No updates provided")
@@ -1382,7 +1382,7 @@ class TreasuryTransferRequest(BaseModel):
     notes: Optional[str] = None
 
 @api_router.post("/treasury/transfer")
-async def inter_treasury_transfer(transfer: TreasuryTransferRequest, user: dict = Depends(require_admin)):
+async def inter_treasury_transfer(transfer: TreasuryTransferRequest, user: dict = Depends(require_accountant_or_admin)):
     """Transfer funds between treasury accounts"""
     if transfer.source_account_id == transfer.destination_account_id:
         raise HTTPException(status_code=400, detail="Source and destination accounts must be different")
@@ -3135,7 +3135,7 @@ class VendorSettlementRequest(BaseModel):
 async def settle_vendor_balance(
     vendor_id: str, 
     settlement_request: VendorSettlementRequest,
-    user: dict = Depends(require_admin)
+    user: dict = Depends(require_accountant_or_admin)
 ):
     vendor = await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
     if not vendor:
