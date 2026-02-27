@@ -2403,11 +2403,22 @@ async def get_vendors(user: dict = Depends(get_current_user)):
         "settled": {"$ne": True}
     }, {"_id": 0}).to_list(10000)
     
-    # Group transactions by vendor_id
+    # Batch fetch all completed income/expense entries for all vendors
+    ie_entries_all = await db.income_expenses.find({
+        "vendor_id": {"$in": vendor_ids},
+        "status": "completed",
+        "settled": {"$ne": True}
+    }, {"_id": 0}).to_list(10000)
+    
+    # Group transactions and IE entries by vendor_id
     from collections import defaultdict
     pending_by_vendor = defaultdict(list)
     for tx in pending_txs_all:
         pending_by_vendor[tx["vendor_id"]].append(tx)
+    
+    ie_by_vendor = defaultdict(list)
+    for ie in ie_entries_all:
+        ie_by_vendor[ie["vendor_id"]].append(ie)
     
     # Populate vendor data
     for vendor in vendors:
@@ -2421,17 +2432,18 @@ async def get_vendors(user: dict = Depends(get_current_user)):
         
         # Calculate net pending amount by currency
         currency_breakdown = {}
-        for tx in pending_txs:
-            currency = tx.get("base_currency") or tx.get("currency", "USD")
+        
+        def ensure_currency(currency):
             if currency not in currency_breakdown:
                 currency_breakdown[currency] = {
-                    "deposits_base": 0,
-                    "withdrawals_base": 0,
-                    "deposits_usd": 0,
-                    "withdrawals_usd": 0,
-                    "commission_base": 0,
-                    "commission_usd": 0
+                    "deposits_base": 0, "withdrawals_base": 0,
+                    "deposits_usd": 0, "withdrawals_usd": 0,
+                    "commission_base": 0, "commission_usd": 0
                 }
+        
+        for tx in pending_txs:
+            currency = tx.get("base_currency") or tx.get("currency", "USD")
+            ensure_currency(currency)
             
             base_amount = tx.get("base_amount") or tx.get("amount", 0)
             usd_amount = tx.get("amount", 0)
@@ -2439,6 +2451,26 @@ async def get_vendors(user: dict = Depends(get_current_user)):
             commission_usd = tx.get("vendor_commission_amount", 0)
             
             if tx.get("transaction_type") == "deposit":
+                currency_breakdown[currency]["deposits_base"] += base_amount
+                currency_breakdown[currency]["deposits_usd"] += usd_amount
+            else:
+                currency_breakdown[currency]["withdrawals_base"] += base_amount
+                currency_breakdown[currency]["withdrawals_usd"] += usd_amount
+            
+            currency_breakdown[currency]["commission_base"] += commission_base
+            currency_breakdown[currency]["commission_usd"] += commission_usd
+        
+        # Include income/expense entries: income = Money In, expense = Money Out
+        for ie in ie_by_vendor.get(vendor["vendor_id"], []):
+            currency = ie.get("currency", "USD")
+            ensure_currency(currency)
+            
+            base_amount = ie.get("amount", 0)
+            usd_amount = ie.get("amount_usd") or base_amount
+            commission_base = ie.get("vendor_commission_base_amount", 0)
+            commission_usd = ie.get("vendor_commission_amount", 0)
+            
+            if ie.get("entry_type") == "income":
                 currency_breakdown[currency]["deposits_base"] += base_amount
                 currency_breakdown[currency]["deposits_usd"] += usd_amount
             else:
