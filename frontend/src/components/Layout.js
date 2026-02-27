@@ -73,6 +73,7 @@ export default function Layout() {
     { to: '/clients', icon: Users, label: 'Clients' },
     { to: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
     { to: '/treasury', icon: Landmark, label: 'Treasury' },
+    ...(isAccountantOrAdmin ? [{ to: '/lp-accounts', icon: TrendingUp, label: 'LP Management' }] : []),
     ...(isAccountantOrAdmin ? [{ to: '/income-expenses', icon: Wallet, label: 'Income & Expenses' }] : []),
     ...(isAccountantOrAdmin ? [{ to: '/loans', icon: Banknote, label: 'Loans' }] : []),
     ...(isAccountantOrAdmin ? [{ to: '/debts', icon: Receipt, label: 'O/S Accounts' }] : []),
