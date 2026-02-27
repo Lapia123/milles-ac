@@ -242,9 +242,13 @@ export default function Reports() {
         chart: `${API_URL}/api/reports/transactions-summary?days=30`,
         loans: `${API_URL}/api/loans/reports/summary`,
         loansData: `${API_URL}/api/loans`,
+        // Detailed data endpoints
+        allTransactions: `${API_URL}/api/transactions${queryStr ? `?${queryStr}` : ''}`,
+        allIE: `${API_URL}/api/income-expenses?limit=500`,
+        allTreasuryTx: `${API_URL}/api/treasury/transactions?limit=500`,
       };
 
-      const [txRes, vendorRes, commRes, clientRes, treasuryRes, pspRes, financialRes, outstandingRes, debtsRes, chartRes, loansRes, loansDataRes] = await Promise.all([
+      const [txRes, vendorRes, commRes, clientRes, treasuryRes, pspRes, financialRes, outstandingRes, debtsRes, chartRes, loansRes, loansDataRes, allTxRes, allIERes, allTreasuryTxRes] = await Promise.all([
         fetch(endpoints.transactions, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.vendors, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.commissions, { headers: getAuthHeaders(), credentials: 'include' }),
@@ -257,6 +261,9 @@ export default function Reports() {
         fetch(endpoints.chart, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.loans, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.loansData, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.allTransactions, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.allIE, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.allTreasuryTx, { headers: getAuthHeaders(), credentials: 'include' }),
       ]);
 
       if (txRes.ok) setTransactionReport(await txRes.json());
@@ -271,6 +278,13 @@ export default function Reports() {
       if (chartRes.ok) setChartData(await chartRes.json());
       if (loansRes.ok) setLoansReport(await loansRes.json());
       if (loansDataRes.ok) setLoansData(await loansDataRes.json());
+      // Detailed data
+      if (allTxRes.ok) setAllTransactions(await allTxRes.json());
+      if (allIERes.ok) setAllIncomeExpenses(await allIERes.json());
+      if (allTreasuryTxRes.ok) {
+        const txData = await allTreasuryTxRes.json();
+        setAllTreasuryTransactions(Array.isArray(txData) ? txData : txData.transactions || []);
+      }
     } catch (error) {
       console.error('Error fetching reports:', error);
       toast.error('Failed to load reports');
