@@ -5,9 +5,9 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 
 ## User Roles
 - **Admin**: Full system access
-- **Sub-admin**: Limited admin capabilities
-- **Accountant**: Transaction approvals, settlements
-- **Vendor**: Vendor-specific portal access
+- **Sub-admin**: Limited access — Clients, Transactions, Settings only. No Dashboard.
+- **Accountant**: Transaction approvals, settlements, Exchangers management, Income & Expenses, Loans, O/S Accounts
+- **Vendor/Exchanger**: Vendor-specific portal access
 
 ## Core Features (Implemented)
 
@@ -141,6 +141,12 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 - "Deposit Commission" renamed to "Money In Commission"
 - "Withdrawal Commission" renamed to "Money Out Commission"
 - Commission displays now show **USD (base currency) first**, with original currency in parentheses
+
+## Recent Changes (Feb 27, 2026)
+- Accountant role: Added "Exchangers" section to navigation (manage exchangers, commissions, settlements)
+- Accountant role: Backend vendor CRUD endpoints now allow accountant access (create/update/delete)
+- Sub-Admin role: Removed "Dashboard" from navigation; sub-admins now land on Clients page
+- Sub-Admin role: Redirect from /dashboard to /clients enforced in routing
 
 ## Known Issues
 - P2: Minor session management redirect issue after login
