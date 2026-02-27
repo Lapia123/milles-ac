@@ -445,6 +445,8 @@ export default function Loans() {
       const payload = {
         ...repaymentForm,
         amount: parseFloat(repaymentForm.amount),
+        exchange_rate: repaymentForm.exchange_rate ? parseFloat(repaymentForm.exchange_rate) : null,
+        amount_in_loan_currency: repaymentForm.amount_in_loan_currency ? parseFloat(repaymentForm.amount_in_loan_currency) : null,
       };
       
       const response = await fetch(`${API_URL}/api/loans/${selectedLoan.loan_id}/repayment`, {
