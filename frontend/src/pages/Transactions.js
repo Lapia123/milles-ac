@@ -88,6 +88,7 @@ export default function Transactions() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [destinationFilter, setDestinationFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
