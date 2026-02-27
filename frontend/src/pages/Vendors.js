@@ -266,6 +266,8 @@ export default function Exchangers() {
         vendor_name: formData.vendor_name,
         deposit_commission: parseFloat(formData.deposit_commission) || 0,
         withdrawal_commission: parseFloat(formData.withdrawal_commission) || 0,
+        deposit_commission_cash: parseFloat(formData.deposit_commission_cash) || 0,
+        withdrawal_commission_cash: parseFloat(formData.withdrawal_commission_cash) || 0,
         description: formData.description || null,
       };
 
