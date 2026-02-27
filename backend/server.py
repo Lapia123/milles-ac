@@ -5808,6 +5808,7 @@ async def record_loan_repayment(loan_id: str, repayment: LoanRepaymentCreate, us
         {
             "$set": {
                 "total_repaid": new_total_repaid,
+                "outstanding_balance": max(0, outstanding),
                 "status": new_status,
                 "updated_at": now.isoformat()
             },
