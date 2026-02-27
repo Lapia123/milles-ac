@@ -17,6 +17,7 @@ import Loans from "./pages/Loans";
 import Debts from "./pages/Debts";
 import Reconciliation from "./pages/Reconciliation";
 import AuditCompliance from "./pages/AuditCompliance";
+import LogsManagement from "./pages/Logs";
 import Layout from "./components/Layout";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
