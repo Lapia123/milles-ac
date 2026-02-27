@@ -525,6 +525,8 @@ export default function Loans() {
       payment_date: new Date().toISOString().split('T')[0],
       reference: '',
       notes: '',
+      exchange_rate: '',
+      amount_in_loan_currency: '',
     });
   };
 
@@ -533,8 +535,54 @@ export default function Loans() {
     setRepaymentForm({
       ...repaymentForm,
       currency: loan.currency,
+      exchange_rate: '',
+      amount_in_loan_currency: '',
     });
     setIsRepaymentDialogOpen(true);
+  };
+
+  // Fetch live exchange rate
+  const fetchExchangeRate = async (fromCurrency, toCurrency) => {
+    if (!fromCurrency || !toCurrency || fromCurrency === toCurrency) return;
+    setFetchingRate(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(
+        `${API_URL}/api/fx-rates/convert?amount=1&from_currency=${fromCurrency}&to_currency=${toCurrency}`,
+        { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        const rate = data.converted_amount;
+        setRepaymentForm(prev => {
+          const newForm = { ...prev, exchange_rate: rate.toString() };
+          if (prev.amount) {
+            newForm.amount_in_loan_currency = (parseFloat(prev.amount) * rate).toFixed(2);
+          }
+          return newForm;
+        });
+        toast.success(`Live rate: 1 ${fromCurrency} = ${rate} ${toCurrency}`);
+      }
+    } catch {
+      toast.error('Failed to fetch exchange rate');
+    } finally {
+      setFetchingRate(false);
+    }
+  };
+
+  // Auto-calculate loan currency equivalent when amount or rate changes
+  const updateRepaymentCalc = (field, value) => {
+    setRepaymentForm(prev => {
+      const updated = { ...prev, [field]: value };
+      const amount = parseFloat(field === 'amount' ? value : prev.amount) || 0;
+      const rate = parseFloat(field === 'exchange_rate' ? value : prev.exchange_rate) || 0;
+      if (amount > 0 && rate > 0) {
+        updated.amount_in_loan_currency = (amount * rate).toFixed(2);
+      } else {
+        updated.amount_in_loan_currency = '';
+      }
+      return updated;
+    });
   };
 
   const formatDate = (dateStr) => {
