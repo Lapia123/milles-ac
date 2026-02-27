@@ -115,6 +115,7 @@ export default function Treasury() {
     currency: 'USD',
     description: '',
     status: 'active',
+    opening_balance: '',
     // USDT specific fields
     usdt_address: '',
     usdt_network: '',
@@ -389,6 +390,7 @@ export default function Treasury() {
       currency: 'USD',
       description: '',
       status: 'active',
+      opening_balance: '',
       usdt_address: '',
       usdt_network: '',
       usdt_notes: '',
