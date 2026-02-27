@@ -154,6 +154,17 @@ export default function Exchangers() {
     }
   };
 
+  const fetchVendorIeEntries = async (vendorId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/income-expenses?vendor_id=${vendorId}`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setVendorIeEntries(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching vendor I&E entries:', error);
+    }
+  };
+
   const fetchExchangerDetails = async (vendorId) => {
     try {
       const response = await fetch(`${API_URL}/api/vendors/${vendorId}`, { headers: getAuthHeaders(), credentials: 'include' });
