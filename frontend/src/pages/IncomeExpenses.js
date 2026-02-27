@@ -636,15 +636,35 @@ export default function IncomeExpenses() {
         )}
 
         {/* Entry Tabs Content */}
-        {['all', 'income', 'expense'].map(tabVal => (
+        {['all', 'income', 'expense'].map(tabVal => {
+          // Apply client-side filters for status, vendor, entryType
+          const filteredEntries = entries.filter(e => {
+            if (filters.status && e.status !== filters.status) return false;
+            if (filters.vendorId && e.vendor_id !== filters.vendorId) return false;
+            if (filters.entryType && e.entry_type !== filters.entryType) return false;
+            return true;
+          });
+          return (
           <TabsContent key={tabVal} value={tabVal} className="mt-4">
-            <EntriesTable entries={entries} loading={loading} onDelete={handleDelete} isAdmin={isAdmin}
+            {/* Export Buttons */}
+            <div className="flex justify-end gap-2 mb-3">
+              <Button variant="outline" size="sm" onClick={() => exportCSV(filteredEntries)} className="border-slate-200 text-slate-600 hover:bg-slate-100" data-testid="export-csv-btn">
+                <Download className="w-3.5 h-3.5 mr-1.5" /> CSV
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => exportExcel(filteredEntries)} className="border-slate-200 text-slate-600 hover:bg-slate-100" data-testid="export-xlsx-btn">
+                <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" /> Excel
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => exportPDF(filteredEntries)} className="border-slate-200 text-slate-600 hover:bg-slate-100" data-testid="export-pdf-btn">
+                <FileText className="w-3.5 h-3.5 mr-1.5" /> PDF
+              </Button>
+            </div>
+            <EntriesTable entries={filteredEntries} loading={loading} onDelete={handleDelete} isAdmin={isAdmin}
               formatDate={formatDate} getCategoryLabel={getCategoryLabel}
               onConvertToLoan={(entry) => { setConvertDialog({ open: true, entry }); setConvertForm({ ...convertForm, borrower_name: entry.description || '', treasury_account_id: entry.treasury_account_id || '' }); }}
               onUploadInvoice={(entry) => setInvoiceDialog({ open: true, entry })}
               onViewInvoice={(file) => setViewInvoiceDialog({ open: true, file })} />
           </TabsContent>
-        ))}
+        )})}
         
         {/* Vendors Tab */}
         <TabsContent value="vendors" className="mt-4">
