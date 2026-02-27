@@ -203,14 +203,18 @@ class VendorCreate(BaseModel):
     vendor_name: str
     email: EmailStr
     password: str
-    deposit_commission: float = 0  # percentage for deposits
-    withdrawal_commission: float = 0  # percentage for withdrawals
+    deposit_commission: float = 0  # percentage for deposits (bank)
+    withdrawal_commission: float = 0  # percentage for withdrawals (bank)
+    deposit_commission_cash: float = 0  # percentage for deposits (cash)
+    withdrawal_commission_cash: float = 0  # percentage for withdrawals (cash)
     description: Optional[str] = None
 
 class VendorUpdate(BaseModel):
     vendor_name: Optional[str] = None
     deposit_commission: Optional[float] = None
     withdrawal_commission: Optional[float] = None
+    deposit_commission_cash: Optional[float] = None
+    withdrawal_commission_cash: Optional[float] = None
     status: Optional[str] = None
     description: Optional[str] = None
 
