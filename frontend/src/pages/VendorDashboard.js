@@ -843,6 +843,14 @@ export default function ExchangerDashboard() {
                               )}
                             </TableCell>
                             <TableCell>
+                              <Badge className={entry.transaction_mode === 'cash' ? 'bg-amber-100 text-amber-700 text-[10px]' : 'bg-blue-100 text-blue-700 text-[10px]'}>
+                                {entry.transaction_mode === 'cash' ? 'Cash' : 'Bank'}
+                              </Badge>
+                              {entry.transaction_mode === 'cash' && entry.collecting_person_name && (
+                                <p className="text-[10px] text-slate-500 mt-0.5">{entry.collecting_person_name}</p>
+                              )}
+                            </TableCell>
+                            <TableCell>
                               {entry.status === 'pending_vendor' && <Badge className="status-pending text-xs uppercase">Pending</Badge>}
                               {entry.status === 'completed' && <Badge className="status-approved text-xs uppercase">Approved</Badge>}
                               {entry.status === 'rejected' && <Badge className="status-rejected text-xs uppercase">Rejected</Badge>}
