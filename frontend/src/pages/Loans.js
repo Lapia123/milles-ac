@@ -141,7 +141,10 @@ export default function Loans() {
     payment_date: new Date().toISOString().split('T')[0],
     reference: '',
     notes: '',
+    exchange_rate: '',
+    amount_in_loan_currency: '',
   });
+  const [fetchingRate, setFetchingRate] = useState(false);
   
   // Swap form
   const [swapForm, setSwapForm] = useState({
