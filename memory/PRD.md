@@ -143,6 +143,9 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 - Commission displays now show **USD (base currency) first**, with original currency in parentheses
 
 ## Recent Changes (Feb 27, 2026)
+- **Role Permissions:** Accountant can now settle exchanger balances, manage treasury accounts (add/edit/transfer), and manage exchangers (add/edit)
+- **Role Permissions:** Treasury page accessible to accountants (add accounts, edit, transfer)
+- **Delete Removed:** All delete buttons removed from every page (Clients, Transactions, Treasury, Exchangers, Loans, I&E, Settings, PSPs) for all roles
 - **Bug Fix:** Settlement balance now includes income/expense entries (income=Money In, expense=Money Out). Fixed in all 3 vendor endpoints.
 - Accountant role: Added "Exchangers" section to navigation (manage exchangers, commissions, settlements)
 - Accountant role: Backend vendor CRUD endpoints now allow accountant access (create/update/delete)
