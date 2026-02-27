@@ -3431,6 +3431,17 @@ async def get_transactions(
         query["status"] = status
     
     transactions = await db.transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    
+    # Enrich transactions with client email
+    client_ids = list(set(tx.get("client_id") for tx in transactions if tx.get("client_id")))
+    clients_map = {}
+    if client_ids:
+        clients = await db.clients.find({"client_id": {"$in": client_ids}}, {"_id": 0, "client_id": 1, "email": 1}).to_list(len(client_ids))
+        clients_map = {c["client_id"]: c.get("email", "") for c in clients}
+    
+    for tx in transactions:
+        tx["client_email"] = clients_map.get(tx.get("client_id"), "")
+    
     return transactions
 
 @api_router.get("/transactions/pending")
