@@ -1489,6 +1489,10 @@ export default function Loans() {
                   <span className="text-slate-800">{selectedLoan.borrower_name}</span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-slate-500">Loan Currency:</span>
+                  <Badge className="bg-blue-100 text-blue-700">{selectedLoan.currency}</Badge>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-slate-500">Outstanding:</span>
                   <span className="text-blue-600 font-mono">{selectedLoan.outstanding_balance?.toLocaleString()} {selectedLoan.currency}</span>
                 </div>
@@ -1497,26 +1501,31 @@ export default function Loans() {
           )}
           
           <form onSubmit={handleRecordRepayment} className="space-y-4">
-            {/* Amount & Currency */}
+            {/* Amount & Payment Currency */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Amount *</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Payment Amount *</Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={repaymentForm.amount}
-                  onChange={(e) => setRepaymentForm({ ...repaymentForm, amount: e.target.value })}
+                  onChange={(e) => updateRepaymentCalc('amount', e.target.value)}
                   className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
                   placeholder="0.00"
                   data-testid="repayment-amount"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Currency</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Payment Currency</Label>
                 <Select
                   value={repaymentForm.currency}
-                  onValueChange={(value) => setRepaymentForm({ ...repaymentForm, currency: value })}
+                  onValueChange={(value) => {
+                    setRepaymentForm(prev => ({ ...prev, currency: value, exchange_rate: '', amount_in_loan_currency: '' }));
+                    if (selectedLoan && value !== selectedLoan.currency) {
+                      fetchExchangeRate(value, selectedLoan.currency);
+                    }
+                  }}
                 >
                   <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
                     <SelectValue />
@@ -1529,6 +1538,67 @@ export default function Loans() {
                 </Select>
               </div>
             </div>
+
+            {/* Exchange Rate Section - only shown when currencies differ */}
+            {selectedLoan && repaymentForm.currency !== selectedLoan.currency && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-amber-700 uppercase tracking-wider font-semibold">Currency Conversion</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fetchExchangeRate(repaymentForm.currency, selectedLoan.currency)}
+                    className="border-amber-300 text-amber-700 hover:bg-amber-100 h-7 px-2 text-xs"
+                    disabled={fetchingRate}
+                    data-testid="fetch-rate-btn"
+                  >
+                    {fetchingRate ? (
+                      <div className="w-3 h-3 border border-amber-600 border-t-transparent rounded-full animate-spin mr-1" />
+                    ) : (
+                      <ArrowRightLeft className="w-3 h-3 mr-1" />
+                    )}
+                    Fetch Live Rate
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-amber-700 text-[10px] uppercase">
+                      Rate (1 {repaymentForm.currency} = ? {selectedLoan.currency})
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.000001"
+                      min="0"
+                      value={repaymentForm.exchange_rate}
+                      onChange={(e) => updateRepaymentCalc('exchange_rate', e.target.value)}
+                      className="bg-white border-amber-200 text-slate-800 focus:border-amber-400 font-mono"
+                      placeholder="e.g. 22.5"
+                      data-testid="repayment-exchange-rate"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-amber-700 text-[10px] uppercase">
+                      Equivalent in {selectedLoan.currency}
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={repaymentForm.amount_in_loan_currency}
+                      readOnly
+                      className="bg-slate-100 border-amber-200 text-blue-700 font-mono font-bold"
+                      placeholder="Auto-calculated"
+                      data-testid="repayment-loan-equivalent"
+                    />
+                  </div>
+                </div>
+                {repaymentForm.amount && repaymentForm.exchange_rate && repaymentForm.amount_in_loan_currency && (
+                  <p className="text-xs text-amber-700 text-center">
+                    {parseFloat(repaymentForm.amount).toLocaleString()} {repaymentForm.currency} × {repaymentForm.exchange_rate} = <strong>{parseFloat(repaymentForm.amount_in_loan_currency).toLocaleString()} {selectedLoan.currency}</strong> will be deducted from loan
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Treasury Account */}
             <div className="space-y-2">
