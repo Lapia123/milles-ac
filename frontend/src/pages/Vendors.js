@@ -672,18 +672,25 @@ export default function Exchangers() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500 text-sm flex items-center gap-1">
-                      <ArrowDownRight className="w-3 h-3 text-green-400" /> Money In
-                    </span>
-                    <span className="text-slate-800 font-mono">{vendor.deposit_commission}%</span>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-3 gap-1 text-xs">
+                    <div></div>
+                    <span className="text-center text-blue-600 font-semibold">Bank</span>
+                    <span className="text-center text-amber-600 font-semibold">Cash</span>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="grid grid-cols-3 gap-1 items-center">
                     <span className="text-slate-500 text-sm flex items-center gap-1">
-                      <ArrowUpRight className="w-3 h-3 text-red-400" /> Money Out
+                      <ArrowDownRight className="w-3 h-3 text-green-400" /> In
                     </span>
-                    <span className="text-slate-800 font-mono">{vendor.withdrawal_commission}%</span>
+                    <span className="text-slate-800 font-mono text-center">{vendor.deposit_commission || 0}%</span>
+                    <span className="text-slate-800 font-mono text-center">{vendor.deposit_commission_cash || 0}%</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 items-center">
+                    <span className="text-slate-500 text-sm flex items-center gap-1">
+                      <ArrowUpRight className="w-3 h-3 text-red-400" /> Out
+                    </span>
+                    <span className="text-slate-800 font-mono text-center">{vendor.withdrawal_commission || 0}%</span>
+                    <span className="text-slate-800 font-mono text-center">{vendor.withdrawal_commission_cash || 0}%</span>
                   </div>
                   <div className="pt-2 border-t border-slate-200">
                     <span className="text-slate-500 text-xs uppercase tracking-wider">Net Settlement</span>
