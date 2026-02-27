@@ -404,7 +404,7 @@ export default function Transactions() {
       matchesDate = matchesDate && txDate <= dateTo;
     }
     
-    return matchesSearch && matchesType && matchesStatus && matchesDate;
+    return matchesSearch && matchesType && matchesStatus && matchesDestination && matchesDate;
   });
 
   const formatDate = (dateStr) => {
