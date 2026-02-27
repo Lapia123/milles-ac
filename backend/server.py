@@ -1509,7 +1509,7 @@ async def get_psp(psp_id: str, user: dict = Depends(get_current_user)):
     return psp
 
 @api_router.post("/psp")
-async def create_psp(psp_data: PSPCreate, user: dict = Depends(require_admin)):
+async def create_psp(psp_data: PSPCreate, user: dict = Depends(require_accountant_or_admin)):
     # Verify settlement destination exists
     dest = await db.treasury_accounts.find_one({"account_id": psp_data.settlement_destination_id}, {"_id": 0})
     if not dest:
@@ -1533,7 +1533,7 @@ async def create_psp(psp_data: PSPCreate, user: dict = Depends(require_admin)):
     return await db.psps.find_one({"psp_id": psp_id}, {"_id": 0})
 
 @api_router.put("/psp/{psp_id}")
-async def update_psp(psp_id: str, update_data: PSPUpdate, user: dict = Depends(require_admin)):
+async def update_psp(psp_id: str, update_data: PSPUpdate, user: dict = Depends(require_accountant_or_admin)):
     updates = {k: v for k, v in update_data.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No updates provided")
@@ -1578,7 +1578,7 @@ async def get_all_settlements(
     return settlements
 
 @api_router.post("/psp/{psp_id}/settle")
-async def create_settlement(psp_id: str, user: dict = Depends(require_admin)):
+async def create_settlement(psp_id: str, user: dict = Depends(require_accountant_or_admin)):
     """Create a settlement for pending PSP transactions"""
     psp = await db.psps.find_one({"psp_id": psp_id}, {"_id": 0})
     if not psp:
@@ -1668,7 +1668,7 @@ async def create_settlement(psp_id: str, user: dict = Depends(require_admin)):
     return await db.psp_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
 
 @api_router.post("/psp-settlements/{settlement_id}/complete")
-async def complete_settlement(settlement_id: str, user: dict = Depends(require_admin)):
+async def complete_settlement(settlement_id: str, user: dict = Depends(require_accountant_or_admin)):
     """Mark a settlement as completed and transfer funds to treasury"""
     settlement = await db.psp_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
     if not settlement:
@@ -2007,7 +2007,7 @@ async def record_psp_payment(
 async def settle_psp_transaction(
     transaction_id: str, 
     destination_account_id: Optional[str] = None,
-    user: dict = Depends(require_admin)
+    user: dict = Depends(require_accountant_or_admin)
 ):
     """Mark a single PSP transaction as settled and transfer to treasury (immediate settlement)"""
     tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
