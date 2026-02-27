@@ -8273,6 +8273,213 @@ async def update_commission_settings(request: Request, user: dict = Depends(requ
     )
     return {"message": "Commission settings updated", "deposit_commission_rate": deposit_rate, "withdrawal_commission_rate": withdrawal_rate, "commission_enabled": enabled}
 
+# ============== LOGS MANAGEMENT ==============
+
+@api_router.get("/logs")
+async def get_all_logs(
+    user: dict = Depends(require_admin),
+    log_type: Optional[str] = None,
+    action: Optional[str] = None,
+    module: Optional[str] = None,
+    user_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    search: Optional[str] = None,
+    limit: int = 100,
+    skip: int = 0
+):
+    """Get all logs with filtering"""
+    query = {}
+    
+    if log_type:
+        query["log_type"] = log_type
+    if action:
+        query["action"] = action
+    if module:
+        query["module"] = module
+    if user_id:
+        query["user_id"] = user_id
+    if date_from:
+        query["timestamp"] = {"$gte": date_from}
+    if date_to:
+        if "timestamp" in query:
+            query["timestamp"]["$lte"] = date_to + "T23:59:59"
+        else:
+            query["timestamp"] = {"$lte": date_to + "T23:59:59"}
+    if search:
+        query["$or"] = [
+            {"description": {"$regex": search, "$options": "i"}},
+            {"user_name": {"$regex": search, "$options": "i"}},
+            {"user_email": {"$regex": search, "$options": "i"}},
+            {"reference_id": {"$regex": search, "$options": "i"}},
+            {"module": {"$regex": search, "$options": "i"}},
+        ]
+    
+    logs = await db.system_logs.find(query, {"_id": 0}).sort("timestamp", -1).skip(skip).limit(limit).to_list(length=limit)
+    total = await db.system_logs.count_documents(query)
+    
+    return {
+        "logs": logs,
+        "total": total,
+        "limit": limit,
+        "skip": skip
+    }
+
+@api_router.get("/logs/stats")
+async def get_logs_stats(user: dict = Depends(require_admin)):
+    """Get logs statistics"""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
+    
+    total_logs = await db.system_logs.count_documents({})
+    today_logs = await db.system_logs.count_documents({"timestamp": {"$gte": today}})
+    
+    # Logs by type
+    activity_count = await db.system_logs.count_documents({"log_type": "activity"})
+    auth_count = await db.system_logs.count_documents({"log_type": "auth"})
+    audit_count = await db.system_logs.count_documents({"log_type": "audit"})
+    error_count = await db.system_logs.count_documents({"log_type": "error"})
+    
+    # Failed logins in last 7 days
+    failed_logins = await db.system_logs.count_documents({
+        "log_type": "auth",
+        "action": "login_failed",
+        "timestamp": {"$gte": week_ago}
+    })
+    
+    # Most active users
+    pipeline = [
+        {"$match": {"timestamp": {"$gte": week_ago}}},
+        {"$group": {"_id": "$user_name", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 5}
+    ]
+    active_users = await db.system_logs.aggregate(pipeline).to_list(length=5)
+    
+    # Most common actions
+    action_pipeline = [
+        {"$match": {"timestamp": {"$gte": week_ago}}},
+        {"$group": {"_id": "$action", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 10}
+    ]
+    common_actions = await db.system_logs.aggregate(action_pipeline).to_list(length=10)
+    
+    return {
+        "total_logs": total_logs,
+        "today_logs": today_logs,
+        "by_type": {
+            "activity": activity_count,
+            "auth": auth_count,
+            "audit": audit_count,
+            "error": error_count
+        },
+        "failed_logins_7d": failed_logins,
+        "active_users": [{"user": u["_id"], "count": u["count"]} for u in active_users if u["_id"]],
+        "common_actions": [{"action": a["_id"], "count": a["count"]} for a in common_actions if a["_id"]]
+    }
+
+@api_router.get("/logs/activity")
+async def get_activity_logs(
+    user: dict = Depends(require_admin),
+    module: Optional[str] = None,
+    user_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    limit: int = 100
+):
+    """Get activity logs"""
+    query = {"log_type": "activity"}
+    if module:
+        query["module"] = module
+    if user_id:
+        query["user_id"] = user_id
+    if date_from:
+        query["timestamp"] = {"$gte": date_from}
+    if date_to:
+        if "timestamp" in query:
+            query["timestamp"]["$lte"] = date_to + "T23:59:59"
+        else:
+            query["timestamp"] = {"$lte": date_to + "T23:59:59"}
+    
+    logs = await db.system_logs.find(query, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(length=limit)
+    return {"logs": logs}
+
+@api_router.get("/logs/auth")
+async def get_auth_logs(
+    user: dict = Depends(require_admin),
+    action: Optional[str] = None,
+    user_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    limit: int = 100
+):
+    """Get authentication logs (login, logout, failed attempts)"""
+    query = {"log_type": "auth"}
+    if action:
+        query["action"] = action
+    if user_id:
+        query["user_id"] = user_id
+    if date_from:
+        query["timestamp"] = {"$gte": date_from}
+    if date_to:
+        if "timestamp" in query:
+            query["timestamp"]["$lte"] = date_to + "T23:59:59"
+        else:
+            query["timestamp"] = {"$lte": date_to + "T23:59:59"}
+    
+    logs = await db.system_logs.find(query, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(length=limit)
+    return {"logs": logs}
+
+@api_router.get("/logs/audit")
+async def get_audit_logs(
+    user: dict = Depends(require_admin),
+    module: Optional[str] = None,
+    reference_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    limit: int = 100
+):
+    """Get audit logs (financial changes)"""
+    query = {"log_type": "audit"}
+    if module:
+        query["module"] = module
+    if reference_id:
+        query["reference_id"] = reference_id
+    if date_from:
+        query["timestamp"] = {"$gte": date_from}
+    if date_to:
+        if "timestamp" in query:
+            query["timestamp"]["$lte"] = date_to + "T23:59:59"
+        else:
+            query["timestamp"] = {"$lte": date_to + "T23:59:59"}
+    
+    logs = await db.system_logs.find(query, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(length=limit)
+    return {"logs": logs}
+
+@api_router.delete("/logs/clear")
+async def clear_old_logs(
+    user: dict = Depends(require_admin),
+    days_to_keep: int = 90
+):
+    """Clear logs older than specified days (default: 90 days)"""
+    cutoff_date = (datetime.now(timezone.utc) - timedelta(days=days_to_keep)).isoformat()
+    result = await db.system_logs.delete_many({"timestamp": {"$lt": cutoff_date}})
+    
+    # Log this action
+    await create_log(
+        log_type="activity",
+        action="delete",
+        module="logs",
+        user_id=user["user_id"],
+        user_name=user["name"],
+        user_email=user["email"],
+        user_role=user["role"],
+        description=f"Cleared {result.deleted_count} logs older than {days_to_keep} days"
+    )
+    
+    return {"message": f"Deleted {result.deleted_count} logs older than {days_to_keep} days"}
+
 # Include router
 app.include_router(api_router)
 
