@@ -3660,8 +3660,11 @@ async def create_transaction(
         "vendor_name": vendor_info["vendor_name"] if vendor_info else None,
         "vendor_deposit_commission": vendor_info["deposit_commission"] if vendor_info and transaction_type == TransactionType.DEPOSIT else None,
         "vendor_withdrawal_commission": vendor_info["withdrawal_commission"] if vendor_info and transaction_type == TransactionType.WITHDRAWAL else None,
-        "vendor_proof_image": None,  # Vendor uploads when completing withdrawal
-        "accountant_proof_image": None,  # Accountant uploads for withdrawal approvals
+        "vendor_proof_image": None,
+        "accountant_proof_image": None,
+        "transaction_mode": transaction_mode or "bank",
+        "collecting_person_name": collecting_person_name if transaction_mode == "cash" else None,
+        "collecting_person_number": collecting_person_number if transaction_mode == "cash" else None,
         "status": TransactionStatus.PENDING,
         "description": description,
         "reference": reference or f"REF{uuid.uuid4().hex[:8].upper()}",
