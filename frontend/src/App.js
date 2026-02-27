@@ -55,20 +55,20 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   return children;
 };
 
+// Smart redirect component based on user role
+const RoleBasedRedirect = () => {
+  const { user } = useAuth();
+  if (user?.role === 'vendor') return <Navigate to="/vendor-portal" replace />;
+  return <Navigate to="/dashboard" replace />;
+};
+
 function AppRouter() {
   const location = useLocation();
-  const { user } = useAuth();
 
   // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
   if (location.hash?.includes('session_id=')) {
     return <AuthCallback />;
   }
-
-  // Smart redirect based on role
-  const getDefaultRoute = () => {
-    if (user?.role === 'vendor') return '/vendor-portal';
-    return '/dashboard';
-  };
 
   return (
     <Routes>
@@ -82,7 +82,7 @@ function AppRouter() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to={getDefaultRoute()} replace />} />
+        <Route index element={<RoleBasedRedirect />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="clients" element={<Clients />} />
         <Route path="transactions" element={<Transactions />} />
