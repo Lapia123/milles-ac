@@ -1023,6 +1023,113 @@ export default function Loans() {
               </TabsTrigger>
             </TabsList>
 
+            {/* Filters Section */}
+            <Card className="bg-white border-slate-200 mt-4 mb-4">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Filter className="w-4 h-4 text-slate-500" />
+                  <span className="text-sm font-medium text-slate-600 uppercase tracking-wider">Filters</span>
+                  {hasActiveFilters && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearAllFilters}
+                      className="ml-auto text-slate-500 hover:text-slate-700 h-7 px-2"
+                    >
+                      <RotateCcw className="w-3 h-3 mr-1" />
+                      Clear All
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Borrower Filter */}
+                  <div>
+                    <Label className="text-xs text-slate-500 uppercase tracking-wider mb-1.5 block">Borrower</Label>
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        placeholder="Search borrower..."
+                        value={borrowerFilter}
+                        onChange={(e) => setBorrowerFilter(e.target.value)}
+                        className="pl-8 h-9 border-slate-200 text-sm"
+                        data-testid="borrower-filter"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Principal Range Filter */}
+                  <div>
+                    <Label className="text-xs text-slate-500 uppercase tracking-wider mb-1.5 block">Principal Range</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Min"
+                        value={principalMinFilter}
+                        onChange={(e) => setPrincipalMinFilter(e.target.value)}
+                        className="h-9 border-slate-200 text-sm"
+                        data-testid="principal-min-filter"
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Max"
+                        value={principalMaxFilter}
+                        onChange={(e) => setPrincipalMaxFilter(e.target.value)}
+                        className="h-9 border-slate-200 text-sm"
+                        data-testid="principal-max-filter"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Outstanding Range Filter */}
+                  <div>
+                    <Label className="text-xs text-slate-500 uppercase tracking-wider mb-1.5 block">Outstanding Range</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Min"
+                        value={outstandingMinFilter}
+                        onChange={(e) => setOutstandingMinFilter(e.target.value)}
+                        className="h-9 border-slate-200 text-sm"
+                        data-testid="outstanding-min-filter"
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Max"
+                        value={outstandingMaxFilter}
+                        onChange={(e) => setOutstandingMaxFilter(e.target.value)}
+                        className="h-9 border-slate-200 text-sm"
+                        data-testid="outstanding-max-filter"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Status Filter (Select) */}
+                  <div>
+                    <Label className="text-xs text-slate-500 uppercase tracking-wider mb-1.5 block">Status</Label>
+                    <Select value={activeTab} onValueChange={setActiveTab}>
+                      <SelectTrigger className="h-9 border-slate-200" data-testid="status-filter">
+                        <SelectValue placeholder="All statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="partially_paid">Partially Paid</SelectItem>
+                        <SelectItem value="fully_paid">Fully Paid</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                {hasActiveFilters && (
+                  <div className="mt-3 pt-3 border-t border-slate-100">
+                    <p className="text-xs text-slate-500">
+                      Showing <span className="font-semibold text-slate-700">{filteredLoans.length}</span> of {loans.length} loans
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Loans Table */}
             <TabsContent value={activeTab} className="mt-4">
               {loading ? (
