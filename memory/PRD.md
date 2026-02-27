@@ -143,14 +143,16 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 - Commission displays now show **USD (base currency) first**, with original currency in parentheses
 
 ## Recent Changes (Feb 27, 2026)
-- **Role Permissions:** Accountant can now settle exchanger balances, manage treasury accounts (add/edit/transfer), and manage exchangers (add/edit)
-- **Role Permissions:** Treasury page accessible to accountants (add accounts, edit, transfer)
-- **Delete Removed:** All delete buttons removed from every page (Clients, Transactions, Treasury, Exchangers, Loans, I&E, Settings, PSPs) for all roles
-- **Bug Fix:** Settlement balance now includes income/expense entries (income=Money In, expense=Money Out). Fixed in all 3 vendor endpoints.
-- Accountant role: Added "Exchangers" section to navigation (manage exchangers, commissions, settlements)
-- Accountant role: Backend vendor CRUD endpoints now allow accountant access (create/update/delete)
-- Sub-Admin role: Removed "Dashboard" from navigation; sub-admins now land on Clients page
-- Sub-Admin role: Redirect from /dashboard to /clients enforced in routing
+- **Multi-mode Commission**: Exchangers now have 4 commission rates: Money In (Bank/Cash) and Money Out (Bank/Cash). Commission is auto-calculated based on transaction mode.
+- **Transaction Mode**: Added Bank/Cash mode to Transactions and Income & Expenses. Cash mode shows collecting person name & phone fields.
+- **Mode Column**: Added Mode (Bank/Cash) column to Admin exchanger detail, Vendor portal transactions, and I&E tables.
+- **Role Permissions:** Accountant can now settle exchanger balances, manage treasury accounts, manage exchangers, and manage PSPs.
+- **Delete Removed:** All delete buttons removed from every page for all roles.
+- **Bug Fix:** Settlement balance now includes income/expense entries.
+- Sub-Admin: Dashboard removed, lands on Clients page.
+- Treasury: Added opening balance field.
+- I&E: Added export (CSV/XLSX/PDF), advanced filters, fixed status badges.
+- Transactions: Added destination filter.
 
 ## Known Issues
 - P2: Minor session management redirect issue after login
