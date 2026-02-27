@@ -577,6 +577,7 @@ class TreasuryAccountCreate(BaseModel):
     swift_code: Optional[str] = None
     currency: str = "USD"
     description: Optional[str] = None
+    opening_balance: float = 0.0
     # USDT specific fields
     usdt_address: Optional[str] = None
     usdt_network: Optional[str] = None  # TRC20, ERC20, BEP20
@@ -1260,8 +1261,9 @@ async def create_treasury_account(account_data: TreasuryAccountCreate, user: dic
     
     account_doc = {
         "account_id": account_id,
-        **account_data.model_dump(),
-        "balance": 0.0,
+        **account_data.model_dump(exclude={"opening_balance"}),
+        "balance": account_data.opening_balance,
+        "opening_balance": account_data.opening_balance,
         "status": TreasuryAccountStatus.ACTIVE,
         "created_at": now.isoformat(),
         "updated_at": now.isoformat()
