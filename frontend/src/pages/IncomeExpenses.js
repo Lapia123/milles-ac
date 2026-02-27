@@ -554,28 +554,82 @@ export default function IncomeExpenses() {
         {['all', 'income', 'expense'].includes(activeTab) && (
           <Card className="bg-white border-slate-200 mt-4">
             <CardContent className="p-4">
-              <div className="flex flex-wrap items-end gap-4">
-                <div className="flex-1 min-w-[150px] space-y-1">
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="flex-1 min-w-[130px] space-y-1">
                   <Label className="text-slate-500 text-xs uppercase tracking-wider">Start Date</Label>
                   <Input type="date" value={filters.startDate} onChange={(e) => setFilters({ ...filters, startDate: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]" />
                 </div>
-                <div className="flex-1 min-w-[150px] space-y-1">
+                <div className="flex-1 min-w-[130px] space-y-1">
                   <Label className="text-slate-500 text-xs uppercase tracking-wider">End Date</Label>
                   <Input type="date" value={filters.endDate} onChange={(e) => setFilters({ ...filters, endDate: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]" />
                 </div>
-                <div className="flex-1 min-w-[150px] space-y-1">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Treasury Account</Label>
-                  <Select value={filters.treasuryAccountId} onValueChange={(value) => setFilters({ ...filters, treasuryAccountId: value === 'all' ? '' : value })}>
-                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800"><SelectValue placeholder="All Accounts" /></SelectTrigger>
+                {activeTab === 'all' && (
+                  <div className="flex-1 min-w-[120px] space-y-1">
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Type</Label>
+                    <Select value={filters.entryType || 'all'} onValueChange={(value) => setFilters({ ...filters, entryType: value === 'all' ? '' : value })}>
+                      <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800"><SelectValue placeholder="All Types" /></SelectTrigger>
+                      <SelectContent className="bg-white border-slate-200">
+                        <SelectItem value="all" className="text-slate-800">All Types</SelectItem>
+                        <SelectItem value="income" className="text-green-600">Income</SelectItem>
+                        <SelectItem value="expense" className="text-red-600">Expense</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div className="flex-1 min-w-[120px] space-y-1">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Category</Label>
+                  <Select value={filters.category || 'all'} onValueChange={(value) => setFilters({ ...filters, category: value === 'all' ? '' : value })}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800"><SelectValue placeholder="All Categories" /></SelectTrigger>
                     <SelectContent className="bg-white border-slate-200">
-                      <SelectItem value="all" className="text-slate-800 hover:bg-slate-100">All Accounts</SelectItem>
-                      {treasuryAccounts.map((acc) => (
-                        <SelectItem key={acc.account_id} value={acc.account_id} className="text-slate-800 hover:bg-slate-100">{acc.account_name}</SelectItem>
+                      <SelectItem value="all" className="text-slate-800">All Categories</SelectItem>
+                      {ieCategories.filter(c => c.is_active).map(c => (
+                        <SelectItem key={c.category_id} value={c.name.toLowerCase()} className="text-slate-800">{c.name}</SelectItem>
+                      ))}
+                      {[...defaultIncomeCategories, ...defaultExpenseCategories].map(c => (
+                        <SelectItem key={c.value} value={c.value} className="text-slate-800">{c.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <Button variant="outline" onClick={clearFilters} className="border-slate-200 text-slate-500 hover:bg-slate-100"><X className="w-4 h-4 mr-2" />Clear</Button>
+                <div className="flex-1 min-w-[140px] space-y-1">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Account / Linked</Label>
+                  <Select value={filters.vendorId ? `vendor_${filters.vendorId}` : filters.treasuryAccountId || 'all'} onValueChange={(value) => {
+                    if (value === 'all') setFilters({ ...filters, treasuryAccountId: '', vendorId: '' });
+                    else if (value.startsWith('vendor_')) setFilters({ ...filters, vendorId: value.replace('vendor_', ''), treasuryAccountId: '' });
+                    else setFilters({ ...filters, treasuryAccountId: value, vendorId: '' });
+                  }}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800"><SelectValue placeholder="All Accounts" /></SelectTrigger>
+                    <SelectContent className="bg-white border-slate-200">
+                      <SelectItem value="all" className="text-slate-800">All Accounts</SelectItem>
+                      <div className="px-2 py-1 text-xs text-blue-600 font-semibold uppercase">Treasury</div>
+                      {treasuryAccounts.map((acc) => (
+                        <SelectItem key={acc.account_id} value={acc.account_id} className="text-slate-800">{acc.account_name}</SelectItem>
+                      ))}
+                      {exchangers.length > 0 && (
+                        <>
+                          <div className="px-2 py-1 text-xs text-amber-500 font-semibold uppercase mt-1 border-t border-slate-200 pt-1">Exchangers</div>
+                          {exchangers.map((v) => (
+                            <SelectItem key={v.vendor_id} value={`vendor_${v.vendor_id}`} className="text-slate-800">{v.vendor_name}</SelectItem>
+                          ))}
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1 min-w-[120px] space-y-1">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Status</Label>
+                  <Select value={filters.status || 'all'} onValueChange={(value) => setFilters({ ...filters, status: value === 'all' ? '' : value })}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+                    <SelectContent className="bg-white border-slate-200">
+                      <SelectItem value="all" className="text-slate-800">All Statuses</SelectItem>
+                      <SelectItem value="active" className="text-blue-600">Active</SelectItem>
+                      <SelectItem value="completed" className="text-green-600">Completed</SelectItem>
+                      <SelectItem value="pending_vendor" className="text-amber-600">Pending</SelectItem>
+                      <SelectItem value="rejected" className="text-red-600">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button variant="outline" onClick={clearFilters} className="border-slate-200 text-slate-500 hover:bg-slate-100"><X className="w-4 h-4 mr-1" />Clear</Button>
               </div>
             </CardContent>
           </Card>
