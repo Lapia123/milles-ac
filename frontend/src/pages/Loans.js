@@ -394,8 +394,9 @@ export default function Loans() {
     try {
       // Create vendor with minimal required fields
       const payload = {
-        name: borrowerForm.name,
+        vendor_name: borrowerForm.name,
         email: borrowerForm.email || `${borrowerForm.name.toLowerCase().replace(/\s+/g, '_')}@borrower.local`,
+        password: 'borrower123',  // Default password for borrower accounts
         phone: borrowerForm.phone || '',
         address: borrowerForm.address || '',
         contact_person: borrowerForm.contact_person || '',
