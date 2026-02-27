@@ -3474,6 +3474,9 @@ async def create_transaction(
     # Client USDT details (for withdrawal to USDT)
     client_usdt_address: Optional[str] = Form(None),
     client_usdt_network: Optional[str] = Form(None),
+    transaction_mode: Optional[str] = Form("bank"),
+    collecting_person_name: Optional[str] = Form(None),
+    collecting_person_number: Optional[str] = Form(None),
     proof_image: Optional[UploadFile] = File(None),
     user: dict = Depends(get_current_user)
 ):
