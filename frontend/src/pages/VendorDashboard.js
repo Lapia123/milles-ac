@@ -775,62 +775,82 @@ export default function ExchangerDashboard() {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-slate-200 hover:bg-transparent">
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Category</TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Description</TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Bank Account</TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Amount</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Currency</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Commission</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {ieEntries.map((entry) => {
                         const isIncome = entry.entry_type === 'income';
+                        const displayCurrency = entry.currency || 'USD';
                         return (
-                          <TableRow key={entry.entry_id} className={`border-slate-200 hover:bg-slate-100 border-l-4 ${isIncome ? 'border-l-green-500' : 'border-l-red-500'}`}>
-                            <TableCell className="text-slate-800 text-sm">{entry.date ? new Date(entry.date).toLocaleDateString() : '-'}</TableCell>
+                          <TableRow key={entry.entry_id} className="border-slate-200 hover:bg-slate-100">
                             <TableCell>
-                              <Badge className={isIncome ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}>
-                                {isIncome ? 'Income' : 'Expense'}
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-slate-800">{entry.entry_id?.slice(-10)?.toUpperCase()}</span>
+                                {entry.vendor_proof_image && <ImageIcon className="w-4 h-4 text-blue-600" />}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className={`flex items-center gap-1 ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
+                                {isIncome ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                                <span className="capitalize">{entry.entry_type}</span>
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-slate-800 text-sm capitalize">{entry.category?.replace('_', ' ') || '-'}</TableCell>
+                            <TableCell className={`font-mono font-medium ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
+                              {isIncome ? '+' : '-'}{entry.amount?.toLocaleString()}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={`${
+                                displayCurrency === 'USD' ? 'bg-green-500/20 text-green-400' :
+                                displayCurrency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                                displayCurrency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
+                                displayCurrency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                                displayCurrency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
+                                'bg-gray-500/20 text-gray-400'
+                              }`}>
+                                {displayCurrency}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-slate-500 text-sm capitalize">{entry.category?.replace('_', ' ')}</TableCell>
-                            <TableCell className="text-slate-800 text-sm max-w-[200px] truncate">{entry.description || '-'}</TableCell>
-                            <TableCell className="text-slate-500 text-sm">
-                              {entry.vendor_bank_account_number ? (
-                                <div className="text-[10px] space-y-0.5">
-                                  <p>A/C: {entry.vendor_bank_account_number}</p>
-                                  {entry.vendor_bank_ifsc && <p>IFSC: {entry.vendor_bank_ifsc}</p>}
-                                  {entry.vendor_bank_branch && <p>Branch: {entry.vendor_bank_branch}</p>}
-                                  {entry.vendor_bank_account_name && <p>Name: {entry.vendor_bank_account_name}</p>}
+                            <TableCell>
+                              {entry.vendor_commission_amount ? (
+                                <div className="font-mono text-yellow-400">
+                                  <span>${entry.vendor_commission_amount?.toLocaleString()}</span>
+                                  {entry.vendor_commission_base_currency && entry.vendor_commission_base_currency !== 'USD' && entry.vendor_commission_base_amount && (
+                                    <span className="text-slate-500 text-xs block">({entry.vendor_commission_base_amount?.toLocaleString()} {entry.vendor_commission_base_currency})</span>
+                                  )}
                                 </div>
-                              ) : entry.vendor_bank_account || '-'}
-                            </TableCell>
-                            <TableCell className={`font-mono text-right ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
-                              {isIncome ? '+' : '-'}{entry.amount?.toLocaleString()} {entry.currency}
+                              ) : (
+                                <span className="text-slate-500 text-xs">-</span>
+                              )}
                             </TableCell>
                             <TableCell>
-                              {entry.status === 'pending_vendor' && <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px]"><Clock className="w-2.5 h-2.5 mr-1" />Pending</Badge>}
-                              {entry.status === 'completed' && <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[10px]"><CheckCircle2 className="w-2.5 h-2.5 mr-1" />Approved</Badge>}
-                              {entry.status === 'rejected' && <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]"><XCircle className="w-2.5 h-2.5 mr-1" />Rejected</Badge>}
+                              {entry.status === 'pending_vendor' && <Badge className="status-pending text-xs uppercase">Pending</Badge>}
+                              {entry.status === 'completed' && <Badge className="status-approved text-xs uppercase">Approved</Badge>}
+                              {entry.status === 'rejected' && <Badge className="status-rejected text-xs uppercase">Rejected</Badge>}
                             </TableCell>
+                            <TableCell className="text-slate-500 text-sm">{formatDate(entry.date || entry.created_at)}</TableCell>
                             <TableCell className="text-right">
-                              {entry.status === 'pending_vendor' && (
-                                <div className="flex gap-1 justify-end">
-                                  <Button size="sm" onClick={() => openIeAction(entry, 'approve')} className="bg-green-500/10 text-green-400 hover:bg-green-500/20 h-7 px-2 text-xs" data-testid={`ie-approve-${entry.entry_id}`}>
-                                    <CheckCircle2 className="w-3 h-3 mr-1" />Approve
-                                  </Button>
-                                  <Button size="sm" onClick={() => openIeAction(entry, 'reject')} className="bg-red-500/10 text-red-400 hover:bg-red-500/20 h-7 px-2 text-xs" data-testid={`ie-reject-${entry.entry_id}`}>
-                                    <XCircle className="w-3 h-3 mr-1" />Reject
-                                  </Button>
-                                </div>
-                              )}
-                              {entry.status === 'completed' && entry.vendor_commission_amount > 0 && (
-                                <span className="text-[10px] text-blue-600">Commission: ${entry.vendor_commission_amount?.toFixed(2)}</span>
-                              )}
-                              {entry.vendor_proof_image && <Badge className="bg-blue-500/10 text-blue-400 text-[10px] ml-1"><ImageIcon className="w-2.5 h-2.5 mr-1" />Proof</Badge>}
+                              <div className="flex items-center justify-end gap-2">
+                                {entry.status === 'pending_vendor' && (
+                                  <>
+                                    <Button size="sm" onClick={() => openIeAction(entry, 'approve')} className="bg-green-500/20 text-green-400 hover:bg-green-500/30" data-testid={`ie-approve-${entry.entry_id}`}>
+                                      <CheckCircle2 className="w-4 h-4" />
+                                    </Button>
+                                    <Button size="sm" onClick={() => openIeAction(entry, 'reject')} className="bg-red-500/20 text-red-400 hover:bg-red-500/30" data-testid={`ie-reject-${entry.entry_id}`}>
+                                      <XCircle className="w-4 h-4" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
