@@ -655,6 +655,97 @@ export default function Reports() {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Detailed Transactions Table */}
+              <Card className="bg-white border-slate-200">
+                <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-cyan-500" />
+                    All Transactions (Detailed)
+                  </CardTitle>
+                  <ExportDropdown
+                    data={allTransactions}
+                    filename="all_transactions"
+                    title="All Transactions Report"
+                    columns={[
+                      { key: 'reference', label: 'Reference' },
+                      { key: 'client_name', label: 'Client' },
+                      { key: 'transaction_type', label: 'Type' },
+                      { key: 'amount', label: 'Amount' },
+                      { key: 'currency', label: 'Currency' },
+                      { key: 'base_amount', label: 'Payment Amount' },
+                      { key: 'base_currency', label: 'Payment Currency' },
+                      { key: 'status', label: 'Status' },
+                      { key: 'created_at', label: 'Date' },
+                    ]}
+                    summaryData={[
+                      { label: 'Total Deposits', value: `$${(transactionReport.summary?.total_deposits_usd || 0).toLocaleString()}` },
+                      { label: 'Total Withdrawals', value: `$${(transactionReport.summary?.total_withdrawals_usd || 0).toLocaleString()}` },
+                      { label: 'Net Flow', value: `$${(transactionReport.summary?.net_flow_usd || 0).toLocaleString()}` },
+                    ]}
+                  />
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-slate-200">
+                          <TableHead className="text-slate-500 text-xs">Reference</TableHead>
+                          <TableHead className="text-slate-500 text-xs">Client</TableHead>
+                          <TableHead className="text-slate-500 text-xs">Type</TableHead>
+                          <TableHead className="text-slate-500 text-xs text-right">Amount (USD)</TableHead>
+                          <TableHead className="text-slate-500 text-xs text-right">Payment</TableHead>
+                          <TableHead className="text-slate-500 text-xs">Status</TableHead>
+                          <TableHead className="text-slate-500 text-xs">Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {allTransactions.map((tx, i) => (
+                          <TableRow key={tx.transaction_id || i} className="border-slate-200">
+                            <TableCell className="font-mono text-xs text-slate-800">{tx.reference}</TableCell>
+                            <TableCell className="text-slate-600">{tx.client_name}</TableCell>
+                            <TableCell>
+                              <Badge className={tx.transaction_type === 'deposit' ? 'bg-green-500' : 'bg-red-500'}>
+                                {tx.transaction_type}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className={`font-mono text-right ${tx.transaction_type === 'deposit' ? 'text-green-500' : 'text-red-500'}`}>
+                              {tx.transaction_type === 'deposit' ? '+' : '-'}${tx.amount?.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="font-mono text-right text-slate-500">
+                              {tx.base_amount?.toLocaleString()} {tx.base_currency}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={
+                                tx.status === 'completed' ? 'text-green-600 border-green-600' :
+                                tx.status === 'pending' ? 'text-yellow-600 border-yellow-600' :
+                                'text-slate-600 border-slate-600'
+                              }>
+                                {tx.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-slate-500 text-xs">{tx.created_at?.split('T')[0]}</TableCell>
+                          </TableRow>
+                        ))}
+                        {/* Total Row */}
+                        {allTransactions.length > 0 && (
+                          <TableRow className="border-t-2 border-blue-500 bg-blue-500/10 font-bold">
+                            <TableCell className="text-blue-600" colSpan={3}>TOTALS</TableCell>
+                            <TableCell className="text-right">
+                              <div className="text-green-500">+${allTransactions.filter(t => t.transaction_type === 'deposit').reduce((sum, t) => sum + (t.amount || 0), 0).toLocaleString()}</div>
+                              <div className="text-red-500">-${allTransactions.filter(t => t.transaction_type === 'withdrawal').reduce((sum, t) => sum + (t.amount || 0), 0).toLocaleString()}</div>
+                            </TableCell>
+                            <TableCell className="text-right text-blue-600">
+                              Net: ${(allTransactions.filter(t => t.transaction_type === 'deposit').reduce((sum, t) => sum + (t.amount || 0), 0) - allTransactions.filter(t => t.transaction_type === 'withdrawal').reduce((sum, t) => sum + (t.amount || 0), 0)).toLocaleString()}
+                            </TableCell>
+                            <TableCell colSpan={2} className="text-blue-600 text-right">{allTransactions.length} transactions</TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
             </>
           )}
         </TabsContent>
