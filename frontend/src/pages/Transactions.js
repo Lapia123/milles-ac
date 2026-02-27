@@ -1347,11 +1347,11 @@ export default function Transactions() {
               data-testid="filter-date-to"
             />
           </div>
-          {(dateFrom || dateTo) && (
+          {(dateFrom || dateTo || destinationFilter !== 'all') && (
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => { setDateFrom(''); setDateTo(''); }}
+              onClick={() => { setDateFrom(''); setDateTo(''); setDestinationFilter('all'); }}
               className="text-slate-500 hover:text-red-500"
             >
               Clear
