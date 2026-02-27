@@ -1754,7 +1754,7 @@ async def get_psp_summary(user: dict = Depends(get_current_user)):
         }, {"_id": 0}).to_list(1000)
         
         pending_count = len(pending_txs)
-        pending_amount = sum(tx.get("psp_net_amount", tx.get("amount", 0)) for tx in pending_txs)
+        pending_amount_gross = sum(tx.get("psp_net_amount", tx.get("amount", 0)) for tx in pending_txs)
         
         # Check for overdue settlements
         overdue_count = 0
@@ -1767,15 +1767,21 @@ async def get_psp_summary(user: dict = Depends(get_current_user)):
                 if exp_dt < now:
                     overdue_count += 1
         
-        # Calculate reserve fund held
+        # Calculate reserve fund held from pending transactions
         reserve_fund_rate = psp.get("reserve_fund_rate", psp.get("chargeback_rate", 0)) / 100
-        total_reserve_held = 0
+        reserve_from_pending = 0
         for tx in pending_txs:
             rf = tx.get("psp_reserve_fund_amount", tx.get("psp_chargeback_amount", 0))
             if rf > 0:
-                total_reserve_held += rf
+                reserve_from_pending += rf
             else:
-                total_reserve_held += round(tx.get("amount", 0) * reserve_fund_rate, 2)
+                reserve_from_pending += round(tx.get("amount", 0) * reserve_fund_rate, 2)
+
+        # Pending Amount = Gross - Commission - Reserve Fund
+        pending_amount = round(pending_amount_gross - reserve_from_pending, 2)
+
+        # Total reserve held includes pending + settled unreleased
+        total_reserve_held = reserve_from_pending
 
         # Also count released/unreleased reserve funds from settled transactions
         settled_with_reserve = await db.transactions.find({
