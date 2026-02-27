@@ -113,6 +113,7 @@ export default function PSPs() {
   });
 
   const isAdmin = user?.role === 'admin';
+  const isAccountantOrAdmin = user?.role === 'admin' || user?.role === 'accountant';
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -798,7 +799,7 @@ export default function PSPs() {
           <div className="col-span-full text-center py-12">
             <CreditCard className="w-12 h-12 text-slate-500 mx-auto mb-4" />
             <p className="text-slate-500">No PSPs found</p>
-            {isAdmin && <p className="text-sm text-slate-500/60 mt-2">Click "Add PSP" to create one</p>}
+            {isAccountantOrAdmin && <p className="text-sm text-slate-500/60 mt-2">Click "Add PSP" to create one</p>}
           </div>
         ) : (
           psps.map((psp) => (
@@ -818,7 +819,7 @@ export default function PSPs() {
                       <p className="text-xs text-slate-500">{psp.description || 'No description'}</p>
                     </div>
                   </div>
-                  {isAdmin && (
+                  {isAccountantOrAdmin && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" data-testid={`psp-actions-${psp.psp_id}`}>
@@ -1060,7 +1061,7 @@ export default function PSPs() {
                                     >
                                       <Receipt className="w-3 h-3" />
                                     </Button>
-                                    {isAdmin && (
+                                    {isAccountantOrAdmin && (
                                       <Button
                                         size="sm"
                                         onClick={() => openRecordPaymentDialog(tx)}
