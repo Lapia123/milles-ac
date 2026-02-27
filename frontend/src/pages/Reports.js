@@ -113,11 +113,109 @@ export default function Reports() {
   const [chartData, setChartData] = useState([]);
   const [loansReport, setLoansReport] = useState(null);
   const [loansData, setLoansData] = useState([]);
+  
+  // Detailed data for full reports
+  const [allTransactions, setAllTransactions] = useState([]);
+  const [allIncomeExpenses, setAllIncomeExpenses] = useState([]);
+  const [allTreasuryTransactions, setAllTreasuryTransactions] = useState([]);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
     return { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
   };
+
+  // Export to Excel function
+  const exportToExcel = (data, filename, columns) => {
+    const exportData = data.map(row => {
+      const obj = {};
+      columns.forEach(col => {
+        obj[col.label] = row[col.key] ?? '';
+      });
+      return obj;
+    });
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Report');
+    XLSX.writeFile(wb, `${filename}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast.success('Excel file downloaded');
+  };
+
+  // Export to PDF function
+  const exportToPDF = (title, data, columns, summaryData = null) => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(11, 12, 16);
+    doc.text('MILES CAPITALS', 14, 20);
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(title, 14, 28);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 35);
+    if (dateFrom || dateTo) {
+      doc.text(`Period: ${dateFrom || 'Start'} to ${dateTo || 'Present'}`, 14, 41);
+    }
+    
+    let yPos = 50;
+    
+    // Summary section if provided
+    if (summaryData) {
+      doc.setFontSize(12);
+      doc.setTextColor(0);
+      doc.text('Summary', 14, yPos);
+      yPos += 8;
+      doc.setFontSize(10);
+      summaryData.forEach(item => {
+        doc.text(`${item.label}: ${item.value}`, 14, yPos);
+        yPos += 6;
+      });
+      yPos += 10;
+    }
+    
+    // Data table
+    if (data && data.length > 0) {
+      const tableData = data.map(row => columns.map(col => {
+        const val = row[col.key];
+        if (typeof val === 'number') return val.toLocaleString();
+        return val ?? '';
+      }));
+      
+      doc.autoTable({
+        head: [columns.map(c => c.label)],
+        body: tableData,
+        startY: yPos,
+        theme: 'striped',
+        headStyles: { fillColor: [11, 12, 16], textColor: [102, 252, 241] },
+        styles: { fontSize: 8 },
+      });
+    }
+    
+    doc.save(`${title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success('PDF file downloaded');
+  };
+
+  // Export dropdown component
+  const ExportDropdown = ({ data, filename, columns, title, summaryData }) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="border-slate-200 text-slate-600 hover:bg-slate-100">
+          <Download className="w-4 h-4 mr-2" /> Export <ChevronDown className="w-3 h-3 ml-1" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="bg-white border-slate-200">
+        <DropdownMenuItem onClick={() => downloadCSV(data, filename, columns)} className="cursor-pointer">
+          <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" /> CSV
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => exportToExcel(data, filename, columns)} className="cursor-pointer">
+          <FileSpreadsheet className="w-4 h-4 mr-2 text-blue-600" /> Excel (.xlsx)
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => exportToPDF(title, data, columns, summaryData)} className="cursor-pointer">
+          <FileText className="w-4 h-4 mr-2 text-red-600" /> PDF
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   const buildQueryParams = () => {
     const params = new URLSearchParams();
