@@ -441,7 +441,7 @@ export default function Treasury() {
           <p className="text-slate-500">Manage bank accounts and treasury</p>
         </div>
         <div className="flex gap-2">
-          {isAdmin && accounts.length >= 2 && (
+          {isAccountantOrAdmin && accounts.length >= 2 && (
             <Button
               onClick={initiateTransfer}
               variant="outline"
@@ -452,7 +452,7 @@ export default function Treasury() {
               Transfer
             </Button>
           )}
-          {isAdmin && (
+          {isAccountantOrAdmin && (
             <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
               <DialogTrigger asChild>
                 <Button
@@ -720,7 +720,7 @@ export default function Treasury() {
                       <p className="text-xs text-slate-500">{account.bank_name || 'N/A'}</p>
                     </div>
                   </div>
-                  {isAdmin && (
+                  {isAccountantOrAdmin && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" data-testid={`treasury-actions-${account.account_id}`}>
@@ -736,9 +736,6 @@ export default function Treasury() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEdit(account)} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
                           <Edit className="w-4 h-4 mr-2" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDelete(account.account_id)} className="text-red-400 hover:bg-slate-100 cursor-pointer">
-                          <Trash2 className="w-4 h-4 mr-2" /> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
