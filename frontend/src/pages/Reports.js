@@ -333,6 +333,10 @@ export default function Reports() {
             <Receipt className="w-4 h-4 mr-2" />
             O/S Accounts
           </TabsTrigger>
+          <TabsTrigger value="loans" className="data-[state=active]:bg-blue-600/20 data-[state=active]:text-blue-400">
+            <Building2 className="w-4 h-4 mr-2" />
+            Loans
+          </TabsTrigger>
         </TabsList>
 
         {/* ========== TRANSACTIONS REPORT ========== */}
