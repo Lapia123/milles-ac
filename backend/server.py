@@ -5659,11 +5659,22 @@ async def record_loan_repayment(loan_id: str, repayment: LoanRepaymentCreate, us
     
     # Convert to loan currency if different
     repayment_amount_in_loan_currency = repayment.amount
+    exchange_rate_used = 1.0
     if repayment.currency != loan["currency"]:
-        # Convert to USD first, then to loan currency
-        amount_usd = convert_to_usd(repayment.amount, repayment.currency)
-        loan_rate = EXCHANGE_RATES_TO_USD.get(loan["currency"].upper(), 1.0)
-        repayment_amount_in_loan_currency = round(amount_usd / loan_rate, 2) if loan_rate else repayment.amount
+        if repayment.amount_in_loan_currency and repayment.amount_in_loan_currency > 0:
+            # Use pre-calculated amount from frontend
+            repayment_amount_in_loan_currency = repayment.amount_in_loan_currency
+            exchange_rate_used = repayment.exchange_rate or (repayment_amount_in_loan_currency / repayment.amount if repayment.amount else 1.0)
+        elif repayment.exchange_rate and repayment.exchange_rate > 0:
+            # Use provided exchange rate (payment currency -> loan currency)
+            repayment_amount_in_loan_currency = round(repayment.amount * repayment.exchange_rate, 2)
+            exchange_rate_used = repayment.exchange_rate
+        else:
+            # Convert using live FX rates
+            amount_usd = convert_to_usd(repayment.amount, repayment.currency)
+            loan_rate = EXCHANGE_RATES_TO_USD.get(loan["currency"].upper(), 1.0)
+            repayment_amount_in_loan_currency = round(amount_usd / loan_rate, 2) if loan_rate else repayment.amount
+            exchange_rate_used = round(repayment_amount_in_loan_currency / repayment.amount, 6) if repayment.amount else 1.0
     
     repayment_doc = {
         "repayment_id": repayment_id,
@@ -5671,6 +5682,8 @@ async def record_loan_repayment(loan_id: str, repayment: LoanRepaymentCreate, us
         "amount": repayment.amount,
         "currency": repayment.currency,
         "amount_in_loan_currency": repayment_amount_in_loan_currency,
+        "loan_currency": loan["currency"],
+        "exchange_rate": exchange_rate_used,
         "treasury_account_id": repayment.treasury_account_id,
         "payment_date": payment_date,
         "reference": repayment.reference,
