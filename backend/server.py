@@ -5197,7 +5197,7 @@ async def create_loan(loan_data: LoanCreate, user: dict = Depends(get_current_us
     loan_doc = {
         "loan_id": loan_id,
         "vendor_id": loan_data.vendor_id,
-        "vendor_name": vendor["name"] if vendor else None,
+        "vendor_name": vendor.get("vendor_name") or vendor.get("name") if vendor else None,
         "borrower_name": loan_data.borrower_name,
         "amount": loan_data.amount,
         "currency": loan_data.currency,
