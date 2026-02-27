@@ -62,7 +62,6 @@ export default function Layout() {
 
   // Sub-admin navigation (Clients & Transactions only)
   const subAdminNavItems = [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/clients', icon: Users, label: 'Clients' },
     { to: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
     { to: '/settings', icon: Settings, label: 'Settings' },
@@ -78,7 +77,7 @@ export default function Layout() {
     ...(isAccountantOrAdmin ? [{ to: '/loans', icon: Banknote, label: 'Loans' }] : []),
     ...(isAccountantOrAdmin ? [{ to: '/debts', icon: Receipt, label: 'O/S Accounts' }] : []),
     { to: '/psp', icon: CreditCard, label: 'PSP' },
-    ...(isAdmin ? [{ to: '/vendors', icon: Store, label: 'Exchangers' }] : []),
+    ...(isAccountantOrAdmin ? [{ to: '/vendors', icon: Store, label: 'Exchangers' }] : []),
     { to: '/reconciliation', icon: ArrowUpDown, label: 'Reconciliation' },
     ...(isAdmin ? [{ to: '/audit', icon: ShieldCheck, label: 'Audit' }] : []),
     ...(isAdmin ? [{ to: '/logs', icon: ScrollText, label: 'Logs' }] : []),
