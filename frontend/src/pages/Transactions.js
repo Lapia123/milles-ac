@@ -307,6 +307,12 @@ export default function Transactions() {
       if (formData.reference) {
         formDataToSend.append('reference', formData.reference);
       }
+      // Transaction mode and collecting person
+      formDataToSend.append('transaction_mode', formData.transaction_mode || 'bank');
+      if (formData.transaction_mode === 'cash') {
+        if (formData.collecting_person_name) formDataToSend.append('collecting_person_name', formData.collecting_person_name);
+        if (formData.collecting_person_number) formDataToSend.append('collecting_person_number', formData.collecting_person_number);
+      }
       if (proofImage) {
         formDataToSend.append('proof_image', proofImage);
       }
