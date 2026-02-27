@@ -387,7 +387,22 @@ export default function Transactions() {
   const filteredTransactions = transactions.filter(tx => {
     const clientName = (tx.client_name || getClientName(tx.client_id)).toLowerCase();
     const ref = (tx.reference || '').toLowerCase();
-    return clientName.includes(searchTerm.toLowerCase()) || ref.includes(searchTerm.toLowerCase());
+    const matchesSearch = clientName.includes(searchTerm.toLowerCase()) || ref.includes(searchTerm.toLowerCase());
+    const matchesType = typeFilter === 'all' || tx.transaction_type === typeFilter;
+    const matchesStatus = statusFilter === 'all' || tx.status === statusFilter;
+    
+    // Date filters
+    let matchesDate = true;
+    if (dateFrom) {
+      const txDate = new Date(tx.created_at).toISOString().split('T')[0];
+      matchesDate = matchesDate && txDate >= dateFrom;
+    }
+    if (dateTo) {
+      const txDate = new Date(tx.created_at).toISOString().split('T')[0];
+      matchesDate = matchesDate && txDate <= dateTo;
+    }
+    
+    return matchesSearch && matchesType && matchesStatus && matchesDate;
   });
 
   const formatDate = (dateStr) => {
