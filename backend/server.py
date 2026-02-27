@@ -5076,7 +5076,7 @@ async def get_vendor_borrowers(user: dict = Depends(get_current_user)):
         stats = vendor_stats.get(v["vendor_id"], {"total_loans": 0, "total_disbursed": 0, "total_outstanding": 0, "active_loans": 0})
         result.append({
             "vendor_id": v["vendor_id"],
-            "name": v["name"],
+            "name": v.get("vendor_name") or v.get("name", "Unknown"),
             "email": v.get("email"),
             "status": v.get("status", "active"),
             "loan_stats": {
