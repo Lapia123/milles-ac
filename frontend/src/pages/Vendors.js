@@ -506,30 +506,22 @@ export default function Exchangers() {
                   </>
                 )}
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Money In Commission (%)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={formData.deposit_commission}
-                      onChange={(e) => setFormData({ ...formData, deposit_commission: e.target.value })}
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
-                      placeholder="1.5"
-                      data-testid="vendor-deposit-commission"
-                    />
+                <div className="space-y-3">
+                  <p className="text-slate-500 text-xs uppercase tracking-wider font-semibold">Commission Rates (%)</p>
+                  <div className="grid grid-cols-3 gap-2 items-center">
+                    <div></div>
+                    <Label className="text-center text-xs text-blue-600 uppercase">Bank</Label>
+                    <Label className="text-center text-xs text-amber-600 uppercase">Cash</Label>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Money Out Commission (%)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={formData.withdrawal_commission}
-                      onChange={(e) => setFormData({ ...formData, withdrawal_commission: e.target.value })}
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
-                      placeholder="2.0"
-                      data-testid="vendor-withdrawal-commission"
-                    />
+                  <div className="grid grid-cols-3 gap-2 items-center">
+                    <Label className="text-slate-500 text-xs uppercase">Money In</Label>
+                    <Input type="number" step="0.01" value={formData.deposit_commission} onChange={(e) => setFormData({ ...formData, deposit_commission: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 font-mono" placeholder="0" data-testid="vendor-deposit-commission" />
+                    <Input type="number" step="0.01" value={formData.deposit_commission_cash} onChange={(e) => setFormData({ ...formData, deposit_commission_cash: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 font-mono" placeholder="0" data-testid="vendor-deposit-commission-cash" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 items-center">
+                    <Label className="text-slate-500 text-xs uppercase">Money Out</Label>
+                    <Input type="number" step="0.01" value={formData.withdrawal_commission} onChange={(e) => setFormData({ ...formData, withdrawal_commission: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 font-mono" placeholder="0" data-testid="vendor-withdrawal-commission" />
+                    <Input type="number" step="0.01" value={formData.withdrawal_commission_cash} onChange={(e) => setFormData({ ...formData, withdrawal_commission_cash: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 font-mono" placeholder="0" data-testid="vendor-withdrawal-commission-cash" />
                   </div>
                 </div>
                 
