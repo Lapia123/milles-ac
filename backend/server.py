@@ -3621,6 +3621,27 @@ async def create_transaction(
             b_base = base_amount if (base_currency and base_currency != "USD" and base_amount) else usd_amount
             broker_commission_base = round(b_base * broker_commission_rate / 100, 2)
 
+    # Calculate vendor commission at creation time
+    vendor_commission_rate = 0.0
+    vendor_commission_amount = 0.0
+    vendor_commission_base_amount = 0.0
+    if destination_type == "vendor" and vendor_info:
+        tx_mode = transaction_mode or "bank"
+        if transaction_type == TransactionType.DEPOSIT:
+            if tx_mode == "cash":
+                vendor_commission_rate = vendor_info.get("deposit_commission_cash", vendor_info.get("deposit_commission", 0))
+            else:
+                vendor_commission_rate = vendor_info.get("deposit_commission", 0)
+        elif transaction_type == TransactionType.WITHDRAWAL:
+            if tx_mode == "cash":
+                vendor_commission_rate = vendor_info.get("withdrawal_commission_cash", vendor_info.get("withdrawal_commission", 0))
+            else:
+                vendor_commission_rate = vendor_info.get("withdrawal_commission", 0)
+        if vendor_commission_rate > 0:
+            vendor_commission_amount = round(usd_amount * vendor_commission_rate / 100, 2)
+            v_base = base_amount if (base_currency and base_currency != "USD" and base_amount) else usd_amount
+            vendor_commission_base_amount = round(v_base * vendor_commission_rate / 100, 2)
+
     tx_doc = {
         "transaction_id": tx_id,
         "client_id": client_id,
