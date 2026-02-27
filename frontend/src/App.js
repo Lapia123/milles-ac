@@ -134,6 +134,14 @@ function AppRouter() {
             </ProtectedRoute>
           } 
         />
+        <Route 
+          path="/logs" 
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <LogsManagement />
+            </ProtectedRoute>
+          } 
+        />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
