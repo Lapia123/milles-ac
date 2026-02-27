@@ -391,6 +391,7 @@ export default function Transactions() {
     const matchesSearch = clientName.includes(searchTerm.toLowerCase()) || ref.includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === 'all' || tx.transaction_type === typeFilter;
     const matchesStatus = statusFilter === 'all' || tx.status === statusFilter;
+    const matchesDestination = destinationFilter === 'all' || tx.destination_type === destinationFilter;
     
     // Date filters
     let matchesDate = true;
