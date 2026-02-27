@@ -327,12 +327,12 @@ export default function Logs() {
             </div>
             <div className="w-[150px]">
               <Label className="text-slate-500 text-xs uppercase">Module</Label>
-              <Select value={filters.module} onValueChange={(v) => setFilters({ ...filters, module: v })}>
+              <Select value={filters.module || "all"} onValueChange={(v) => setFilters({ ...filters, module: v === "all" ? "" : v })}>
                 <SelectTrigger className="bg-slate-50 border-slate-200">
                   <SelectValue placeholder="All modules" />
                 </SelectTrigger>
                 <SelectContent className="bg-white border-slate-200">
-                  <SelectItem value="">All modules</SelectItem>
+                  <SelectItem value="all">All modules</SelectItem>
                   <SelectItem value="authentication">Authentication</SelectItem>
                   <SelectItem value="transactions">Transactions</SelectItem>
                   <SelectItem value="clients">Clients</SelectItem>
