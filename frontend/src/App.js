@@ -89,7 +89,11 @@ function AppRouter() {
         <Route path="transactions" element={<Transactions />} />
         <Route path="treasury" element={<Treasury />} />
         <Route path="psp" element={<PSPs />} />
-        <Route path="vendors" element={<Vendors />} />
+        <Route path="vendors" element={
+            <ProtectedRoute allowedRoles={['admin', 'accountant']}>
+              <Vendors />
+            </ProtectedRoute>
+          } />
         <Route path="vendor-portal" element={<VendorDashboard />} />
         <Route path="reports" element={<Reports />} />
         <Route path="reconciliation" element={<Reconciliation />} />
