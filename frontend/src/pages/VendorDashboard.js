@@ -853,7 +853,10 @@ export default function ExchangerDashboard() {
                                 {entry.transaction_mode === 'cash' ? 'Cash' : 'Bank'}
                               </Badge>
                               {entry.transaction_mode === 'cash' && entry.collecting_person_name && (
-                                <p className="text-[10px] text-slate-500 mt-0.5">{entry.collecting_person_name}</p>
+                                <div className="text-[10px] text-slate-600 mt-0.5 space-y-0.5">
+                                  <p className="font-medium">{entry.collecting_person_name}</p>
+                                  {entry.collecting_person_number && <p className="text-slate-500">{entry.collecting_person_number}</p>}
+                                </div>
                               )}
                             </TableCell>
                             <TableCell>
