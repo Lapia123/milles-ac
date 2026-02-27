@@ -256,6 +256,9 @@ class IncomeExpenseCreate(BaseModel):
     description: Optional[str] = None
     reference: Optional[str] = None
     date: Optional[str] = None  # ISO date string
+    transaction_mode: Optional[str] = None  # "bank" or "cash"
+    collecting_person_name: Optional[str] = None
+    collecting_person_number: Optional[str] = None
 
 class IncomeExpenseUpdate(BaseModel):
     category: Optional[str] = None
