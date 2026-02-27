@@ -1180,6 +1180,19 @@ export default function Reports() {
                             </TableCell>
                           </TableRow>
                         ))}
+                        {/* Total Row */}
+                        {treasuryReport.accounts?.length > 0 && (
+                          <TableRow className="border-t-2 border-blue-500 bg-blue-500/10 font-bold">
+                            <TableCell className="text-blue-600 font-bold">TOTAL ({treasuryReport.accounts.length} accounts)</TableCell>
+                            <TableCell></TableCell>
+                            <TableCell></TableCell>
+                            <TableCell className="text-slate-800 font-mono text-right font-bold">-</TableCell>
+                            <TableCell className="text-blue-400 font-mono text-right font-bold">
+                              ${treasuryReport.accounts.reduce((sum, acc) => sum + (acc.balance_usd || 0), 0).toLocaleString()}
+                            </TableCell>
+                            <TableCell></TableCell>
+                          </TableRow>
+                        )}
                       </TableBody>
                     </Table>
                   </ScrollArea>
