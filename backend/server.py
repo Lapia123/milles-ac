@@ -4958,10 +4958,17 @@ async def vendor_approve_ie(entry_id: str, user: dict = Depends(require_vendor))
     
     # Calculate commission (same as deposit/withdrawal)
     # For IE entries: income = deposit-like (vendor receives), expense = withdrawal-like (vendor pays)
+    tx_mode = entry.get("transaction_mode", "bank")
     if entry["entry_type"] == "income":
-        commission_rate = vendor.get("deposit_commission", 0) / 100
+        if tx_mode == "cash":
+            commission_rate = vendor.get("deposit_commission_cash", vendor.get("deposit_commission", 0)) / 100
+        else:
+            commission_rate = vendor.get("deposit_commission", 0) / 100
     else:
-        commission_rate = vendor.get("withdrawal_commission", 0) / 100
+        if tx_mode == "cash":
+            commission_rate = vendor.get("withdrawal_commission_cash", vendor.get("withdrawal_commission", 0)) / 100
+        else:
+            commission_rate = vendor.get("withdrawal_commission", 0) / 100
     
     amount = entry.get("amount", 0)
     amount_usd = entry.get("amount_usd") or convert_to_usd(amount, entry.get("currency", "USD"))
