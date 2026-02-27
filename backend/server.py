@@ -142,6 +142,46 @@ class TreasuryAccountStatus:
     ACTIVE = "active"
     INACTIVE = "inactive"
 
+# LP (Liquidity Provider) Models
+class LPAccountStatus:
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+
+class LPTransactionType:
+    DEPOSIT = "deposit"
+    WITHDRAWAL = "withdrawal"
+
+class LPAccountCreate(BaseModel):
+    lp_name: str
+    account_number: Optional[str] = None
+    bank_name: Optional[str] = None
+    swift_code: Optional[str] = None
+    currency: str = "USD"
+    contact_person: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    notes: Optional[str] = None
+
+class LPAccountUpdate(BaseModel):
+    lp_name: Optional[str] = None
+    account_number: Optional[str] = None
+    bank_name: Optional[str] = None
+    swift_code: Optional[str] = None
+    currency: Optional[str] = None
+    contact_person: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+class LPTransactionCreate(BaseModel):
+    transaction_type: str  # deposit or withdrawal
+    amount: float
+    currency: str = "USD"
+    treasury_account_id: Optional[str] = None  # Source/destination treasury
+    reference: Optional[str] = None
+    notes: Optional[str] = None
+
 # PSP Models
 class PSPStatus:
     ACTIVE = "active"
