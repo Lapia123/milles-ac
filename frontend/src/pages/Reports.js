@@ -1457,11 +1457,98 @@ export default function Reports() {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Detailed Income & Expenses Table */}
+              <Card className="bg-white border-slate-200">
+                <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                    <Wallet className="w-5 h-5 text-purple-500" />
+                    All Income & Expenses (Detailed)
+                  </CardTitle>
+                  <ExportDropdown
+                    data={allIncomeExpenses}
+                    filename="income_expenses_detailed"
+                    title="Income & Expenses Report"
+                    columns={[
+                      { key: 'entry_type', label: 'Type' },
+                      { key: 'category', label: 'Category' },
+                      { key: 'amount', label: 'Amount' },
+                      { key: 'currency', label: 'Currency' },
+                      { key: 'amount_usd', label: 'Amount (USD)' },
+                      { key: 'treasury_account_name', label: 'Account' },
+                      { key: 'description', label: 'Description' },
+                      { key: 'date', label: 'Date' },
+                      { key: 'status', label: 'Status' },
+                    ]}
+                    summaryData={[
+                      { label: 'Total Income', value: `$${(financialReport.income?.total || 0).toLocaleString()}` },
+                      { label: 'Total Expenses', value: `$${(financialReport.expenses?.total || 0).toLocaleString()}` },
+                      { label: 'Net P&L', value: `$${(financialReport.net_profit_loss || 0).toLocaleString()}` },
+                    ]}
+                  />
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-slate-200">
+                          <TableHead className="text-slate-500 text-xs">Type</TableHead>
+                          <TableHead className="text-slate-500 text-xs">Category</TableHead>
+                          <TableHead className="text-slate-500 text-xs text-right">Amount</TableHead>
+                          <TableHead className="text-slate-500 text-xs">Account</TableHead>
+                          <TableHead className="text-slate-500 text-xs">Description</TableHead>
+                          <TableHead className="text-slate-500 text-xs">Date</TableHead>
+                          <TableHead className="text-slate-500 text-xs">Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {allIncomeExpenses.map((entry, i) => (
+                          <TableRow key={entry.entry_id || i} className="border-slate-200">
+                            <TableCell>
+                              <Badge className={entry.entry_type === 'income' ? 'bg-green-500' : 'bg-red-500'}>
+                                {entry.entry_type}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-slate-600 capitalize">{entry.category?.replace(/_/g, ' ') || entry.ie_category_name || '-'}</TableCell>
+                            <TableCell className={`font-mono text-right ${entry.entry_type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
+                              {entry.entry_type === 'income' ? '+' : '-'}${entry.amount_usd?.toLocaleString() || entry.amount?.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-slate-500">{entry.treasury_account_name || '-'}</TableCell>
+                            <TableCell className="text-slate-500 text-xs max-w-[200px] truncate">{entry.description || '-'}</TableCell>
+                            <TableCell className="text-slate-500 text-xs">{entry.date?.split('T')[0]}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={
+                                entry.status === 'completed' ? 'text-green-600 border-green-600' :
+                                entry.status === 'pending' ? 'text-yellow-600 border-yellow-600' :
+                                'text-slate-600 border-slate-600'
+                              }>
+                                {entry.status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {/* Total Row */}
+                        {allIncomeExpenses.length > 0 && (
+                          <TableRow className="border-t-2 border-purple-500 bg-purple-500/10 font-bold">
+                            <TableCell className="text-purple-600" colSpan={2}>TOTALS</TableCell>
+                            <TableCell className="text-right">
+                              <div className="text-green-500">+${allIncomeExpenses.filter(e => e.entry_type === 'income').reduce((sum, e) => sum + (e.amount_usd || e.amount || 0), 0).toLocaleString()}</div>
+                              <div className="text-red-500">-${allIncomeExpenses.filter(e => e.entry_type === 'expense').reduce((sum, e) => sum + (e.amount_usd || e.amount || 0), 0).toLocaleString()}</div>
+                            </TableCell>
+                            <TableCell className="text-purple-600 font-bold">
+                              Net: ${(allIncomeExpenses.filter(e => e.entry_type === 'income').reduce((sum, e) => sum + (e.amount_usd || e.amount || 0), 0) - allIncomeExpenses.filter(e => e.entry_type === 'expense').reduce((sum, e) => sum + (e.amount_usd || e.amount || 0), 0)).toLocaleString()}
+                            </TableCell>
+                            <TableCell colSpan={3} className="text-purple-600 text-right">{allIncomeExpenses.length} entries</TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
             </>
           )}
         </TabsContent>
-
-        {/* ========== OUTSTANDING ACCOUNTS REPORT ========== */}
         <TabsContent value="outstanding" className="space-y-4">
           {outstandingReport && (
             <>
