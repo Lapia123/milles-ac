@@ -509,7 +509,7 @@ export default function PSPs() {
           </h1>
           <p className="text-slate-500">Manage PSPs, commissions, and settlements</p>
         </div>
-        {isAdmin && (
+        {isAccountantOrAdmin && (
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button
