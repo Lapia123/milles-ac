@@ -639,6 +639,7 @@ export default function ExchangerDashboard() {
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Amount</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Currency</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Commission</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Mode</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
@@ -647,7 +648,7 @@ export default function ExchangerDashboard() {
               <TableBody>
                 {transactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-slate-500">
+                    <TableCell colSpan={10} className="text-center py-8 text-slate-500">
                       No transactions assigned to you
                     </TableCell>
                   </TableRow>
