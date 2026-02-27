@@ -131,9 +131,11 @@ export default function Reports() {
         outstanding: `${API_URL}/api/debts/summary/overview`,
         debts: `${API_URL}/api/debts`,
         chart: `${API_URL}/api/reports/transactions-summary?days=30`,
+        loans: `${API_URL}/api/loans/reports/summary`,
+        loansData: `${API_URL}/api/loans`,
       };
 
-      const [txRes, vendorRes, commRes, clientRes, treasuryRes, pspRes, financialRes, outstandingRes, debtsRes, chartRes] = await Promise.all([
+      const [txRes, vendorRes, commRes, clientRes, treasuryRes, pspRes, financialRes, outstandingRes, debtsRes, chartRes, loansRes, loansDataRes] = await Promise.all([
         fetch(endpoints.transactions, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.vendors, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.commissions, { headers: getAuthHeaders(), credentials: 'include' }),
@@ -144,6 +146,8 @@ export default function Reports() {
         fetch(endpoints.outstanding, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.debts, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.chart, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.loans, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.loansData, { headers: getAuthHeaders(), credentials: 'include' }),
       ]);
 
       if (txRes.ok) setTransactionReport(await txRes.json());
@@ -156,6 +160,8 @@ export default function Reports() {
       if (outstandingRes.ok) setOutstandingReport(await outstandingRes.json());
       if (debtsRes.ok) setDebtsData(await debtsRes.json());
       if (chartRes.ok) setChartData(await chartRes.json());
+      if (loansRes.ok) setLoansReport(await loansRes.json());
+      if (loansDataRes.ok) setLoansData(await loansDataRes.json());
     } catch (error) {
       console.error('Error fetching reports:', error);
       toast.error('Failed to load reports');
