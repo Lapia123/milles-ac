@@ -426,7 +426,7 @@ export default function Exchangers() {
           </h1>
           <p className="text-slate-500">Manage exchangers, commissions, and settlements</p>
         </div>
-        {isAdmin && (
+        {isAccountantOrAdmin && (
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button
@@ -639,7 +639,7 @@ export default function Exchangers() {
                       <p className="text-xs text-slate-500">{vendor.email}</p>
                     </div>
                   </div>
-                  {isAdmin && (
+                  {isAccountantOrAdmin && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" data-testid={`vendor-actions-${vendor.vendor_id}`}>
@@ -652,9 +652,6 @@ export default function Exchangers() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(vendor); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
                           <Edit className="w-4 h-4 mr-2" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(vendor.vendor_id); }} className="text-red-400 hover:bg-slate-100 cursor-pointer">
-                          <Trash2 className="w-4 h-4 mr-2" /> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -807,7 +804,7 @@ export default function Exchangers() {
               </div>
 
               {/* Settle Button */}
-              {isAdmin && pendingTransactions.filter(t => (t.status === 'approved' || t.status === 'completed') && !t.settled).length > 0 && (
+              {isAccountantOrAdmin && pendingTransactions.filter(t => (t.status === 'approved' || t.status === 'completed') && !t.settled).length > 0 && (
                 <Button
                   onClick={() => setSettleDialogOpen(true)}
                   className="w-full bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
