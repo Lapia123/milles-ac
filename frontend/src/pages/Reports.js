@@ -1463,6 +1463,225 @@ export default function Reports() {
             </>
           )}
         </TabsContent>
+
+        {/* ========== LOANS REPORT ========== */}
+        <TabsContent value="loans" className="space-y-4">
+          {loansReport && (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="bg-white border-slate-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-slate-500 uppercase tracking-wider">Total Disbursed</p>
+                        <p className="text-2xl font-bold text-slate-800">${loansReport.total_disbursed_usd?.toLocaleString()}</p>
+                      </div>
+                      <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <Banknote className="w-5 h-5 text-blue-500" />
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-2">{loansReport.total_loans} total loans</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-white border-slate-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-slate-500 uppercase tracking-wider">Outstanding</p>
+                        <p className="text-2xl font-bold text-red-500">${loansReport.total_outstanding_usd?.toLocaleString()}</p>
+                      </div>
+                      <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                        <AlertTriangle className="w-5 h-5 text-red-500" />
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-2">{loansReport.status_breakdown?.active || 0} active loans</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-white border-slate-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-slate-500 uppercase tracking-wider">Total Repaid</p>
+                        <p className="text-2xl font-bold text-green-500">${loansReport.total_repaid_usd?.toLocaleString()}</p>
+                      </div>
+                      <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-green-500" />
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-2">{loansReport.status_breakdown?.fully_paid || 0} fully paid</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-white border-slate-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-slate-500 uppercase tracking-wider">Overdue</p>
+                        <p className="text-2xl font-bold text-orange-500">{loansReport.status_breakdown?.overdue || 0}</p>
+                      </div>
+                      <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-orange-500" />
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-2">Need attention</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Loans by Borrower */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card className="bg-white border-slate-200">
+                  <CardHeader>
+                    <CardTitle className="text-slate-800 flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-blue-500" />
+                      Loans by Borrower
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[300px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-slate-200">
+                            <TableHead className="text-slate-500">Borrower</TableHead>
+                            <TableHead className="text-slate-500 text-right">Disbursed</TableHead>
+                            <TableHead className="text-slate-500 text-right">Outstanding</TableHead>
+                            <TableHead className="text-slate-500 text-right">Count</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {loansReport.by_borrower && Object.entries(loansReport.by_borrower).map(([borrower, data]) => (
+                            <TableRow key={borrower} className="border-slate-200">
+                              <TableCell className="font-medium text-slate-800">{borrower}</TableCell>
+                              <TableCell className="text-right text-slate-600">${data.disbursed?.toLocaleString()}</TableCell>
+                              <TableCell className="text-right text-red-500">${data.outstanding?.toLocaleString()}</TableCell>
+                              <TableCell className="text-right text-slate-500">{data.count}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+
+                {/* Loan Status Pie Chart */}
+                <Card className="bg-white border-slate-200">
+                  <CardHeader>
+                    <CardTitle className="text-slate-800 flex items-center gap-2">
+                      <PieChart className="w-5 h-5 text-purple-500" />
+                      Loan Status Distribution
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <RechartsPieChart>
+                        <Pie
+                          data={[
+                            { name: 'Active', value: loansReport.status_breakdown?.active || 0 },
+                            { name: 'Partially Paid', value: loansReport.status_breakdown?.partially_paid || 0 },
+                            { name: 'Fully Paid', value: loansReport.status_breakdown?.fully_paid || 0 },
+                            { name: 'Overdue', value: loansReport.status_breakdown?.overdue || 0 },
+                          ].filter(d => d.value > 0)}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={100}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {[
+                            { name: 'Active', value: loansReport.status_breakdown?.active || 0 },
+                            { name: 'Partially Paid', value: loansReport.status_breakdown?.partially_paid || 0 },
+                            { name: 'Fully Paid', value: loansReport.status_breakdown?.fully_paid || 0 },
+                            { name: 'Overdue', value: loansReport.status_breakdown?.overdue || 0 },
+                          ].filter(d => d.value > 0).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* All Loans Table */}
+              <Card className="bg-white border-slate-200">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-slate-800 flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-cyan-500" />
+                      All Loans
+                    </CardTitle>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => downloadCSV(loansData, 'loans_report', [
+                        { key: 'loan_id', label: 'Loan ID' },
+                        { key: 'borrower_name', label: 'Borrower' },
+                        { key: 'amount', label: 'Amount' },
+                        { key: 'currency', label: 'Currency' },
+                        { key: 'interest_rate', label: 'Interest Rate' },
+                        { key: 'total_repaid', label: 'Repaid' },
+                        { key: 'status', label: 'Status' },
+                        { key: 'loan_date', label: 'Loan Date' },
+                        { key: 'due_date', label: 'Due Date' },
+                      ])}
+                      className="border-slate-200 text-slate-600 hover:bg-slate-100"
+                    >
+                      <Download className="w-4 h-4 mr-2" /> Export CSV
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-slate-200">
+                          <TableHead className="text-slate-500">Loan ID</TableHead>
+                          <TableHead className="text-slate-500">Borrower</TableHead>
+                          <TableHead className="text-slate-500 text-right">Amount</TableHead>
+                          <TableHead className="text-slate-500 text-right">Interest</TableHead>
+                          <TableHead className="text-slate-500 text-right">Repaid</TableHead>
+                          <TableHead className="text-slate-500 text-right">Outstanding</TableHead>
+                          <TableHead className="text-slate-500">Status</TableHead>
+                          <TableHead className="text-slate-500">Due Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {loansData.map((loan) => {
+                          const totalDue = loan.amount + (loan.total_interest || 0);
+                          const outstanding = totalDue - (loan.total_repaid || 0);
+                          return (
+                            <TableRow key={loan.loan_id} className="border-slate-200">
+                              <TableCell className="font-mono text-xs text-slate-600">{loan.loan_id?.slice(0, 12)}</TableCell>
+                              <TableCell className="font-medium text-slate-800">{loan.borrower_name}</TableCell>
+                              <TableCell className="text-right text-slate-600">{loan.amount?.toLocaleString()} {loan.currency}</TableCell>
+                              <TableCell className="text-right text-slate-500">{loan.interest_rate}%</TableCell>
+                              <TableCell className="text-right text-green-600">{loan.total_repaid?.toLocaleString() || 0} {loan.currency}</TableCell>
+                              <TableCell className="text-right text-red-500">{Math.max(0, outstanding)?.toLocaleString()} {loan.currency}</TableCell>
+                              <TableCell>
+                                <Badge className={
+                                  loan.status === 'active' ? 'bg-blue-500' :
+                                  loan.status === 'fully_paid' ? 'bg-green-500' :
+                                  loan.status === 'partially_paid' ? 'bg-yellow-500' :
+                                  'bg-red-500'
+                                }>
+                                  {loan.status?.replace('_', ' ')}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-slate-500">{loan.due_date?.split('T')[0] || '-'}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </TabsContent>
       </Tabs>
     </div>
   );
