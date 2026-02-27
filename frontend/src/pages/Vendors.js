@@ -922,6 +922,14 @@ export default function Exchangers() {
                                   <span className="text-slate-500 text-xs">-</span>
                                 )}
                               </TableCell>
+                              <TableCell>
+                                <Badge className={tx.transaction_mode === 'cash' ? 'bg-amber-100 text-amber-700 text-[10px]' : 'bg-blue-100 text-blue-700 text-[10px]'}>
+                                  {tx.transaction_mode === 'cash' ? 'Cash' : 'Bank'}
+                                </Badge>
+                                {tx.transaction_mode === 'cash' && tx.collecting_person_name && (
+                                  <p className="text-[10px] text-slate-500 mt-0.5">{tx.collecting_person_name}</p>
+                                )}
+                              </TableCell>
                               <TableCell>{getStatusBadge(tx.status)}</TableCell>
                               <TableCell>
                                 {tx.settled ? (
