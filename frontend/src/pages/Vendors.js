@@ -837,6 +837,9 @@ export default function Exchangers() {
                   <TabsTrigger value="history" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
                     Settlement History
                   </TabsTrigger>
+                  <TabsTrigger value="ie" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+                    Income/Expenses ({vendorIeEntries.length})
+                  </TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="transactions" className="mt-4">
