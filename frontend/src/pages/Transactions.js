@@ -800,8 +800,8 @@ export default function Transactions() {
                 </div>
               )}
               
-              {/* Client Bank Details (for withdrawal to bank) */}
-              {formData.destination_type === 'bank' && (
+              {/* Client Bank Details (for withdrawal to bank - not for cash) */}
+              {formData.destination_type === 'bank' && formData.transaction_mode !== 'cash' && (
                 <div className="space-y-4 p-4 bg-slate-50 rounded-sm border border-slate-200">
                   <div className="flex items-center gap-2 text-blue-600 mb-2">
                     <Building2 className="w-4 h-4" />
