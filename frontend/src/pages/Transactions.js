@@ -1007,6 +1007,34 @@ export default function Transactions() {
                     </Select>
                   </div>
                   
+                  {/* Transaction Mode - Bank or Cash */}
+                  <div className="space-y-2">
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Transaction Mode *</Label>
+                    <Select value={formData.transaction_mode} onValueChange={(value) => setFormData({ ...formData, transaction_mode: value, collecting_person_name: '', collecting_person_number: '' })}>
+                      <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="select-tx-mode">
+                        <SelectValue placeholder="Select mode" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-slate-200">
+                        <SelectItem value="bank" className="text-slate-800">Bank Transfer</SelectItem>
+                        <SelectItem value="cash" className="text-slate-800">Cash</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Cash collecting person details */}
+                  {formData.transaction_mode === 'cash' && (
+                    <div className="grid grid-cols-2 gap-4 p-3 bg-amber-50 border border-amber-200 rounded-sm">
+                      <div className="space-y-1">
+                        <Label className="text-amber-700 text-xs uppercase">Collecting Person Name</Label>
+                        <Input value={formData.collecting_person_name} onChange={(e) => setFormData({ ...formData, collecting_person_name: e.target.value })} className="bg-white border-amber-200 text-slate-800" placeholder="Full name" data-testid="collecting-person-name" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-amber-700 text-xs uppercase">Collecting Person Number</Label>
+                        <Input value={formData.collecting_person_number} onChange={(e) => setFormData({ ...formData, collecting_person_number: e.target.value })} className="bg-white border-amber-200 text-slate-800" placeholder="Phone number" data-testid="collecting-person-number" />
+                      </div>
+                    </div>
+                  )}
+
                   {/* For withdrawals via vendor - enter client bank details */}
                   {formData.transaction_type === 'withdrawal' && (
                     <div className="space-y-4 p-4 bg-slate-50 rounded-sm border border-slate-200 mt-2">
