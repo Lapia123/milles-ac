@@ -1492,9 +1492,6 @@ export default function Loans() {
                   value={repaymentForm.currency}
                   onValueChange={(value) => {
                     setRepaymentForm(prev => ({ ...prev, currency: value, exchange_rate: '', amount_in_loan_currency: '' }));
-                    if (selectedLoan && value !== selectedLoan.currency) {
-                      fetchExchangeRate(value, selectedLoan.currency);
-                    }
                   }}
                 >
                   <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
