@@ -96,6 +96,7 @@ export default function Exchangers() {
   });
 
   const isAdmin = user?.role === 'admin';
+  const isAccountantOrAdmin = user?.role === 'admin' || user?.role === 'accountant';
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
