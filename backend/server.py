@@ -4451,9 +4451,41 @@ class ConvertToLoanRequest(BaseModel):
 
 @api_router.get("/loans/borrowers")
 async def get_loan_borrowers(user: dict = Depends(get_current_user)):
-    """Get unique list of borrower names from existing loans"""
-    borrowers = await db.loans.distinct("borrower_name")
-    return {"borrowers": sorted([b for b in borrowers if b])}
+    """Get list of borrower companies (vendors) plus unique borrower names from existing loans"""
+    # Get all vendor companies as potential borrowers
+    vendors = await db.vendors.find({"status": "active"}, {"_id": 0, "vendor_id": 1, "vendor_name": 1, "email": 1}).to_list(length=1000)
+    
+    # Also get unique borrower names from existing loans (for historical entries)
+    loan_borrowers = await db.loans.distinct("borrower_name")
+    
+    # Combine into borrowers list
+    borrowers = []
+    seen_names = set()
+    
+    # Add vendors as borrower companies
+    for v in vendors:
+        name = v.get("vendor_name") or v.get("name")
+        if name and name not in seen_names:
+            borrowers.append({
+                "name": name,
+                "vendor_id": v.get("vendor_id"),
+                "email": v.get("email"),
+                "type": "company"
+            })
+            seen_names.add(name)
+    
+    # Add historical borrower names from loans (if not already in vendor list)
+    for b in loan_borrowers:
+        if b and b not in seen_names:
+            borrowers.append({
+                "name": b,
+                "vendor_id": None,
+                "email": None,
+                "type": "historical"
+            })
+            seen_names.add(b)
+    
+    return {"borrowers": sorted(borrowers, key=lambda x: x["name"])}
 
 @api_router.post("/income-expenses/{entry_id}/convert-to-loan")
 async def convert_expense_to_loan(entry_id: str, req: ConvertToLoanRequest, user: dict = Depends(get_current_user)):
