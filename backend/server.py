@@ -1533,6 +1533,293 @@ async def inter_treasury_transfer(transfer: TreasuryTransferRequest, user: dict 
         "created_by_name": user["name"]
     }
 
+# ============== LP (LIQUIDITY PROVIDER) ROUTES ==============
+
+@api_router.get("/lp")
+async def get_lp_accounts(user: dict = Depends(get_current_user)):
+    """Get all LP accounts"""
+    accounts = await db.lp_accounts.find({}, {"_id": 0}).to_list(1000)
+    return accounts
+
+@api_router.get("/lp/dashboard")
+async def get_lp_dashboard(user: dict = Depends(get_current_user)):
+    """Get LP dashboard with summary statistics"""
+    accounts = await db.lp_accounts.find({}, {"_id": 0}).to_list(1000)
+    
+    total_balance = sum(a.get("balance", 0) for a in accounts)
+    total_deposits = sum(a.get("total_deposits", 0) for a in accounts)
+    total_withdrawals = sum(a.get("total_withdrawals", 0) for a in accounts)
+    active_count = sum(1 for a in accounts if a.get("status") == LPAccountStatus.ACTIVE)
+    
+    # Get recent transactions
+    recent_txs = await db.lp_transactions.find({}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10)
+    
+    return {
+        "total_balance": total_balance,
+        "total_deposits": total_deposits,
+        "total_withdrawals": total_withdrawals,
+        "active_lp_count": active_count,
+        "total_lp_count": len(accounts),
+        "accounts": accounts,
+        "recent_transactions": recent_txs
+    }
+
+@api_router.get("/lp/{lp_id}")
+async def get_lp_account(lp_id: str, user: dict = Depends(get_current_user)):
+    """Get a specific LP account"""
+    account = await db.lp_accounts.find_one({"lp_id": lp_id}, {"_id": 0})
+    if not account:
+        raise HTTPException(status_code=404, detail="LP account not found")
+    return account
+
+@api_router.post("/lp")
+async def create_lp_account(lp_data: LPAccountCreate, user: dict = Depends(require_accountant_or_admin)):
+    """Create a new LP account"""
+    lp_id = f"lp_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    
+    account_doc = {
+        "lp_id": lp_id,
+        "lp_name": lp_data.lp_name,
+        "account_number": lp_data.account_number,
+        "bank_name": lp_data.bank_name,
+        "swift_code": lp_data.swift_code,
+        "currency": lp_data.currency,
+        "contact_person": lp_data.contact_person,
+        "contact_email": lp_data.contact_email,
+        "contact_phone": lp_data.contact_phone,
+        "notes": lp_data.notes,
+        "balance": 0,
+        "total_deposits": 0,
+        "total_withdrawals": 0,
+        "transaction_count": 0,
+        "status": LPAccountStatus.ACTIVE,
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    
+    await db.lp_accounts.insert_one(account_doc)
+    return await db.lp_accounts.find_one({"lp_id": lp_id}, {"_id": 0})
+
+@api_router.put("/lp/{lp_id}")
+async def update_lp_account(lp_id: str, lp_data: LPAccountUpdate, user: dict = Depends(require_accountant_or_admin)):
+    """Update an LP account"""
+    account = await db.lp_accounts.find_one({"lp_id": lp_id}, {"_id": 0})
+    if not account:
+        raise HTTPException(status_code=404, detail="LP account not found")
+    
+    updates = {k: v for k, v in lp_data.model_dump().items() if v is not None}
+    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.lp_accounts.update_one({"lp_id": lp_id}, {"$set": updates})
+    return await db.lp_accounts.find_one({"lp_id": lp_id}, {"_id": 0})
+
+@api_router.get("/lp/{lp_id}/transactions")
+async def get_lp_transactions(lp_id: str, user: dict = Depends(get_current_user), limit: int = 100):
+    """Get transactions for a specific LP account"""
+    account = await db.lp_accounts.find_one({"lp_id": lp_id}, {"_id": 0})
+    if not account:
+        raise HTTPException(status_code=404, detail="LP account not found")
+    
+    transactions = await db.lp_transactions.find(
+        {"lp_id": lp_id}, {"_id": 0}
+    ).sort("created_at", -1).to_list(limit)
+    
+    return transactions
+
+@api_router.post("/lp/{lp_id}/deposit")
+async def create_lp_deposit(lp_id: str, tx_data: LPTransactionCreate, user: dict = Depends(require_accountant_or_admin)):
+    """Create a deposit to LP (sending funds TO the LP)"""
+    account = await db.lp_accounts.find_one({"lp_id": lp_id}, {"_id": 0})
+    if not account:
+        raise HTTPException(status_code=404, detail="LP account not found")
+    
+    if tx_data.amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be positive")
+    
+    now = datetime.now(timezone.utc)
+    tx_id = f"lptx_{uuid.uuid4().hex[:12]}"
+    
+    # If treasury account specified, deduct from it
+    treasury_name = None
+    if tx_data.treasury_account_id:
+        treasury = await db.treasury_accounts.find_one({"account_id": tx_data.treasury_account_id}, {"_id": 0})
+        if not treasury:
+            raise HTTPException(status_code=404, detail="Treasury account not found")
+        if treasury.get("balance", 0) < tx_data.amount:
+            raise HTTPException(status_code=400, detail="Insufficient treasury balance")
+        
+        treasury_name = treasury.get("account_name")
+        
+        # Deduct from treasury
+        await db.treasury_accounts.update_one(
+            {"account_id": tx_data.treasury_account_id},
+            {"$inc": {"balance": -tx_data.amount}, "$set": {"updated_at": now.isoformat()}}
+        )
+        
+        # Record treasury transaction
+        await db.treasury_transactions.insert_one({
+            "treasury_transaction_id": f"ttx_{uuid.uuid4().hex[:12]}",
+            "account_id": tx_data.treasury_account_id,
+            "account_name": treasury_name,
+            "transaction_type": "lp_deposit",
+            "amount": -tx_data.amount,
+            "currency": tx_data.currency,
+            "reference": f"Deposit to LP: {account['lp_name']}",
+            "lp_transaction_id": tx_id,
+            "created_at": now.isoformat(),
+            "created_by": user["user_id"],
+            "created_by_name": user["name"]
+        })
+    
+    # Create LP transaction
+    tx_doc = {
+        "lp_transaction_id": tx_id,
+        "lp_id": lp_id,
+        "lp_name": account["lp_name"],
+        "transaction_type": LPTransactionType.DEPOSIT,
+        "amount": tx_data.amount,
+        "currency": tx_data.currency,
+        "treasury_account_id": tx_data.treasury_account_id,
+        "treasury_name": treasury_name,
+        "reference": tx_data.reference or f"DEP-{tx_id[-8:].upper()}",
+        "notes": tx_data.notes,
+        "balance_before": account.get("balance", 0),
+        "balance_after": account.get("balance", 0) + tx_data.amount,
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    
+    await db.lp_transactions.insert_one(tx_doc)
+    
+    # Update LP account balance
+    await db.lp_accounts.update_one(
+        {"lp_id": lp_id},
+        {
+            "$inc": {"balance": tx_data.amount, "total_deposits": tx_data.amount, "transaction_count": 1},
+            "$set": {"updated_at": now.isoformat()}
+        }
+    )
+    
+    tx_doc.pop("_id", None)
+    return tx_doc
+
+@api_router.post("/lp/{lp_id}/withdraw")
+async def create_lp_withdrawal(lp_id: str, tx_data: LPTransactionCreate, user: dict = Depends(require_accountant_or_admin)):
+    """Create a withdrawal from LP (receiving funds FROM the LP)"""
+    account = await db.lp_accounts.find_one({"lp_id": lp_id}, {"_id": 0})
+    if not account:
+        raise HTTPException(status_code=404, detail="LP account not found")
+    
+    if tx_data.amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be positive")
+    
+    if account.get("balance", 0) < tx_data.amount:
+        raise HTTPException(status_code=400, detail="Insufficient LP balance")
+    
+    now = datetime.now(timezone.utc)
+    tx_id = f"lptx_{uuid.uuid4().hex[:12]}"
+    
+    # If treasury account specified, add to it
+    treasury_name = None
+    if tx_data.treasury_account_id:
+        treasury = await db.treasury_accounts.find_one({"account_id": tx_data.treasury_account_id}, {"_id": 0})
+        if not treasury:
+            raise HTTPException(status_code=404, detail="Treasury account not found")
+        
+        treasury_name = treasury.get("account_name")
+        
+        # Add to treasury
+        await db.treasury_accounts.update_one(
+            {"account_id": tx_data.treasury_account_id},
+            {"$inc": {"balance": tx_data.amount}, "$set": {"updated_at": now.isoformat()}}
+        )
+        
+        # Record treasury transaction
+        await db.treasury_transactions.insert_one({
+            "treasury_transaction_id": f"ttx_{uuid.uuid4().hex[:12]}",
+            "account_id": tx_data.treasury_account_id,
+            "account_name": treasury_name,
+            "transaction_type": "lp_withdrawal",
+            "amount": tx_data.amount,
+            "currency": tx_data.currency,
+            "reference": f"Withdrawal from LP: {account['lp_name']}",
+            "lp_transaction_id": tx_id,
+            "created_at": now.isoformat(),
+            "created_by": user["user_id"],
+            "created_by_name": user["name"]
+        })
+    
+    # Create LP transaction
+    tx_doc = {
+        "lp_transaction_id": tx_id,
+        "lp_id": lp_id,
+        "lp_name": account["lp_name"],
+        "transaction_type": LPTransactionType.WITHDRAWAL,
+        "amount": tx_data.amount,
+        "currency": tx_data.currency,
+        "treasury_account_id": tx_data.treasury_account_id,
+        "treasury_name": treasury_name,
+        "reference": tx_data.reference or f"WTH-{tx_id[-8:].upper()}",
+        "notes": tx_data.notes,
+        "balance_before": account.get("balance", 0),
+        "balance_after": account.get("balance", 0) - tx_data.amount,
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    
+    await db.lp_transactions.insert_one(tx_doc)
+    
+    # Update LP account balance
+    await db.lp_accounts.update_one(
+        {"lp_id": lp_id},
+        {
+            "$inc": {"balance": -tx_data.amount, "total_withdrawals": tx_data.amount, "transaction_count": 1},
+            "$set": {"updated_at": now.isoformat()}
+        }
+    )
+    
+    tx_doc.pop("_id", None)
+    return tx_doc
+
+@api_router.get("/lp/export/csv")
+async def export_lp_csv(user: dict = Depends(get_current_user)):
+    """Export LP accounts and transactions to CSV"""
+    import csv
+    import io
+    
+    accounts = await db.lp_accounts.find({}, {"_id": 0}).to_list(1000)
+    transactions = await db.lp_transactions.find({}, {"_id": 0}).sort("created_at", -1).to_list(5000)
+    
+    output = io.StringIO()
+    
+    # Write accounts
+    output.write("=== LP ACCOUNTS ===\n")
+    if accounts:
+        writer = csv.DictWriter(output, fieldnames=["lp_id", "lp_name", "currency", "balance", "total_deposits", "total_withdrawals", "status"])
+        writer.writeheader()
+        for acc in accounts:
+            writer.writerow({k: acc.get(k, "") for k in writer.fieldnames})
+    
+    output.write("\n=== LP TRANSACTIONS ===\n")
+    if transactions:
+        writer = csv.DictWriter(output, fieldnames=["lp_transaction_id", "lp_name", "transaction_type", "amount", "currency", "reference", "created_at", "created_by_name"])
+        writer.writeheader()
+        for tx in transactions:
+            writer.writerow({k: tx.get(k, "") for k in writer.fieldnames})
+    
+    from fastapi.responses import StreamingResponse
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=lp_export_{datetime.now().strftime('%Y%m%d')}.csv"}
+    )
+
 # ============== PSP ROUTES ==============
 
 @api_router.get("/psp")
