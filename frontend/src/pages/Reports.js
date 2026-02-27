@@ -30,7 +30,7 @@ import { ScrollArea } from '../components/ui/scroll-area';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import {
   BarChart3,
   TrendingUp,
