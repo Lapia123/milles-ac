@@ -57,11 +57,18 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
 function AppRouter() {
   const location = useLocation();
+  const { user } = useAuth();
 
   // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
   if (location.hash?.includes('session_id=')) {
     return <AuthCallback />;
   }
+
+  // Smart redirect based on role
+  const getDefaultRoute = () => {
+    if (user?.role === 'vendor') return '/vendor-portal';
+    return '/dashboard';
+  };
 
   return (
     <Routes>
@@ -75,7 +82,7 @@ function AppRouter() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route index element={<Navigate to={getDefaultRoute()} replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="clients" element={<Clients />} />
         <Route path="transactions" element={<Transactions />} />
