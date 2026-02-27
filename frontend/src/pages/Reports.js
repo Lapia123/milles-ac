@@ -100,6 +100,8 @@ export default function Reports() {
   const [outstandingReport, setOutstandingReport] = useState(null);
   const [debtsData, setDebtsData] = useState([]);
   const [chartData, setChartData] = useState([]);
+  const [loansReport, setLoansReport] = useState(null);
+  const [loansData, setLoansData] = useState([]);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
