@@ -1032,12 +1032,12 @@ export default function LPAccounts() {
               </div>
               <div className="col-span-2">
                 <Label className="text-slate-500 text-xs uppercase">Destination Treasury Account</Label>
-                <Select value={transactionForm.treasury_account_id} onValueChange={(v) => setTransactionForm({ ...transactionForm, treasury_account_id: v })}>
+                <Select value={transactionForm.treasury_account_id || "none"} onValueChange={(v) => setTransactionForm({ ...transactionForm, treasury_account_id: v === "none" ? "" : v })}>
                   <SelectTrigger className="border-slate-200 mt-1">
                     <SelectValue placeholder="Select destination account (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None (Manual tracking only)</SelectItem>
                     {treasuryAccounts.map((acc) => (
                       <SelectItem key={acc.account_id} value={acc.account_id}>
                         {acc.account_name} ({acc.currency}) - ${acc.balance?.toLocaleString()}
