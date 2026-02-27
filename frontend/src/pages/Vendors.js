@@ -619,7 +619,7 @@ export default function Exchangers() {
           <div className="col-span-full text-center py-12">
             <Store className="w-12 h-12 text-slate-500 mx-auto mb-4" />
             <p className="text-slate-500">No vendors found</p>
-            {isAdmin && <p className="text-sm text-slate-500/60 mt-2">Click "Add Exchanger" to create one</p>}
+            {isAccountantOrAdmin && <p className="text-sm text-slate-500/60 mt-2">Click "Add Exchanger" to create one</p>}
           </div>
         ) : (
           vendors.map((vendor) => (
