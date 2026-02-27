@@ -592,7 +592,37 @@ export default function Loans() {
     }
   };
 
-  const filteredLoans = activeTab === 'all' ? loans : loans.filter(l => l.status === activeTab);
+  // Apply all filters to loans
+  const filteredLoans = loans.filter(loan => {
+    // Status filter (from tabs)
+    if (activeTab !== 'all' && loan.status !== activeTab) return false;
+    
+    // Borrower filter
+    if (borrowerFilter && !loan.borrower_name?.toLowerCase().includes(borrowerFilter.toLowerCase())) return false;
+    
+    // Principal range filter
+    const principal = loan.amount || 0;
+    if (principalMinFilter && principal < parseFloat(principalMinFilter)) return false;
+    if (principalMaxFilter && principal > parseFloat(principalMaxFilter)) return false;
+    
+    // Outstanding range filter
+    const outstanding = loan.outstanding_balance || 0;
+    if (outstandingMinFilter && outstanding < parseFloat(outstandingMinFilter)) return false;
+    if (outstandingMaxFilter && outstanding > parseFloat(outstandingMaxFilter)) return false;
+    
+    return true;
+  });
+
+  const clearAllFilters = () => {
+    setBorrowerFilter('');
+    setPrincipalMinFilter('');
+    setPrincipalMaxFilter('');
+    setOutstandingMinFilter('');
+    setOutstandingMaxFilter('');
+    setActiveTab('all');
+  };
+
+  const hasActiveFilters = borrowerFilter || principalMinFilter || principalMaxFilter || outstandingMinFilter || outstandingMaxFilter || activeTab !== 'all';
 
   const handleExportCSV = async () => {
     try {
