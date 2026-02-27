@@ -1306,7 +1306,8 @@ export default function Transactions() {
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Client</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
-                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Amount</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Amount (USD)</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Payment Currency</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Destination</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
@@ -1315,13 +1316,13 @@ export default function Transactions() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : filteredTransactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                    <TableCell colSpan={8} className="text-center py-8 text-slate-500">
                       No transactions found
                     </TableCell>
                   </TableRow>
@@ -1353,6 +1354,16 @@ export default function Transactions() {
                       <TableCell className={`font-mono font-medium ${['deposit', 'rebate'].includes(tx.transaction_type) ? 'text-green-400' : 'text-red-400'}`}>
                         {['deposit', 'rebate'].includes(tx.transaction_type) ? '+' : '-'}${tx.amount?.toLocaleString()} {tx.currency}
                       </TableCell>
+                      <TableCell className="text-slate-600">
+                        {tx.base_currency && tx.base_currency !== 'USD' && tx.base_amount ? (
+                          <div className="flex flex-col">
+                            <span className="font-mono font-medium">{tx.base_amount?.toLocaleString()} {tx.base_currency}</span>
+                            <span className="text-xs text-slate-400">@ {tx.exchange_rate || '-'}</span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">USD</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-slate-500">
                         {tx.destination_bank_name ? (
                           <span>{tx.destination_account_name}<br/><span className="text-xs">{tx.destination_bank_name}</span></span>
@@ -1372,7 +1383,7 @@ export default function Transactions() {
                       </TableCell>
                     </TableRow>
                   ))
-                )}
+                )}}
               </TableBody>
             </Table>
           </ScrollArea>
