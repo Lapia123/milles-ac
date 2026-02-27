@@ -542,35 +542,6 @@ export default function Loans() {
     setIsRepaymentDialogOpen(true);
   };
 
-  // Fetch live exchange rate
-  const fetchExchangeRate = async (fromCurrency, toCurrency) => {
-    if (!fromCurrency || !toCurrency || fromCurrency === toCurrency) return;
-    setFetchingRate(true);
-    try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(
-        `${API_URL}/api/fx-rates/convert?amount=1&from_currency=${fromCurrency}&to_currency=${toCurrency}`,
-        { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        const rate = data.converted_amount;
-        setRepaymentForm(prev => {
-          const newForm = { ...prev, exchange_rate: rate.toString() };
-          if (prev.amount) {
-            newForm.amount_in_loan_currency = (parseFloat(prev.amount) * rate).toFixed(2);
-          }
-          return newForm;
-        });
-        toast.success(`Live rate: 1 ${fromCurrency} = ${rate} ${toCurrency}`);
-      }
-    } catch {
-      toast.error('Failed to fetch exchange rate');
-    } finally {
-      setFetchingRate(false);
-    }
-  };
-
   // Auto-calculate loan currency equivalent when amount or rate changes
   const updateRepaymentCalc = (field, value) => {
     setRepaymentForm(prev => {
