@@ -1313,6 +1313,19 @@ export default function Transactions() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={destinationFilter} onValueChange={setDestinationFilter}>
+          <SelectTrigger className="w-full sm:w-44 bg-white border-slate-200 text-slate-800" data-testid="filter-tx-destination">
+            <SelectValue placeholder="Destination" />
+          </SelectTrigger>
+          <SelectContent className="bg-white border-slate-200">
+            <SelectItem value="all" className="text-slate-800 hover:bg-slate-100">All Destinations</SelectItem>
+            <SelectItem value="treasury" className="text-slate-800 hover:bg-slate-100">Treasury</SelectItem>
+            <SelectItem value="psp" className="text-slate-800 hover:bg-slate-100">PSP</SelectItem>
+            <SelectItem value="vendor" className="text-slate-800 hover:bg-slate-100">Exchanger</SelectItem>
+            <SelectItem value="bank" className="text-slate-800 hover:bg-slate-100">Bank</SelectItem>
+            <SelectItem value="usdt" className="text-slate-800 hover:bg-slate-100">USDT</SelectItem>
+          </SelectContent>
+        </Select>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
             <span className="text-xs text-slate-500">From:</span>
