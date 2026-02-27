@@ -143,6 +143,7 @@ A back-office accounting software for FX broker "Miles Capitals" with dark blue 
 - Commission displays now show **USD (base currency) first**, with original currency in parentheses
 
 ## Recent Changes (Feb 27, 2026)
+- **Bug Fix:** Settlement balance now includes income/expense entries (income=Money In, expense=Money Out). Fixed in all 3 vendor endpoints.
 - Accountant role: Added "Exchangers" section to navigation (manage exchangers, commissions, settlements)
 - Accountant role: Backend vendor CRUD endpoints now allow accountant access (create/update/delete)
 - Sub-Admin role: Removed "Dashboard" from navigation; sub-admins now land on Clients page
