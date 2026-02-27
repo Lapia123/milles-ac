@@ -178,8 +178,9 @@ export default function Exchangers() {
   };
 
   const openExchangerView = (vendor) => {
-    setViewExchanger(vendor); // Set initial data
-    fetchExchangerDetails(vendor.vendor_id); // Fetch full details including settlement_by_currency
+    setViewExchanger(vendor);
+    fetchExchangerDetails(vendor.vendor_id);
+    fetchVendorIeEntries(vendor.vendor_id);
   };
 
   const openStatement = async (settlementId) => {
