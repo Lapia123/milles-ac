@@ -71,7 +71,7 @@ export default function IncomeExpenses() {
   const [uploadingInvoice, setUploadingInvoice] = useState(false);
   const [viewInvoiceDialog, setViewInvoiceDialog] = useState({ open: false, file: null });
 
-  const [filters, setFilters] = useState({ startDate: '', endDate: '', category: '', treasuryAccountId: '' });
+  const [filters, setFilters] = useState({ startDate: '', endDate: '', category: '', treasuryAccountId: '', status: '', vendorId: '', entryType: '' });
 
   const [formData, setFormData] = useState({
     entry_type: 'income', category: '', custom_category: '', amount: '',
