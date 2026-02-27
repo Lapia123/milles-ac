@@ -13,6 +13,12 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
+import {
   Table,
   TableBody,
   TableCell,
@@ -22,6 +28,9 @@ import {
 } from '../components/ui/table';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import {
   BarChart3,
   TrendingUp,
@@ -47,6 +56,8 @@ import {
   Clock,
   AlertTriangle,
   Building2,
+  FileText,
+  ChevronDown,
 } from 'lucide-react';
 import {
   AreaChart,
