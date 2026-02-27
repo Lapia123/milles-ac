@@ -46,6 +46,7 @@ import {
   Receipt,
   Clock,
   AlertTriangle,
+  Building2,
 } from 'lucide-react';
 import {
   AreaChart,
