@@ -45,6 +45,11 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/vendor-portal" replace />;
   }
 
+  // Redirect sub-admins away from dashboard
+  if (user.role === 'sub_admin' && location.pathname === '/dashboard') {
+    return <Navigate to="/clients" replace />;
+  }
+
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     // Redirect to appropriate page based on role
     if (user.role === 'vendor') {

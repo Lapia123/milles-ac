@@ -2550,7 +2550,7 @@ async def get_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
     return vendor
 
 @api_router.post("/vendors")
-async def create_vendor(vendor_data: VendorCreate, user: dict = Depends(require_admin)):
+async def create_vendor(vendor_data: VendorCreate, user: dict = Depends(require_accountant_or_admin)):
     # Check if email already exists
     existing = await db.users.find_one({"email": vendor_data.email}, {"_id": 0})
     if existing:
@@ -2595,7 +2595,7 @@ async def create_vendor(vendor_data: VendorCreate, user: dict = Depends(require_
     return await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
 
 @api_router.put("/vendors/{vendor_id}")
-async def update_vendor(vendor_id: str, update_data: VendorUpdate, user: dict = Depends(require_admin)):
+async def update_vendor(vendor_id: str, update_data: VendorUpdate, user: dict = Depends(require_accountant_or_admin)):
     updates = {k: v for k, v in update_data.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No updates provided")
@@ -2615,7 +2615,7 @@ async def update_vendor(vendor_id: str, update_data: VendorUpdate, user: dict = 
     return await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
 
 @api_router.delete("/vendors/{vendor_id}")
-async def delete_vendor(vendor_id: str, user: dict = Depends(require_admin)):
+async def delete_vendor(vendor_id: str, user: dict = Depends(require_accountant_or_admin)):
     vendor = await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
