@@ -289,6 +289,113 @@ class LoanTransactionType:
     WRITE_OFF = "write_off"
     REFINANCE = "refinance"
 
+# ============== LOGGING SYSTEM ==============
+class LogType(str, Enum):
+    ACTIVITY = "activity"
+    AUTH = "auth"
+    AUDIT = "audit"
+    ERROR = "error"
+
+class LogAction(str, Enum):
+    # Auth actions
+    LOGIN = "login"
+    LOGOUT = "logout"
+    LOGIN_FAILED = "login_failed"
+    PASSWORD_CHANGE = "password_change"
+    # CRUD actions
+    CREATE = "create"
+    READ = "read"
+    UPDATE = "update"
+    DELETE = "delete"
+    # Transaction actions
+    APPROVE = "approve"
+    REJECT = "reject"
+    UPLOAD = "upload"
+    EXPORT = "export"
+    # System actions
+    SYSTEM_ERROR = "system_error"
+
+async def create_log(
+    log_type: str,
+    action: str,
+    module: str,
+    user_id: str = None,
+    user_name: str = None,
+    user_email: str = None,
+    user_role: str = None,
+    description: str = None,
+    details: dict = None,
+    ip_address: str = None,
+    user_agent: str = None,
+    reference_id: str = None,
+    old_value: dict = None,
+    new_value: dict = None,
+    status: str = "success"
+):
+    """Create a log entry in the database"""
+    try:
+        log_entry = {
+            "log_id": f"log_{uuid.uuid4().hex[:12]}",
+            "log_type": log_type,
+            "action": action,
+            "module": module,
+            "user_id": user_id,
+            "user_name": user_name,
+            "user_email": user_email,
+            "user_role": user_role,
+            "description": description,
+            "details": details or {},
+            "ip_address": ip_address,
+            "user_agent": user_agent,
+            "reference_id": reference_id,
+            "old_value": old_value,
+            "new_value": new_value,
+            "status": status,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        await db.system_logs.insert_one(log_entry)
+    except Exception as e:
+        logger.error(f"Failed to create log: {e}")
+
+async def log_activity(request: Request, user: dict, action: str, module: str, description: str, reference_id: str = None, details: dict = None):
+    """Helper to log activity with request info"""
+    ip_address = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent", "")
+    await create_log(
+        log_type="activity",
+        action=action,
+        module=module,
+        user_id=user.get("user_id"),
+        user_name=user.get("name"),
+        user_email=user.get("email"),
+        user_role=user.get("role"),
+        description=description,
+        details=details,
+        ip_address=ip_address,
+        user_agent=user_agent,
+        reference_id=reference_id
+    )
+
+async def log_audit(request: Request, user: dict, action: str, module: str, reference_id: str, old_value: dict = None, new_value: dict = None, description: str = None):
+    """Helper to log audit trail for financial changes"""
+    ip_address = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent", "")
+    await create_log(
+        log_type="audit",
+        action=action,
+        module=module,
+        user_id=user.get("user_id"),
+        user_name=user.get("name"),
+        user_email=user.get("email"),
+        user_role=user.get("role"),
+        description=description,
+        ip_address=ip_address,
+        user_agent=user_agent,
+        reference_id=reference_id,
+        old_value=old_value,
+        new_value=new_value
+    )
+
 class LoanCreate(BaseModel):
     vendor_id: Optional[str] = None  # Link to vendor (borrower company)
     borrower_name: str
