@@ -9,23 +9,30 @@ The user wants to build a back-office accounting software for an FX (foreign exc
     - **Client Management:** CRUD for clients, KYC, transaction history, and net balance.
     - **Transaction Management:** Track deposits, withdrawals, transfers with proof uploads. Commission logic for deposits/withdrawals. Report downloads (CSV/Excel/PDF).
     - **Exchanger Portal:** Manage assigned transactions, approve/reject with proof, and handle net settlements.
-    - **Income & Expenses (Enhanced):** A module to manage income/expense entries, with a clear distinction between Exchangers (money partners) and Vendors (suppliers of goods/services like rent, utilities). Includes a full account category management system.
+    - **Income & Expenses (Enhanced):** A module to manage income/expense entries, with a clear distinction between Exchangers (money partners) and Vendors (suppliers of goods/services like rent, utilities). Includes a full account category management system, invoice uploads, and Excel import.
     - **Treasury Management:** Manage bank/USDT accounts.
-    - **PSP Management:** Manual ledger for Payment Service Providers.
-    - **Reporting, Ledgers, Daily Email Reports, Reconciliation, Live FX Rates, Audit & Compliance.**
+    - **Loan Management:** Module to create loans, track borrowers, and convert expenses into loans.
+    - **Reporting, Ledgers, Daily Email Reports, Reconciliation, Live FX Rates.**
+    - **Audit & Compliance:** A comprehensive Logs Management system to track user activity, authentication events, and audit trails.
 - **UI:** A dark/light mode toggle is required.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack application with a React frontend and a monolithic FastAPI backend using MongoDB. The application now features a robust Income & Expenses module with separate entities for  and . It also includes a dark/light mode toggle, enhanced role-based access for Sub-admins, and a fully functional Exchanger role that links from user creation to portal access. The Exchanger Portal correctly displays and manages assigned deposits, withdrawals, and I/E requests with appropriate proof requirements. Transaction reports can be downloaded in CSV, Excel, or PDF formats.
+A full-stack application with a React frontend and a monolithic FastAPI backend using MongoDB. The application has evolved significantly, now featuring:
+- A comprehensive **Reports & Analytics** module with detailed data tables, summary totals, and export options (CSV, Excel, PDF) for Transactions, Exchangers, Financials, Treasury, and a new Loans section.
+- A complete **Logs Management** page for admins to monitor user activity, authentication, and audit trails with advanced filtering.
+- An enhanced **Income & Expenses** module supporting invoice uploads and bulk import from Excel.
+- A functional **Loan Management** module to create borrowers and convert expenses into loans.
+- Numerous UI/UX improvements, including advanced filters on the Transactions page, corrected data display in tables, and role-specific navigation for Exchangers.
+- A series of critical bug fixes related to data entry, entity creation, and API logic.
 
 **Last working item**:
-- **Last item agent was working:** Investigating a user-reported error that occurs when creating a **withdrawal** transaction and selecting an **Exchanger** as the destination.
+- **Last item agent was working:** Fulfilling the user's request to clear all financial data from the application. The agent identified that the active database was  (not the default ), and successfully cleared the , , and  collections, and reset all account balances.
 - **Status:** USER VERIFICATION PENDING
-- **Agent Testing Done:** Y (Agent attempted to reproduce the issue by creating a withdrawal to an exchanger but was successful. The agent also checked browser console logs and found no relevant errors.)
-- **Which testing method agent to use?** Manual testing via screenshot tool. Ask the user for specific steps to reproduce the error. If reproducible, use browser dev tools to inspect the network request.
-- **User Testing Done:** N (User reported the issue but has not yet provided the specific steps or error message needed to debug it).
+- **Agent Testing Done:** Y (Agent confirmed data deletion via database queries and verified the empty state with a screenshot showing No transactions found.)
+- **Which testing method agent to use?** N/A. The next agent should confirm with the user that the data has been cleared to their satisfaction before proceeding.
+- **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
 - **Issue 1:** Error during withdrawal creation to an Exchanger (Priority: P0)
@@ -33,19 +40,20 @@ A full-stack application with a React frontend and a monolithic FastAPI backend 
 
 **Issues Detail:**
 - **Issue 1:** Error during withdrawal creation when selecting an Exchanger.
-    - **Attempted fixes:** The agent successfully created a withdrawal transaction to an exchanger via the UI and could not reproduce the bug.
+    - **Attempted fixes:** None in this session. The previous agent could not reproduce it. The user did not bring it up again, prioritizing other features.
     - **Next debug checklist:**
-        1.  Ask the user for the exact steps to reproduce, including a screenshot of the error message or browser console.
-        2.  Inspect the network request payload sent to  in the browser's developer tools to check the data being sent.
-        3.  Review  in the  function, focusing on how  and  are set when an Exchanger is selected.
-    - **Why fix this issue and what will be achieved with the fix?** This is a core business function for paying exchangers. Fixing it is critical for the application's workflow.
-    - **Status:** IN PROGRESS
+        1.  Confirm with the user if this issue is still relevant.
+        2.  If yes, ask for exact steps to reproduce, including a screenshot of the error message or browser console.
+        3.  Inspect the network request payload to  in the browser's developer tools.
+        4.  Review  in the  function.
+    - **Why fix this issue and what will be achieved with the fix?** This is a core business function. Fixing it is critical for the application's workflow.
+    - **Status:** NOT STARTED
     - **Is recurring issue?** N
     - **Should Test frontend/backend/both after fix?** Both
     - **Blocked on other issue:** None
 
 - **Issue 2:** Minor session management redirect bug.
-    - **Attempted fixes:** None.
+    - **Attempted fixes:** None. This is a persistent low-priority issue.
     - **Next debug checklist:**
         1.  Review redirection logic in  and .
         2.  Check how  is used after API calls in various components.
@@ -60,97 +68,107 @@ A full-stack application with a React frontend and a monolithic FastAPI backend 
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - **P1: Complete Reconciliation Module:** The UI and basic endpoints exist, but the core functionality for uploading and matching statements needs to be implemented.
+    - **P1: Complete Reconciliation Module:** The UI and basic endpoints from a previous session may exist, but the core functionality for uploading and matching statements needs to be implemented.
 - **Future Tasks:**
-    - **P2: Refactor :** This monolithic file is now extremely large and is a major source of technical debt. It must be broken down into modular  files for better maintainability.
+    - **P2: Refactor :** This monolithic file has grown even larger and is a major source of technical debt. It must be broken down into modular  files for better maintainability. This is now a critical task.
 
 **Completed work in this session**
-- **Income & Expenses Module Enhancement (DONE):** Implemented separate backend models and frontend UIs for managing  and .
-- **Dark/Light Mode Toggle (DONE):** Added a theme provider, a toggle button in the sidebar/header, and CSS variables for theme-aware styling. The preference is saved in .
-- **Sub-Admin Role Restriction (DONE):** Limited the Sub-admin role to see only the Clients and Transactions pages.
-- **Transaction Report Download (DONE):** Added a Download Report button to the Transactions page with CSV, Excel, and Print/PDF export options.
-- **Exchanger Role & Portal Integration (DONE):**
-    - Added Exchanger as a role in User Management, which now automatically creates a linked Exchanger entity with commission rates.
-    - Fixed routing and logic in the Exchanger Portal to correctly display assigned Deposits, Withdrawals, and I/E approval requests.
-    - Updated approval logic to require proof only for Withdrawals and Expenses, not Deposits, fixing a related backend bug.
+- **Reporting & Analytics Overhaul (DONE):**
+  - Added a Loans tab with summary cards and detailed tables.
+  - Implemented summary **total rows** across all report tables (Transactions, Exchangers, Financials).
+  - Added **detailed data tables** alongside summary views.
+  - Added **Excel and PDF export** options to all reports.
+  - Fixed a critical bug in the PDF export functionality.
+- **Logs Management Module (DONE):**
+  - Created a new Logs Management page () with stats, advanced filters, and tabbed views for different log types.
+  - Implemented backend models, API endpoints (), and logging middleware in .
+- **Income & Expense Enhancements (DONE):**
+  - Added UI and backend endpoints for **invoice/document uploads** and **bulk Excel import**.
+  - Fixed multiple Failed to save entry bugs by making the  field optional in the backend model and adding null checks.
+- **Loan Management Fixes (DONE):**
+  - Fixed the Add Borrower functionality by correcting  vs.  inconsistencies.
+  - Fixed the Convert Expense to Loan dialog to correctly show all potential borrower companies.
+- **UI/UX & Bug Fixes (DONE):**
+  - Implemented role-based redirects for Exchanger users to their portal.
+  - Added Payment Currency and fixed Destination columns in the Transactions table.
+  - Added date range filters to the Transactions page.
+- **Data Management (DONE):**
+  - Cleared all financial data from the  as requested by the user.
 
 **Earlier issues found/mentioned but not fixed**
-- **Issue 1:** Session management redirect issue.
+- **Issue 1:** Session management redirect issue. (Same as Pending Issue 2)
     - **Debug checklist:** Review  and  for state management and redirection logic.
-    - **Why to solve this issue and what will be achieved with this?** To provide a smoother user experience post-login and after certain actions.
+    - **Why to solve this issue and what will be achieved with this?** To provide a smoother user experience.
     - **Should Test frontend/backend/both after fix:** Frontend
     - **Is recurring issue?** Y
 
 **Known issue recurrence from previous fork**
-- N/A
+- **Issue recurrence in previous fork:** Minor session management redirect bug.
+- **Recurrence count:** 2+
+- **Status:** NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Frontend:** React, Tailwind CSS, Shadcn/UI, Recharts, , , 
-- **Backend:** FastAPI, Motor (async MongoDB driver), Pydantic
+- **Frontend:** React, Tailwind CSS, Shadcn/UI, Recharts, , , , 
+- **Backend:** FastAPI, Motor (async MongoDB driver), Pydantic, 
 - **Database:** MongoDB
 - **State Management:** React Context API (for Auth and Theme)
 
 **key DB schema**
-- **vendors_suppliers (New):** 
-- **ie_categories (New):** 
-- **users:**  now includes .
-- **vendors (Exchangers):** Now created automatically when a user with role  is created via the Settings page.
-- **income_expenses:** Now includes optional  and  fields.
+- **logs (New):** 
+- **income_expenses:** Added  (optional string).
+- **vendors:** Code was standardized to use .
 
 **changes in tech stack**
-- **Frontend Libraries Added:** , ,  for client-side report generation.
+- **Backend:**  dependency usage confirmed for Excel imports.
 
 **All files of reference**
-- : The monolith for all backend logic.
-- : Location of the potential withdrawal creation bug.
-- : The newly overhauled module.
-- : Logic for creating users with different roles.
-- : The portal for exchangers.
-- : Manages the application's theme.
-- : Contains the new theme variables.
-- : Contains sidebar logic and role-based visibility rules.
+- : The monolithic source of all backend logic. Needs urgent refactoring.
+- : The completely overhauled reporting module.
+- : The new logging interface.
+- : Contains new filters and column fixes.
+- : Contains the UI for new I&E features.
+- : Contains the  setting.
 
 **Areas that need refactoring**:
-- **:** This is a critical technical debt. Its size and complexity are slowing down development and increasing the risk of bugs. Refactoring it into  modules is the highest priority architectural task.
+- **:** This is a critical technical debt. Its size and complexity have increased significantly, making maintenance and new feature development risky and slow. Refactoring it into  modules is the highest priority architectural task.
 
 **key api endpoints**
 - **New Endpoints:**
   - 
   - 
+  - 
+  - 
 - **Modified Endpoints:**
-  - : Now accepts commission rates and creates a linked  entity if  is .
-  - : Logic updated to only require proof for withdrawals.
-- **Endpoints to Investigate:**
-  - : The endpoint used for creating withdrawals, where the user reported an error.
+  - : Now creates a log entry on success.
+  - : Now returns a combined list of borrowers from existing loans and all vendor companies.
+  - : Backend validation fixed to handle custom categories correctly.
+  - :  fixed by using .
 
 **Critical Info for New Agent**
-- **Immediate Priority (P0):** The top priority is to debug the user-reported error that occurs when creating a **withdrawal to an exchanger**. You must first get clear, reproducible steps from the user, as the previous agent could not reproduce the issue.
-- **Terminology Clarification:**
-    - **Exchanger:** A money partner who processes deposits/withdrawals. Stored in the  collection, has a user account with the  role, and accesses a dedicated portal.
-    - **Vendor (Supplier):** A supplier of goods/services (e.g., rent). Stored in the new  collection and does not have a user account.
-- **Database Clears:** The user frequently asks to clear financial data while preserving core entities like users and clients. A script for this is available and has been used multiple times.
+- **Database Name:** The application is configured to use  in . All database operations MUST target this database. Do not assume the default name.
+- **Top Priority (Technical Debt):** The  monolith is unmanageable. Before adding significant new features, proposing a refactoring plan to the user is highly recommended.
+- **User-Directed Workflow:** The agent was highly directed by the user, leading to many new features and bug fixes while planned work (Reconciliation, refactoring) and the initial P0 bug were deferred. Be prepared for a similar dynamic.
 
 **documents and test reports created in this job**
--  (Updated)
-- 
+- None
 
 **Last 10 User Messages and any pending HUMAN messages**
-- 10. **(LATEST)** User reported an error when creating a withdrawal and selecting an exchanger.
-- 9. User asked to check the preview after clearing the data.
-- 8. User asked to clear all transaction data and erase all money.
-- 7. User reported that approving a deposit in the exchanger portal was failing with a 400 error.
-- 6. User clarified that proof should only be required for withdrawals and expenses, not deposits.
-- 5. User asked the agent to re-check the exchanger portal.
-- 4. User expressed confusion about Exchanger vs. Vendor and noted the portal was not showing deposits/withdrawals correctly.
-- 3. User reported that the requests area (tabs) was missing from the exchanger portal.
-- 2. User requested to connect the exchanger role in user management to the actual exchanger entity so the portal would work.
-- 1. User asked to add a new exchanger role to user management.
+- 10. **(LATEST)** User requested to . (Completed)
+- 9. User requested to add filters to the Transactions page. (Completed)
+- 8. User requested a Logs Management page for admins. (Completed)
+- 7. User reported a bug with PDF export (). (Fixed)
+- 6. User requested summary totals and more export options (PDF, Excel) for all reports. (Completed)
+- 5. User requested to add Loan Management to the Reports page. (Completed)
+- 4. User reported that the Destination was not showing for certain transactions. (Fixed)
+- 3. User requested a Payment Currency column in the Transactions table. (Completed)
+- 2. User reported that the Borrower Company list was empty in the Convert Expense to Loan dialog. (Fixed)
+- 1. User reported that the main dashboard was incorrectly shown to Exchanger roles. (Fixed)
 
 **Project Health Check:**
-- **Broken:** Withdrawal creation to an Exchanger is potentially broken (user-reported, but not yet reproduced by the agent).
+- **Broken:** The original P0 issue (error creating a withdrawal to an exchanger) is still pending and its status is unknown.
 - **Mocked:** N/A
 - **Technical Debt:** The  monolith is severe and urgently needs refactoring.
 
@@ -158,18 +176,21 @@ A full-stack application with a React frontend and a monolithic FastAPI backend 
 - **Emergent-managed Google Auth**
 - **Gmail SMTP**
 - **ExchangeRate-API**
-- **Frontend Libraries:** , , 
+- **Frontend Libraries:** , , , , 
+- **Backend Libraries:** 
 
 **Testing status**
-- Testing agent used after significant changes: YES (for the I&E module)
-- Troubleshoot agent used after agent stuck in loop: NO
-- Test files created: None
-- Known regressions: The withdrawal creation issue is a new potential regression. The minor session redirect bug persists.
+- **Testing agent used after significant changes:** NO (The agent performed extensive manual testing via screenshots and  commands.)
+- **Troubleshoot agent used after agent stuck in loop:** NO
+- **Test files created:** None
+- **Known regressions:** None from this session. The minor session redirect bug persists from previous sessions.
 
 **Credentials to test flow:**
 - **Admin:**  / 
-- **Exchanger (example):**  /  (It is recommended to create a new exchanger for clean testing via the Settings page).
+- **Exchanger (example):**  /  (A new exchanger can be created via the Settings page for clean testing).
 
 **What agent forgot to execute**
-- The agent has not yet addressed the long-standing minor session redirect bug.
-- The agent has not started the planned Reconciliation Module or the critical  refactor.</analysis>
+- **P0 Bug:** The agent did not resolve the original high-priority bug: Error during withdrawal creation to an Exchanger. The user's focus shifted, and it was never brought up again.
+- **P2 Recurring Bug:** The agent did not address the long-standing Minor session management redirect bug.
+- **Planned Tasks:** The agent did not start work on the **Reconciliation Module** or the critical ** refactor**, as they were fully occupied with a long list of user-directed feature requests and bug fixes.
+- **PRD Update:** The agent did not update  after completing a substantial amount of work.</analysis>
