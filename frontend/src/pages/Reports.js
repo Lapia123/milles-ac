@@ -181,7 +181,7 @@ export default function Reports() {
         return val ?? '';
       }));
       
-      doc.autoTable({
+      autoTable(doc, {
         head: [columns.map(c => c.label)],
         body: tableData,
         startY: yPos,
