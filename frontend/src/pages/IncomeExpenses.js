@@ -80,6 +80,7 @@ export default function IncomeExpenses() {
     vendor_bank_account_name: '', vendor_bank_account_number: '',
     vendor_bank_ifsc: '', vendor_bank_branch: '',
     description: '', reference: '', date: new Date().toISOString().split('T')[0],
+    transaction_mode: 'bank', collecting_person_name: '', collecting_person_number: '',
   });
   
   // Search states for dropdowns
