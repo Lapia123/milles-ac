@@ -704,7 +704,7 @@ export default function Treasury() {
           <div className="col-span-full text-center py-12">
             <Landmark className="w-12 h-12 text-slate-500 mx-auto mb-4" />
             <p className="text-slate-500">No treasury accounts found</p>
-            {isAdmin && <p className="text-sm text-slate-500/60 mt-2">Click "Add Account" to create one</p>}
+            {isAccountantOrAdmin && <p className="text-sm text-slate-500/60 mt-2">Click "Add Account" to create one</p>}
           </div>
         ) : (
           accounts.map((account) => (
