@@ -1069,6 +1069,35 @@ export default function IncomeExpenses() {
                 <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded text-xs text-amber-600">
                   <Clock className="w-3 h-3 inline mr-1" /> This entry will be sent to exchanger for approval before treasury is updated
                 </div>
+
+                {/* Transaction Mode for Exchanger */}
+                <div className="space-y-2">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Transaction Mode *</Label>
+                  <Select value={formData.transaction_mode} onValueChange={(value) => setFormData({ ...formData, transaction_mode: value, collecting_person_name: '', collecting_person_number: '' })}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="ie-tx-mode">
+                      <SelectValue placeholder="Select mode" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-slate-200">
+                      <SelectItem value="bank" className="text-slate-800">Bank Transfer</SelectItem>
+                      <SelectItem value="cash" className="text-slate-800">Cash</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Cash collecting person details */}
+                {formData.transaction_mode === 'cash' && (
+                  <div className="grid grid-cols-2 gap-3 p-3 bg-amber-50 border border-amber-200 rounded-sm">
+                    <div className="space-y-1">
+                      <Label className="text-amber-700 text-xs uppercase">Collecting Person Name</Label>
+                      <Input value={formData.collecting_person_name} onChange={(e) => setFormData({ ...formData, collecting_person_name: e.target.value })} className="bg-white border-amber-200 text-slate-800" placeholder="Full name" data-testid="ie-collecting-name" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-amber-700 text-xs uppercase">Collecting Person Number</Label>
+                      <Input value={formData.collecting_person_number} onChange={(e) => setFormData({ ...formData, collecting_person_number: e.target.value })} className="bg-white border-amber-200 text-slate-800" placeholder="Phone number" data-testid="ie-collecting-number" />
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-3 p-3 bg-slate-50/50 border border-slate-200 rounded">
                   <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Exchanger Bank Details</p>
                   <div className="grid grid-cols-2 gap-3">
