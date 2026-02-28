@@ -34,6 +34,7 @@ import {
   Sun,
   Moon,
   ScrollText,
+  Shield,
 } from 'lucide-react';
 
 export default function Layout() {
