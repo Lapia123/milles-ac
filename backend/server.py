@@ -9683,9 +9683,19 @@ async def startup_db_indexes():
             ("amount", 1),
             ("created_at", -1)
         ])
+        # Index for roles
+        await db.roles.create_index("role_id", unique=True, sparse=True)
+        await db.roles.create_index("name", unique=True, sparse=True)
         logger.info("Database indexes created/verified successfully")
     except Exception as e:
         logger.warning(f"Index creation warning (may already exist): {e}")
+    
+    # Initialize default roles
+    try:
+        await initialize_default_roles()
+        logger.info("Default roles initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize default roles: {e}")
     
     # Start scheduler and schedule daily report
     try:
