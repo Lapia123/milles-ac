@@ -6043,21 +6043,29 @@ async def create_loan(loan_data: LoanCreate, user: dict = Depends(get_current_us
     
     await db.loans.insert_one(loan_doc)
     
-    # Deduct from treasury account
+    # Deduct from treasury account - convert if currencies differ
+    treasury_currency = treasury.get("currency", "USD")
+    treasury_deduct_amount = loan_data.amount
+    if treasury_currency.upper() != loan_data.currency.upper():
+        treasury_deduct_amount = convert_currency(loan_data.amount, loan_data.currency, treasury_currency)
+    
     await db.treasury_accounts.update_one(
         {"account_id": loan_data.treasury_account_id},
-        {"$inc": {"balance": -loan_data.amount}, "$set": {"updated_at": now.isoformat()}}
+        {"$inc": {"balance": -treasury_deduct_amount}, "$set": {"updated_at": now.isoformat()}}
     )
     
     # Record treasury transaction
+    conversion_note = f" (Converted from {loan_data.amount:,.2f} {loan_data.currency})" if treasury_currency.upper() != loan_data.currency.upper() else ""
     tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
     tx_doc = {
         "treasury_transaction_id": tx_id,
         "account_id": loan_data.treasury_account_id,
         "transaction_type": "loan_disbursement",
-        "amount": -loan_data.amount,
-        "currency": loan_data.currency,
-        "reference": f"Loan to {loan_data.borrower_name}",
+        "amount": -treasury_deduct_amount,
+        "currency": treasury_currency,
+        "original_amount": loan_data.amount,
+        "original_currency": loan_data.currency,
+        "reference": f"Loan to {loan_data.borrower_name}{conversion_note}",
         "loan_id": loan_id,
         "created_at": now.isoformat(),
         "created_by": user["user_id"],
