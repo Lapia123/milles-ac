@@ -1643,30 +1643,40 @@ async def create_lp_deposit(lp_id: str, tx_data: LPTransactionCreate, user: dict
     
     # If treasury account specified, deduct from it
     treasury_name = None
+    treasury_deduct_amount = tx_data.amount
     if tx_data.treasury_account_id:
         treasury = await db.treasury_accounts.find_one({"account_id": tx_data.treasury_account_id}, {"_id": 0})
         if not treasury:
             raise HTTPException(status_code=404, detail="Treasury account not found")
-        if treasury.get("balance", 0) < tx_data.amount:
-            raise HTTPException(status_code=400, detail="Insufficient treasury balance")
+        
+        # Convert amount if currencies differ
+        treasury_currency = treasury.get("currency", "USD")
+        if treasury_currency.upper() != tx_data.currency.upper():
+            treasury_deduct_amount = convert_currency(tx_data.amount, tx_data.currency, treasury_currency)
+        
+        if treasury.get("balance", 0) < treasury_deduct_amount:
+            raise HTTPException(status_code=400, detail=f"Insufficient treasury balance. Required: {treasury_deduct_amount:,.2f} {treasury_currency}")
         
         treasury_name = treasury.get("account_name")
         
-        # Deduct from treasury
+        # Deduct from treasury (in treasury's currency)
         await db.treasury_accounts.update_one(
             {"account_id": tx_data.treasury_account_id},
-            {"$inc": {"balance": -tx_data.amount}, "$set": {"updated_at": now.isoformat()}}
+            {"$inc": {"balance": -treasury_deduct_amount}, "$set": {"updated_at": now.isoformat()}}
         )
         
         # Record treasury transaction
+        conversion_note = f" (Converted from {tx_data.amount:,.2f} {tx_data.currency})" if treasury_currency.upper() != tx_data.currency.upper() else ""
         await db.treasury_transactions.insert_one({
             "treasury_transaction_id": f"ttx_{uuid.uuid4().hex[:12]}",
             "account_id": tx_data.treasury_account_id,
             "account_name": treasury_name,
             "transaction_type": "lp_deposit",
-            "amount": -tx_data.amount,
-            "currency": tx_data.currency,
-            "reference": f"Deposit to LP: {account['lp_name']}",
+            "amount": -treasury_deduct_amount,
+            "currency": treasury_currency,
+            "original_amount": tx_data.amount,
+            "original_currency": tx_data.currency,
+            "reference": f"Deposit to LP: {account['lp_name']}{conversion_note}",
             "lp_transaction_id": tx_id,
             "created_at": now.isoformat(),
             "created_by": user["user_id"],
