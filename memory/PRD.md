@@ -1,168 +1,133 @@
-# Miles Capitals Back Office - Product Requirements Document
+# Miles Capitals FX Broker Back-Office System - PRD
 
-## Overview
-A back-office accounting software for FX broker "Miles Capitals" with dark blue and white theme.
+## Original Problem Statement
+Build a comprehensive back-office accounting software for an FX (foreign exchange) broker named "Miles Capitals". The application includes modules for:
+- Client Management
+- Transactions
+- Exchanger Portal
+- Income & Expenses
+- Treasury
+- Loans
+- LP (Liquidity Provider) Management
+- Granular Role-Based Access Control (RBAC)
+- Reporting & Reconciliation
 
-## User Roles
-- **Admin**: Full system access
-- **Sub-admin**: Limited access — Clients, Transactions, Settings only. No Dashboard.
-- **Accountant**: Transaction approvals, settlements, Exchangers management, Income & Expenses, Loans, O/S Accounts
-- **Vendor/Exchanger**: Vendor-specific portal access
+## User Personas
+1. **Super Admin** - Full system access
+2. **Admin** - Most administrative functions
+3. **Accountant** - Financial operations
+4. **Exchanger** - Limited transaction access
 
-## Core Features (Implemented)
+## Core Requirements
+- JWT-based authentication
+- Distinct "Bank" vs "Cash" transaction modes
+- Four-part commission structure
+- System-wide currency auto-conversion for treasury operations
+- MongoDB Atlas as database backend
+- Custom SMTP for email dispatch
 
-### Authentication
-- JWT (email/password) + Google Social Login (Emergent-managed)
+## Tech Stack
+- **Frontend:** React, Tailwind CSS, Shadcn/UI
+- **Backend:** FastAPI, Motor (async MongoDB), Pydantic
+- **Database:** MongoDB Atlas
+- **Auth:** JWT + Emergent-managed Google Auth (disabled)
 
-### Client Management
-- Full CRUD, KYC tracking, MT5 Number, CRM Customer ID, saved bank accounts
-- Enhanced filters, CSV export, searchable client selector in transaction form
+---
 
-### Transaction Management
-- Deposits, withdrawals, transfers with proof uploads
-- Multiple currencies, live FX conversion
-- Broker commission on deposits/withdrawals (configurable)
-- Destinations: Treasury, PSP, Vendor, Client Bank, USDT
+## What's Been Implemented
 
-### Treasury Management
-- Bank/USDT accounts, total balance in USD, inter-treasury transfers
+### Date: Feb 28, 2026
 
-### Accountant Dashboard
-- Approve/reject transactions, math captcha, settlement approvals
+**PSP Settlement History Bug Fix:**
+- Fixed issue where PSP settlements weren't appearing in Settlement History tab
+- Modified `/record-payment` endpoint to create `psp_settlements` records
+- Added backfill migration endpoint `/api/psp/backfill-settlements`
+- Enhanced Settlement History UI with Reference, Net Received, Date columns
+- Successfully migrated existing settlement REF832FB603 (+8,710 USD)
 
-### PSP Management
-- Commission tracking, per-PSP rates, reserve fund with per-transaction storage
-- Currency conversion on all settlements and reserve fund releases
-- Two-step settlement process
+**Previous Session Work:**
+- Granular RBAC System (Foundation) - Backend models, permission logic, default roles, management APIs, and "Roles & Permissions" UI page
+- LP Management Module - Full-featured module for managing Liquidity Providers
+- System-wide Currency Auto-Conversion - Implemented in Loans, LP, and Income/Expense modules
+- Database Migration to MongoDB Atlas - Successfully connected
+- Loan Management Enhancements - Filters added, date parsing and balance calculation bugs fixed
+- Transaction Ledger Enhancement - Added client_email column
+- System Configuration - Custom SMTP configured, Google Sign-in removed from login page
 
-### Vendor Portal (Enhanced Feb 25, 2026)
-- Separate login, assigned transactions, settlement requests
-- **Tabbed layout**: Transactions, Income/Expenses, Settlement History
-- **IE History**: Shows all income/expense entries linked to vendor
-- **IE Approval/Rejection**: Vendor can approve/reject pending entries
-- **Proof Upload Required**: Vendors MUST upload proof screenshot before approving ANY transaction
-- Settlement History with Statement of Settlement (printable)
+---
 
-### Income & Expenses (Enhanced Feb 26, 2026)
-- **Visual Distinction**: Green left border + green badge for income, Red left border + red badge for expenses
-- **Exchanger Integration**: Exchangers (money partners) available in Account dropdown with "Requires Approval" label
-- **Bank Account Field**: When exchanger selected, bank account details can be specified
-- **Pending Exchanger Status**: Exchanger-linked entries start as "pending_vendor", treasury only updates after approval
-- **Convert Expense to Loan (Enhanced)**: 
-  - Searchable borrower company dropdown with existing borrowers list
-  - "Add new" option to add a new company
-  - Treasury Account field REMOVED (uses expense's treasury automatically)
-- **No Double Entry**: Converted expenses excluded from reports, marked with "Loan" badge
-- **NEW: Vendor Suppliers Tab** (Feb 26, 2026):
-  - Separate collection `vendor_suppliers` for service providers (rent, utilities, office supplies)
-  - Distinct from Exchangers (money partners)
-  - Fields: name, contact_person, email, phone, address, bank details (bank_name, account_name, account_number, ifsc, branch)
-  - Full CRUD with soft-delete when linked to entries
-- **NEW: Account Categories Tab** (Feb 26, 2026):
-  - Collection `ie_categories` for custom account categories
-  - Types: income, expense, or both
-  - Full CRUD with soft-delete (mark inactive) when linked to entries
-- **Enhanced Add Entry Form**:
-  - Searchable category dropdown with "+ Add new category" option
-  - Optional linking to Client and Vendor Supplier
-  - Shows custom categories with folder icon, default categories below
+## Prioritized Backlog
 
-### Loan Management (Enhanced Feb 26, 2026)
-- **MAJOR OVERHAUL** - Complete redesign with new tabbed interface
-- **Dashboard Tab**: Portfolio overview, Aging analysis, Top borrowers, Upcoming dues
-- **Borrowers Tab**: Vendor loan statistics (total loans, disbursed, outstanding, active)
-- **All Loans Tab**: Summary cards, filter tabs, enhanced actions (View, Repay, Swap, Delete, Write-off)
-- **Transactions Tab**: Full loan transaction history with types (Disbursement, Repayment, Swap, Write-off)
-- **Create Loan Enhanced**: Searchable borrower dropdown (vendors + new), Loan types (Short/Long/Credit Line), Simple interest, Repayment modes (Lump Sum, EMI, Custom), Collateral field
-- **Loan Swapping**: Transfer to another borrower, adjust terms, full history tracking
-- **Write-off**: Mark as bad debt with amount and reason
-- **CSV Export**: Export all loans data
+### P0 - Critical/Blockers
+- [ ] Fix Settings page redirect issue (blocking RBAC integration)
 
-### Outstanding Accounts
-- Debtors & Creditors, party linking, interest, payment recording, aging summary
+### P1 - High Priority
+- [ ] Verify RBAC permission enforcement for Exchanger role
+- [ ] Complete User Management + RBAC integration
+- [ ] Enforce granular permissions across backend endpoints
 
-### Reports
-- 7 tabs (Transaction, Vendor, Commission, Client, Treasury, PSP, Financial), CSV export
+### P2 - Medium Priority
+- [ ] Implement frontend permission gates (conditional UI rendering)
+- [ ] Complete Reconciliation Module
 
-### Daily Email Reports
-- Gmail SMTP, configurable recipients, APScheduler
+### P3 - Low Priority/Technical Debt
+- [ ] Refactor `backend/server.py` into modular APIRouter files
 
-### Live FX Rates
-- Real-time from ExchangeRate-API, 1-hour cache, dashboard ticker
+---
 
-### Broker Commission
-- Global configurable rates for deposits/withdrawals in Settings
+## Key Endpoints
 
-### Reconciliation Module (Scaffold)
-- Bank/Treasury, PSP, Client, Vendor reconciliation views
+### RBAC Endpoints
+- `GET /api/roles` - List all roles
+- `POST /api/roles` - Create role
+- `PUT /api/roles/{role_id}` - Update role
+- `GET /api/permissions/my` - Get current user permissions
+- `PUT /api/users/{user_id}/role` - Assign role to user
 
-### Audit & Compliance Module
-- Dashboard with health score, 5 audit categories, findings, history, settings
-- Automated daily scan with email alerts, admin-only access
+### LP Management Endpoints
+- Full CRUD for LPs (`/api/lps`)
+- `/api/lps/{lp_id}/deposit` - Deposit to LP
+- `/api/lps/{lp_id}/withdraw` - Withdraw from LP
 
-## Key API Endpoints (New/Updated)
+### PSP Endpoints
+- `/api/psp` - List/Create PSPs
+- `/api/psp/{psp_id}/settlements` - Get PSP settlement history
+- `/api/psp/transactions/{transaction_id}/record-payment` - Record payment received
+- `/api/psp/backfill-settlements` - Migration: backfill existing settlements
 
-### Vendor Suppliers (NEW Feb 26, 2026)
-- `GET /api/vendor-suppliers` - List all service vendors with search/status filter
-- `GET /api/vendor-suppliers/{supplier_id}` - Get vendor details
-- `POST /api/vendor-suppliers` - Create vendor supplier
-- `PUT /api/vendor-suppliers/{supplier_id}` - Update vendor
-- `DELETE /api/vendor-suppliers/{supplier_id}` - Delete/deactivate vendor
+---
 
-### IE Categories (NEW Feb 26, 2026)
-- `GET /api/ie-categories` - List categories with type/active filter
-- `GET /api/ie-categories/{category_id}` - Get category details
-- `POST /api/ie-categories` - Create category
-- `PUT /api/ie-categories/{category_id}` - Update category
-- `DELETE /api/ie-categories/{category_id}` - Delete/deactivate category
+## Database Schema
 
-### Income & Expenses
-- `POST /api/income-expenses` - Create entry (now with vendor_supplier_id, client_id, ie_category_id)
-- `POST /api/income-expenses/{id}/convert-to-loan` - Convert expense to loan (treasury_account_id now optional)
-- `POST /api/income-expenses/{id}/vendor-approve` - Vendor approves entry
-- `POST /api/income-expenses/{id}/vendor-reject` - Vendor rejects entry
-- `POST /api/income-expenses/{id}/vendor-upload-proof` - Upload proof for IE entry
-- `GET /api/vendor/income-expenses` - Get vendor's IE entries
+### Collections
+- `users` - User accounts with `role_id` reference
+- `roles` - Granular RBAC roles
+- `clients` - Client records
+- `transactions` - All financial transactions
+- `treasury_accounts` - Treasury account management
+- `treasury_transactions` - Treasury transaction logs
+- `psps` - Payment Service Providers
+- `psp_settlements` - PSP settlement history
+- `lp_accounts` - Liquidity Provider accounts
+- `lp_transactions` - LP transaction records
+- `loans` - Loan management
+- `income_expenses` - Income & expense records
+- `app_settings` - Application configuration (SMTP, etc.)
 
-### Loans
-- `GET /api/loans/dashboard` - Get comprehensive loan dashboard data
-- `GET /api/loans/transactions` - Get loan transactions log
-- `GET /api/loans/vendors` - Get vendors with loan statistics
-- `POST /api/loans/{id}/swap` - Transfer/swap loan to another borrower
-- `POST /api/loans/{id}/write-off` - Write off loan as bad debt
-- `GET /api/loans/export/csv` - Export loans to CSV
-- `GET /api/loans/borrowers` - Get unique borrower company names
+---
 
 ## Test Credentials
-- **Admin**: admin@fxbroker.com / password
-- **Vendor**: vendor3@fxbroker.com / password
+- **Admin:** admin@fxbroker.com / admin123
+- **Accountant:** admin3@fxbroker.com / admin123
+- **Exchanger:** kenway@fxbroker.com / password
 
-## UI Terminology (Updated Feb 26, 2026)
-- "Deposit Commission" renamed to "Money In Commission"
-- "Withdrawal Commission" renamed to "Money Out Commission"
-- Commission displays now show **USD (base currency) first**, with original currency in parentheses
+---
 
-## Recent Changes (Feb 27, 2026)
-- **Multi-mode Commission**: Exchangers now have 4 commission rates: Money In (Bank/Cash) and Money Out (Bank/Cash). Commission is auto-calculated based on transaction mode.
-- **Transaction Mode**: Added Bank/Cash mode to Transactions and Income & Expenses. Cash mode shows collecting person name & phone fields.
-- **Mode Column**: Added Mode (Bank/Cash) column to Admin exchanger detail, Vendor portal transactions, and I&E tables.
-- **Role Permissions:** Accountant can now settle exchanger balances, manage treasury accounts, manage exchangers, and manage PSPs.
-- **Delete Removed:** All delete buttons removed from every page for all roles.
-- **Bug Fix:** Settlement balance now includes income/expense entries.
-- Sub-Admin: Dashboard removed, lands on Clients page.
-- Treasury: Added opening balance field.
-- I&E: Added export (CSV/XLSX/PDF), advanced filters, fixed status badges.
-- Transactions: Added destination filter.
-
-## Known Issues
-- P2: Minor session management redirect issue after login
-
-## Future/Backlog
-- P1: Complete Reconciliation Module (CSV/Excel upload + auto-matching)
-- P2: Fix session management redirect issue
-- P2: Refactor server.py monolith into APIRouter modules (now ~7900+ lines)
-
-## Database Collections (Key)
-- `vendor_suppliers`: Service providers (rent, utilities) - distinct from `vendors` (exchangers/money partners)
-- `ie_categories`: Custom income/expense account categories
-- `income_expenses`: Enhanced with vendor_supplier_id, client_id, ie_category_id fields
+## Key Files
+- `backend/server.py` - Main backend (needs refactoring)
+- `frontend/src/pages/Settings.js` - User management (IN PROGRESS)
+- `frontend/src/pages/RolesPermissions.js` - RBAC UI
+- `frontend/src/pages/PSPs.js` - PSP management
+- `frontend/src/pages/LPs.js` - LP management
+- `frontend/src/pages/Loans.js` - Loan management
+- `frontend/src/components/Layout.js` - App layout & navigation
