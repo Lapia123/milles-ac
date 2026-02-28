@@ -445,22 +445,26 @@ export default function Settings() {
     }));
   };
 
-  const getRoleBadge = (role) => {
+  const getRoleBadge = (role, roleId) => {
+    // Try to find from roles list first
+    const foundRole = roles.find(r => r.role_id === roleId || r.name === role);
+    
     const roleStyles = {
       admin: 'bg-blue-100 text-blue-700 border border-blue-200',
+      super_admin: 'bg-red-100 text-red-700 border border-red-200',
       sub_admin: 'bg-slate-100 text-slate-600 border border-slate-200',
       accountant: 'bg-purple-100 text-purple-700 border border-purple-200',
       vendor: 'bg-amber-100 text-amber-700 border border-amber-200',
+      exchanger: 'bg-amber-100 text-amber-700 border border-amber-200',
+      viewer: 'bg-green-100 text-green-700 border border-green-200',
     };
-    const roleLabels = {
-      admin: 'Admin',
-      sub_admin: 'Sub-Admin',
-      accountant: 'Accountant',
-      vendor: 'Exchanger',
-    };
+    
+    const displayName = foundRole?.display_name || role;
+    const styleKey = roleId || role;
+    
     return (
-      <Badge className={`${roleStyles[role] || roleStyles.sub_admin} text-xs uppercase`}>
-        {roleLabels[role] || role}
+      <Badge className={`${roleStyles[styleKey] || 'bg-slate-100 text-slate-600 border border-slate-200'} text-xs uppercase`}>
+        {displayName}
       </Badge>
     );
   };
