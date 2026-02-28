@@ -8282,6 +8282,221 @@ async def get_reconciliation_summary(user: dict = Depends(get_current_user)):
         }
     }
 
+# ============== ROLES & PERMISSIONS MANAGEMENT ==============
+
+@api_router.get("/roles")
+async def get_roles(user: dict = Depends(get_current_user)):
+    """Get all roles"""
+    has_permission = await check_permission(user, Modules.ROLES, Actions.VIEW)
+    # Allow admins with old system to view
+    if not has_permission and user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    roles = await db.roles.find({"is_active": {"$ne": False}}, {"_id": 0}).to_list(100)
+    return roles
+
+@api_router.get("/roles/{role_id}")
+async def get_role(role_id: str, user: dict = Depends(get_current_user)):
+    """Get a specific role"""
+    has_permission = await check_permission(user, Modules.ROLES, Actions.VIEW)
+    if not has_permission and user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    role = await db.roles.find_one({"role_id": role_id}, {"_id": 0})
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+    return role
+
+@api_router.post("/roles")
+async def create_role(role_data: RoleCreate, user: dict = Depends(get_current_user)):
+    """Create a new role"""
+    has_permission = await check_permission(user, Modules.ROLES, Actions.CREATE)
+    if not has_permission and user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    # Check if role name already exists
+    existing = await db.roles.find_one({"name": role_data.name}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Role name already exists")
+    
+    now = datetime.now(timezone.utc)
+    role_id = f"role_{uuid.uuid4().hex[:12]}"
+    
+    role_doc = {
+        "role_id": role_id,
+        "name": role_data.name,
+        "display_name": role_data.display_name,
+        "description": role_data.description,
+        "permissions": role_data.permissions,
+        "is_system_role": False,
+        "hierarchy_level": role_data.hierarchy_level,
+        "is_active": True,
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    
+    await db.roles.insert_one(role_doc)
+    
+    # Log the action
+    await db.audit_logs.insert_one({
+        "log_id": f"log_{uuid.uuid4().hex[:12]}",
+        "action": "role_created",
+        "module": Modules.ROLES,
+        "details": f"Created role: {role_data.display_name}",
+        "user_id": user["user_id"],
+        "user_name": user["name"],
+        "created_at": now.isoformat()
+    })
+    
+    return await db.roles.find_one({"role_id": role_id}, {"_id": 0})
+
+@api_router.put("/roles/{role_id}")
+async def update_role(role_id: str, role_data: RoleUpdate, user: dict = Depends(get_current_user)):
+    """Update a role"""
+    has_permission = await check_permission(user, Modules.ROLES, Actions.EDIT)
+    if not has_permission and user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    role = await db.roles.find_one({"role_id": role_id}, {"_id": 0})
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+    
+    # Prevent modifying system roles (except permissions)
+    if role.get("is_system_role") and role_data.is_active is False:
+        raise HTTPException(status_code=400, detail="Cannot deactivate system roles")
+    
+    now = datetime.now(timezone.utc)
+    updates = {k: v for k, v in role_data.model_dump().items() if v is not None}
+    updates["updated_at"] = now.isoformat()
+    
+    await db.roles.update_one({"role_id": role_id}, {"$set": updates})
+    
+    # Log the action
+    await db.audit_logs.insert_one({
+        "log_id": f"log_{uuid.uuid4().hex[:12]}",
+        "action": "role_updated",
+        "module": Modules.ROLES,
+        "details": f"Updated role: {role.get('display_name')}",
+        "changes": updates,
+        "user_id": user["user_id"],
+        "user_name": user["name"],
+        "created_at": now.isoformat()
+    })
+    
+    return await db.roles.find_one({"role_id": role_id}, {"_id": 0})
+
+@api_router.delete("/roles/{role_id}")
+async def delete_role(role_id: str, user: dict = Depends(get_current_user)):
+    """Delete a role (soft delete)"""
+    has_permission = await check_permission(user, Modules.ROLES, Actions.EDIT)
+    if not has_permission and user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    role = await db.roles.find_one({"role_id": role_id}, {"_id": 0})
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+    
+    if role.get("is_system_role"):
+        raise HTTPException(status_code=400, detail="Cannot delete system roles")
+    
+    # Check if any users have this role
+    users_with_role = await db.users.count_documents({"role_id": role_id})
+    if users_with_role > 0:
+        raise HTTPException(status_code=400, detail=f"Cannot delete role: {users_with_role} users have this role")
+    
+    await db.roles.update_one({"role_id": role_id}, {"$set": {"is_active": False}})
+    
+    return {"message": "Role deleted successfully"}
+
+@api_router.get("/permissions/modules")
+async def get_modules_and_actions(user: dict = Depends(get_current_user)):
+    """Get all available modules and actions for permission configuration"""
+    has_permission = await check_permission(user, Modules.ROLES, Actions.VIEW)
+    if not has_permission and user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    return {
+        "modules": [{"id": m, "name": MODULE_DISPLAY_NAMES.get(m, m)} for m in ALL_MODULES],
+        "actions": ALL_ACTIONS
+    }
+
+@api_router.get("/permissions/my")
+async def get_my_permissions(user: dict = Depends(get_current_user)):
+    """Get current user's permissions"""
+    permissions = await get_user_permissions(user["user_id"])
+    
+    # Get role info
+    role_id = user.get("role_id") or user.get("role")
+    role = await db.roles.find_one({"$or": [{"role_id": role_id}, {"name": role_id}]}, {"_id": 0})
+    
+    return {
+        "user_id": user["user_id"],
+        "role": role.get("display_name") if role else user.get("role"),
+        "role_id": role_id,
+        "permissions": permissions,
+        "modules": {m: MODULE_DISPLAY_NAMES.get(m, m) for m in ALL_MODULES}
+    }
+
+@api_router.put("/users/{user_id}/role")
+async def assign_user_role(user_id: str, role_id: str = Form(...), user: dict = Depends(get_current_user)):
+    """Assign a role to a user"""
+    has_permission = await check_permission(user, Modules.USERS, Actions.EDIT)
+    if not has_permission and user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    target_user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    role = await db.roles.find_one({"role_id": role_id}, {"_id": 0})
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+    
+    now = datetime.now(timezone.utc)
+    await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {"role_id": role_id, "role": role.get("name"), "updated_at": now.isoformat()}}
+    )
+    
+    # Log the action
+    await db.audit_logs.insert_one({
+        "log_id": f"log_{uuid.uuid4().hex[:12]}",
+        "action": "user_role_assigned",
+        "module": Modules.USERS,
+        "details": f"Assigned role '{role.get('display_name')}' to user '{target_user.get('name')}'",
+        "target_user_id": user_id,
+        "user_id": user["user_id"],
+        "user_name": user["name"],
+        "created_at": now.isoformat()
+    })
+    
+    return {"message": "Role assigned successfully"}
+
+@api_router.put("/users/{user_id}/permissions")
+async def set_user_permission_overrides(
+    user_id: str, 
+    permissions: dict,
+    user: dict = Depends(get_current_user)
+):
+    """Set custom permission overrides for a user"""
+    has_permission = await check_permission(user, Modules.USERS, Actions.EDIT)
+    if not has_permission and user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    target_user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    now = datetime.now(timezone.utc)
+    await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {"permission_overrides": permissions, "updated_at": now.isoformat()}}
+    )
+    
+    return {"message": "Permission overrides updated successfully"}
+
 # ============== EMAIL SETTINGS & DAILY REPORTS ==============
 
 class EmailSettingsUpdate(BaseModel):
