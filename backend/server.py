@@ -855,6 +855,178 @@ async def require_vendor_or_admin(user: dict = Depends(get_current_user)) -> dic
         raise HTTPException(status_code=403, detail="Vendor or Admin access required")
     return user
 
+# ============== GRANULAR PERMISSION SYSTEM ==============
+
+async def get_user_permissions(user_id: str) -> dict:
+    """Get all permissions for a user (role permissions + user overrides)"""
+    user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not user:
+        return {}
+    
+    # Get role permissions
+    role_name = user.get("role_id") or user.get("role", "")
+    role = await db.roles.find_one({"role_id": role_name}, {"_id": 0})
+    if not role:
+        role = await db.roles.find_one({"name": role_name}, {"_id": 0})
+    
+    base_permissions = role.get("permissions", {}) if role else {}
+    
+    # Get user-specific overrides
+    user_overrides = user.get("permission_overrides", {})
+    
+    # Merge: user overrides take precedence
+    final_permissions = {**base_permissions}
+    for module, actions in user_overrides.items():
+        if module in final_permissions:
+            final_permissions[module] = list(set(final_permissions[module] + actions))
+        else:
+            final_permissions[module] = actions
+    
+    return final_permissions
+
+async def check_permission(user: dict, module: str, action: str) -> bool:
+    """Check if user has permission for a specific action on a module"""
+    # Super admin bypass - users with 'admin' role from old system
+    if user.get("role") == UserRole.ADMIN and not user.get("role_id"):
+        return True
+    
+    permissions = await get_user_permissions(user.get("user_id"))
+    
+    # Check if module exists and action is allowed
+    if module in permissions:
+        return action in permissions[module] or "*" in permissions[module]
+    
+    return False
+
+def require_permission(module: str, action: str):
+    """Decorator factory for permission checking"""
+    async def permission_checker(user: dict = Depends(get_current_user)) -> dict:
+        has_permission = await check_permission(user, module, action)
+        if not has_permission:
+            raise HTTPException(
+                status_code=403, 
+                detail=f"Permission denied: {action} on {module}"
+            )
+        return user
+    return permission_checker
+
+# Default role templates
+DEFAULT_ROLES = [
+    {
+        "role_id": "super_admin",
+        "name": "super_admin",
+        "display_name": "Super Admin",
+        "description": "Full system access with all permissions",
+        "is_system_role": True,
+        "hierarchy_level": 100,
+        "permissions": {module: ALL_ACTIONS.copy() for module in ALL_MODULES}
+    },
+    {
+        "role_id": "admin",
+        "name": "admin",
+        "display_name": "Admin",
+        "description": "Administrative access to most modules",
+        "is_system_role": True,
+        "hierarchy_level": 90,
+        "permissions": {
+            Modules.DASHBOARD: [Actions.VIEW],
+            Modules.CLIENTS: ALL_ACTIONS.copy(),
+            Modules.TRANSACTIONS: ALL_ACTIONS.copy(),
+            Modules.TREASURY: ALL_ACTIONS.copy(),
+            Modules.LP_MANAGEMENT: ALL_ACTIONS.copy(),
+            Modules.INCOME_EXPENSES: ALL_ACTIONS.copy(),
+            Modules.LOANS: ALL_ACTIONS.copy(),
+            Modules.DEBTS: ALL_ACTIONS.copy(),
+            Modules.PSP: ALL_ACTIONS.copy(),
+            Modules.EXCHANGERS: ALL_ACTIONS.copy(),
+            Modules.RECONCILIATION: ALL_ACTIONS.copy(),
+            Modules.AUDIT: [Actions.VIEW, Actions.EXPORT],
+            Modules.LOGS: [Actions.VIEW, Actions.EXPORT],
+            Modules.REPORTS: [Actions.VIEW, Actions.EXPORT],
+            Modules.SETTINGS: ALL_ACTIONS.copy(),
+            Modules.USERS: ALL_ACTIONS.copy(),
+            Modules.ROLES: [Actions.VIEW]
+        }
+    },
+    {
+        "role_id": "accountant",
+        "name": "accountant",
+        "display_name": "Accountant",
+        "description": "Financial operations and approvals",
+        "is_system_role": True,
+        "hierarchy_level": 70,
+        "permissions": {
+            Modules.DASHBOARD: [Actions.VIEW],
+            Modules.CLIENTS: [Actions.VIEW, Actions.CREATE, Actions.EDIT],
+            Modules.TRANSACTIONS: ALL_ACTIONS.copy(),
+            Modules.TREASURY: ALL_ACTIONS.copy(),
+            Modules.LP_MANAGEMENT: ALL_ACTIONS.copy(),
+            Modules.INCOME_EXPENSES: ALL_ACTIONS.copy(),
+            Modules.LOANS: ALL_ACTIONS.copy(),
+            Modules.DEBTS: [Actions.VIEW, Actions.CREATE, Actions.EDIT],
+            Modules.PSP: ALL_ACTIONS.copy(),
+            Modules.EXCHANGERS: ALL_ACTIONS.copy(),
+            Modules.RECONCILIATION: [Actions.VIEW, Actions.CREATE],
+            Modules.REPORTS: [Actions.VIEW, Actions.EXPORT],
+            Modules.SETTINGS: [Actions.VIEW]
+        }
+    },
+    {
+        "role_id": "sub_admin",
+        "name": "sub_admin",
+        "display_name": "Sub Admin",
+        "description": "Limited administrative access",
+        "is_system_role": True,
+        "hierarchy_level": 50,
+        "permissions": {
+            Modules.CLIENTS: [Actions.VIEW, Actions.CREATE, Actions.EDIT],
+            Modules.TRANSACTIONS: [Actions.VIEW, Actions.CREATE],
+            Modules.TREASURY: [Actions.VIEW],
+            Modules.INCOME_EXPENSES: [Actions.VIEW],
+            Modules.REPORTS: [Actions.VIEW, Actions.EXPORT]
+        }
+    },
+    {
+        "role_id": "exchanger",
+        "name": "vendor",
+        "display_name": "Exchanger",
+        "description": "Exchanger/Vendor portal access",
+        "is_system_role": True,
+        "hierarchy_level": 20,
+        "permissions": {
+            Modules.DASHBOARD: [Actions.VIEW],
+            Modules.TRANSACTIONS: [Actions.VIEW, Actions.APPROVE],
+            Modules.INCOME_EXPENSES: [Actions.VIEW, Actions.APPROVE]
+        }
+    },
+    {
+        "role_id": "viewer",
+        "name": "viewer",
+        "display_name": "Viewer",
+        "description": "Read-only access to selected modules",
+        "is_system_role": True,
+        "hierarchy_level": 10,
+        "permissions": {
+            Modules.DASHBOARD: [Actions.VIEW],
+            Modules.CLIENTS: [Actions.VIEW],
+            Modules.TRANSACTIONS: [Actions.VIEW],
+            Modules.REPORTS: [Actions.VIEW]
+        }
+    }
+]
+
+async def initialize_default_roles():
+    """Initialize default roles if they don't exist"""
+    for role_data in DEFAULT_ROLES:
+        existing = await db.roles.find_one({"role_id": role_data["role_id"]}, {"_id": 0})
+        if not existing:
+            now = datetime.now(timezone.utc)
+            role_data["created_at"] = now.isoformat()
+            role_data["updated_at"] = now.isoformat()
+            role_data["is_active"] = True
+            await db.roles.insert_one(role_data)
+            logger.info(f"Created default role: {role_data['display_name']}")
+
 # ============== AUTH ROUTES ==============
 
 @api_router.post("/auth/register", response_model=TokenResponse)
