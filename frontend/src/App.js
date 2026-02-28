@@ -112,6 +112,14 @@ function AppRouter() {
         <Route path="reconciliation" element={<Reconciliation />} />
         <Route path="settings" element={<Settings />} />
         <Route 
+          path="roles" 
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <RolesPermissions />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
           path="accountant" 
           element={
             <ProtectedRoute allowedRoles={['admin', 'accountant']}>
