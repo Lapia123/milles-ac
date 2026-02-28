@@ -588,23 +588,31 @@ export default function Settings() {
                         <div className="space-y-2">
                           <Label className="text-slate-500 text-xs uppercase tracking-wider">Role</Label>
                           <Select
-                            value={formData.role}
-                            onValueChange={(value) => setFormData({ ...formData, role: value })}
+                            value={formData.role_id || formData.role}
+                            onValueChange={(value) => {
+                              const selectedRole = roles.find(r => r.role_id === value || r.name === value);
+                              setFormData({ 
+                                ...formData, 
+                                role: selectedRole?.name || value,
+                                role_id: selectedRole?.role_id || value 
+                              });
+                            }}
                           >
                             <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="user-role-select">
                               <SelectValue placeholder="Select role" />
                             </SelectTrigger>
                             <SelectContent className="bg-white border-slate-200">
-                              {roleOptions.map((role) => (
-                                <SelectItem key={role.value} value={role.value} className="text-slate-800 hover:bg-slate-100">
-                                  {role.label}
+                              {roles.map((role) => (
+                                <SelectItem key={role.role_id} value={role.role_id} className="text-slate-800 hover:bg-slate-100">
+                                  {role.display_name}
+                                  {role.is_system_role && <span className="ml-2 text-xs text-slate-400">(System)</span>}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
                         {/* Exchanger Commission Fields */}
-                        {formData.role === 'vendor' && !selectedUser && (
+                        {(formData.role === 'vendor' || formData.role_id === 'exchanger') && !selectedUser && (
                           <div className="space-y-3 p-3 bg-amber-50 border border-amber-200 rounded-sm">
                             <p className="text-xs text-amber-700 font-semibold uppercase tracking-wider">Exchanger Commission Rates</p>
                             <div className="grid grid-cols-2 gap-3">
