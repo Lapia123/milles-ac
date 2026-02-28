@@ -315,6 +315,7 @@ export default function Settings() {
       password: '',
       name: userItem.name,
       role: userItem.role,
+      role_id: userItem.role_id || userItem.role,
       is_active: userItem.is_active,
     });
     setIsDialogOpen(true);
@@ -327,6 +328,7 @@ export default function Settings() {
       password: '',
       name: '',
       role: 'sub_admin',
+      role_id: '',
       deposit_commission: 0,
       withdrawal_commission: 0,
     });
