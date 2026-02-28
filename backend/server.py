@@ -6186,13 +6186,19 @@ async def record_loan_repayment(loan_id: str, repayment: LoanRepaymentCreate, us
         }
     )
     
-    # Credit treasury account
+    # Credit treasury account - convert if currency differs
+    treasury_currency = treasury.get("currency", "USD")
+    treasury_credit_amount = repayment.amount
+    if treasury_currency.upper() != repayment.currency.upper():
+        treasury_credit_amount = convert_currency(repayment.amount, repayment.currency, treasury_currency)
+    
     await db.treasury_accounts.update_one(
         {"account_id": repayment.treasury_account_id},
-        {"$inc": {"balance": repayment.amount}, "$set": {"updated_at": now.isoformat()}}
+        {"$inc": {"balance": treasury_credit_amount}, "$set": {"updated_at": now.isoformat()}}
     )
     
     # Record treasury transaction
+    conversion_note = f" (Converted from {repayment.amount:,.2f} {repayment.currency})" if treasury_currency.upper() != repayment.currency.upper() else ""
     tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
     tx_doc = {
         "treasury_transaction_id": tx_id,
