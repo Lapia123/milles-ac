@@ -66,16 +66,10 @@ import {
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-const roleOptions = [
-  { value: 'admin', label: 'Admin' },
-  { value: 'sub_admin', label: 'Sub-Admin' },
-  { value: 'accountant', label: 'Accountant' },
-  { value: 'vendor', label: 'Exchanger' },
-];
-
 export default function Settings() {
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -84,6 +78,7 @@ export default function Settings() {
     password: '',
     name: '',
     role: 'sub_admin',
+    role_id: '',
     deposit_commission: 0,
     withdrawal_commission: 0,
   });
