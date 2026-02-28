@@ -134,6 +134,18 @@ export default function Settings() {
       setLoading(false);
     }
   };
+
+  const fetchRoles = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/roles`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        const rolesData = await response.json();
+        setRoles(rolesData.filter(r => r.is_active !== false));
+      }
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+    }
+  };
   
   const fetchEmailSettings = async () => {
     try {
