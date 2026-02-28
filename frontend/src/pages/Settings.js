@@ -723,7 +723,7 @@ export default function Settings() {
                               </div>
                             </TableCell>
                             <TableCell className="text-white font-mono">{userItem.email}</TableCell>
-                            <TableCell>{getRoleBadge(userItem.role)}</TableCell>
+                            <TableCell>{getRoleBadge(userItem.role, userItem.role_id)}</TableCell>
                             <TableCell>
                               <Badge className={`${userItem.is_active !== false ? 'status-approved' : 'status-rejected'} text-xs uppercase`}>
                                 {userItem.is_active !== false ? 'Active' : 'Inactive'}
