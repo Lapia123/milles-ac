@@ -162,6 +162,7 @@ class UserLogin(BaseModel):
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     role: Optional[str] = None
+    role_id: Optional[str] = None
     is_active: Optional[bool] = None
 
 class TokenResponse(BaseModel):
