@@ -12,6 +12,7 @@ import Vendors from "./pages/Vendors";
 import VendorDashboard from "./pages/VendorDashboard";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import RolesPermissions from "./pages/RolesPermissions";
 import AccountantDashboard from "./pages/AccountantDashboard";
 import IncomeExpenses from "./pages/IncomeExpenses";
 import Loans from "./pages/Loans";
