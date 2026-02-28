@@ -1734,6 +1734,7 @@ async def create_lp_withdrawal(lp_id: str, tx_data: LPTransactionCreate, user: d
     
     # If treasury account specified, add to it
     treasury_name = None
+    treasury_add_amount = tx_data.amount
     if tx_data.treasury_account_id:
         treasury = await db.treasury_accounts.find_one({"account_id": tx_data.treasury_account_id}, {"_id": 0})
         if not treasury:
@@ -1741,21 +1742,29 @@ async def create_lp_withdrawal(lp_id: str, tx_data: LPTransactionCreate, user: d
         
         treasury_name = treasury.get("account_name")
         
-        # Add to treasury
+        # Convert amount if currencies differ
+        treasury_currency = treasury.get("currency", "USD")
+        if treasury_currency.upper() != tx_data.currency.upper():
+            treasury_add_amount = convert_currency(tx_data.amount, tx_data.currency, treasury_currency)
+        
+        # Add to treasury (in treasury's currency)
         await db.treasury_accounts.update_one(
             {"account_id": tx_data.treasury_account_id},
-            {"$inc": {"balance": tx_data.amount}, "$set": {"updated_at": now.isoformat()}}
+            {"$inc": {"balance": treasury_add_amount}, "$set": {"updated_at": now.isoformat()}}
         )
         
         # Record treasury transaction
+        conversion_note = f" (Converted from {tx_data.amount:,.2f} {tx_data.currency})" if treasury_currency.upper() != tx_data.currency.upper() else ""
         await db.treasury_transactions.insert_one({
             "treasury_transaction_id": f"ttx_{uuid.uuid4().hex[:12]}",
             "account_id": tx_data.treasury_account_id,
             "account_name": treasury_name,
             "transaction_type": "lp_withdrawal",
-            "amount": tx_data.amount,
-            "currency": tx_data.currency,
-            "reference": f"Withdrawal from LP: {account['lp_name']}",
+            "amount": treasury_add_amount,
+            "currency": treasury_currency,
+            "original_amount": tx_data.amount,
+            "original_currency": tx_data.currency,
+            "reference": f"Withdrawal from LP: {account['lp_name']}{conversion_note}",
             "lp_transaction_id": tx_id,
             "created_at": now.isoformat(),
             "created_by": user["user_id"],
