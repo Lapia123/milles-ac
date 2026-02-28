@@ -502,7 +502,7 @@ export default function Settings() {
               <p className="text-xl text-white font-medium">{user?.name}</p>
               <p className="text-[#C5C6C7] font-mono">{user?.email}</p>
               <div className="mt-2">
-                {getRoleBadge(user?.role)}
+                {getRoleBadge(user?.role, user?.role_id)}
               </div>
             </div>
           </div>
