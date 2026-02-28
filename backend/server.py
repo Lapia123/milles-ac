@@ -2760,6 +2760,79 @@ async def settle_psp_transaction(
     
     return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
 
+
+# Migration endpoint: Backfill existing settled PSP transactions into psp_settlements
+@api_router.post("/psp/backfill-settlements")
+async def backfill_psp_settlements(user: dict = Depends(require_admin)):
+    """Backfill historical settled PSP transactions into psp_settlements collection."""
+    # Find all settled PSP transactions that don't have a settlement_id
+    settled_txs = await db.transactions.find({
+        "destination_type": "psp",
+        "settled": True,
+        "settlement_id": {"$exists": False}
+    }, {"_id": 0}).to_list(10000)
+    
+    if not settled_txs:
+        return {"message": "No transactions to backfill", "count": 0}
+    
+    backfilled = 0
+    now = datetime.now(timezone.utc)
+    
+    for tx in settled_txs:
+        # Get PSP info
+        psp = await db.psps.find_one({"psp_id": tx.get("psp_id")}, {"_id": 0})
+        
+        # Create settlement record
+        settlement_id = f"stl_{uuid.uuid4().hex[:12]}"
+        gross_amount = tx.get("amount", 0)
+        commission_amount = tx.get("psp_commission_amount", 0)
+        reserve_fund_amount = tx.get("psp_reserve_fund_amount", tx.get("psp_chargeback_amount", 0))
+        extra_charges = tx.get("psp_extra_charges", 0)
+        settle_amount = tx.get("psp_actual_amount_received", tx.get("psp_net_amount", gross_amount - commission_amount - reserve_fund_amount - extra_charges))
+        
+        settlement_doc = {
+            "settlement_id": settlement_id,
+            "psp_id": tx.get("psp_id"),
+            "psp_name": tx.get("psp_name", psp.get("psp_name") if psp else "Unknown PSP"),
+            "gross_amount": gross_amount,
+            "commission_rate": psp.get("commission_rate", 0) if psp else 0,
+            "commission_amount": commission_amount,
+            "reserve_fund_rate": psp.get("reserve_fund_rate", psp.get("chargeback_rate", 0)) if psp else 0,
+            "reserve_fund_amount": reserve_fund_amount,
+            "chargeback_rate": psp.get("reserve_fund_rate", psp.get("chargeback_rate", 0)) if psp else 0,
+            "chargeback_amount": reserve_fund_amount,
+            "extra_charges": extra_charges,
+            "gateway_fees": tx.get("psp_gateway_fee", 0),
+            "total_deductions": commission_amount + reserve_fund_amount + extra_charges,
+            "net_amount": settle_amount,
+            "actual_amount_received": settle_amount,
+            "variance": tx.get("psp_settlement_variance", 0),
+            "holding_days": psp.get("holding_days", 0) if psp else 0,
+            "transaction_count": 1,
+            "transaction_ids": [tx.get("transaction_id")],
+            "settlement_destination_id": tx.get("settlement_destination_id", psp.get("settlement_destination_id") if psp else None),
+            "status": PSPSettlementStatus.COMPLETED,
+            "expected_settlement_date": tx.get("psp_expected_settlement_date"),
+            "created_at": tx.get("settled_at", now.isoformat()),
+            "settled_at": tx.get("settled_at", now.isoformat()),
+            "created_by": tx.get("settled_by", user["user_id"]),
+            "created_by_name": tx.get("settled_by_name", user["name"]),
+            "reference": tx.get("reference", tx.get("transaction_id"))
+        }
+        
+        await db.psp_settlements.insert_one(settlement_doc)
+        
+        # Update the transaction with settlement_id
+        await db.transactions.update_one(
+            {"transaction_id": tx.get("transaction_id")},
+            {"$set": {"settlement_id": settlement_id}}
+        )
+        
+        backfilled += 1
+    
+    return {"message": f"Successfully backfilled {backfilled} settlements", "count": backfilled}
+
+
 # ============== RESERVE FUND MANAGEMENT ==============
 
 @api_router.get("/psps/{psp_id}/reserve-funds")
