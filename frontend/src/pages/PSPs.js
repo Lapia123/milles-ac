@@ -1234,28 +1234,33 @@ export default function PSPs() {
                       <Table>
                         <TableHeader>
                           <TableRow className="border-slate-200 hover:bg-transparent">
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Settlement ID</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Gross</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Commission</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reserve Fund</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Extra</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Net</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Net Received</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {settlements.map((settlement) => (
-                            <TableRow key={settlement.settlement_id} className="border-slate-200 hover:bg-slate-100">
-                              <TableCell className="font-mono text-slate-800 text-xs">{settlement.settlement_id}</TableCell>
+                            <TableRow key={settlement.settlement_id} className="border-slate-200 hover:bg-slate-100" data-testid={`settlement-row-${settlement.settlement_id}`}>
+                              <TableCell>
+                                <div>
+                                  <span className="font-mono text-slate-800 text-xs">{settlement.reference || settlement.settlement_id}</span>
+                                  {settlement.transaction_count > 1 && (
+                                    <p className="text-[10px] text-slate-500">{settlement.transaction_count} transactions</p>
+                                  )}
+                                </div>
+                              </TableCell>
                               <TableCell className="font-mono text-slate-800">${settlement.gross_amount?.toLocaleString()}</TableCell>
                               <TableCell className="font-mono text-yellow-400">-${(settlement.commission_amount || 0).toLocaleString()}</TableCell>
                               <TableCell className="font-mono text-red-400">
                                 {settlement.chargeback_amount || settlement.reserve_fund_amount ? `-$${(settlement.reserve_fund_amount || settlement.chargeback_amount).toLocaleString()}` : '-'}
                               </TableCell>
-                              <TableCell className="font-mono text-red-400">
-                                {settlement.extra_charges ? `-$${settlement.extra_charges.toLocaleString()}` : '-'}
-                              </TableCell>
-                              <TableCell className="font-mono text-blue-600 font-bold">${settlement.net_amount?.toLocaleString()}</TableCell>
+                              <TableCell className="font-mono text-green-500 font-bold">+${settlement.net_amount?.toLocaleString()}</TableCell>
+                              <TableCell className="text-slate-500 text-xs">{formatDate(settlement.settled_at || settlement.created_at)}</TableCell>
                               <TableCell>{getStatusBadge(settlement.status)}</TableCell>
                             </TableRow>
                           ))}
