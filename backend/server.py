@@ -5092,34 +5092,48 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = De
     
     # Only update treasury if not vendor-linked (vendor must approve first)
     if not vendor_info and treasury:
+        # Convert amount to treasury currency if different
+        treasury_currency = treasury.get("currency", "USD")
+        entry_currency = entry_data.currency
+        
+        if treasury_currency.upper() != entry_currency.upper():
+            converted_amount = convert_currency(entry_data.amount, entry_currency, treasury_currency)
+        else:
+            converted_amount = entry_data.amount
+        
         if entry_data.entry_type == IncomeExpenseType.INCOME:
             await db.treasury_accounts.update_one(
                 {"account_id": entry_data.treasury_account_id},
-                {"$inc": {"balance": entry_data.amount}, "$set": {"updated_at": now.isoformat()}}
+                {"$inc": {"balance": converted_amount}, "$set": {"updated_at": now.isoformat()}}
             )
         else:
-            if treasury.get("balance", 0) < entry_data.amount:
+            if treasury.get("balance", 0) < converted_amount:
                 raise HTTPException(status_code=400, detail="Insufficient balance in treasury account")
             await db.treasury_accounts.update_one(
                 {"account_id": entry_data.treasury_account_id},
-                {"$inc": {"balance": -entry_data.amount}, "$set": {"updated_at": now.isoformat()}}
+                {"$inc": {"balance": -converted_amount}, "$set": {"updated_at": now.isoformat()}}
             )
         
         # Record in treasury transactions
         tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
         tx_type = "income" if entry_data.entry_type == IncomeExpenseType.INCOME else "expense"
-        tx_amount = entry_data.amount if entry_data.entry_type == IncomeExpenseType.INCOME else -entry_data.amount
+        tx_amount = converted_amount if entry_data.entry_type == IncomeExpenseType.INCOME else -converted_amount
         
         # Build reference from category name (either standard category or custom ie_category)
         category_label = entry_data.category.replace('_', ' ').title() if entry_data.category else (ie_category_info["name"] if ie_category_info else "Other")
+        
+        # Include conversion info in reference if currencies differ
+        conversion_note = f" (Converted from {entry_data.amount:,.2f} {entry_currency})" if treasury_currency.upper() != entry_currency.upper() else ""
         
         tx_doc = {
             "treasury_transaction_id": tx_id,
             "account_id": entry_data.treasury_account_id,
             "transaction_type": tx_type,
             "amount": tx_amount,
-            "currency": entry_data.currency,
-            "reference": f"{category_label}: {entry_data.description or 'N/A'}",
+            "currency": treasury_currency,
+            "original_amount": entry_data.amount,
+            "original_currency": entry_currency,
+            "reference": f"{category_label}: {entry_data.description or 'N/A'}{conversion_note}",
             "income_expense_id": entry_id,
             "created_at": now.isoformat(),
             "created_by": user["user_id"],
