@@ -127,26 +127,6 @@ export default function Login() {
               </Button>
             </form>
 
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200"></div>
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-4 text-slate-500">Or continue with</span>
-              </div>
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={loginWithGoogle}
-              className="w-full bg-transparent border-blue-600 text-blue-600 hover:bg-blue-50 font-medium uppercase tracking-wider rounded-lg"
-              data-testid="google-login-btn"
-            >
-              <Chrome className="w-4 h-4 mr-2" />
-              Sign in with Google
-            </Button>
-
             <p className="mt-6 text-center text-xs text-slate-500">
               Demo credentials: admin@fxbroker.com / password
             </p>
