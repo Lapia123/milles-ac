@@ -2586,6 +2586,44 @@ async def record_psp_payment(
     }
     await db.treasury_transactions.insert_one(treasury_tx)
     
+    # Create PSP settlement record for Settlement History
+    settlement_id = f"stl_{uuid.uuid4().hex[:12]}"
+    gross_amount = tx.get("amount", 0)
+    commission_amount = tx.get("psp_commission_amount", 0)
+    reserve_fund_amount = tx.get("psp_reserve_fund_amount", tx.get("psp_chargeback_amount", 0))
+    extra_charges = tx.get("psp_extra_charges", 0)
+    
+    settlement_doc = {
+        "settlement_id": settlement_id,
+        "psp_id": tx.get("psp_id"),
+        "psp_name": tx.get("psp_name", psp.get("psp_name") if psp else "Unknown PSP"),
+        "gross_amount": gross_amount,
+        "commission_rate": psp.get("commission_rate", 0) if psp else 0,
+        "commission_amount": commission_amount,
+        "reserve_fund_rate": psp.get("reserve_fund_rate", psp.get("chargeback_rate", 0)) if psp else 0,
+        "reserve_fund_amount": reserve_fund_amount,
+        "chargeback_rate": psp.get("reserve_fund_rate", psp.get("chargeback_rate", 0)) if psp else 0,
+        "chargeback_amount": reserve_fund_amount,
+        "extra_charges": extra_charges,
+        "gateway_fees": tx.get("psp_gateway_fee", 0),
+        "total_deductions": commission_amount + reserve_fund_amount + extra_charges,
+        "net_amount": settle_amount,
+        "actual_amount_received": settle_amount,
+        "variance": variance,
+        "holding_days": psp.get("holding_days", 0) if psp else 0,
+        "transaction_count": 1,
+        "transaction_ids": [transaction_id],
+        "settlement_destination_id": dest_account_id,
+        "status": PSPSettlementStatus.COMPLETED,
+        "expected_settlement_date": now.isoformat(),
+        "created_at": now.isoformat(),
+        "settled_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"],
+        "reference": tx.get("reference", transaction_id)
+    }
+    await db.psp_settlements.insert_one(settlement_doc)
+    
     # Mark transaction as settled
     await db.transactions.update_one(
         {"transaction_id": transaction_id},
@@ -2598,7 +2636,8 @@ async def record_psp_payment(
             "settlement_destination_id": dest_account_id,
             "settlement_destination_name": dest["account_name"],
             "psp_actual_amount_received": settle_amount,
-            "psp_settlement_variance": variance
+            "psp_settlement_variance": variance,
+            "settlement_id": settlement_id
         }}
     )
     
