@@ -2769,7 +2769,10 @@ async def backfill_psp_settlements(user: dict = Depends(require_admin)):
     settled_txs = await db.transactions.find({
         "destination_type": "psp",
         "settled": True,
-        "settlement_id": {"$exists": False}
+        "$or": [
+            {"settlement_id": {"$exists": False}},
+            {"settlement_id": None}
+        ]
     }, {"_id": 0}).to_list(10000)
     
     if not settled_txs:
