@@ -247,6 +247,7 @@ export default function Settings() {
 
   useEffect(() => {
     fetchUsers();
+    fetchRoles();
     fetchEmailSettings();
     fetchEmailLogs();
     fetchCommissionSettings();
@@ -261,8 +262,9 @@ export default function Settings() {
         : `${API_URL}/api/users`;
       const method = selectedUser ? 'PUT' : 'POST';
 
+      // Include role_id when saving
       const body = selectedUser
-        ? { name: formData.name, role: formData.role, is_active: formData.is_active }
+        ? { name: formData.name, role: formData.role, role_id: formData.role_id || formData.role, is_active: formData.is_active }
         : formData;
 
       const response = await fetch(url, {
