@@ -55,6 +55,87 @@ class UserRole:
     ACCOUNTANT = "accountant"
     VENDOR = "vendor"
 
+# ============== GRANULAR ACCESS CONTROL MODELS ==============
+
+# All modules in the system
+class Modules:
+    DASHBOARD = "dashboard"
+    CLIENTS = "clients"
+    TRANSACTIONS = "transactions"
+    TREASURY = "treasury"
+    LP_MANAGEMENT = "lp_management"
+    INCOME_EXPENSES = "income_expenses"
+    LOANS = "loans"
+    DEBTS = "debts"
+    PSP = "psp"
+    EXCHANGERS = "exchangers"
+    RECONCILIATION = "reconciliation"
+    AUDIT = "audit"
+    LOGS = "logs"
+    REPORTS = "reports"
+    SETTINGS = "settings"
+    USERS = "users"
+    ROLES = "roles"
+
+# Standard actions
+class Actions:
+    VIEW = "view"
+    CREATE = "create"
+    EDIT = "edit"
+    APPROVE = "approve"
+    EXPORT = "export"
+
+# All modules list
+ALL_MODULES = [
+    Modules.DASHBOARD, Modules.CLIENTS, Modules.TRANSACTIONS, Modules.TREASURY,
+    Modules.LP_MANAGEMENT, Modules.INCOME_EXPENSES, Modules.LOANS, Modules.DEBTS,
+    Modules.PSP, Modules.EXCHANGERS, Modules.RECONCILIATION, Modules.AUDIT,
+    Modules.LOGS, Modules.REPORTS, Modules.SETTINGS, Modules.USERS, Modules.ROLES
+]
+
+# All actions list
+ALL_ACTIONS = [Actions.VIEW, Actions.CREATE, Actions.EDIT, Actions.APPROVE, Actions.EXPORT]
+
+# Module display names
+MODULE_DISPLAY_NAMES = {
+    Modules.DASHBOARD: "Dashboard",
+    Modules.CLIENTS: "Clients",
+    Modules.TRANSACTIONS: "Transactions",
+    Modules.TREASURY: "Treasury",
+    Modules.LP_MANAGEMENT: "LP Management",
+    Modules.INCOME_EXPENSES: "Income & Expenses",
+    Modules.LOANS: "Loans",
+    Modules.DEBTS: "O/S Accounts",
+    Modules.PSP: "PSP",
+    Modules.EXCHANGERS: "Exchangers",
+    Modules.RECONCILIATION: "Reconciliation",
+    Modules.AUDIT: "Audit",
+    Modules.LOGS: "Logs",
+    Modules.REPORTS: "Reports",
+    Modules.SETTINGS: "Settings",
+    Modules.USERS: "Users",
+    Modules.ROLES: "Roles & Permissions"
+}
+
+class RoleCreate(BaseModel):
+    name: str
+    display_name: str
+    description: Optional[str] = None
+    permissions: dict = {}  # {module: [actions]}
+    is_system_role: bool = False
+    hierarchy_level: int = 0  # Higher = more access
+
+class RoleUpdate(BaseModel):
+    display_name: Optional[str] = None
+    description: Optional[str] = None
+    permissions: Optional[dict] = None
+    hierarchy_level: Optional[int] = None
+    is_active: Optional[bool] = None
+
+class UserPermissionOverride(BaseModel):
+    user_id: str
+    permissions: dict = {}  # Custom permission overrides for this user
+
 class UserBase(BaseModel):
     model_config = ConfigDict(extra="ignore")
     user_id: str
