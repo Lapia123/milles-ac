@@ -906,7 +906,24 @@ export default function Settings() {
                     </div>
                     <Switch
                       checked={emailSettings.report_enabled}
-                      onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, report_enabled: checked }))}
+                      onCheckedChange={async (checked) => {
+                        setEmailSettings(prev => ({ ...prev, report_enabled: checked }));
+                        // Auto-save the toggle change
+                        try {
+                          const response = await fetch(`${API_URL}/api/settings/email`, {
+                            method: 'PUT',
+                            headers: getAuthHeaders(),
+                            credentials: 'include',
+                            body: JSON.stringify({ report_enabled: checked }),
+                          });
+                          if (response.ok) {
+                            toast.success(checked ? 'Daily reports enabled' : 'Daily reports disabled');
+                          }
+                        } catch (error) {
+                          toast.error('Failed to update setting');
+                          setEmailSettings(prev => ({ ...prev, report_enabled: !checked }));
+                        }
+                      }}
                       data-testid="report-enabled-switch"
                     />
                   </div>
