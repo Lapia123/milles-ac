@@ -1013,7 +1013,22 @@ export default function IncomeExpenses() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-slate-500 text-xs uppercase tracking-wider">Amount *</Label>
-                <Input type="number" step="0.01" min="0" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono" placeholder="0.00" data-testid="entry-amount" />
+                <Input 
+                  type="text" 
+                  inputMode="decimal"
+                  pattern="[0-9]*\.?[0-9]*"
+                  value={formData.amount} 
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Allow empty, numbers, and decimal point
+                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                      setFormData({ ...formData, amount: value });
+                    }
+                  }} 
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono" 
+                  placeholder="0.00" 
+                  data-testid="entry-amount" 
+                />
               </div>
               <div className="space-y-2">
                 <Label className="text-slate-500 text-xs uppercase tracking-wider">Currency</Label>
