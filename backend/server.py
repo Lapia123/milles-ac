@@ -2836,6 +2836,41 @@ async def backfill_psp_settlements(user: dict = Depends(require_admin)):
     return {"message": f"Successfully backfilled {backfilled} settlements", "count": backfilled}
 
 
+# Migration endpoint: Fix treasury transaction dates to match linked income/expense entries
+@api_router.post("/treasury/sync-ie-dates")
+async def sync_treasury_ie_dates(user: dict = Depends(require_admin)):
+    """Fix treasury transaction dates to match their linked income/expense entry dates."""
+    # Find all treasury transactions with income_expense_id
+    txs = await db.treasury_transactions.find({"income_expense_id": {"$exists": True}}, {"_id": 0}).to_list(10000)
+    
+    if not txs:
+        return {"message": "No transactions to fix", "count": 0}
+    
+    fixed = 0
+    for tx in txs:
+        ie_id = tx.get("income_expense_id")
+        if not ie_id:
+            continue
+            
+        # Get the linked income/expense entry
+        entry = await db.income_expenses.find_one({"entry_id": ie_id}, {"_id": 0})
+        if not entry or not entry.get("date"):
+            continue
+        
+        entry_date = entry.get("date")
+        # The date format should be YYYY-MM-DD, convert to full ISO format
+        new_created_at = f"{entry_date}T12:00:00+00:00"
+        
+        # Update treasury transaction created_at to match entry date
+        await db.treasury_transactions.update_one(
+            {"treasury_transaction_id": tx.get("treasury_transaction_id")},
+            {"$set": {"created_at": new_created_at}}
+        )
+        fixed += 1
+    
+    return {"message": f"Successfully fixed {fixed} treasury transaction dates", "count": fixed}
+
+
 # ============== RESERVE FUND MANAGEMENT ==============
 
 @api_router.get("/psps/{psp_id}/reserve-funds")
