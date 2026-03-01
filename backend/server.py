@@ -5523,7 +5523,7 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = De
             "original_currency": entry_currency,
             "reference": f"{category_label}: {entry_data.description or 'N/A'}{conversion_note}",
             "income_expense_id": entry_id,
-            "created_at": now.isoformat(),
+            "created_at": f"{entry_date}T12:00:00+00:00",  # Use entry date, not current time
             "created_by": user["user_id"],
             "created_by_name": user["name"]
         }
