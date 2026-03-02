@@ -9,6 +9,7 @@ Build a comprehensive back-office accounting software for an FX (foreign exchang
 - Treasury
 - Loans
 - LP (Liquidity Provider) Management
+- Dealing P&L (NEW)
 - Granular Role-Based Access Control (RBAC)
 - Reporting & Reconciliation
 
@@ -36,23 +37,32 @@ Build a comprehensive back-office accounting software for an FX (foreign exchang
 
 ## What's Been Implemented
 
-### Date: Feb 28, 2026
+### Date: Mar 2, 2026
 
-**PSP Settlement History Bug Fix:**
-- Fixed issue where PSP settlements weren't appearing in Settlement History tab
-- Modified `/record-payment` endpoint to create `psp_settlements` records
-- Added backfill migration endpoint `/api/psp/backfill-settlements`
-- Enhanced Settlement History UI with Reference, Net Received, Date columns
-- Successfully migrated existing settlement REF832FB603 (+8,710 USD)
+**Dealing P&L Feature:**
+- New "Dealing P&L" tab in LP Management module
+- Daily P&L calculation from MT5 and LP data
+- Summary dashboard (30-day totals, profitable/loss days, best day)
+- Record table with calculated broker P&L
+- Add/Delete functionality for daily records
+- Formula: Broker P&L = -(Client Booked) - (Floating Change) + LP Booked + LP Floating Change
 
-**Previous Session Work:**
-- Granular RBAC System (Foundation) - Backend models, permission logic, default roles, management APIs, and "Roles & Permissions" UI page
-- LP Management Module - Full-featured module for managing Liquidity Providers
-- System-wide Currency Auto-Conversion - Implemented in Loans, LP, and Income/Expense modules
-- Database Migration to MongoDB Atlas - Successfully connected
-- Loan Management Enhancements - Filters added, date parsing and balance calculation bugs fixed
-- Transaction Ledger Enhancement - Added client_email column
-- System Configuration - Custom SMTP configured, Google Sign-in removed from login page
+### Date: Mar 1, 2026
+
+**Bug Fixes:**
+- PSP Settlement History not showing records - Fixed by creating psp_settlements entries on record-payment
+- Treasury date mismatch - Fixed to use entry date instead of current timestamp
+- Income/Expenses Amount field not accepting digits - Changed to text input with decimal validation
+- Daily Report Schedule auto-save - Toggle now saves immediately
+
+### Previous Session Work:
+- Granular RBAC System (Foundation)
+- LP Management Module
+- System-wide Currency Auto-Conversion
+- Database Migration to MongoDB Atlas
+- Loan Management Enhancements
+- Transaction Ledger Enhancement
+- System Configuration (SMTP, Google Sign-in removed)
 
 ---
 
@@ -69,6 +79,7 @@ Build a comprehensive back-office accounting software for an FX (foreign exchang
 ### P2 - Medium Priority
 - [ ] Implement frontend permission gates (conditional UI rendering)
 - [ ] Complete Reconciliation Module
+- [ ] Add screenshot upload to Dealing P&L records
 
 ### P3 - Low Priority/Technical Debt
 - [ ] Refactor `backend/server.py` into modular APIRouter files
@@ -77,29 +88,39 @@ Build a comprehensive back-office accounting software for an FX (foreign exchang
 
 ## Key Endpoints
 
+### Dealing P&L Endpoints (NEW)
+- `GET /api/dealing-pnl` - List records with calculations
+- `GET /api/dealing-pnl/summary` - Summary statistics (30 days)
+- `POST /api/dealing-pnl` - Create/update daily record
+- `DELETE /api/dealing-pnl/{date}` - Delete record
+
 ### RBAC Endpoints
 - `GET /api/roles` - List all roles
 - `POST /api/roles` - Create role
 - `PUT /api/roles/{role_id}` - Update role
 - `GET /api/permissions/my` - Get current user permissions
-- `PUT /api/users/{user_id}/role` - Assign role to user
 
 ### LP Management Endpoints
-- Full CRUD for LPs (`/api/lps`)
-- `/api/lps/{lp_id}/deposit` - Deposit to LP
-- `/api/lps/{lp_id}/withdraw` - Withdraw from LP
+- Full CRUD for LPs (`/api/lp`)
+- `/api/lp/{lp_id}/deposit` - Deposit to LP
+- `/api/lp/{lp_id}/withdraw` - Withdraw from LP
 
 ### PSP Endpoints
 - `/api/psp` - List/Create PSPs
 - `/api/psp/{psp_id}/settlements` - Get PSP settlement history
-- `/api/psp/transactions/{transaction_id}/record-payment` - Record payment received
-- `/api/psp/backfill-settlements` - Migration: backfill existing settlements
+- `/api/psp/transactions/{transaction_id}/record-payment` - Record payment
 
 ---
 
 ## Database Schema
 
-### Collections
+### New Collections
+- `dealing_pnl` - Daily dealing P&L records
+  - date, mt5_booked_pnl, mt5_floating_pnl, lp_booked_pnl, lp_floating_pnl
+  - mt5_screenshot, lp_screenshot, notes
+  - created_at, created_by, updated_at, updated_by
+
+### Existing Collections
 - `users` - User accounts with `role_id` reference
 - `roles` - Granular RBAC roles
 - `clients` - Client records
@@ -112,7 +133,7 @@ Build a comprehensive back-office accounting software for an FX (foreign exchang
 - `lp_transactions` - LP transaction records
 - `loans` - Loan management
 - `income_expenses` - Income & expense records
-- `app_settings` - Application configuration (SMTP, etc.)
+- `app_settings` - Application configuration
 
 ---
 
@@ -125,9 +146,8 @@ Build a comprehensive back-office accounting software for an FX (foreign exchang
 
 ## Key Files
 - `backend/server.py` - Main backend (needs refactoring)
-- `frontend/src/pages/Settings.js` - User management (IN PROGRESS)
+- `frontend/src/pages/LPAccounts.js` - LP Management + Dealing P&L
+- `frontend/src/pages/Settings.js` - User management
 - `frontend/src/pages/RolesPermissions.js` - RBAC UI
 - `frontend/src/pages/PSPs.js` - PSP management
-- `frontend/src/pages/LPs.js` - LP management
 - `frontend/src/pages/Loans.js` - Loan management
-- `frontend/src/components/Layout.js` - App layout & navigation

@@ -263,6 +263,20 @@ class LPTransactionCreate(BaseModel):
     reference: Optional[str] = None
     notes: Optional[str] = None
 
+# Dealing P&L Models
+class DealingPnLCreate(BaseModel):
+    date: str  # YYYY-MM-DD format
+    # MT5 Client Side
+    mt5_booked_pnl: float = 0  # Client booked P&L (positive = client profit)
+    mt5_floating_pnl: float = 0  # Today's running floating P&L
+    # LP Hedging Side
+    lp_booked_pnl: float = 0  # LP booked P&L
+    lp_floating_pnl: float = 0  # LP running floating P&L
+    # Screenshots (base64 or URLs)
+    mt5_screenshot: Optional[str] = None
+    lp_screenshot: Optional[str] = None
+    notes: Optional[str] = None
+
 # PSP Models
 class PSPStatus:
     ACTIVE = "active"
@@ -2091,6 +2105,217 @@ async def export_lp_csv(user: dict = Depends(get_current_user)):
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=lp_export_{datetime.now().strftime('%Y%m%d')}.csv"}
     )
+
+
+# ============== DEALING P&L ROUTES ==============
+
+@api_router.get("/dealing-pnl")
+async def get_dealing_pnl_records(
+    limit: int = 30,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Get all dealing P&L records with calculated values"""
+    query = {}
+    if start_date:
+        query["date"] = {"$gte": start_date}
+    if end_date:
+        if "date" in query:
+            query["date"]["$lte"] = end_date
+        else:
+            query["date"] = {"$lte": end_date}
+    
+    records = await db.dealing_pnl.find(query, {"_id": 0}).sort("date", -1).limit(limit).to_list(limit)
+    
+    # Calculate derived values for each record
+    result = []
+    for i, record in enumerate(records):
+        # Get previous day's floating values
+        prev_mt5_floating = 0
+        prev_lp_floating = 0
+        
+        # Find previous record by date
+        prev_record = await db.dealing_pnl.find_one(
+            {"date": {"$lt": record["date"]}},
+            {"_id": 0},
+            sort=[("date", -1)]
+        )
+        if prev_record:
+            prev_mt5_floating = prev_record.get("mt5_floating_pnl", 0)
+            prev_lp_floating = prev_record.get("lp_floating_pnl", 0)
+        
+        # Calculate MT5 dealing P&L
+        # Broker profit = -(client booked profit) + (change in client floating loss)
+        mt5_booked = record.get("mt5_booked_pnl", 0)
+        mt5_floating = record.get("mt5_floating_pnl", 0)
+        mt5_floating_change = mt5_floating - prev_mt5_floating
+        
+        # If clients booked +50k profit, broker loses -50k
+        # If client floating went from -25k to -100k, clients lost 75k more, broker gains +75k
+        broker_mt5_pnl = -mt5_booked - mt5_floating_change
+        
+        # Calculate LP dealing P&L
+        lp_booked = record.get("lp_booked_pnl", 0)
+        lp_floating = record.get("lp_floating_pnl", 0)
+        lp_floating_change = lp_floating - prev_lp_floating
+        
+        # LP P&L adds to broker's total
+        broker_lp_pnl = lp_booked + lp_floating_change
+        
+        # Total Dealing P&L
+        total_dealing_pnl = broker_mt5_pnl + broker_lp_pnl
+        
+        result.append({
+            **record,
+            "prev_mt5_floating": prev_mt5_floating,
+            "prev_lp_floating": prev_lp_floating,
+            "mt5_floating_change": mt5_floating_change,
+            "lp_floating_change": lp_floating_change,
+            "broker_mt5_pnl": broker_mt5_pnl,
+            "broker_lp_pnl": broker_lp_pnl,
+            "total_dealing_pnl": total_dealing_pnl,
+        })
+    
+    return result
+
+
+@api_router.get("/dealing-pnl/summary")
+async def get_dealing_pnl_summary(
+    days: int = 30,
+    user: dict = Depends(get_current_user)
+):
+    """Get summary statistics for dealing P&L"""
+    from datetime import timedelta
+    
+    end_date = datetime.now(timezone.utc).date()
+    start_date = end_date - timedelta(days=days)
+    
+    records = await db.dealing_pnl.find(
+        {"date": {"$gte": start_date.isoformat(), "$lte": end_date.isoformat()}},
+        {"_id": 0}
+    ).sort("date", -1).to_list(1000)
+    
+    if not records:
+        return {
+            "total_dealing_pnl": 0,
+            "total_mt5_booked": 0,
+            "total_lp_booked": 0,
+            "record_count": 0,
+            "profitable_days": 0,
+            "loss_days": 0,
+            "best_day": None,
+            "worst_day": None,
+        }
+    
+    # Calculate totals
+    total_dealing_pnl = 0
+    total_mt5_booked = 0
+    total_lp_booked = 0
+    profitable_days = 0
+    loss_days = 0
+    best_day = {"date": None, "pnl": float('-inf')}
+    worst_day = {"date": None, "pnl": float('inf')}
+    
+    prev_record = None
+    for record in reversed(records):  # Process in chronological order
+        mt5_booked = record.get("mt5_booked_pnl", 0)
+        mt5_floating = record.get("mt5_floating_pnl", 0)
+        lp_booked = record.get("lp_booked_pnl", 0)
+        lp_floating = record.get("lp_floating_pnl", 0)
+        
+        prev_mt5_floating = prev_record.get("mt5_floating_pnl", 0) if prev_record else 0
+        prev_lp_floating = prev_record.get("lp_floating_pnl", 0) if prev_record else 0
+        
+        mt5_floating_change = mt5_floating - prev_mt5_floating
+        lp_floating_change = lp_floating - prev_lp_floating
+        
+        broker_mt5_pnl = -mt5_booked - mt5_floating_change
+        broker_lp_pnl = lp_booked + lp_floating_change
+        day_pnl = broker_mt5_pnl + broker_lp_pnl
+        
+        total_dealing_pnl += day_pnl
+        total_mt5_booked += mt5_booked
+        total_lp_booked += lp_booked
+        
+        if day_pnl > 0:
+            profitable_days += 1
+        elif day_pnl < 0:
+            loss_days += 1
+        
+        if day_pnl > best_day["pnl"]:
+            best_day = {"date": record["date"], "pnl": day_pnl}
+        if day_pnl < worst_day["pnl"]:
+            worst_day = {"date": record["date"], "pnl": day_pnl}
+        
+        prev_record = record
+    
+    return {
+        "total_dealing_pnl": round(total_dealing_pnl, 2),
+        "total_mt5_booked": round(total_mt5_booked, 2),
+        "total_lp_booked": round(total_lp_booked, 2),
+        "record_count": len(records),
+        "profitable_days": profitable_days,
+        "loss_days": loss_days,
+        "best_day": best_day if best_day["date"] else None,
+        "worst_day": worst_day if worst_day["date"] else None,
+    }
+
+
+@api_router.post("/dealing-pnl")
+async def create_dealing_pnl(data: DealingPnLCreate, user: dict = Depends(require_accountant_or_admin)):
+    """Create or update a dealing P&L record for a specific date"""
+    now = datetime.now(timezone.utc)
+    
+    # Check if record already exists for this date
+    existing = await db.dealing_pnl.find_one({"date": data.date}, {"_id": 0})
+    
+    record = {
+        "date": data.date,
+        "mt5_booked_pnl": data.mt5_booked_pnl,
+        "mt5_floating_pnl": data.mt5_floating_pnl,
+        "lp_booked_pnl": data.lp_booked_pnl,
+        "lp_floating_pnl": data.lp_floating_pnl,
+        "mt5_screenshot": data.mt5_screenshot,
+        "lp_screenshot": data.lp_screenshot,
+        "notes": data.notes,
+        "updated_at": now.isoformat(),
+        "updated_by": user["user_id"],
+        "updated_by_name": user["name"],
+    }
+    
+    if existing:
+        await db.dealing_pnl.update_one(
+            {"date": data.date},
+            {"$set": record}
+        )
+        return {"message": "Dealing P&L record updated", "date": data.date}
+    else:
+        record["record_id"] = f"dpnl_{uuid.uuid4().hex[:12]}"
+        record["created_at"] = now.isoformat()
+        record["created_by"] = user["user_id"]
+        record["created_by_name"] = user["name"]
+        await db.dealing_pnl.insert_one(record)
+        return {"message": "Dealing P&L record created", "date": data.date, "record_id": record["record_id"]}
+
+
+@api_router.get("/dealing-pnl/{date}")
+async def get_dealing_pnl_by_date(date: str, user: dict = Depends(get_current_user)):
+    """Get dealing P&L record for a specific date"""
+    record = await db.dealing_pnl.find_one({"date": date}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail="No record found for this date")
+    return record
+
+
+@api_router.delete("/dealing-pnl/{date}")
+async def delete_dealing_pnl(date: str, user: dict = Depends(require_admin)):
+    """Delete a dealing P&L record"""
+    result = await db.dealing_pnl.delete_one({"date": date})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return {"message": "Dealing P&L record deleted", "date": date}
+
 
 # ============== PSP ROUTES ==============
 

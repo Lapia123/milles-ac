@@ -49,6 +49,11 @@ import {
   Wallet,
   TrendingUp,
   TrendingDown,
+  Calculator,
+  Calendar,
+  Upload,
+  Trash2,
+  Save,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -93,6 +98,21 @@ export default function LPAccounts() {
     reference: '',
     notes: '',
   });
+
+  // Dealing P&L State
+  const [dealingPnLRecords, setDealingPnLRecords] = useState([]);
+  const [dealingPnLSummary, setDealingPnLSummary] = useState(null);
+  const [dealingPnLLoading, setDealingPnLLoading] = useState(false);
+  const [isDealingFormOpen, setIsDealingFormOpen] = useState(false);
+  const [dealingForm, setDealingForm] = useState({
+    date: new Date().toISOString().split('T')[0],
+    mt5_booked_pnl: '',
+    mt5_floating_pnl: '',
+    lp_booked_pnl: '',
+    lp_floating_pnl: '',
+    notes: '',
+  });
+  const [savingDealingPnL, setSavingDealingPnL] = useState(false);
 
   const isAdmin = user?.role === 'admin';
   const canManage = ['admin', 'accountant'].includes(user?.role);
@@ -150,6 +170,92 @@ export default function LPAccounts() {
       }
     } catch (error) {
       console.error('Error fetching LP transactions:', error);
+    }
+  };
+
+  const fetchDealingPnL = async () => {
+    setDealingPnLLoading(true);
+    try {
+      const [recordsRes, summaryRes] = await Promise.all([
+        fetch(`${API_URL}/api/dealing-pnl?limit=30`, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(`${API_URL}/api/dealing-pnl/summary?days=30`, { headers: getAuthHeaders(), credentials: 'include' }),
+      ]);
+      if (recordsRes.ok) {
+        setDealingPnLRecords(await recordsRes.json());
+      }
+      if (summaryRes.ok) {
+        setDealingPnLSummary(await summaryRes.json());
+      }
+    } catch (error) {
+      console.error('Error fetching dealing P&L:', error);
+    } finally {
+      setDealingPnLLoading(false);
+    }
+  };
+
+  const handleSaveDealingPnL = async () => {
+    if (!dealingForm.date) {
+      toast.error('Date is required');
+      return;
+    }
+    
+    setSavingDealingPnL(true);
+    try {
+      const response = await fetch(`${API_URL}/api/dealing-pnl`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          date: dealingForm.date,
+          mt5_booked_pnl: parseFloat(dealingForm.mt5_booked_pnl) || 0,
+          mt5_floating_pnl: parseFloat(dealingForm.mt5_floating_pnl) || 0,
+          lp_booked_pnl: parseFloat(dealingForm.lp_booked_pnl) || 0,
+          lp_floating_pnl: parseFloat(dealingForm.lp_floating_pnl) || 0,
+          notes: dealingForm.notes,
+        }),
+      });
+      
+      if (response.ok) {
+        toast.success('Dealing P&L saved');
+        setIsDealingFormOpen(false);
+        setDealingForm({
+          date: new Date().toISOString().split('T')[0],
+          mt5_booked_pnl: '',
+          mt5_floating_pnl: '',
+          lp_booked_pnl: '',
+          lp_floating_pnl: '',
+          notes: '',
+        });
+        fetchDealingPnL();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to save');
+      }
+    } catch (error) {
+      toast.error('Failed to save dealing P&L');
+    } finally {
+      setSavingDealingPnL(false);
+    }
+  };
+
+  const handleDeleteDealingPnL = async (date) => {
+    if (!window.confirm(`Delete dealing P&L record for ${date}?`)) return;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/dealing-pnl/${date}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        toast.success('Record deleted');
+        fetchDealingPnL();
+      } else {
+        toast.error('Failed to delete');
+      }
+    } catch (error) {
+      toast.error('Failed to delete');
     }
   };
 
@@ -408,7 +514,7 @@ export default function LPAccounts() {
       </div>
 
       {/* Main Tabs */}
-      <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
+      <Tabs value={mainTab} onValueChange={(v) => { setMainTab(v); if (v === 'dealing') fetchDealingPnL(); }} className="w-full">
         <TabsList className="bg-white border border-slate-200 mb-4">
           <TabsTrigger value="dashboard" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
             <BarChart3 className="w-4 h-4 mr-2" /> Dashboard
@@ -418,6 +524,9 @@ export default function LPAccounts() {
           </TabsTrigger>
           <TabsTrigger value="transactions" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
             <History className="w-4 h-4 mr-2" /> Transactions
+          </TabsTrigger>
+          <TabsTrigger value="dealing" className="data-[state=active]:bg-green-100 data-[state=active]:text-green-600">
+            <Calculator className="w-4 h-4 mr-2" /> Dealing P&L
           </TabsTrigger>
         </TabsList>
 
@@ -692,7 +801,306 @@ export default function LPAccounts() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Dealing P&L Tab */}
+        <TabsContent value="dealing">
+          {dealingPnLLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Summary Cards */}
+              {dealingPnLSummary && (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <Card className="bg-white border-slate-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-slate-500 uppercase tracking-wider">Total Dealing P&L (30d)</p>
+                          <p className={`text-2xl font-bold font-mono ${dealingPnLSummary.total_dealing_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {dealingPnLSummary.total_dealing_pnl >= 0 ? '+' : ''}{dealingPnLSummary.total_dealing_pnl?.toLocaleString()} USD
+                          </p>
+                        </div>
+                        <Calculator className={`w-8 h-8 ${dealingPnLSummary.total_dealing_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`} />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-white border-slate-200">
+                    <CardContent className="p-4">
+                      <p className="text-xs text-slate-500 uppercase tracking-wider">Profitable Days</p>
+                      <p className="text-2xl font-bold text-green-500">{dealingPnLSummary.profitable_days}</p>
+                      <p className="text-xs text-slate-400">out of {dealingPnLSummary.record_count} records</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-white border-slate-200">
+                    <CardContent className="p-4">
+                      <p className="text-xs text-slate-500 uppercase tracking-wider">Loss Days</p>
+                      <p className="text-2xl font-bold text-red-500">{dealingPnLSummary.loss_days}</p>
+                      <p className="text-xs text-slate-400">out of {dealingPnLSummary.record_count} records</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-white border-slate-200">
+                    <CardContent className="p-4">
+                      <p className="text-xs text-slate-500 uppercase tracking-wider">Best Day</p>
+                      {dealingPnLSummary.best_day ? (
+                        <>
+                          <p className="text-lg font-bold text-green-500 font-mono">+{dealingPnLSummary.best_day.pnl?.toLocaleString()} USD</p>
+                          <p className="text-xs text-slate-400">{dealingPnLSummary.best_day.date}</p>
+                        </>
+                      ) : (
+                        <p className="text-slate-400">-</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Add Record Button */}
+              <div className="flex justify-end">
+                {canManage && (
+                  <Button
+                    onClick={() => setIsDealingFormOpen(true)}
+                    className="bg-green-500 text-white hover:bg-green-600 font-bold uppercase tracking-wider rounded-sm"
+                    data-testid="add-dealing-pnl-btn"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Daily P&L
+                  </Button>
+                )}
+              </div>
+
+              {/* Records Table */}
+              <Card className="bg-white border-slate-200">
+                <CardContent className="p-0">
+                  <ScrollArea className="h-[500px]">
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-white z-10">
+                        <TableRow className="border-slate-200">
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase">Date</TableHead>
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">MT5 Booked</TableHead>
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">MT5 Floating</TableHead>
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">MT5 P&L</TableHead>
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">LP Booked</TableHead>
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">LP Floating</TableHead>
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">LP P&L</TableHead>
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">Total Dealing</TableHead>
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {dealingPnLRecords.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={9} className="text-center py-8 text-slate-500">
+                              No dealing P&L records. Add your first daily record.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          dealingPnLRecords.map((record) => (
+                            <TableRow key={record.date} className="border-slate-200 hover:bg-slate-50" data-testid={`dealing-row-${record.date}`}>
+                              <TableCell className="font-medium text-slate-800">{record.date}</TableCell>
+                              <TableCell className={`text-right font-mono ${record.mt5_booked_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {record.mt5_booked_pnl >= 0 ? '+' : ''}{record.mt5_booked_pnl?.toLocaleString()}
+                              </TableCell>
+                              <TableCell className={`text-right font-mono ${record.mt5_floating_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {record.mt5_floating_pnl >= 0 ? '+' : ''}{record.mt5_floating_pnl?.toLocaleString()}
+                                <span className="text-xs text-slate-400 block">
+                                  Δ {record.mt5_floating_change >= 0 ? '+' : ''}{record.mt5_floating_change?.toLocaleString()}
+                                </span>
+                              </TableCell>
+                              <TableCell className={`text-right font-mono font-bold ${record.broker_mt5_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {record.broker_mt5_pnl >= 0 ? '+' : ''}{record.broker_mt5_pnl?.toLocaleString()}
+                              </TableCell>
+                              <TableCell className={`text-right font-mono ${record.lp_booked_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {record.lp_booked_pnl >= 0 ? '+' : ''}{record.lp_booked_pnl?.toLocaleString()}
+                              </TableCell>
+                              <TableCell className={`text-right font-mono ${record.lp_floating_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {record.lp_floating_pnl >= 0 ? '+' : ''}{record.lp_floating_pnl?.toLocaleString()}
+                                <span className="text-xs text-slate-400 block">
+                                  Δ {record.lp_floating_change >= 0 ? '+' : ''}{record.lp_floating_change?.toLocaleString()}
+                                </span>
+                              </TableCell>
+                              <TableCell className={`text-right font-mono font-bold ${record.broker_lp_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {record.broker_lp_pnl >= 0 ? '+' : ''}{record.broker_lp_pnl?.toLocaleString()}
+                              </TableCell>
+                              <TableCell className={`text-right font-mono font-bold text-lg ${record.total_dealing_pnl >= 0 ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'}`}>
+                                {record.total_dealing_pnl >= 0 ? '+' : ''}{record.total_dealing_pnl?.toLocaleString()}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {isAdmin && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteDealingPnL(record.date)}
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    data-testid={`delete-dealing-${record.date}`}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              {/* Calculation Explanation */}
+              <Card className="bg-slate-50 border-slate-200">
+                <CardContent className="p-4">
+                  <h4 className="font-bold text-slate-700 mb-2">How Dealing P&L is Calculated:</h4>
+                  <div className="text-sm text-slate-600 space-y-1">
+                    <p><strong>MT5 Broker P&L</strong> = -(Client Booked P&L) - (Change in Client Floating)</p>
+                    <p><strong>LP P&L</strong> = (LP Booked P&L) + (Change in LP Floating)</p>
+                    <p><strong>Total Dealing P&L</strong> = MT5 Broker P&L + LP P&L</p>
+                    <p className="text-xs text-slate-500 mt-2">
+                      * Positive client booked P&L means clients profited, which is a loss for the broker.
+                      <br />* Increase in client floating loss (more negative) is a gain for the broker.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
+
+      {/* Add Dealing P&L Dialog */}
+      <Dialog open={isDealingFormOpen} onOpenChange={setIsDealingFormOpen}>
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight text-green-600" style={{ fontFamily: 'Barlow Condensed' }}>
+              <Calculator className="w-6 h-6 inline mr-2" />
+              Add Daily Dealing P&L
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Date */}
+            <div>
+              <Label className="text-slate-500 text-xs uppercase">Date *</Label>
+              <Input
+                type="date"
+                value={dealingForm.date}
+                onChange={(e) => setDealingForm({ ...dealingForm, date: e.target.value })}
+                className="bg-slate-50 border-slate-200 text-slate-800"
+                data-testid="dealing-date"
+              />
+            </div>
+
+            {/* MT5 Section */}
+            <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
+              <h4 className="font-bold text-blue-700 mb-3 flex items-center">
+                <TrendingUp className="w-4 h-4 mr-2" />
+                MT5 Client Data
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-blue-600 text-xs uppercase">Booked P&L</Label>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={dealingForm.mt5_booked_pnl}
+                    onChange={(e) => setDealingForm({ ...dealingForm, mt5_booked_pnl: e.target.value })}
+                    className="bg-white border-blue-200 text-slate-800 font-mono"
+                    placeholder="e.g. 50000 or -30000"
+                    data-testid="dealing-mt5-booked"
+                  />
+                  <p className="text-xs text-blue-500 mt-1">Client profits/losses today</p>
+                </div>
+                <div>
+                  <Label className="text-blue-600 text-xs uppercase">Running Floating</Label>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={dealingForm.mt5_floating_pnl}
+                    onChange={(e) => setDealingForm({ ...dealingForm, mt5_floating_pnl: e.target.value })}
+                    className="bg-white border-blue-200 text-slate-800 font-mono"
+                    placeholder="e.g. -100000"
+                    data-testid="dealing-mt5-floating"
+                  />
+                  <p className="text-xs text-blue-500 mt-1">Current open positions P&L</p>
+                </div>
+              </div>
+            </div>
+
+            {/* LP Section */}
+            <div className="p-3 bg-green-50 rounded-md border border-green-200">
+              <h4 className="font-bold text-green-700 mb-3 flex items-center">
+                <Landmark className="w-4 h-4 mr-2" />
+                LP Hedging Data
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-green-600 text-xs uppercase">LP Booked P&L</Label>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={dealingForm.lp_booked_pnl}
+                    onChange={(e) => setDealingForm({ ...dealingForm, lp_booked_pnl: e.target.value })}
+                    className="bg-white border-green-200 text-slate-800 font-mono"
+                    placeholder="e.g. 25000"
+                    data-testid="dealing-lp-booked"
+                  />
+                  <p className="text-xs text-green-500 mt-1">LP closed positions P&L</p>
+                </div>
+                <div>
+                  <Label className="text-green-600 text-xs uppercase">LP Running Floating</Label>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={dealingForm.lp_floating_pnl}
+                    onChange={(e) => setDealingForm({ ...dealingForm, lp_floating_pnl: e.target.value })}
+                    className="bg-white border-green-200 text-slate-800 font-mono"
+                    placeholder="e.g. -10000"
+                    data-testid="dealing-lp-floating"
+                  />
+                  <p className="text-xs text-green-500 mt-1">LP open positions P&L</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <Label className="text-slate-500 text-xs uppercase">Notes</Label>
+              <Textarea
+                value={dealingForm.notes}
+                onChange={(e) => setDealingForm({ ...dealingForm, notes: e.target.value })}
+                className="bg-slate-50 border-slate-200 text-slate-800"
+                placeholder="Any additional notes..."
+                rows={2}
+                data-testid="dealing-notes"
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsDealingFormOpen(false)}
+                className="border-slate-200"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveDealingPnL}
+                disabled={savingDealingPnL}
+                className="bg-green-500 text-white hover:bg-green-600"
+                data-testid="save-dealing-btn"
+              >
+                {savingDealingPnL ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Save Record
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Add LP Dialog */}
       <Dialog open={isAddLPOpen} onOpenChange={setIsAddLPOpen}>
