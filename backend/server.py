@@ -264,14 +264,22 @@ class LPTransactionCreate(BaseModel):
     notes: Optional[str] = None
 
 # Dealing P&L Models
+class LPPnLEntry(BaseModel):
+    lp_id: str
+    lp_name: Optional[str] = None
+    booked_pnl: float = 0
+    floating_pnl: float = 0
+
 class DealingPnLCreate(BaseModel):
     date: str  # YYYY-MM-DD format
     # MT5 Client Side
     mt5_booked_pnl: float = 0  # Client booked P&L (positive = client profit)
     mt5_floating_pnl: float = 0  # Today's running floating P&L
-    # LP Hedging Side
-    lp_booked_pnl: float = 0  # LP booked P&L
-    lp_floating_pnl: float = 0  # LP running floating P&L
+    # LP Hedging Side - Multiple LPs
+    lp_entries: Optional[List[LPPnLEntry]] = []  # List of LP P&L entries
+    # Legacy single LP fields (for backward compatibility)
+    lp_booked_pnl: float = 0
+    lp_floating_pnl: float = 0
     # Screenshots (base64 or URLs)
     mt5_screenshot: Optional[str] = None
     lp_screenshot: Optional[str] = None
@@ -2133,7 +2141,7 @@ async def get_dealing_pnl_records(
     for i, record in enumerate(records):
         # Get previous day's floating values
         prev_mt5_floating = 0
-        prev_lp_floating = 0
+        prev_lp_entries = {}
         
         # Find previous record by date
         prev_record = await db.dealing_pnl.find_one(
@@ -2143,37 +2151,56 @@ async def get_dealing_pnl_records(
         )
         if prev_record:
             prev_mt5_floating = prev_record.get("mt5_floating_pnl", 0)
-            prev_lp_floating = prev_record.get("lp_floating_pnl", 0)
+            # Build map of previous LP floating values
+            for lp_entry in prev_record.get("lp_entries", []):
+                prev_lp_entries[lp_entry.get("lp_id")] = lp_entry.get("floating_pnl", 0)
         
         # Calculate MT5 dealing P&L
-        # Broker profit = -(client booked profit) + (change in client floating loss)
         mt5_booked = record.get("mt5_booked_pnl", 0)
         mt5_floating = record.get("mt5_floating_pnl", 0)
         mt5_floating_change = mt5_floating - prev_mt5_floating
-        
-        # If clients booked +50k profit, broker loses -50k
-        # If client floating went from -25k to -100k, clients lost 75k more, broker gains +75k
         broker_mt5_pnl = -mt5_booked - mt5_floating_change
         
-        # Calculate LP dealing P&L
-        lp_booked = record.get("lp_booked_pnl", 0)
-        lp_floating = record.get("lp_floating_pnl", 0)
-        lp_floating_change = lp_floating - prev_lp_floating
+        # Calculate LP dealing P&L for each LP
+        lp_entries_with_calc = []
+        total_lp_booked = 0
+        total_lp_floating = 0
+        total_lp_floating_change = 0
+        total_broker_lp_pnl = 0
         
-        # LP P&L adds to broker's total
-        broker_lp_pnl = lp_booked + lp_floating_change
+        for lp_entry in record.get("lp_entries", []):
+            lp_id = lp_entry.get("lp_id")
+            lp_booked = lp_entry.get("booked_pnl", 0)
+            lp_floating = lp_entry.get("floating_pnl", 0)
+            prev_floating = prev_lp_entries.get(lp_id, 0)
+            floating_change = lp_floating - prev_floating
+            lp_pnl = lp_booked + floating_change
+            
+            lp_entries_with_calc.append({
+                **lp_entry,
+                "prev_floating": prev_floating,
+                "floating_change": floating_change,
+                "lp_pnl": lp_pnl,
+            })
+            
+            total_lp_booked += lp_booked
+            total_lp_floating += lp_floating
+            total_lp_floating_change += floating_change
+            total_broker_lp_pnl += lp_pnl
         
         # Total Dealing P&L
-        total_dealing_pnl = broker_mt5_pnl + broker_lp_pnl
+        total_dealing_pnl = broker_mt5_pnl + total_broker_lp_pnl
         
         result.append({
             **record,
+            "lp_entries": lp_entries_with_calc,
             "prev_mt5_floating": prev_mt5_floating,
-            "prev_lp_floating": prev_lp_floating,
             "mt5_floating_change": mt5_floating_change,
-            "lp_floating_change": lp_floating_change,
             "broker_mt5_pnl": broker_mt5_pnl,
-            "broker_lp_pnl": broker_lp_pnl,
+            "total_lp_booked": total_lp_booked,
+            "total_lp_floating": total_lp_floating,
+            "total_lp_floating_change": total_lp_floating_change,
+            "broker_lp_pnl": total_broker_lp_pnl,
             "total_dealing_pnl": total_dealing_pnl,
         })
     
@@ -2270,12 +2297,27 @@ async def create_dealing_pnl(data: DealingPnLCreate, user: dict = Depends(requir
     # Check if record already exists for this date
     existing = await db.dealing_pnl.find_one({"date": data.date}, {"_id": 0})
     
+    # Process LP entries - fetch LP names if not provided
+    lp_entries = []
+    for entry in (data.lp_entries or []):
+        lp_entry = {
+            "lp_id": entry.lp_id,
+            "lp_name": entry.lp_name,
+            "booked_pnl": entry.booked_pnl,
+            "floating_pnl": entry.floating_pnl,
+        }
+        # Fetch LP name if not provided
+        if not lp_entry["lp_name"]:
+            lp = await db.lp_accounts.find_one({"lp_id": entry.lp_id}, {"_id": 0, "lp_name": 1})
+            if lp:
+                lp_entry["lp_name"] = lp.get("lp_name")
+        lp_entries.append(lp_entry)
+    
     record = {
         "date": data.date,
         "mt5_booked_pnl": data.mt5_booked_pnl,
         "mt5_floating_pnl": data.mt5_floating_pnl,
-        "lp_booked_pnl": data.lp_booked_pnl,
-        "lp_floating_pnl": data.lp_floating_pnl,
+        "lp_entries": lp_entries,
         "mt5_screenshot": data.mt5_screenshot,
         "lp_screenshot": data.lp_screenshot,
         "notes": data.notes,

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -108,8 +108,7 @@ export default function LPAccounts() {
     date: new Date().toISOString().split('T')[0],
     mt5_booked_pnl: '',
     mt5_floating_pnl: '',
-    lp_booked_pnl: '',
-    lp_floating_pnl: '',
+    lp_entries: [], // Array of {lp_id, lp_name, booked_pnl, floating_pnl}
     notes: '',
   });
   const [savingDealingPnL, setSavingDealingPnL] = useState(false);
@@ -201,6 +200,16 @@ export default function LPAccounts() {
     
     setSavingDealingPnL(true);
     try {
+      // Process LP entries - filter out empty ones and convert to numbers
+      const lp_entries = dealingForm.lp_entries
+        .filter(e => e.lp_id && (e.booked_pnl || e.floating_pnl))
+        .map(e => ({
+          lp_id: e.lp_id,
+          lp_name: e.lp_name,
+          booked_pnl: parseFloat(e.booked_pnl) || 0,
+          floating_pnl: parseFloat(e.floating_pnl) || 0,
+        }));
+      
       const response = await fetch(`${API_URL}/api/dealing-pnl`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -209,8 +218,7 @@ export default function LPAccounts() {
           date: dealingForm.date,
           mt5_booked_pnl: parseFloat(dealingForm.mt5_booked_pnl) || 0,
           mt5_floating_pnl: parseFloat(dealingForm.mt5_floating_pnl) || 0,
-          lp_booked_pnl: parseFloat(dealingForm.lp_booked_pnl) || 0,
-          lp_floating_pnl: parseFloat(dealingForm.lp_floating_pnl) || 0,
+          lp_entries: lp_entries,
           notes: dealingForm.notes,
         }),
       });
@@ -218,14 +226,7 @@ export default function LPAccounts() {
       if (response.ok) {
         toast.success('Dealing P&L saved');
         setIsDealingFormOpen(false);
-        setDealingForm({
-          date: new Date().toISOString().split('T')[0],
-          mt5_booked_pnl: '',
-          mt5_floating_pnl: '',
-          lp_booked_pnl: '',
-          lp_floating_pnl: '',
-          notes: '',
-        });
+        resetDealingForm();
         fetchDealingPnL();
       } else {
         const error = await response.json();
@@ -236,6 +237,33 @@ export default function LPAccounts() {
     } finally {
       setSavingDealingPnL(false);
     }
+  };
+
+  const resetDealingForm = () => {
+    // Initialize LP entries from existing LP accounts
+    const initialLPEntries = lpAccounts.map(lp => ({
+      lp_id: lp.lp_id,
+      lp_name: lp.lp_name,
+      booked_pnl: '',
+      floating_pnl: '',
+    }));
+    
+    setDealingForm({
+      date: new Date().toISOString().split('T')[0],
+      mt5_booked_pnl: '',
+      mt5_floating_pnl: '',
+      lp_entries: initialLPEntries,
+      notes: '',
+    });
+  };
+
+  const updateLPEntry = (lpId, field, value) => {
+    setDealingForm(prev => ({
+      ...prev,
+      lp_entries: prev.lp_entries.map(e => 
+        e.lp_id === lpId ? { ...e, [field]: value } : e
+      ),
+    }));
   };
 
   const handleDeleteDealingPnL = async (date) => {
@@ -860,7 +888,10 @@ export default function LPAccounts() {
               <div className="flex justify-end">
                 {canManage && (
                   <Button
-                    onClick={() => setIsDealingFormOpen(true)}
+                    onClick={() => {
+                      resetDealingForm();
+                      setIsDealingFormOpen(true);
+                    }}
                     className="bg-green-500 text-white hover:bg-green-600 font-bold uppercase tracking-wider rounded-sm"
                     data-testid="add-dealing-pnl-btn"
                   >
@@ -881,8 +912,7 @@ export default function LPAccounts() {
                           <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">MT5 Booked</TableHead>
                           <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">MT5 Floating</TableHead>
                           <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">MT5 P&L</TableHead>
-                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">LP Booked</TableHead>
-                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">LP Floating</TableHead>
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">LP Summary</TableHead>
                           <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">LP P&L</TableHead>
                           <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">Total Dealing</TableHead>
                           <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">Actions</TableHead>
@@ -891,55 +921,94 @@ export default function LPAccounts() {
                       <TableBody>
                         {dealingPnLRecords.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={9} className="text-center py-8 text-slate-500">
+                            <TableCell colSpan={8} className="text-center py-8 text-slate-500">
                               No dealing P&L records. Add your first daily record.
                             </TableCell>
                           </TableRow>
                         ) : (
                           dealingPnLRecords.map((record) => (
-                            <TableRow key={record.date} className="border-slate-200 hover:bg-slate-50" data-testid={`dealing-row-${record.date}`}>
-                              <TableCell className="font-medium text-slate-800">{record.date}</TableCell>
-                              <TableCell className={`text-right font-mono ${record.mt5_booked_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                {record.mt5_booked_pnl >= 0 ? '+' : ''}{record.mt5_booked_pnl?.toLocaleString()}
-                              </TableCell>
-                              <TableCell className={`text-right font-mono ${record.mt5_floating_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                {record.mt5_floating_pnl >= 0 ? '+' : ''}{record.mt5_floating_pnl?.toLocaleString()}
-                                <span className="text-xs text-slate-400 block">
-                                  Δ {record.mt5_floating_change >= 0 ? '+' : ''}{record.mt5_floating_change?.toLocaleString()}
-                                </span>
-                              </TableCell>
-                              <TableCell className={`text-right font-mono font-bold ${record.broker_mt5_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {record.broker_mt5_pnl >= 0 ? '+' : ''}{record.broker_mt5_pnl?.toLocaleString()}
-                              </TableCell>
-                              <TableCell className={`text-right font-mono ${record.lp_booked_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                {record.lp_booked_pnl >= 0 ? '+' : ''}{record.lp_booked_pnl?.toLocaleString()}
-                              </TableCell>
-                              <TableCell className={`text-right font-mono ${record.lp_floating_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                {record.lp_floating_pnl >= 0 ? '+' : ''}{record.lp_floating_pnl?.toLocaleString()}
-                                <span className="text-xs text-slate-400 block">
-                                  Δ {record.lp_floating_change >= 0 ? '+' : ''}{record.lp_floating_change?.toLocaleString()}
-                                </span>
-                              </TableCell>
-                              <TableCell className={`text-right font-mono font-bold ${record.broker_lp_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {record.broker_lp_pnl >= 0 ? '+' : ''}{record.broker_lp_pnl?.toLocaleString()}
-                              </TableCell>
-                              <TableCell className={`text-right font-mono font-bold text-lg ${record.total_dealing_pnl >= 0 ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'}`}>
-                                {record.total_dealing_pnl >= 0 ? '+' : ''}{record.total_dealing_pnl?.toLocaleString()}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {isAdmin && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDeleteDealingPnL(record.date)}
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                    data-testid={`delete-dealing-${record.date}`}
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                )}
-                              </TableCell>
-                            </TableRow>
+                            <React.Fragment key={record.date}>
+                              <TableRow className="border-slate-200 hover:bg-slate-50" data-testid={`dealing-row-${record.date}`}>
+                                <TableCell className="font-medium text-slate-800">{record.date}</TableCell>
+                                <TableCell className={`text-right font-mono ${record.mt5_booked_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                  {record.mt5_booked_pnl >= 0 ? '+' : ''}{record.mt5_booked_pnl?.toLocaleString()}
+                                </TableCell>
+                                <TableCell className={`text-right font-mono ${record.mt5_floating_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                  {record.mt5_floating_pnl >= 0 ? '+' : ''}{record.mt5_floating_pnl?.toLocaleString()}
+                                  <span className="text-xs text-slate-400 block">
+                                    Δ {record.mt5_floating_change >= 0 ? '+' : ''}{record.mt5_floating_change?.toLocaleString()}
+                                  </span>
+                                </TableCell>
+                                <TableCell className={`text-right font-mono font-bold ${record.broker_mt5_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {record.broker_mt5_pnl >= 0 ? '+' : ''}{record.broker_mt5_pnl?.toLocaleString()}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="text-xs text-slate-500">
+                                    {record.lp_entries?.length || 0} LPs
+                                  </div>
+                                  <div className={`font-mono text-sm ${(record.total_lp_booked || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                    B: {(record.total_lp_booked || 0) >= 0 ? '+' : ''}{(record.total_lp_booked || 0)?.toLocaleString()}
+                                  </div>
+                                  <div className={`font-mono text-sm ${(record.total_lp_floating || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                    F: {(record.total_lp_floating || 0) >= 0 ? '+' : ''}{(record.total_lp_floating || 0)?.toLocaleString()}
+                                  </div>
+                                </TableCell>
+                                <TableCell className={`text-right font-mono font-bold ${record.broker_lp_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {record.broker_lp_pnl >= 0 ? '+' : ''}{record.broker_lp_pnl?.toLocaleString()}
+                                </TableCell>
+                                <TableCell className={`text-right font-mono font-bold text-lg ${record.total_dealing_pnl >= 0 ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'}`}>
+                                  {record.total_dealing_pnl >= 0 ? '+' : ''}{record.total_dealing_pnl?.toLocaleString()}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {isAdmin && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteDealingPnL(record.date)}
+                                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                      data-testid={`delete-dealing-${record.date}`}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                              {/* LP Breakdown Row */}
+                              {record.lp_entries?.length > 0 && (
+                                <TableRow className="bg-green-50/50 border-slate-100">
+                                  <TableCell colSpan={8} className="py-2 px-4">
+                                    <div className="flex flex-wrap gap-3">
+                                      {record.lp_entries.map((lp) => (
+                                        <div key={lp.lp_id} className="bg-white p-2 rounded border border-green-200 text-xs min-w-[140px]">
+                                          <div className="font-medium text-green-700 mb-1">{lp.lp_name || lp.lp_id}</div>
+                                          <div className="grid grid-cols-2 gap-1 text-[11px]">
+                                            <div>
+                                              <span className="text-slate-500">Booked:</span>
+                                              <span className={`ml-1 font-mono ${lp.booked_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {lp.booked_pnl >= 0 ? '+' : ''}{lp.booked_pnl?.toLocaleString()}
+                                              </span>
+                                            </div>
+                                            <div>
+                                              <span className="text-slate-500">Float:</span>
+                                              <span className={`ml-1 font-mono ${lp.floating_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {lp.floating_pnl >= 0 ? '+' : ''}{lp.floating_pnl?.toLocaleString()}
+                                              </span>
+                                            </div>
+                                            <div className="col-span-2">
+                                              <span className="text-slate-500">P&L:</span>
+                                              <span className={`ml-1 font-mono font-bold ${lp.lp_pnl >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                                                {lp.lp_pnl >= 0 ? '+' : ''}{lp.lp_pnl?.toLocaleString()}
+                                              </span>
+                                              <span className="text-slate-400 ml-1">(Δ{lp.floating_change >= 0 ? '+' : ''}{lp.floating_change?.toLocaleString()})</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </React.Fragment>
                           ))
                         )}
                       </TableBody>
@@ -1026,40 +1095,56 @@ export default function LPAccounts() {
               </div>
             </div>
 
-            {/* LP Section */}
-            <div className="p-3 bg-green-50 rounded-md border border-green-200">
-              <h4 className="font-bold text-green-700 mb-3 flex items-center">
+            {/* LP Section - Multiple LPs */}
+            <div className="p-3 bg-green-50 rounded-md border border-green-200 max-h-[300px] overflow-y-auto">
+              <h4 className="font-bold text-green-700 mb-3 flex items-center sticky top-0 bg-green-50 pb-2">
                 <Landmark className="w-4 h-4 mr-2" />
-                LP Hedging Data
+                LP Hedging Data ({dealingForm.lp_entries?.length || 0} LPs)
               </h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-green-600 text-xs uppercase">LP Booked P&L</Label>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    value={dealingForm.lp_booked_pnl}
-                    onChange={(e) => setDealingForm({ ...dealingForm, lp_booked_pnl: e.target.value })}
-                    className="bg-white border-green-200 text-slate-800 font-mono"
-                    placeholder="e.g. 25000"
-                    data-testid="dealing-lp-booked"
-                  />
-                  <p className="text-xs text-green-500 mt-1">LP closed positions P&L</p>
+              
+              {dealingForm.lp_entries?.length === 0 ? (
+                <div className="text-center py-4 text-green-600">
+                  <p className="text-sm">No LP accounts found.</p>
+                  <p className="text-xs text-green-500">Add LP accounts in the "LP Accounts" tab first.</p>
                 </div>
-                <div>
-                  <Label className="text-green-600 text-xs uppercase">LP Running Floating</Label>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    value={dealingForm.lp_floating_pnl}
-                    onChange={(e) => setDealingForm({ ...dealingForm, lp_floating_pnl: e.target.value })}
-                    className="bg-white border-green-200 text-slate-800 font-mono"
-                    placeholder="e.g. -10000"
-                    data-testid="dealing-lp-floating"
-                  />
-                  <p className="text-xs text-green-500 mt-1">LP open positions P&L</p>
+              ) : (
+                <div className="space-y-3">
+                  {dealingForm.lp_entries?.map((lpEntry, idx) => (
+                    <div key={lpEntry.lp_id} className="p-2 bg-white rounded border border-green-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-green-700 text-sm">{lpEntry.lp_name || lpEntry.lp_id}</span>
+                        <span className="text-xs text-green-500">LP #{idx + 1}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-green-600 text-[10px] uppercase">Booked P&L</Label>
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            value={lpEntry.booked_pnl}
+                            onChange={(e) => updateLPEntry(lpEntry.lp_id, 'booked_pnl', e.target.value)}
+                            className="bg-green-50 border-green-200 text-slate-800 font-mono h-8 text-sm"
+                            placeholder="0"
+                            data-testid={`dealing-lp-${lpEntry.lp_id}-booked`}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-green-600 text-[10px] uppercase">Floating P&L</Label>
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            value={lpEntry.floating_pnl}
+                            onChange={(e) => updateLPEntry(lpEntry.lp_id, 'floating_pnl', e.target.value)}
+                            className="bg-green-50 border-green-200 text-slate-800 font-mono h-8 text-sm"
+                            placeholder="0"
+                            data-testid={`dealing-lp-${lpEntry.lp_id}-floating`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Notes */}
