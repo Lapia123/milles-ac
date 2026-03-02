@@ -54,6 +54,8 @@ import {
   Upload,
   Trash2,
   Save,
+  Mail,
+  Send,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -284,6 +286,28 @@ export default function LPAccounts() {
       }
     } catch (error) {
       toast.error('Failed to delete');
+    }
+  };
+
+  const handleSendDealingEmail = async (date) => {
+    if (!window.confirm(`Send Dealing P&L email for ${date} to directors?`)) return;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/dealing-pnl/${date}/send-email`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`Email sent to ${data.recipients?.length || 0} directors`);
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to send email');
+      }
+    } catch (error) {
+      toast.error('Failed to send email');
     }
   };
 
@@ -960,17 +984,31 @@ export default function LPAccounts() {
                                   {record.total_dealing_pnl >= 0 ? '+' : ''}{record.total_dealing_pnl?.toLocaleString()}
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  {isAdmin && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleDeleteDealingPnL(record.date)}
-                                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                      data-testid={`delete-dealing-${record.date}`}
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                  )}
+                                  <div className="flex items-center justify-end gap-1">
+                                    {canManage && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleSendDealingEmail(record.date)}
+                                        className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                                        data-testid={`email-dealing-${record.date}`}
+                                        title="Send email to directors"
+                                      >
+                                        <Mail className="w-4 h-4" />
+                                      </Button>
+                                    )}
+                                    {isAdmin && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleDeleteDealingPnL(record.date)}
+                                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                        data-testid={`delete-dealing-${record.date}`}
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    )}
+                                  </div>
                                 </TableCell>
                               </TableRow>
                               {/* LP Breakdown Row */}

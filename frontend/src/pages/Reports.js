@@ -58,6 +58,7 @@ import {
   Building2,
   FileText,
   ChevronDown,
+  Calculator,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -113,6 +114,8 @@ export default function Reports() {
   const [chartData, setChartData] = useState([]);
   const [loansReport, setLoansReport] = useState(null);
   const [loansData, setLoansData] = useState([]);
+  const [dealingPnLReport, setDealingPnLReport] = useState([]);
+  const [dealingPnLSummary, setDealingPnLSummary] = useState(null);
   
   // Detailed data for full reports
   const [allTransactions, setAllTransactions] = useState([]);
@@ -242,13 +245,15 @@ export default function Reports() {
         chart: `${API_URL}/api/reports/transactions-summary?days=30`,
         loans: `${API_URL}/api/loans/reports/summary`,
         loansData: `${API_URL}/api/loans`,
+        dealingPnL: `${API_URL}/api/dealing-pnl?limit=30`,
+        dealingPnLSummary: `${API_URL}/api/dealing-pnl/summary?days=30`,
         // Detailed data endpoints
         allTransactions: `${API_URL}/api/transactions${queryStr ? `?${queryStr}` : ''}`,
         allIE: `${API_URL}/api/income-expenses?limit=500`,
         allTreasuryTx: `${API_URL}/api/treasury/transactions?limit=500`,
       };
 
-      const [txRes, vendorRes, commRes, clientRes, treasuryRes, pspRes, financialRes, outstandingRes, debtsRes, chartRes, loansRes, loansDataRes, allTxRes, allIERes, allTreasuryTxRes] = await Promise.all([
+      const [txRes, vendorRes, commRes, clientRes, treasuryRes, pspRes, financialRes, outstandingRes, debtsRes, chartRes, loansRes, loansDataRes, dealingRes, dealingSummaryRes, allTxRes, allIERes, allTreasuryTxRes] = await Promise.all([
         fetch(endpoints.transactions, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.vendors, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.commissions, { headers: getAuthHeaders(), credentials: 'include' }),
@@ -261,6 +266,8 @@ export default function Reports() {
         fetch(endpoints.chart, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.loans, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.loansData, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.dealingPnL, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.dealingPnLSummary, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.allTransactions, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.allIE, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.allTreasuryTx, { headers: getAuthHeaders(), credentials: 'include' }),
@@ -278,6 +285,8 @@ export default function Reports() {
       if (chartRes.ok) setChartData(await chartRes.json());
       if (loansRes.ok) setLoansReport(await loansRes.json());
       if (loansDataRes.ok) setLoansData(await loansDataRes.json());
+      if (dealingRes.ok) setDealingPnLReport(await dealingRes.json());
+      if (dealingSummaryRes.ok) setDealingPnLSummary(await dealingSummaryRes.json());
       // Detailed data
       if (allTxRes.ok) setAllTransactions(await allTxRes.json());
       if (allIERes.ok) setAllIncomeExpenses(await allIERes.json());
@@ -459,6 +468,10 @@ export default function Reports() {
           <TabsTrigger value="loans" className="data-[state=active]:bg-blue-600/20 data-[state=active]:text-blue-400">
             <Building2 className="w-4 h-4 mr-2" />
             Loans
+          </TabsTrigger>
+          <TabsTrigger value="dealing" className="data-[state=active]:bg-green-600/20 data-[state=active]:text-green-400">
+            <Calculator className="w-4 h-4 mr-2" />
+            Dealing P&L
           </TabsTrigger>
         </TabsList>
 
@@ -2033,6 +2046,163 @@ export default function Reports() {
                             </TableRow>
                           );
                         })}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </TabsContent>
+
+        {/* ========== DEALING P&L REPORT ========== */}
+        <TabsContent value="dealing" className="space-y-4">
+          {dealingPnLSummary && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard
+                  title="Total Dealing P&L (30d)"
+                  value={`${dealingPnLSummary.total_dealing_pnl >= 0 ? '+' : ''}$${dealingPnLSummary.total_dealing_pnl?.toLocaleString()}`}
+                  icon={Calculator}
+                  color={dealingPnLSummary.total_dealing_pnl >= 0 ? 'green' : 'red'}
+                />
+                <StatCard
+                  title="Profitable Days"
+                  value={dealingPnLSummary.profitable_days}
+                  icon={TrendingUp}
+                  color="green"
+                />
+                <StatCard
+                  title="Loss Days"
+                  value={dealingPnLSummary.loss_days}
+                  icon={TrendingDown}
+                  color="red"
+                />
+                <StatCard
+                  title="Total Records"
+                  value={dealingPnLSummary.record_count}
+                  icon={BarChart3}
+                  color="blue"
+                />
+              </div>
+
+              {/* Best/Worst Days */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {dealingPnLSummary.best_day && (
+                  <Card className="bg-white border-slate-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-slate-500 uppercase tracking-wider">Best Day</p>
+                          <p className="text-2xl font-bold font-mono text-green-500">
+                            +${dealingPnLSummary.best_day.pnl?.toLocaleString()} USD
+                          </p>
+                          <p className="text-sm text-slate-400">{dealingPnLSummary.best_day.date}</p>
+                        </div>
+                        <TrendingUp className="w-8 h-8 text-green-500" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                {dealingPnLSummary.worst_day && (
+                  <Card className="bg-white border-slate-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-slate-500 uppercase tracking-wider">Worst Day</p>
+                          <p className="text-2xl font-bold font-mono text-red-500">
+                            ${dealingPnLSummary.worst_day.pnl?.toLocaleString()} USD
+                          </p>
+                          <p className="text-sm text-slate-400">{dealingPnLSummary.worst_day.date}</p>
+                        </div>
+                        <TrendingDown className="w-8 h-8 text-red-500" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {/* Export Button */}
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => exportToExcel(
+                    dealingPnLReport.map(r => ({
+                      Date: r.date,
+                      'MT5 Booked': r.mt5_booked_pnl,
+                      'MT5 Floating': r.mt5_floating_pnl,
+                      'MT5 Floating Change': r.mt5_floating_change,
+                      'Broker MT5 P&L': r.broker_mt5_pnl,
+                      'LP Booked Total': r.total_lp_booked,
+                      'LP Floating Total': r.total_lp_floating,
+                      'Broker LP P&L': r.broker_lp_pnl,
+                      'Total Dealing P&L': r.total_dealing_pnl,
+                    })),
+                    'dealing_pnl_report',
+                    ['Date', 'MT5 Booked', 'MT5 Floating', 'MT5 Floating Change', 'Broker MT5 P&L', 'LP Booked Total', 'LP Floating Total', 'Broker LP P&L', 'Total Dealing P&L']
+                  )}
+                  className="bg-green-500 text-white hover:bg-green-600"
+                  data-testid="export-dealing-pnl-btn"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export to Excel
+                </Button>
+              </div>
+
+              {/* Dealing P&L Table */}
+              <Card className="bg-white border-slate-200">
+                <CardHeader className="pb-2 border-b border-slate-200">
+                  <CardTitle className="text-lg font-bold text-slate-800">Dealing P&L Records</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <ScrollArea className="h-[500px]">
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-white z-10">
+                        <TableRow className="border-slate-200">
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase">Date</TableHead>
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">MT5 Booked</TableHead>
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">MT5 Floating</TableHead>
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">MT5 P&L</TableHead>
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">LP Booked</TableHead>
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">LP Floating</TableHead>
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">LP P&L</TableHead>
+                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">Total P&L</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {dealingPnLReport.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={8} className="text-center py-8 text-slate-500">
+                              No dealing P&L records found
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          dealingPnLReport.map((record) => (
+                            <TableRow key={record.date} className="border-slate-200 hover:bg-slate-50">
+                              <TableCell className="font-medium text-slate-800">{record.date}</TableCell>
+                              <TableCell className={`text-right font-mono ${record.mt5_booked_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {record.mt5_booked_pnl >= 0 ? '+' : ''}{record.mt5_booked_pnl?.toLocaleString()}
+                              </TableCell>
+                              <TableCell className={`text-right font-mono ${record.mt5_floating_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {record.mt5_floating_pnl?.toLocaleString()}
+                              </TableCell>
+                              <TableCell className={`text-right font-mono font-bold ${record.broker_mt5_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {record.broker_mt5_pnl >= 0 ? '+' : ''}{record.broker_mt5_pnl?.toLocaleString()}
+                              </TableCell>
+                              <TableCell className={`text-right font-mono ${(record.total_lp_booked || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {(record.total_lp_booked || 0) >= 0 ? '+' : ''}{(record.total_lp_booked || 0)?.toLocaleString()}
+                              </TableCell>
+                              <TableCell className={`text-right font-mono ${(record.total_lp_floating || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {(record.total_lp_floating || 0)?.toLocaleString()}
+                              </TableCell>
+                              <TableCell className={`text-right font-mono font-bold ${record.broker_lp_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {record.broker_lp_pnl >= 0 ? '+' : ''}{record.broker_lp_pnl?.toLocaleString()}
+                              </TableCell>
+                              <TableCell className={`text-right font-mono font-bold text-lg ${record.total_dealing_pnl >= 0 ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'}`}>
+                                {record.total_dealing_pnl >= 0 ? '+' : ''}{record.total_dealing_pnl?.toLocaleString()}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   </ScrollArea>
