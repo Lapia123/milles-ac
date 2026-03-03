@@ -23,7 +23,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   TrendingUp, TrendingDown, Plus, DollarSign,
   Trash2, BarChart3, ArrowUpRight, ArrowDownRight,
-  Wallet, X, Store, ArrowRightLeft, Clock, Search, Building2,
+  Wallet, X, Store, Clock, Search, Building2,
   Users, FolderTree, Pencil, User, Upload, FileSpreadsheet, Download, FileText, Eye,
 } from 'lucide-react';
 
@@ -45,10 +45,6 @@ export default function IncomeExpenses() {
   const [activeTab, setActiveTab] = useState('all');
   const [summary, setSummary] = useState(null);
   const [monthlyData, setMonthlyData] = useState([]);
-  const [convertDialog, setConvertDialog] = useState({ open: false, entry: null });
-  const [convertForm, setConvertForm] = useState({ borrower_name: '', interest_rate: 0, due_date: '', notes: '' });
-  const [borrowerSearch, setBorrowerSearch] = useState('');
-  const [showAddBorrower, setShowAddBorrower] = useState(false);
   
   // Vendor Suppliers state
   const [vendorSupplierDialog, setVendorSupplierDialog] = useState({ open: false, mode: 'create', data: null });
@@ -232,28 +228,6 @@ export default function IncomeExpenses() {
       if (response.ok) { toast.success('Entry deleted'); fetchEntries(); fetchSummary(); fetchTreasuryAccounts(); }
       else { const err = await response.json(); toast.error(err.detail || 'Delete failed'); }
     } catch { toast.error('Delete failed'); }
-  };
-
-  const handleConvertToLoan = async () => {
-    if (!convertForm.borrower_name || !convertForm.due_date) {
-      toast.error('Please fill borrower name and due date'); return;
-    }
-    try {
-      const response = await fetch(`${API_URL}/api/income-expenses/${convertDialog.entry.entry_id}/convert-to-loan`, {
-        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(convertForm),
-      });
-      if (response.ok) {
-        toast.success('Expense converted to loan successfully');
-        setConvertDialog({ open: false, entry: null });
-        setConvertForm({ borrower_name: '', interest_rate: 0, due_date: '', notes: '' });
-        setBorrowerSearch('');
-        setShowAddBorrower(false);
-        fetchEntries(); fetchSummary(); fetchBorrowers();
-      } else {
-        const err = await response.json();
-        toast.error(err.detail || 'Conversion failed');
-      }
-    } catch { toast.error('Conversion failed'); }
   };
   
   // Vendor Supplier CRUD
@@ -717,7 +691,6 @@ export default function IncomeExpenses() {
             </div>
             <EntriesTable entries={filteredEntries} loading={loading} onDelete={handleDelete} isAdmin={isAdmin}
               formatDate={formatDate} getCategoryLabel={getCategoryLabel}
-              onConvertToLoan={(entry) => { setConvertDialog({ open: true, entry }); setConvertForm({ ...convertForm, borrower_name: entry.description || '', treasury_account_id: entry.treasury_account_id || '' }); }}
               onUploadInvoice={(entry) => setInvoiceDialog({ open: true, entry })}
               onViewInvoice={(file) => setViewInvoiceDialog({ open: true, file })} />
           </TabsContent>
@@ -1214,126 +1187,6 @@ export default function IncomeExpenses() {
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Convert to Loan Dialog */}
-      <Dialog open={convertDialog.open} onOpenChange={(open) => { 
-        if (!open) {
-          setConvertDialog({ open: false, entry: null });
-          setBorrowerSearch('');
-          setShowAddBorrower(false);
-        }
-      }}>
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <ArrowRightLeft className="w-5 h-5 text-blue-600" /> Convert Expense to Loan
-            </DialogTitle>
-          </DialogHeader>
-          {convertDialog.entry && (
-            <div className="space-y-4">
-              <div className="p-3 bg-slate-50 rounded border border-slate-200">
-                <p className="text-xs text-slate-400">Expense Amount</p>
-                <p className="text-lg font-mono text-red-400">{convertDialog.entry.amount?.toLocaleString()} {convertDialog.entry.currency}</p>
-                <p className="text-xs text-slate-400 mt-1">{convertDialog.entry.description}</p>
-              </div>
-              
-              {/* Borrower Company Searchable Dropdown */}
-              <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider flex items-center gap-2">
-                  <Building2 className="w-3 h-3" /> Borrower Company *
-                </Label>
-                {!showAddBorrower ? (
-                  <div className="relative">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <Input 
-                        value={borrowerSearch} 
-                        onChange={(e) => setBorrowerSearch(e.target.value)}
-                        className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] pl-9" 
-                        placeholder="Search or select borrower..."
-                        data-testid="convert-borrower-search"
-                      />
-                    </div>
-                    {(borrowerSearch || borrowers.length > 0) && (
-                      <div className="absolute z-50 w-full mt-1 bg-slate-50 border border-slate-200 rounded-md max-h-40 overflow-y-auto">
-                        <div 
-                          className="px-3 py-2 cursor-pointer hover:bg-blue-100 text-blue-600 flex items-center gap-2 border-b border-slate-200"
-                          onClick={() => {
-                            setShowAddBorrower(true);
-                            setConvertForm({ ...convertForm, borrower_name: borrowerSearch });
-                          }}
-                        >
-                          <Plus className="w-4 h-4" /> Add new: "{borrowerSearch || 'New Company'}"
-                        </div>
-                        {borrowers
-                          .filter(b => (b.name || b).toLowerCase().includes(borrowerSearch.toLowerCase()))
-                          .map((borrower, idx) => {
-                            const borrowerName = borrower.name || borrower;
-                            return (
-                              <div 
-                                key={idx}
-                                className={`px-3 py-2 cursor-pointer hover:bg-slate-100 text-slate-800 ${convertForm.borrower_name === borrowerName ? 'bg-blue-100' : ''}`}
-                                onClick={() => {
-                                  setConvertForm({ ...convertForm, borrower_name: borrowerName });
-                                  setBorrowerSearch(borrowerName);
-                                  setShowAddBorrower(true);
-                                }}
-                              >
-                                <Building2 className="w-3 h-3 inline mr-2 text-slate-400" />{borrowerName}
-                                {borrower.type === 'company' && <span className="ml-2 text-xs text-green-600">(Company)</span>}
-                              </div>
-                            );
-                          })
-                        }
-                        {borrowers.filter(b => (b.name || b).toLowerCase().includes(borrowerSearch.toLowerCase())).length === 0 && !borrowerSearch && (
-                          <div className="px-3 py-2 text-slate-400 text-sm">No existing borrowers</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <Input 
-                      value={convertForm.borrower_name} 
-                      onChange={(e) => setConvertForm({ ...convertForm, borrower_name: e.target.value })} 
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] flex-1" 
-                      placeholder="Company name" 
-                      data-testid="convert-borrower"
-                    />
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => { setShowAddBorrower(false); setBorrowerSearch(''); setConvertForm({ ...convertForm, borrower_name: '' }); }}
-                      className="text-slate-400 hover:text-slate-800"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Interest Rate (%)</Label>
-                  <Input type="number" step="0.01" value={convertForm.interest_rate} onChange={(e) => setConvertForm({ ...convertForm, interest_rate: parseFloat(e.target.value) || 0 })} className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Due Date *</Label>
-                  <Input type="date" value={convertForm.due_date} onChange={(e) => setConvertForm({ ...convertForm, due_date: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]" data-testid="convert-due-date" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Notes</Label>
-                <Textarea value={convertForm.notes} onChange={(e) => setConvertForm({ ...convertForm, notes: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]" rows={2} />
-              </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <Button variant="outline" onClick={() => { setConvertDialog({ open: false, entry: null }); setBorrowerSearch(''); setShowAddBorrower(false); }} className="border-slate-200 text-slate-500 hover:bg-slate-100">Cancel</Button>
-                <Button onClick={handleConvertToLoan} className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold" data-testid="confirm-convert-btn">Convert to Loan</Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
       
       {/* Add/Edit Vendor Supplier Dialog */}
       <Dialog open={vendorSupplierDialog.open} onOpenChange={(open) => { if (!open) { setVendorSupplierDialog({ open: false, mode: 'create', data: null }); resetVendorSupplierForm(); } }}>
@@ -1608,7 +1461,7 @@ export default function IncomeExpenses() {
 }
 
 // Entries Table Component with visual distinction & convert-to-loan
-function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCategoryLabel, onConvertToLoan, onUploadInvoice, onViewInvoice }) {
+function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCategoryLabel, onUploadInvoice, onViewInvoice }) {
   if (loading) {
     return (
       <Card className="bg-white border-slate-200">
@@ -1699,11 +1552,6 @@ function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCate
                           ) : (
                             <Button variant="ghost" size="sm" onClick={() => onUploadInvoice(entry)} className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 h-7 px-2" title="Upload Invoice">
                               <Upload className="w-3.5 h-3.5" />
-                            </Button>
-                          )}
-                          {!isIncome && !isConverted && entry.status !== 'pending_vendor' && (
-                            <Button variant="ghost" size="sm" onClick={() => onConvertToLoan(entry)} className="text-blue-600 hover:text-[#45A29E] hover:bg-blue-100 text-xs h-7 px-2" title="Convert to Loan" data-testid={`convert-loan-${entry.entry_id}`}>
-                              <ArrowRightLeft className="w-3.5 h-3.5" />
                             </Button>
                           )}
                           {!isConverted && (
