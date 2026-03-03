@@ -3730,9 +3730,11 @@ async def get_vendors(user: dict = Depends(require_permission(Modules.EXCHANGERS
     }, {"_id": 0}).to_list(10000)
     
     # Batch fetch all completed income/expense entries for all vendors
+    # IMPORTANT: Exclude converted_to_loan entries - they're tracked under Loans, not settlement
     ie_entries_all = await db.income_expenses.find({
         "vendor_id": {"$in": vendor_ids},
         "status": "completed",
+        "converted_to_loan": {"$ne": True},  # Exclude converted entries to prevent double-counting
         "settled": {"$ne": True}
     }, {"_id": 0}).to_list(10000)
     
@@ -3892,10 +3894,12 @@ async def get_vendor(vendor_id: str, user: dict = Depends(require_permission(Mod
     settlement_by_currency = await db.transactions.aggregate(settlement_pipeline).to_list(100)
     
     # Also fetch completed income/expense entries for this vendor
+    # IMPORTANT: Exclude converted_to_loan entries - they're tracked under Loans, not as settlement
     ie_pipeline = [
         {"$match": {
             "vendor_id": vendor_id,
             "status": "completed",
+            "converted_to_loan": {"$ne": True},  # Exclude converted entries to prevent double-counting
             "settled": {"$ne": True}
         }},
         {"$group": {
@@ -4163,10 +4167,13 @@ async def get_my_vendor_info(user: dict = Depends(require_vendor)):
     settlement_by_currency = await db.transactions.aggregate(settlement_pipeline).to_list(100)
     
     # Also fetch approved/completed income/expense entries for this vendor
+    # IMPORTANT: Exclude "converted_to_loan" status - when an expense is converted to loan,
+    # it's a reclassification, NOT a cash settlement event. The loan module tracks it instead.
     ie_pipeline = [
         {"$match": {
             "vendor_id": vendor["vendor_id"],
-            "status": {"$in": ["approved", "completed", "converted_to_loan"]},
+            "status": {"$in": ["approved", "completed"]},
+            "converted_to_loan": {"$ne": True},  # Exclude converted entries to prevent double-counting
             "settled": {"$ne": True}
         }},
         {"$group": {
