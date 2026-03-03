@@ -25,48 +25,23 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 ### Date: Mar 4, 2026
 
 **Admin Impersonation Feature (COMPLETE):**
-- `POST /api/admin/impersonate/{user_id}` — generates JWT for target user
-- `POST /api/admin/stop-impersonate` — ends session, logs time
-- `GET /api/admin/impersonation-logs` — full audit trail
-- Red impersonation banner in Layout with "Return to Admin" button
-- Secure token switching (admin token in sessionStorage)
-- Security: only Admin can impersonate, can't impersonate other admins, IP logging
+- Secure impersonation with audit logging
+- Red banner with "Return to Admin" button
+- Cannot impersonate other admins
 
 **Full RBAC Migration (COMPLETE):**
-- **184+ backend routes** migrated from legacy decorators (`require_admin`, `require_accountant_or_admin`, `get_current_user`) to granular `require_permission(Module, Action)` system
-- **Dashboard API** now requires `dashboard:view` permission (was unprotected)
-- **POST /transactions** now requires `transactions:create` permission (was unprotected)
-- **9 security holes fixed**: routes that were missing auth entirely now require proper permissions
-- **Frontend `usePermissions` hook** created — fetches user permissions from `/api/permissions/my`
-- **Sidebar navigation** now dynamically shows/hides based on user's actual permissions
-- Removed redundant inline permission checks from roles endpoints
-- All legacy role-based if-checks removed from navigation
-- **Testing**: 44/44 backend tests pass, all frontend tests pass
+- 184+ backend routes migrated to `require_permission(Module, Action)`
+- Dashboard API now requires `dashboard:view` permission
+- Frontend `usePermissions` hook for dynamic sidebar navigation
+- `ProtectedRoute` in App.js now uses permission-based checks (not hardcoded roles)
 
-**RBAC Route Coverage:**
-| Module | Routes | Permission System |
-|--------|--------|-------------------|
-| Users | 7 | require_permission |
-| Clients | 9 | require_permission |
-| Treasury | 8 | require_permission |
-| LP Management | 9 | require_permission |
-| Dealing P&L | 6 | require_permission |
-| PSP | 20 | require_permission |
-| Exchangers | 12 | require_permission |
-| Transactions | 8 | require_permission |
-| Income & Expenses | 23 | require_permission |
-| Loans | 13 | require_permission |
-| Debts | 8 | require_permission |
-| Reconciliation | 21 | require_permission |
-| Roles | 6 | require_permission |
-| Settings | 6 | require_permission |
-| Logs | 6 | require_permission |
-| Audit | 5 | require_permission |
-| Reports | 13 | require_permission |
-| Vendor-specific | 5 | require_vendor |
-| Admin-only | 1 | require_admin |
-| Utility | 4 | get_current_user |
-| Auth | 5 | public |
+**Vendor Portal Enhancement (COMPLETE):**
+- New `GET /api/vendor/transactions` endpoint — returns ALL statuses (not just pending)
+- Filtering: status (all/pending/approved/rejected/completed), type (deposit/withdrawal), date range, search
+- `GET /api/vendor/transactions/export/excel` — Excel export with styled headers
+- `GET /api/vendor/transactions/export/pdf` — PDF export with summary stats
+- Frontend: filter bar, transaction count, Excel & PDF export buttons
+- Testing: 19/19 backend tests pass, all frontend UI verified
 
 ---
 
@@ -76,7 +51,7 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 | Admin | 100 | 102 (full access) |
 | Accountant | 70 | 47 |
 | Sub Admin | 50 | 9 |
-| Exchanger | 20 | 5 (dashboard:view, transactions:view+approve, ie:view+approve) |
+| Exchanger | 20 | 5 |
 | Viewer | 10 | 4 |
 
 ## Test Credentials
@@ -89,8 +64,8 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 ## Prioritized Backlog
 
 ### P1 - High Priority
-- [ ] Reconciliation System Phase 2 & 3 (PSP, Client, Exchanger enhancements)
-- [ ] Complete frontend permission gates (hide Create/Edit/Delete buttons based on permissions in all pages)
+- [ ] Reconciliation System Phase 2 & 3 (PSP, Client, Exchanger)
+- [ ] Complete frontend permission gates (hide CRUD buttons on all pages)
 
 ### P2 - Medium Priority
 - [ ] Auto-match bank statement entries with treasury transactions
@@ -109,3 +84,5 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - ExchangeRate-API (currency conversion)
 - APScheduler (daily email automation)
 - pdfplumber (PDF parsing for bank statements)
+- reportlab (PDF generation for exports)
+- openpyxl (Excel generation for exports)
