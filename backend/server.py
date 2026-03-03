@@ -9828,6 +9828,55 @@ async def test_email_settings(user: dict = Depends(require_admin)):
         logger.error(f"Test email failed: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to send test email: {str(e)}")
 
+
+@api_router.post("/settings/email/send-daily-report")
+async def send_daily_report_now(user: dict = Depends(require_admin)):
+    """Manually trigger and send the daily report"""
+    try:
+        settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
+        if not settings:
+            raise HTTPException(status_code=400, detail="SMTP settings not configured")
+        
+        smtp_host = settings.get("smtp_host")
+        smtp_port = settings.get("smtp_port", 587)
+        smtp_email = settings.get("smtp_email")
+        smtp_password = settings.get("smtp_password")
+        smtp_from_email = settings.get("smtp_from_email", smtp_email)
+        director_emails = settings.get("director_emails", [])
+        
+        if not all([smtp_host, smtp_email, smtp_password]):
+            raise HTTPException(status_code=400, detail="SMTP settings incomplete")
+        
+        if not director_emails:
+            raise HTTPException(status_code=400, detail="No director emails configured")
+        
+        # Generate the daily report
+        html_content = await generate_daily_report_html()
+        
+        # Send to all directors
+        now = datetime.now(timezone.utc)
+        subject = f"Miles Capitals Daily Report - {now.strftime('%Y-%m-%d')}"
+        
+        await send_email(
+            to_emails=director_emails,
+            subject=subject,
+            html_content=html_content,
+            smtp_host=smtp_host,
+            smtp_port=smtp_port,
+            smtp_email=smtp_email,
+            smtp_password=smtp_password,
+            smtp_from_email=smtp_from_email
+        )
+        
+        logger.info(f"Daily report sent manually to: {director_emails}")
+        return {"message": f"Daily report sent successfully to {', '.join(director_emails)}"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to send daily report: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to send daily report: {str(e)}")
+
+
 async def send_email(to_emails: List[str], subject: str, html_content: str, 
                      smtp_host: str, smtp_port: int, smtp_email: str, smtp_password: str, 
                      smtp_from_email: str = None):
