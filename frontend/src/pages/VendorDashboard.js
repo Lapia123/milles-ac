@@ -1081,7 +1081,7 @@ export default function ExchangerDashboard() {
                             </TableCell>
                             <TableCell>
                               {entry.status === 'pending_vendor' && <Badge className="status-pending text-xs uppercase">Pending</Badge>}
-                              {entry.status === 'completed' && <Badge className="status-approved text-xs uppercase">Approved</Badge>}
+                              {(entry.status === 'completed' || entry.status === 'approved' || entry.status === 'converted_to_loan') && <Badge className="status-approved text-xs uppercase">Approved</Badge>}
                               {entry.status === 'rejected' && <Badge className="status-rejected text-xs uppercase">Rejected</Badge>}
                             </TableCell>
                             <TableCell className="text-slate-500 text-sm">{formatDate(entry.date || entry.created_at)}</TableCell>

@@ -4070,11 +4070,11 @@ async def get_my_vendor_info(user: dict = Depends(require_vendor)):
     
     settlement_by_currency = await db.transactions.aggregate(settlement_pipeline).to_list(100)
     
-    # Also fetch completed income/expense entries for this vendor
+    # Also fetch approved/completed income/expense entries for this vendor
     ie_pipeline = [
         {"$match": {
             "vendor_id": vendor["vendor_id"],
-            "status": "completed",
+            "status": {"$in": ["approved", "completed", "converted_to_loan"]},
             "settled": {"$ne": True}
         }},
         {"$group": {
