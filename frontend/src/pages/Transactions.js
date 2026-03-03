@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import {
   Table,
   TableBody,
@@ -233,6 +234,9 @@ export default function Transactions() {
     fetchPsps();
     fetchExchangers();
   }, [typeFilter, statusFilter]);
+
+  // Auto-refresh: when user returns to tab or every 30s
+  useAutoRefresh(fetchTransactions, 30000);
 
   // Fetch client bank accounts when client changes and destination is bank or vendor
   useEffect(() => {

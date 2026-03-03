@@ -6,6 +6,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { ScrollArea } from '../components/ui/scroll-area';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import {
   Dialog,
   DialogContent,
@@ -229,6 +230,12 @@ export default function AccountantDashboard() {
     };
     loadData();
   }, []);
+
+  // Auto-refresh: when user returns to tab or every 15s
+  useAutoRefresh(() => {
+    fetchPendingTransactions();
+    fetchPendingSettlements();
+  }, 15000);
 
   const initiateApprove = (transactionId, isSettlement = false) => {
     // For withdrawals and deposits, show approval dialog with screenshot requirement

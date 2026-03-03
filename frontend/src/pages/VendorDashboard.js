@@ -21,6 +21,7 @@ import {
 import { ScrollArea } from '../components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { toast } from 'sonner';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { useAuth } from '../context/AuthContext';
 import {
   Store,
@@ -218,6 +219,16 @@ export default function ExchangerDashboard() {
       fetchTransactions();
     }
   }, [txStatusFilter, txTypeFilter, txDateFrom, txDateTo]);
+
+  // Auto-refresh: when user returns to tab or every 15s
+  useAutoRefresh(() => {
+    if (vendorInfo) {
+      fetchTransactions();
+      fetchSettlements();
+      fetchIeEntries();
+      fetchExchangerInfo();
+    }
+  }, 15000);
 
   const handleAction = (tx, action) => {
     setSelectedTransaction(tx);

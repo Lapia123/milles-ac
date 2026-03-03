@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { ScrollArea } from '../components/ui/scroll-area';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import {
   Users,
   Landmark,
@@ -79,8 +80,7 @@ export default function Dashboard() {
     return token ? { 'Authorization': `Bearer ${token}` } : {};
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = useCallback(async () => {
       try {
         const [statsRes, chartRes, activityRes, analyticsRes, fxRes] = await Promise.all([
           fetch(`${API_URL}/api/reports/dashboard`, { headers: getAuthHeaders(), credentials: 'include' }),
@@ -100,14 +100,13 @@ export default function Dashboard() {
         if (fxRes.ok) setFxRates(await fxRes.json());
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
-        toast.error('Failed to load dashboard data');
       } finally {
         setLoading(false);
       }
-    };
-
-    fetchData();
   }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+  useAutoRefresh(fetchData, 30000);
 
   const getStatusBadge = (status) => {
     const styles = {
