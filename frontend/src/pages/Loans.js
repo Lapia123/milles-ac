@@ -1229,6 +1229,17 @@ export default function Loans() {
                                       <FileX className="w-3.5 h-3.5" />
                                     </Button>
                                   )}
+                                  {isAdmin && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteLoan(loan.loan_id)}
+                                      className="text-red-500 hover:text-red-400 hover:bg-red-500/10 h-7 w-7 p-0"
+                                      title="Delete Loan"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                  )}
                                 </div>
                               </TableCell>
                             </TableRow>

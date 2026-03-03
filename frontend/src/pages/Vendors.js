@@ -666,6 +666,9 @@ export default function Exchangers() {
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(vendor); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
                           <Edit className="w-4 h-4 mr-2" /> Edit
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(vendor.vendor_id); }} className="text-red-600 hover:bg-red-50 cursor-pointer">
+                          <Trash2 className="w-4 h-4 mr-2" /> Delete
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}

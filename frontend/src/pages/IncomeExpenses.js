@@ -1706,6 +1706,11 @@ function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCate
                               <ArrowRightLeft className="w-3.5 h-3.5" />
                             </Button>
                           )}
+                          {!isConverted && (
+                            <Button variant="ghost" size="sm" onClick={() => onDelete(entry.entry_id)} className="text-red-500 hover:text-red-400 hover:bg-red-50 h-7 px-2" title="Delete Entry" data-testid={`delete-entry-${entry.entry_id}`}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     )}
