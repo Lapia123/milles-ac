@@ -136,6 +136,7 @@ export default function Loans() {
     installment_frequency: 'monthly',
     num_installments: '',
     treasury_account_id: '',
+    disburse_from_vendor_id: '',
     collateral: '',
     notes: '',
   });
@@ -145,6 +146,7 @@ export default function Loans() {
     amount: '',
     currency: 'USD',
     treasury_account_id: '',
+    credit_to_vendor_id: '',
     payment_date: new Date().toISOString().split('T')[0],
     reference: '',
     notes: '',
@@ -283,8 +285,8 @@ export default function Loans() {
       toast.error('Please enter a valid amount');
       return;
     }
-    if (!loanForm.treasury_account_id) {
-      toast.error('Please select source treasury account');
+    if (!loanForm.treasury_account_id && !loanForm.disburse_from_vendor_id) {
+      toast.error('Please select source (Treasury or Exchanger)');
       return;
     }
     if (!loanForm.due_date) {
@@ -300,6 +302,7 @@ export default function Loans() {
         installment_amount: loanForm.installment_amount ? parseFloat(loanForm.installment_amount) : null,
         num_installments: loanForm.num_installments ? parseInt(loanForm.num_installments) : null,
         vendor_id: loanForm.vendor_id || null,
+        disburse_from_vendor_id: loanForm.disburse_from_vendor_id || null,
       };
       
       const response = await fetch(`${API_URL}/api/loans`, {
@@ -442,8 +445,8 @@ export default function Loans() {
       toast.error('Please enter a valid amount');
       return;
     }
-    if (!repaymentForm.treasury_account_id) {
-      toast.error('Please select treasury account');
+    if (!repaymentForm.treasury_account_id && !repaymentForm.credit_to_vendor_id) {
+      toast.error('Please select destination (Treasury or Exchanger)');
       return;
     }
     
@@ -453,6 +456,7 @@ export default function Loans() {
         amount: parseFloat(repaymentForm.amount),
         exchange_rate: repaymentForm.exchange_rate ? parseFloat(repaymentForm.exchange_rate) : null,
         amount_in_loan_currency: repaymentForm.amount_in_loan_currency ? parseFloat(repaymentForm.amount_in_loan_currency) : null,
+        credit_to_vendor_id: repaymentForm.credit_to_vendor_id || null,
       };
       
       const response = await fetch(`${API_URL}/api/loans/${selectedLoan.loan_id}/repayment`, {
@@ -519,6 +523,7 @@ export default function Loans() {
       installment_frequency: 'monthly',
       num_installments: '',
       treasury_account_id: '',
+      disburse_from_vendor_id: '',
       collateral: '',
       notes: '',
     });
@@ -530,6 +535,7 @@ export default function Loans() {
       amount: '',
       currency: 'USD',
       treasury_account_id: '',
+      credit_to_vendor_id: '',
       payment_date: new Date().toISOString().split('T')[0],
       reference: '',
       notes: '',
@@ -1519,24 +1525,48 @@ export default function Loans() {
               </div>
             )}
 
-            {/* Treasury Account */}
+            {/* Disburse From - Treasury or Exchanger */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">Disburse From Treasury *</Label>
-              <Select
-                value={loanForm.treasury_account_id}
-                onValueChange={(value) => setLoanForm({ ...loanForm, treasury_account_id: value })}
-              >
-                <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="loan-treasury">
-                  <SelectValue placeholder="Select treasury account" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200">
-                  {treasuryAccounts.map((acc) => (
-                    <SelectItem key={acc.account_id} value={acc.account_id} className="text-slate-800 hover:bg-slate-100">
-                      {acc.account_name} ({acc.balance?.toLocaleString()} {acc.currency})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Disburse From *</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Select
+                  value={loanForm.treasury_account_id}
+                  onValueChange={(value) => setLoanForm({ ...loanForm, treasury_account_id: value, disburse_from_vendor_id: '' })}
+                >
+                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="loan-treasury">
+                    <SelectValue placeholder="Treasury Account" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-slate-200">
+                    {treasuryAccounts.map((acc) => (
+                      <SelectItem key={acc.account_id} value={acc.account_id} className="text-slate-800 hover:bg-slate-100">
+                        {acc.account_name} ({acc.balance?.toLocaleString()} {acc.currency})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={loanForm.disburse_from_vendor_id}
+                  onValueChange={(value) => setLoanForm({ ...loanForm, disburse_from_vendor_id: value, treasury_account_id: '' })}
+                >
+                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="loan-vendor">
+                    <SelectValue placeholder="Or Exchanger" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-slate-200">
+                    {vendors.map((v) => (
+                      <SelectItem key={v.vendor_id} value={v.vendor_id} className="text-slate-800 hover:bg-slate-100">
+                        {v.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {(loanForm.treasury_account_id || loanForm.disburse_from_vendor_id) && (
+                <p className="text-xs text-blue-600">
+                  Selected: {loanForm.treasury_account_id 
+                    ? treasuryAccounts.find(a => a.account_id === loanForm.treasury_account_id)?.account_name 
+                    : vendors.find(v => v.vendor_id === loanForm.disburse_from_vendor_id)?.name}
+                </p>
+              )}
             </div>
 
             {/* Collateral */}
@@ -1693,24 +1723,48 @@ export default function Loans() {
               </div>
             )}
 
-            {/* Treasury Account */}
+            {/* Credit To - Treasury or Exchanger */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">Credit to Treasury *</Label>
-              <Select
-                value={repaymentForm.treasury_account_id}
-                onValueChange={(value) => setRepaymentForm({ ...repaymentForm, treasury_account_id: value })}
-              >
-                <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="repayment-treasury">
-                  <SelectValue placeholder="Select treasury account" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200">
-                  {treasuryAccounts.map((acc) => (
-                    <SelectItem key={acc.account_id} value={acc.account_id} className="text-slate-800 hover:bg-slate-100">
-                      {acc.account_name} ({acc.currency})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">Credit To *</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Select
+                  value={repaymentForm.treasury_account_id}
+                  onValueChange={(value) => setRepaymentForm({ ...repaymentForm, treasury_account_id: value, credit_to_vendor_id: '' })}
+                >
+                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="repayment-treasury">
+                    <SelectValue placeholder="Treasury Account" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-slate-200">
+                    {treasuryAccounts.map((acc) => (
+                      <SelectItem key={acc.account_id} value={acc.account_id} className="text-slate-800 hover:bg-slate-100">
+                        {acc.account_name} ({acc.currency})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={repaymentForm.credit_to_vendor_id}
+                  onValueChange={(value) => setRepaymentForm({ ...repaymentForm, credit_to_vendor_id: value, treasury_account_id: '' })}
+                >
+                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="repayment-vendor">
+                    <SelectValue placeholder="Or Exchanger" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-slate-200">
+                    {vendors.map((v) => (
+                      <SelectItem key={v.vendor_id} value={v.vendor_id} className="text-slate-800 hover:bg-slate-100">
+                        {v.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {(repaymentForm.treasury_account_id || repaymentForm.credit_to_vendor_id) && (
+                <p className="text-xs text-green-600">
+                  Credit to: {repaymentForm.treasury_account_id 
+                    ? treasuryAccounts.find(a => a.account_id === repaymentForm.treasury_account_id)?.account_name 
+                    : vendors.find(v => v.vendor_id === repaymentForm.credit_to_vendor_id)?.name}
+                </p>
+              )}
             </div>
 
             {/* Payment Date */}

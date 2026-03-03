@@ -1024,7 +1024,8 @@ export default function ExchangerDashboard() {
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Category</TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Amount</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-green-500">IN Amount</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-red-500">OUT Amount</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Currency</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Commission</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Mode</TableHead>
@@ -1046,14 +1047,17 @@ export default function ExchangerDashboard() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <span className={`flex items-center gap-1 ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
+                              <span className={`flex items-center gap-1 font-bold ${isIncome ? 'text-green-500' : 'text-red-500'}`}>
                                 {isIncome ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
-                                <span className="capitalize">{entry.entry_type}</span>
+                                <span>{isIncome ? 'IN' : 'OUT'}</span>
                               </span>
                             </TableCell>
                             <TableCell className="text-slate-800 text-sm capitalize">{entry.category?.replace('_', ' ') || '-'}</TableCell>
-                            <TableCell className={`font-mono font-medium ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
-                              {isIncome ? '+' : '-'}{entry.amount?.toLocaleString()}
+                            <TableCell className="font-mono font-medium text-green-500">
+                              {isIncome ? entry.amount?.toLocaleString() : '-'}
+                            </TableCell>
+                            <TableCell className="font-mono font-medium text-red-500">
+                              {!isIncome ? entry.amount?.toLocaleString() : '-'}
                             </TableCell>
                             <TableCell>
                               <Badge className={`${
