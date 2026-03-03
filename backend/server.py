@@ -82,6 +82,7 @@ class Actions:
     VIEW = "view"
     CREATE = "create"
     EDIT = "edit"
+    DELETE = "delete"
     APPROVE = "approve"
     EXPORT = "export"
 
@@ -94,7 +95,7 @@ ALL_MODULES = [
 ]
 
 # All actions list
-ALL_ACTIONS = [Actions.VIEW, Actions.CREATE, Actions.EDIT, Actions.APPROVE, Actions.EXPORT]
+ALL_ACTIONS = [Actions.VIEW, Actions.CREATE, Actions.EDIT, Actions.DELETE, Actions.APPROVE, Actions.EXPORT]
 
 # Module display names
 MODULE_DISPLAY_NAMES = {

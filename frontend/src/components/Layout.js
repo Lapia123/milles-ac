@@ -50,9 +50,10 @@ export default function Layout() {
     navigate('/login');
   };
 
-  const isAccountantOrAdmin = user?.role === 'admin' || user?.role === 'accountant';
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isAccountantOrAdmin = user?.role === 'admin' || user?.role === 'accountant' || user?.role === 'super_admin';
   const isExchanger = user?.role === 'vendor';
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const isSubAdmin = user?.role === 'sub_admin';
 
   // Exchanger-specific navigation
