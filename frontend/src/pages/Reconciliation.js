@@ -921,8 +921,8 @@ export default function Reconciliation() {
                   <TableHeader>
                     <TableRow className="border-slate-200">
                       <TableHead className="text-slate-500 text-xs">PSP Name</TableHead>
-                      <TableHead className="text-slate-500 text-xs text-right">Our Records</TableHead>
-                      <TableHead className="text-slate-500 text-xs text-right">Settled</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Expected</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Actual</TableHead>
                       <TableHead className="text-slate-500 text-xs text-right">Variance</TableHead>
                       <TableHead className="text-slate-500 text-xs">Status</TableHead>
                       <TableHead className="text-slate-500 text-xs">Actions</TableHead>
@@ -932,8 +932,8 @@ export default function Reconciliation() {
                     {pspRecon.map((psp) => (
                       <TableRow key={psp.psp_id} className="border-slate-200 hover:bg-slate-50">
                         <TableCell className="text-slate-800 font-medium">{psp.psp_name}</TableCell>
-                        <TableCell className="text-right font-mono text-slate-800">${psp.our_total?.toLocaleString()}</TableCell>
-                        <TableCell className="text-right font-mono text-slate-800">${psp.settled_total?.toLocaleString()}</TableCell>
+                        <TableCell className="text-right font-mono text-slate-800">${psp.expected_amount?.toLocaleString()}</TableCell>
+                        <TableCell className="text-right font-mono text-slate-800">${psp.actual_amount?.toLocaleString()}</TableCell>
                         <TableCell className={`text-right font-mono ${psp.total_variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           ${psp.total_variance?.toLocaleString()}
                         </TableCell>
@@ -967,8 +967,8 @@ export default function Reconciliation() {
                   <TableHeader>
                     <TableRow className="border-slate-200">
                       <TableHead className="text-slate-500 text-xs">Client</TableHead>
-                      <TableHead className="text-slate-500 text-xs text-right">Our Balance</TableHead>
-                      <TableHead className="text-slate-500 text-xs text-right">Client Claims</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Calculated</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Recorded</TableHead>
                       <TableHead className="text-slate-500 text-xs text-right">Variance</TableHead>
                       <TableHead className="text-slate-500 text-xs">Status</TableHead>
                       <TableHead className="text-slate-500 text-xs">Actions</TableHead>
@@ -977,9 +977,9 @@ export default function Reconciliation() {
                   <TableBody>
                     {clientRecon.map((client) => (
                       <TableRow key={client.client_id} className="border-slate-200 hover:bg-slate-50">
-                        <TableCell className="text-slate-800 font-medium">{client.name}</TableCell>
-                        <TableCell className="text-right font-mono text-slate-800">${client.our_balance?.toLocaleString()}</TableCell>
-                        <TableCell className="text-right font-mono text-slate-800">${client.client_balance?.toLocaleString()}</TableCell>
+                        <TableCell className="text-slate-800 font-medium">{client.client_name}</TableCell>
+                        <TableCell className="text-right font-mono text-slate-800">${client.calculated_balance?.toLocaleString()}</TableCell>
+                        <TableCell className="text-right font-mono text-slate-800">${client.recorded_balance?.toLocaleString()}</TableCell>
                         <TableCell className={`text-right font-mono ${client.variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           ${client.variance?.toLocaleString()}
                         </TableCell>
@@ -1013,9 +1013,9 @@ export default function Reconciliation() {
                   <TableHeader>
                     <TableRow className="border-slate-200">
                       <TableHead className="text-slate-500 text-xs">Exchanger</TableHead>
-                      <TableHead className="text-slate-500 text-xs text-right">Bank Balance</TableHead>
-                      <TableHead className="text-slate-500 text-xs text-right">Cash Balance</TableHead>
-                      <TableHead className="text-slate-500 text-xs text-right">Total</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Volume</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Expected Commission</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Paid</TableHead>
                       <TableHead className="text-slate-500 text-xs text-right">Variance</TableHead>
                       <TableHead className="text-slate-500 text-xs">Status</TableHead>
                     </TableRow>
@@ -1023,10 +1023,10 @@ export default function Reconciliation() {
                   <TableBody>
                     {vendorRecon.map((vendor) => (
                       <TableRow key={vendor.vendor_id} className="border-slate-200 hover:bg-slate-50">
-                        <TableCell className="text-slate-800 font-medium">{vendor.name}</TableCell>
-                        <TableCell className="text-right font-mono text-blue-600">${vendor.bank_balance?.toLocaleString()}</TableCell>
-                        <TableCell className="text-right font-mono text-amber-600">${vendor.cash_balance?.toLocaleString()}</TableCell>
-                        <TableCell className="text-right font-mono text-slate-800">${vendor.total_balance?.toLocaleString()}</TableCell>
+                        <TableCell className="text-slate-800 font-medium">{vendor.vendor_name}</TableCell>
+                        <TableCell className="text-right font-mono text-slate-800">${vendor.total_volume?.toLocaleString()}</TableCell>
+                        <TableCell className="text-right font-mono text-blue-600">${vendor.expected_commission?.toLocaleString()}</TableCell>
+                        <TableCell className="text-right font-mono text-green-600">${vendor.paid_commission?.toLocaleString()}</TableCell>
                         <TableCell className={`text-right font-mono ${vendor.variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           ${vendor.variance?.toLocaleString()}
                         </TableCell>

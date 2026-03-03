@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response, UploadFile, File, Form, BackgroundTasks
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response, UploadFile, File, Form, BackgroundTasks, Body
 from fastapi.security import HTTPBearer
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -8891,7 +8891,7 @@ async def get_vendor_reconciliation(user: dict = Depends(get_current_user)):
         
         result.append({
             "vendor_id": vendor_id,
-            "vendor_name": vendor.get("name", "Unknown"),
+            "vendor_name": vendor.get("vendor_name") or vendor.get("name", "Unknown"),
             "commission_rate": vendor.get("commission_rate", 0),
             "total_volume": total_volume,
             "transaction_count": len(txs),
@@ -9120,7 +9120,7 @@ async def quick_reconcile(
 # Bulk Reconcile - Mark multiple items as reconciled
 @api_router.post("/reconciliation/bulk-reconcile")
 async def bulk_reconcile(
-    items: list,  # List of {reference_id, item_type}
+    items: List[dict] = Body(...),  # List of {reference_id, item_type}
     notes: str = "",
     user: dict = Depends(get_current_user)
 ):
