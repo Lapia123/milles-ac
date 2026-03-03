@@ -3323,6 +3323,48 @@ async def sync_treasury_ie_dates(user: dict = Depends(require_admin)):
     return {"message": f"Successfully fixed {fixed} treasury transaction dates", "count": fixed}
 
 
+# Migration endpoint: Assign role_ids to existing users
+@api_router.post("/users/assign-role-ids")
+async def assign_role_ids(user: dict = Depends(require_admin)):
+    """Assign role_ids to existing users based on their role field."""
+    # Role mapping from old role names to new role_ids
+    role_mapping = {
+        "admin": "admin",
+        "super_admin": "super_admin",
+        "accountant": "accountant", 
+        "sub_admin": "sub_admin",
+        "vendor": "exchanger",  # vendors/exchangers get exchanger role
+        "exchanger": "exchanger",
+        "viewer": "viewer"
+    }
+    
+    # Find users without role_id
+    users = await db.users.find({"role_id": {"$exists": False}}, {"_id": 0}).to_list(1000)
+    users.extend(await db.users.find({"role_id": None}, {"_id": 0}).to_list(1000))
+    
+    # Remove duplicates
+    seen_ids = set()
+    unique_users = []
+    for u in users:
+        if u["user_id"] not in seen_ids:
+            seen_ids.add(u["user_id"])
+            unique_users.append(u)
+    
+    updated = 0
+    for u in unique_users:
+        old_role = u.get("role", "viewer")
+        new_role_id = role_mapping.get(old_role, "viewer")
+        
+        await db.users.update_one(
+            {"user_id": u["user_id"]},
+            {"$set": {"role_id": new_role_id}}
+        )
+        updated += 1
+        logger.info(f"Assigned role_id '{new_role_id}' to user {u.get('email')}")
+    
+    return {"message": f"Assigned role_ids to {updated} users", "count": updated}
+
+
 # ============== RESERVE FUND MANAGEMENT ==============
 
 @api_router.get("/psps/{psp_id}/reserve-funds")
@@ -4133,7 +4175,7 @@ async def get_my_vendor_info(user: dict = Depends(require_vendor)):
 
 # Vendor approve transaction
 @api_router.post("/vendor/transactions/{transaction_id}/approve")
-async def vendor_approve_transaction(transaction_id: str, user: dict = Depends(require_vendor)):
+async def vendor_approve_transaction(transaction_id: str, user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.APPROVE))):
     vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
@@ -4209,7 +4251,7 @@ async def vendor_approve_transaction(transaction_id: str, user: dict = Depends(r
 async def vendor_reject_transaction(
     transaction_id: str, 
     reason: str = "",
-    user: dict = Depends(require_vendor)
+    user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.APPROVE))
 ):
     vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
     if not vendor:
@@ -6212,7 +6254,7 @@ async def convert_expense_to_loan(entry_id: str, req: ConvertToLoanRequest, user
     return {"message": "Expense converted to loan", "loan": loan_doc}
 
 @api_router.post("/income-expenses/{entry_id}/vendor-approve")
-async def vendor_approve_ie(entry_id: str, user: dict = Depends(require_vendor)):
+async def vendor_approve_ie(entry_id: str, user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.APPROVE))):
     """Vendor approves a pending income/expense entry with commission calculation"""
     entry = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
     if not entry:
@@ -6286,7 +6328,7 @@ async def vendor_approve_ie(entry_id: str, user: dict = Depends(require_vendor))
     }
 
 @api_router.post("/income-expenses/{entry_id}/vendor-reject")
-async def vendor_reject_ie(entry_id: str, reason: str = "", user: dict = Depends(require_vendor)):
+async def vendor_reject_ie(entry_id: str, reason: str = "", user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.APPROVE))):
     """Vendor rejects a pending income/expense entry"""
     entry = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
     if not entry:
