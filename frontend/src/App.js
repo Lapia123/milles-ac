@@ -23,14 +23,16 @@ import LogsManagement from "./pages/Logs";
 import Layout from "./components/Layout";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
+import { usePermissions } from "./context/usePermissions";
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
+const ProtectedRoute = ({ children, requiredModule }) => {
   const { user, loading } = useAuth();
   const { theme } = useTheme();
+  const { canView, loading: permLoading } = usePermissions();
   const location = useLocation();
   const isDark = theme === 'dark';
 
-  if (loading) {
+  if (loading || permLoading) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#0B0C10]' : 'bg-[#F8FAFC]'}`}>
         <div className={`text-lg ${isDark ? 'text-[#66FCF1]' : 'text-blue-600'}`}>Loading...</div>
@@ -47,13 +49,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/vendor-portal" replace />;
   }
 
-  // Redirect sub-admins away from dashboard
-  if (user.role === 'sub_admin' && location.pathname === '/dashboard') {
-    return <Navigate to="/clients" replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // Redirect to appropriate page based on role
+  // Permission-based access control
+  if (requiredModule && !canView(requiredModule)) {
     if (user.role === 'vendor') {
       return <Navigate to="/vendor-portal" replace />;
     }
@@ -97,13 +94,13 @@ function AppRouter() {
         <Route path="transactions" element={<Transactions />} />
         <Route path="treasury" element={<Treasury />} />
         <Route path="lp-accounts" element={
-            <ProtectedRoute allowedRoles={['admin', 'accountant']}>
+            <ProtectedRoute requiredModule="lp_management">
               <LPAccounts />
             </ProtectedRoute>
           } />
         <Route path="psp" element={<PSPs />} />
         <Route path="vendors" element={
-            <ProtectedRoute allowedRoles={['admin', 'accountant']}>
+            <ProtectedRoute requiredModule="exchangers">
               <Vendors />
             </ProtectedRoute>
           } />
@@ -114,7 +111,7 @@ function AppRouter() {
         <Route 
           path="roles" 
           element={
-            <ProtectedRoute allowedRoles={['admin']}>
+            <ProtectedRoute requiredModule="roles">
               <RolesPermissions />
             </ProtectedRoute>
           } 
@@ -122,7 +119,7 @@ function AppRouter() {
         <Route 
           path="accountant" 
           element={
-            <ProtectedRoute allowedRoles={['admin', 'accountant']}>
+            <ProtectedRoute requiredModule="transactions">
               <AccountantDashboard />
             </ProtectedRoute>
           } 
@@ -130,7 +127,7 @@ function AppRouter() {
         <Route 
           path="/income-expenses" 
           element={
-            <ProtectedRoute allowedRoles={['admin', 'accountant']}>
+            <ProtectedRoute requiredModule="income_expenses">
               <IncomeExpenses />
             </ProtectedRoute>
           } 
@@ -138,7 +135,7 @@ function AppRouter() {
         <Route 
           path="/loans" 
           element={
-            <ProtectedRoute allowedRoles={['admin', 'accountant']}>
+            <ProtectedRoute requiredModule="loans">
               <Loans />
             </ProtectedRoute>
           } 
@@ -146,7 +143,7 @@ function AppRouter() {
         <Route 
           path="/debts" 
           element={
-            <ProtectedRoute allowedRoles={['admin', 'accountant']}>
+            <ProtectedRoute requiredModule="debts">
               <Debts />
             </ProtectedRoute>
           } 
@@ -154,7 +151,7 @@ function AppRouter() {
         <Route 
           path="/audit" 
           element={
-            <ProtectedRoute allowedRoles={['admin']}>
+            <ProtectedRoute requiredModule="audit">
               <AuditCompliance />
             </ProtectedRoute>
           } 
@@ -162,7 +159,7 @@ function AppRouter() {
         <Route 
           path="/logs" 
           element={
-            <ProtectedRoute allowedRoles={['admin']}>
+            <ProtectedRoute requiredModule="logs">
               <LogsManagement />
             </ProtectedRoute>
           } 
