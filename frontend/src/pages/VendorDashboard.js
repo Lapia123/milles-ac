@@ -38,6 +38,10 @@ import {
   FileText,
   Printer,
   Receipt,
+  Download,
+  Filter,
+  Calendar,
+  Search,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -68,6 +72,13 @@ export default function ExchangerDashboard() {
   const [ieProofImage, setIeProofImage] = useState(null);
   const [ieProofPreview, setIeProofPreview] = useState(null);
   const [ieRejectionReason, setIeRejectionReason] = useState('');
+  const [txStatusFilter, setTxStatusFilter] = useState('all');
+  const [txTypeFilter, setTxTypeFilter] = useState('all');
+  const [txDateFrom, setTxDateFrom] = useState('');
+  const [txDateTo, setTxDateTo] = useState('');
+  const [txSearchQuery, setTxSearchQuery] = useState('');
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -100,9 +111,14 @@ export default function ExchangerDashboard() {
   };
 
   const fetchTransactions = async () => {
-    if (!vendorInfo) return;
     try {
-      const response = await fetch(`${API_URL}/api/vendors/${vendorInfo.vendor_id}/transactions`, { 
+      const params = new URLSearchParams();
+      if (txStatusFilter && txStatusFilter !== 'all') params.append('status', txStatusFilter);
+      if (txTypeFilter && txTypeFilter !== 'all') params.append('transaction_type', txTypeFilter);
+      if (txDateFrom) params.append('date_from', txDateFrom);
+      if (txDateTo) params.append('date_to', txDateTo);
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      const response = await fetch(`${API_URL}/api/vendor/transactions${qs}`, { 
         headers: getAuthHeaders(), 
         credentials: 'include' 
       });
@@ -195,6 +211,13 @@ export default function ExchangerDashboard() {
       fetchIeEntries();
     }
   }, [vendorInfo]);
+
+  // Re-fetch when filters change
+  useEffect(() => {
+    if (vendorInfo) {
+      fetchTransactions();
+    }
+  }, [txStatusFilter, txTypeFilter, txDateFrom, txDateTo]);
 
   const handleAction = (tx, action) => {
     setSelectedTransaction(tx);
@@ -430,6 +453,89 @@ export default function ExchangerDashboard() {
     }
   };
 
+  // Client-side search filter
+  const filteredTransactions = transactions.filter(tx => {
+    if (!txSearchQuery) return true;
+    const q = txSearchQuery.toLowerCase();
+    return (
+      (tx.reference || '').toLowerCase().includes(q) ||
+      (tx.client_name || '').toLowerCase().includes(q) ||
+      (tx.base_currency || tx.currency || '').toLowerCase().includes(q)
+    );
+  });
+
+  const handleExportExcel = async () => {
+    setExportingExcel(true);
+    try {
+      const params = new URLSearchParams();
+      if (txStatusFilter && txStatusFilter !== 'all') params.append('status', txStatusFilter);
+      if (txTypeFilter && txTypeFilter !== 'all') params.append('transaction_type', txTypeFilter);
+      if (txDateFrom) params.append('date_from', txDateFrom);
+      if (txDateTo) params.append('date_to', txDateTo);
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      const response = await fetch(`${API_URL}/api/vendor/transactions/export/excel${qs}`, {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'transactions.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+        toast.success('Excel exported successfully');
+      } else {
+        toast.error('Export failed');
+      }
+    } catch (error) {
+      toast.error('Export failed');
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    setExportingPdf(true);
+    try {
+      const params = new URLSearchParams();
+      if (txStatusFilter && txStatusFilter !== 'all') params.append('status', txStatusFilter);
+      if (txTypeFilter && txTypeFilter !== 'all') params.append('transaction_type', txTypeFilter);
+      if (txDateFrom) params.append('date_from', txDateFrom);
+      if (txDateTo) params.append('date_to', txDateTo);
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      const response = await fetch(`${API_URL}/api/vendor/transactions/export/pdf${qs}`, {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'transactions.pdf';
+        a.click();
+        window.URL.revokeObjectURL(url);
+        toast.success('PDF exported successfully');
+      } else {
+        toast.error('Export failed');
+      }
+    } catch (error) {
+      toast.error('Export failed');
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  const clearFilters = () => {
+    setTxStatusFilter('all');
+    setTxTypeFilter('all');
+    setTxDateFrom('');
+    setTxDateTo('');
+    setTxSearchQuery('');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -624,12 +730,126 @@ export default function ExchangerDashboard() {
 
         {/* Transactions Tab */}
         <TabsContent value="transactions" className="mt-4">
+      {/* Filters Bar */}
+      <Card className="bg-white border-slate-200 mb-4">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-end gap-3">
+            {/* Search */}
+            <div className="flex-1 min-w-[180px]">
+              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Search</label>
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Ref, client, currency..."
+                  value={txSearchQuery}
+                  onChange={e => setTxSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-800"
+                  data-testid="tx-search-input"
+                />
+              </div>
+            </div>
+            {/* Status */}
+            <div className="min-w-[130px]">
+              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Status</label>
+              <select
+                value={txStatusFilter}
+                onChange={e => setTxStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-1 focus:ring-blue-500 bg-white text-slate-800"
+                data-testid="tx-status-filter"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            {/* Type */}
+            <div className="min-w-[130px]">
+              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Type</label>
+              <select
+                value={txTypeFilter}
+                onChange={e => setTxTypeFilter(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-1 focus:ring-blue-500 bg-white text-slate-800"
+                data-testid="tx-type-filter"
+              >
+                <option value="all">All Types</option>
+                <option value="deposit">Deposit</option>
+                <option value="withdrawal">Withdrawal</option>
+              </select>
+            </div>
+            {/* Date From */}
+            <div className="min-w-[140px]">
+              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">From</label>
+              <input
+                type="date"
+                value={txDateFrom}
+                onChange={e => setTxDateFrom(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-1 focus:ring-blue-500 bg-white text-slate-800"
+                data-testid="tx-date-from"
+              />
+            </div>
+            {/* Date To */}
+            <div className="min-w-[140px]">
+              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">To</label>
+              <input
+                type="date"
+                value={txDateTo}
+                onChange={e => setTxDateTo(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-1 focus:ring-blue-500 bg-white text-slate-800"
+                data-testid="tx-date-to"
+              />
+            </div>
+            {/* Clear Filters */}
+            {(txStatusFilter !== 'all' || txTypeFilter !== 'all' || txDateFrom || txDateTo || txSearchQuery) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="text-slate-500 hover:text-red-500 text-xs"
+                data-testid="tx-clear-filters"
+              >
+                <XCircle className="w-3.5 h-3.5 mr-1" /> Clear
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Transactions Table */}
       <Card className="bg-white border-slate-200">
-        <CardHeader>
-          <CardTitle className="text-xl text-slate-800 uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
-            Assigned Transactions
-          </CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-xl text-slate-800 uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+              Assigned Transactions
+            </CardTitle>
+            <p className="text-xs text-slate-400 mt-1">{filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportExcel}
+              disabled={exportingExcel || filteredTransactions.length === 0}
+              className="text-green-600 border-green-200 hover:bg-green-50 text-xs"
+              data-testid="tx-export-excel"
+            >
+              <Download className="w-3.5 h-3.5 mr-1" />
+              {exportingExcel ? 'Exporting...' : 'Excel'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPdf}
+              disabled={exportingPdf || filteredTransactions.length === 0}
+              className="text-red-600 border-red-200 hover:bg-red-50 text-xs"
+              data-testid="tx-export-pdf"
+            >
+              <FileText className="w-3.5 h-3.5 mr-1" />
+              {exportingPdf ? 'Exporting...' : 'PDF'}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <ScrollArea className="h-[500px]">
@@ -649,14 +869,14 @@ export default function ExchangerDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {transactions.length === 0 ? (
+                {filteredTransactions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center py-8 text-slate-500">
-                      No transactions assigned to you
+                      No transactions found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  transactions.map((tx) => {
+                  filteredTransactions.map((tx) => {
                     // Use base currency/amount if available, otherwise use converted values
                     const displayCurrency = tx.base_currency || tx.currency || 'USD';
                     const displayAmount = tx.base_amount || tx.amount;

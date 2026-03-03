@@ -4154,6 +4154,197 @@ async def get_my_vendor_info(user: dict = Depends(require_vendor)):
     
     return vendor
 
+
+# Vendor: Get all assigned transactions with filters
+@api_router.get("/vendor/transactions")
+async def get_vendor_all_transactions(
+    status: Optional[str] = None,
+    transaction_type: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user: dict = Depends(require_vendor),
+):
+    vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    query = {"vendor_id": vendor["vendor_id"], "destination_type": "vendor"}
+    if status and status != "all":
+        query["status"] = status
+    if transaction_type and transaction_type != "all":
+        query["transaction_type"] = transaction_type
+    if date_from:
+        query.setdefault("created_at", {})["$gte"] = date_from
+    if date_to:
+        query.setdefault("created_at", {})["$lte"] = date_to + "T23:59:59"
+
+    transactions = await db.transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(5000)
+    return transactions
+
+
+# Vendor: Export transactions to Excel
+@api_router.get("/vendor/transactions/export/excel")
+async def vendor_export_excel(
+    status: Optional[str] = None,
+    transaction_type: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user: dict = Depends(require_vendor),
+):
+    from fastapi.responses import StreamingResponse
+    import openpyxl
+    from io import BytesIO
+
+    vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    query = {"vendor_id": vendor["vendor_id"], "destination_type": "vendor"}
+    if status and status != "all":
+        query["status"] = status
+    if transaction_type and transaction_type != "all":
+        query["transaction_type"] = transaction_type
+    if date_from:
+        query.setdefault("created_at", {})["$gte"] = date_from
+    if date_to:
+        query.setdefault("created_at", {})["$lte"] = date_to + "T23:59:59"
+
+    txs = await db.transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(5000)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Transactions"
+
+    headers = ["Reference", "Type", "Client", "Amount", "Currency", "Commission (USD)", "Mode", "Status", "Date"]
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = openpyxl.styles.Font(bold=True, color="FFFFFF")
+        cell.fill = openpyxl.styles.PatternFill(start_color="0B3D91", end_color="0B3D91", fill_type="solid")
+
+    for i, tx in enumerate(txs, 2):
+        ws.cell(row=i, column=1, value=tx.get("reference", ""))
+        ws.cell(row=i, column=2, value=tx.get("transaction_type", ""))
+        ws.cell(row=i, column=3, value=tx.get("client_name", ""))
+        ws.cell(row=i, column=4, value=tx.get("base_amount") or tx.get("amount", 0))
+        ws.cell(row=i, column=5, value=tx.get("base_currency") or tx.get("currency", "USD"))
+        ws.cell(row=i, column=6, value=tx.get("vendor_commission_amount", 0) or 0)
+        ws.cell(row=i, column=7, value=tx.get("transaction_mode", "bank"))
+        ws.cell(row=i, column=8, value=tx.get("status", ""))
+        ws.cell(row=i, column=9, value=tx.get("created_at", "")[:10] if tx.get("created_at") else "")
+
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or "")) for cell in col)
+        ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 30)
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=transactions_{vendor['vendor_name'].replace(' ', '_')}.xlsx"}
+    )
+
+
+# Vendor: Export transactions to PDF
+@api_router.get("/vendor/transactions/export/pdf")
+async def vendor_export_pdf(
+    status: Optional[str] = None,
+    transaction_type: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user: dict = Depends(require_vendor),
+):
+    from fastapi.responses import StreamingResponse
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table as RLTable, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from io import BytesIO
+
+    vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    query = {"vendor_id": vendor["vendor_id"], "destination_type": "vendor"}
+    if status and status != "all":
+        query["status"] = status
+    if transaction_type and transaction_type != "all":
+        query["transaction_type"] = transaction_type
+    if date_from:
+        query.setdefault("created_at", {})["$gte"] = date_from
+    if date_to:
+        query.setdefault("created_at", {})["$lte"] = date_to + "T23:59:59"
+
+    txs = await db.transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(5000)
+
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=landscape(A4), topMargin=30, bottomMargin=30)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    title_style = ParagraphStyle('Title', parent=styles['Title'], fontSize=16, spaceAfter=6)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'], fontSize=9, textColor=colors.grey, spaceAfter=14)
+
+    elements.append(Paragraph(f"Transaction Report — {vendor['vendor_name']}", title_style))
+    filter_parts = []
+    if status and status != "all":
+        filter_parts.append(f"Status: {status}")
+    if transaction_type and transaction_type != "all":
+        filter_parts.append(f"Type: {transaction_type}")
+    if date_from:
+        filter_parts.append(f"From: {date_from}")
+    if date_to:
+        filter_parts.append(f"To: {date_to}")
+    elements.append(Paragraph(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}  |  {' | '.join(filter_parts) if filter_parts else 'All transactions'}", subtitle_style))
+
+    data = [["Reference", "Type", "Client", "Amount", "Currency", "Commission", "Mode", "Status", "Date"]]
+    for tx in txs:
+        data.append([
+            tx.get("reference", ""),
+            tx.get("transaction_type", "").capitalize(),
+            tx.get("client_name", ""),
+            f"{tx.get('base_amount') or tx.get('amount', 0):,.2f}",
+            tx.get("base_currency") or tx.get("currency", "USD"),
+            f"${tx.get('vendor_commission_amount', 0) or 0:,.2f}",
+            tx.get("transaction_mode", "bank").capitalize(),
+            tx.get("status", "").capitalize(),
+            tx.get("created_at", "")[:10] if tx.get("created_at") else "",
+        ])
+
+    col_widths = [1.1*inch, 0.75*inch, 1.3*inch, 0.9*inch, 0.7*inch, 0.85*inch, 0.65*inch, 0.75*inch, 0.85*inch]
+    table = RLTable(data, colWidths=col_widths, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0B3D91')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 8),
+        ('FONTSIZE', (0, 1), (-1, -1), 7),
+        ('ALIGN', (3, 0), (5, -1), 'RIGHT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E5E7EB')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F9FAFB')]),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    elements.append(table)
+
+    # Summary
+    total_deposits = sum(1 for t in txs if t.get("transaction_type") == "deposit")
+    total_withdrawals = sum(1 for t in txs if t.get("transaction_type") == "withdrawal")
+    total_commission = sum(t.get("vendor_commission_amount", 0) or 0 for t in txs)
+    elements.append(Spacer(1, 12))
+    elements.append(Paragraph(f"Total: {len(txs)} transactions  |  Deposits: {total_deposits}  |  Withdrawals: {total_withdrawals}  |  Total Commission: ${total_commission:,.2f}", subtitle_style))
+
+    doc.build(elements)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=transactions_{vendor['vendor_name'].replace(' ', '_')}.pdf"}
+    )
+
+
 # Vendor approve transaction
 @api_router.post("/vendor/transactions/{transaction_id}/approve")
 async def vendor_approve_transaction(transaction_id: str, user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.APPROVE))):
