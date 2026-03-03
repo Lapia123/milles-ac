@@ -42,6 +42,7 @@ import {
 } from '../components/ui/tabs';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import {
   Settings as SettingsIcon,
   Users,
@@ -62,12 +63,14 @@ import {
   RefreshCw,
   TrendingUp,
   Percent,
+  LogIn,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, startImpersonation } = useAuth();
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -305,6 +308,24 @@ export default function Settings() {
       }
     } catch (error) {
       toast.error('Delete failed');
+    }
+  };
+
+  const handleImpersonate = async (targetUser) => {
+    if (!window.confirm(`Login as ${targetUser.name} (${targetUser.email})? You will be redirected to their dashboard.`)) return;
+    try {
+      await startImpersonation(targetUser.user_id);
+      toast.success(`Now impersonating ${targetUser.name}`);
+      const role = targetUser.role;
+      if (role === 'vendor') {
+        navigate('/vendor-portal');
+      } else if (role === 'sub_admin') {
+        navigate('/clients');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Impersonation failed');
     }
   };
 
@@ -740,6 +761,24 @@ export default function Settings() {
                                   <DropdownMenuItem onClick={() => handleEdit(userItem)} className="text-white hover:bg-white/5 cursor-pointer">
                                     <Edit className="w-4 h-4 mr-2" /> Edit
                                   </DropdownMenuItem>
+                                  {userItem.role !== 'admin' && userItem.user_id !== user?.user_id && (
+                                    <DropdownMenuItem
+                                      onClick={() => handleImpersonate(userItem)}
+                                      className="text-amber-500 hover:bg-white/5 cursor-pointer"
+                                      data-testid={`impersonate-${userItem.user_id}`}
+                                    >
+                                      <LogIn className="w-4 h-4 mr-2" /> Login as User
+                                    </DropdownMenuItem>
+                                  )}
+                                  {userItem.user_id !== user?.user_id && (
+                                    <DropdownMenuItem
+                                      onClick={() => handleDelete(userItem.user_id)}
+                                      className="text-red-500 hover:bg-white/5 cursor-pointer"
+                                      data-testid={`delete-user-${userItem.user_id}`}
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                    </DropdownMenuItem>
+                                  )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </TableCell>

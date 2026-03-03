@@ -11145,6 +11145,102 @@ async def clear_old_logs(
     
     return {"message": f"Deleted {result.deleted_count} logs older than {days_to_keep} days"}
 
+# ============== ADMIN IMPERSONATION ==============
+
+@api_router.post("/admin/impersonate/{user_id}")
+async def start_impersonation(user_id: str, request: Request, admin: dict = Depends(require_admin)):
+    """Admin impersonates a sub-user. Returns a new JWT for the target user."""
+    # Find target user
+    target = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Prevent impersonating admins
+    if target.get("role") == "admin":
+        raise HTTPException(status_code=403, detail="Cannot impersonate another Admin")
+
+    if target.get("is_active") is False:
+        raise HTTPException(status_code=400, detail="Cannot impersonate an inactive user")
+
+    # Create a JWT for the target user
+    impersonation_token = create_jwt_token(target["user_id"], target["email"], target["role"])
+
+    # Create an impersonation log entry
+    log_id = f"imp_{uuid.uuid4().hex[:12]}"
+    ip_address = request.client.host if request.client else "unknown"
+    await db.impersonation_logs.insert_one({
+        "log_id": log_id,
+        "admin_id": admin["user_id"],
+        "admin_name": admin.get("name", ""),
+        "admin_email": admin.get("email", ""),
+        "user_id": target["user_id"],
+        "user_name": target.get("name", ""),
+        "user_email": target.get("email", ""),
+        "user_role": target.get("role", ""),
+        "login_time": datetime.now(timezone.utc).isoformat(),
+        "logout_time": None,
+        "ip_address": ip_address,
+        "status": "active"
+    })
+
+    # Activity log
+    await log_activity(
+        request, admin, "impersonate", "users",
+        f"Admin impersonated user {target.get('name')} ({target.get('email')})",
+        reference_id=target["user_id"],
+        details={"target_user": target.get("email"), "target_role": target.get("role")}
+    )
+
+    return {
+        "access_token": impersonation_token,
+        "impersonation_log_id": log_id,
+        "user": {
+            "user_id": target["user_id"],
+            "email": target["email"],
+            "name": target.get("name", ""),
+            "role": target.get("role", ""),
+        }
+    }
+
+
+@api_router.post("/admin/stop-impersonate")
+async def stop_impersonation(request: Request, user: dict = Depends(get_current_user)):
+    """End impersonation session. Called by the impersonated session to log the end time."""
+    log_id = None
+    body = {}
+    try:
+        body = await request.json()
+        log_id = body.get("log_id")
+    except Exception:
+        pass
+
+    if log_id:
+        await db.impersonation_logs.update_one(
+            {"log_id": log_id, "status": "active"},
+            {"$set": {"logout_time": datetime.now(timezone.utc).isoformat(), "status": "ended"}}
+        )
+    else:
+        # Fallback: close most recent active session for this user
+        await db.impersonation_logs.update_one(
+            {"user_id": user["user_id"], "status": "active"},
+            {"$set": {"logout_time": datetime.now(timezone.utc).isoformat(), "status": "ended"}},
+        )
+
+    return {"message": "Impersonation ended"}
+
+
+@api_router.get("/admin/impersonation-logs")
+async def get_impersonation_logs(
+    limit: int = 50,
+    admin: dict = Depends(require_admin)
+):
+    """Get impersonation audit logs"""
+    logs = await db.impersonation_logs.find(
+        {}, {"_id": 0}
+    ).sort("login_time", -1).to_list(limit)
+    return logs
+
+
 # Include router
 app.include_router(api_router)
 

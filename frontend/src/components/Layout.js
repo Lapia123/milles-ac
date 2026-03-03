@@ -35,10 +35,12 @@ import {
   Moon,
   ScrollText,
   Shield,
+  ArrowLeft,
+  AlertTriangle,
 } from 'lucide-react';
 
 export default function Layout() {
-  const { user, logout } = useAuth();
+  const { user, logout, impersonating, adminName, stopImpersonation } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -48,6 +50,11 @@ export default function Layout() {
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const handleStopImpersonation = async () => {
+    await stopImpersonation();
+    navigate('/settings');
   };
 
   const isAccountantOrAdmin = user?.role === 'admin' || user?.role === 'accountant';
@@ -191,7 +198,29 @@ export default function Layout() {
       </aside>
 
       <div className="flex-1 flex flex-col min-h-screen">
-        <header className={`sticky top-0 z-30 h-16 backdrop-blur-md border-b theme-transition ${
+        {/* Impersonation Banner */}
+        {impersonating && (
+          <div
+            className="sticky top-0 z-50 flex items-center justify-between px-4 py-2.5 bg-red-600 text-white shadow-lg"
+            data-testid="impersonation-banner"
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold tracking-wide">
+              <AlertTriangle className="w-4 h-4" />
+              <span>You are impersonating <strong>{user?.name}</strong> ({user?.role})</span>
+              <span className="hidden sm:inline text-red-200 ml-1">— Logged in by {adminName}</span>
+            </div>
+            <button
+              onClick={handleStopImpersonation}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 rounded font-bold text-xs uppercase tracking-wider hover:bg-red-50 transition-colors"
+              data-testid="stop-impersonation-btn"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Return to Admin
+            </button>
+          </div>
+        )}
+
+        <header className={`sticky ${impersonating ? 'top-[42px]' : 'top-0'} z-30 h-16 backdrop-blur-md border-b theme-transition ${
           isDark ? 'bg-[#1F2833]/80 border-[#2D3748]' : 'bg-white/80 border-slate-200'
         }`}>
           <div className="flex items-center justify-between h-full px-4 md:px-6">
