@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { usePermissions } from '../context/usePermissions';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import {
@@ -42,6 +43,7 @@ import {
 export default function Layout() {
   const { user, logout, impersonating, adminName, stopImpersonation } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { canView, loading: permissionsLoading } = usePermissions();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -57,10 +59,7 @@ export default function Layout() {
     navigate('/settings');
   };
 
-  const isAccountantOrAdmin = user?.role === 'admin' || user?.role === 'accountant';
   const isExchanger = user?.role === 'vendor';
-  const isAdmin = user?.role === 'admin';
-  const isSubAdmin = user?.role === 'sub_admin';
 
   // Exchanger-specific navigation
   const vendorNavItems = [
@@ -68,36 +67,34 @@ export default function Layout() {
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
 
-  // Sub-admin navigation (Clients & Transactions only)
-  const subAdminNavItems = [
-    { to: '/clients', icon: Users, label: 'Clients' },
-    { to: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
-    { to: '/settings', icon: Settings, label: 'Settings' },
+  // Permission-based navigation for all non-vendor users
+  const allNavItems = [
+    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', module: 'dashboard' },
+    { to: '/clients', icon: Users, label: 'Clients', module: 'clients' },
+    { to: '/transactions', icon: ArrowLeftRight, label: 'Transactions', module: 'transactions' },
+    { to: '/treasury', icon: Landmark, label: 'Treasury', module: 'treasury' },
+    { to: '/lp-accounts', icon: TrendingUp, label: 'LP Management', module: 'lp_management' },
+    { to: '/income-expenses', icon: Wallet, label: 'Income & Expenses', module: 'income_expenses' },
+    { to: '/loans', icon: Banknote, label: 'Loans', module: 'loans' },
+    { to: '/debts', icon: Receipt, label: 'O/S Accounts', module: 'debts' },
+    { to: '/psp', icon: CreditCard, label: 'PSP', module: 'psp' },
+    { to: '/vendors', icon: Store, label: 'Exchangers', module: 'exchangers' },
+    { to: '/reconciliation', icon: ArrowUpDown, label: 'Reconciliation', module: 'reconciliation' },
+    { to: '/audit', icon: ShieldCheck, label: 'Audit', module: 'audit' },
+    { to: '/logs', icon: ScrollText, label: 'Logs', module: 'logs' },
+    { to: '/reports', icon: BarChart3, label: 'Reports', module: 'reports' },
+    { to: '/accountant', icon: ClipboardCheck, label: 'Approvals', module: 'transactions' },
+    { to: '/roles', icon: Shield, label: 'Roles & Permissions', module: 'roles' },
+    { to: '/settings', icon: Settings, label: 'Settings', module: null },
   ];
 
-  // Admin/Accountant navigation (full access)
-  const adminNavItems = [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/clients', icon: Users, label: 'Clients' },
-    { to: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
-    { to: '/treasury', icon: Landmark, label: 'Treasury' },
-    ...(isAccountantOrAdmin ? [{ to: '/lp-accounts', icon: TrendingUp, label: 'LP Management' }] : []),
-    ...(isAccountantOrAdmin ? [{ to: '/income-expenses', icon: Wallet, label: 'Income & Expenses' }] : []),
-    ...(isAccountantOrAdmin ? [{ to: '/loans', icon: Banknote, label: 'Loans' }] : []),
-    ...(isAccountantOrAdmin ? [{ to: '/debts', icon: Receipt, label: 'O/S Accounts' }] : []),
-    { to: '/psp', icon: CreditCard, label: 'PSP' },
-    ...(isAccountantOrAdmin ? [{ to: '/vendors', icon: Store, label: 'Exchangers' }] : []),
-    { to: '/reconciliation', icon: ArrowUpDown, label: 'Reconciliation' },
-    ...(isAdmin ? [{ to: '/audit', icon: ShieldCheck, label: 'Audit' }] : []),
-    ...(isAdmin ? [{ to: '/logs', icon: ScrollText, label: 'Logs' }] : []),
-    { to: '/reports', icon: BarChart3, label: 'Reports' },
-    ...(isAccountantOrAdmin ? [{ to: '/accountant', icon: ClipboardCheck, label: 'Approvals' }] : []),
-    ...(isAdmin ? [{ to: '/roles', icon: Shield, label: 'Roles & Permissions' }] : []),
-    { to: '/settings', icon: Settings, label: 'Settings' },
-  ];
+  // Filter navigation items based on permissions (show all while loading)
+  const filteredNavItems = allNavItems.filter(item => 
+    !item.module || permissionsLoading || canView(item.module)
+  );
 
   // Select nav items based on role
-  const navItems = isExchanger ? vendorNavItems : isSubAdmin ? subAdminNavItems : adminNavItems;
+  const navItems = isExchanger ? vendorNavItems : filteredNavItems;
 
   const NavItem = ({ to, icon: Icon, label }) => (
     <NavLink

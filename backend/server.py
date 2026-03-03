@@ -1225,12 +1225,12 @@ async def logout(request: Request, response: Response):
 # ============== USERS/ADMINS ROUTES ==============
 
 @api_router.get("/users")
-async def get_users(user: dict = Depends(require_admin)):
+async def get_users(user: dict = Depends(require_permission(Modules.USERS, Actions.VIEW))):
     users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(1000)
     return users
 
 @api_router.post("/users")
-async def create_user(user_data: UserCreate, admin: dict = Depends(require_admin)):
+async def create_user(user_data: UserCreate, user: dict = Depends(require_permission(Modules.USERS, Actions.CREATE))):
     existing = await db.users.find_one({"email": user_data.email}, {"_id": 0})
     if existing:
         raise HTTPException(status_code=400, detail="Email already exists")
@@ -1276,7 +1276,7 @@ async def create_user(user_data: UserCreate, admin: dict = Depends(require_admin
     return {"user_id": user_id, "email": user_data.email, "name": user_data.name, "role": user_data.role}
 
 @api_router.put("/users/{user_id}")
-async def update_user(user_id: str, update_data: UserUpdate, admin: dict = Depends(require_admin)):
+async def update_user(user_id: str, update_data: UserUpdate, user: dict = Depends(require_permission(Modules.USERS, Actions.EDIT))):
     updates = {k: v for k, v in update_data.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No updates provided")
@@ -1285,12 +1285,12 @@ async def update_user(user_id: str, update_data: UserUpdate, admin: dict = Depen
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
     
-    user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
-    return user
+    updated_user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
+    return updated_user
 
 @api_router.delete("/users/{user_id}")
-async def delete_user(user_id: str, admin: dict = Depends(require_admin)):
-    if admin["user_id"] == user_id:
+async def delete_user(user_id: str, user: dict = Depends(require_permission(Modules.USERS, Actions.DELETE))):
+    if user["user_id"] == user_id:
         raise HTTPException(status_code=400, detail="Cannot delete yourself")
     
     result = await db.users.delete_one({"user_id": user_id})
@@ -1303,7 +1303,7 @@ async def delete_user(user_id: str, admin: dict = Depends(require_admin)):
 
 @api_router.get("/clients")
 async def get_clients(
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_permission(Modules.CLIENTS, Actions.VIEW)),
     status: Optional[str] = None,
     search: Optional[str] = None
 ):
@@ -1359,7 +1359,7 @@ async def get_clients(
     return clients
 
 @api_router.get("/clients/{client_id}")
-async def get_client(client_id: str, user: dict = Depends(get_current_user)):
+async def get_client(client_id: str, user: dict = Depends(require_permission(Modules.CLIENTS, Actions.VIEW))):
     client = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
@@ -1397,7 +1397,7 @@ async def get_client(client_id: str, user: dict = Depends(get_current_user)):
     return client
 
 @api_router.post("/clients")
-async def create_client(client_data: ClientCreate, user: dict = Depends(get_current_user)):
+async def create_client(client_data: ClientCreate, user: dict = Depends(require_permission(Modules.CLIENTS, Actions.CREATE))):
     existing = await db.clients.find_one({"email": client_data.email}, {"_id": 0})
     if existing:
         raise HTTPException(status_code=400, detail="Client email already exists")
@@ -1419,7 +1419,7 @@ async def create_client(client_data: ClientCreate, user: dict = Depends(get_curr
     return await db.clients.find_one({"client_id": client_id}, {"_id": 0})
 
 @api_router.put("/clients/{client_id}")
-async def update_client(client_id: str, update_data: ClientUpdate, user: dict = Depends(get_current_user)):
+async def update_client(client_id: str, update_data: ClientUpdate, user: dict = Depends(require_permission(Modules.CLIENTS, Actions.EDIT))):
     updates = {k: v for k, v in update_data.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No updates provided")
@@ -1433,7 +1433,7 @@ async def update_client(client_id: str, update_data: ClientUpdate, user: dict = 
     return await db.clients.find_one({"client_id": client_id}, {"_id": 0})
 
 @api_router.delete("/clients/{client_id}")
-async def delete_client(client_id: str, user: dict = Depends(get_current_user)):
+async def delete_client(client_id: str, user: dict = Depends(require_permission(Modules.CLIENTS, Actions.DELETE))):
     result = await db.clients.delete_one({"client_id": client_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Client not found")
@@ -1442,7 +1442,7 @@ async def delete_client(client_id: str, user: dict = Depends(get_current_user)):
 # ============== CLIENT BANK ACCOUNTS ROUTES ==============
 
 @api_router.get("/clients/{client_id}/bank-accounts")
-async def get_client_bank_accounts(client_id: str, user: dict = Depends(get_current_user)):
+async def get_client_bank_accounts(client_id: str, user: dict = Depends(require_permission(Modules.CLIENTS, Actions.VIEW))):
     """Get all saved bank accounts for a client"""
     accounts = await db.client_bank_accounts.find({"client_id": client_id}, {"_id": 0}).to_list(100)
     return accounts
@@ -1455,7 +1455,7 @@ async def create_client_bank_account(
     account_number: str = Form(...),
     swift_iban: str = Form(None),
     currency: str = Form("USD"),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.CLIENTS, Actions.CREATE))
 ):
     """Save a new bank account for a client"""
     # Check if client exists
@@ -1499,7 +1499,7 @@ async def update_client_bank_account(
     account_number: str = Form(None),
     swift_iban: str = Form(None),
     currency: str = Form(None),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.CLIENTS, Actions.EDIT))
 ):
     """Update a client's bank account"""
     updates = {}
@@ -1529,7 +1529,7 @@ async def update_client_bank_account(
     return await db.client_bank_accounts.find_one({"bank_account_id": bank_account_id}, {"_id": 0})
 
 @api_router.delete("/clients/{client_id}/bank-accounts/{bank_account_id}")
-async def delete_client_bank_account(client_id: str, bank_account_id: str, user: dict = Depends(get_current_user)):
+async def delete_client_bank_account(client_id: str, bank_account_id: str, user: dict = Depends(require_permission(Modules.CLIENTS, Actions.DELETE))):
     """Delete a client's bank account"""
     result = await db.client_bank_accounts.delete_one({"bank_account_id": bank_account_id, "client_id": client_id})
     if result.deleted_count == 0:
@@ -1539,7 +1539,7 @@ async def delete_client_bank_account(client_id: str, bank_account_id: str, user:
 # ============== TREASURY/BANK ACCOUNTS ROUTES ==============
 
 @api_router.get("/treasury")
-async def get_treasury_accounts(user: dict = Depends(get_current_user)):
+async def get_treasury_accounts(user: dict = Depends(require_permission(Modules.TREASURY, Actions.VIEW))):
     accounts = await db.treasury_accounts.find({}, {"_id": 0}).to_list(1000)
     # Add USD equivalent for each account
     for acc in accounts:
@@ -1547,14 +1547,14 @@ async def get_treasury_accounts(user: dict = Depends(get_current_user)):
     return accounts
 
 @api_router.get("/treasury/{account_id}")
-async def get_treasury_account(account_id: str, user: dict = Depends(get_current_user)):
+async def get_treasury_account(account_id: str, user: dict = Depends(require_permission(Modules.TREASURY, Actions.VIEW))):
     account = await db.treasury_accounts.find_one({"account_id": account_id}, {"_id": 0})
     if not account:
         raise HTTPException(status_code=404, detail="Treasury account not found")
     return account
 
 @api_router.post("/treasury")
-async def create_treasury_account(account_data: TreasuryAccountCreate, request: Request, user: dict = Depends(require_accountant_or_admin)):
+async def create_treasury_account(account_data: TreasuryAccountCreate, request: Request, user: dict = Depends(require_permission(Modules.TREASURY, Actions.CREATE))):
     account_id = f"treasury_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
     
@@ -1576,7 +1576,7 @@ async def create_treasury_account(account_data: TreasuryAccountCreate, request: 
     return await db.treasury_accounts.find_one({"account_id": account_id}, {"_id": 0})
 
 @api_router.put("/treasury/{account_id}")
-async def update_treasury_account(account_id: str, update_data: TreasuryAccountUpdate, user: dict = Depends(require_accountant_or_admin)):
+async def update_treasury_account(account_id: str, update_data: TreasuryAccountUpdate, user: dict = Depends(require_permission(Modules.TREASURY, Actions.EDIT))):
     updates = {k: v for k, v in update_data.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No updates provided")
@@ -1597,7 +1597,7 @@ async def get_treasury_history(
     end_date: Optional[str] = None,
     transaction_type: Optional[str] = None,
     limit: int = 100,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.TREASURY, Actions.VIEW))
 ):
     """Get transaction history for a treasury account"""
     account = await db.treasury_accounts.find_one({"account_id": account_id}, {"_id": 0})
@@ -1671,7 +1671,7 @@ async def get_treasury_history(
     return treasury_txs[:limit]
 
 @api_router.delete("/treasury/{account_id}")
-async def delete_treasury_account(account_id: str, user: dict = Depends(require_admin)):
+async def delete_treasury_account(account_id: str, user: dict = Depends(require_permission(Modules.TREASURY, Actions.DELETE))):
     result = await db.treasury_accounts.delete_one({"account_id": account_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Treasury account not found")
@@ -1686,7 +1686,7 @@ class TreasuryTransferRequest(BaseModel):
     notes: Optional[str] = None
 
 @api_router.post("/treasury/transfer")
-async def inter_treasury_transfer(transfer: TreasuryTransferRequest, user: dict = Depends(require_accountant_or_admin)):
+async def inter_treasury_transfer(transfer: TreasuryTransferRequest, user: dict = Depends(require_permission(Modules.TREASURY, Actions.CREATE))):
     """Transfer funds between treasury accounts"""
     if transfer.source_account_id == transfer.destination_account_id:
         raise HTTPException(status_code=400, detail="Source and destination accounts must be different")
@@ -1788,13 +1788,13 @@ async def inter_treasury_transfer(transfer: TreasuryTransferRequest, user: dict 
 # ============== LP (LIQUIDITY PROVIDER) ROUTES ==============
 
 @api_router.get("/lp")
-async def get_lp_accounts(user: dict = Depends(get_current_user)):
+async def get_lp_accounts(user: dict = Depends(require_permission(Modules.LP_MANAGEMENT, Actions.VIEW))):
     """Get all LP accounts"""
     accounts = await db.lp_accounts.find({}, {"_id": 0}).to_list(1000)
     return accounts
 
 @api_router.get("/lp/dashboard")
-async def get_lp_dashboard(user: dict = Depends(get_current_user)):
+async def get_lp_dashboard(user: dict = Depends(require_permission(Modules.LP_MANAGEMENT, Actions.VIEW))):
     """Get LP dashboard with summary statistics"""
     accounts = await db.lp_accounts.find({}, {"_id": 0}).to_list(1000)
     
@@ -1817,7 +1817,7 @@ async def get_lp_dashboard(user: dict = Depends(get_current_user)):
     }
 
 @api_router.get("/lp/{lp_id}")
-async def get_lp_account(lp_id: str, user: dict = Depends(get_current_user)):
+async def get_lp_account(lp_id: str, user: dict = Depends(require_permission(Modules.LP_MANAGEMENT, Actions.VIEW))):
     """Get a specific LP account"""
     account = await db.lp_accounts.find_one({"lp_id": lp_id}, {"_id": 0})
     if not account:
@@ -1825,7 +1825,7 @@ async def get_lp_account(lp_id: str, user: dict = Depends(get_current_user)):
     return account
 
 @api_router.post("/lp")
-async def create_lp_account(lp_data: LPAccountCreate, user: dict = Depends(require_accountant_or_admin)):
+async def create_lp_account(lp_data: LPAccountCreate, user: dict = Depends(require_permission(Modules.LP_MANAGEMENT, Actions.CREATE))):
     """Create a new LP account"""
     lp_id = f"lp_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
@@ -1856,7 +1856,7 @@ async def create_lp_account(lp_data: LPAccountCreate, user: dict = Depends(requi
     return await db.lp_accounts.find_one({"lp_id": lp_id}, {"_id": 0})
 
 @api_router.put("/lp/{lp_id}")
-async def update_lp_account(lp_id: str, lp_data: LPAccountUpdate, user: dict = Depends(require_accountant_or_admin)):
+async def update_lp_account(lp_id: str, lp_data: LPAccountUpdate, user: dict = Depends(require_permission(Modules.LP_MANAGEMENT, Actions.EDIT))):
     """Update an LP account"""
     account = await db.lp_accounts.find_one({"lp_id": lp_id}, {"_id": 0})
     if not account:
@@ -1869,7 +1869,7 @@ async def update_lp_account(lp_id: str, lp_data: LPAccountUpdate, user: dict = D
     return await db.lp_accounts.find_one({"lp_id": lp_id}, {"_id": 0})
 
 @api_router.get("/lp/{lp_id}/transactions")
-async def get_lp_transactions(lp_id: str, user: dict = Depends(get_current_user), limit: int = 100):
+async def get_lp_transactions(lp_id: str, user: dict = Depends(require_permission(Modules.LP_MANAGEMENT, Actions.VIEW)), limit: int = 100):
     """Get transactions for a specific LP account"""
     account = await db.lp_accounts.find_one({"lp_id": lp_id}, {"_id": 0})
     if not account:
@@ -1882,7 +1882,7 @@ async def get_lp_transactions(lp_id: str, user: dict = Depends(get_current_user)
     return transactions
 
 @api_router.post("/lp/{lp_id}/deposit")
-async def create_lp_deposit(lp_id: str, tx_data: LPTransactionCreate, user: dict = Depends(require_accountant_or_admin)):
+async def create_lp_deposit(lp_id: str, tx_data: LPTransactionCreate, user: dict = Depends(require_permission(Modules.LP_MANAGEMENT, Actions.CREATE))):
     """Create a deposit to LP (sending funds TO the LP)"""
     account = await db.lp_accounts.find_one({"lp_id": lp_id}, {"_id": 0})
     if not account:
@@ -1970,7 +1970,7 @@ async def create_lp_deposit(lp_id: str, tx_data: LPTransactionCreate, user: dict
     return tx_doc
 
 @api_router.post("/lp/{lp_id}/withdraw")
-async def create_lp_withdrawal(lp_id: str, tx_data: LPTransactionCreate, user: dict = Depends(require_accountant_or_admin)):
+async def create_lp_withdrawal(lp_id: str, tx_data: LPTransactionCreate, user: dict = Depends(require_permission(Modules.LP_MANAGEMENT, Actions.CREATE))):
     """Create a withdrawal from LP (receiving funds FROM the LP)"""
     account = await db.lp_accounts.find_one({"lp_id": lp_id}, {"_id": 0})
     if not account:
@@ -2058,7 +2058,7 @@ async def create_lp_withdrawal(lp_id: str, tx_data: LPTransactionCreate, user: d
     return tx_doc
 
 @api_router.get("/lp/export/csv")
-async def export_lp_csv(user: dict = Depends(get_current_user)):
+async def export_lp_csv(user: dict = Depends(require_permission(Modules.LP_MANAGEMENT, Actions.EXPORT))):
     """Export LP accounts and transactions to CSV"""
     import csv
     import io
@@ -2099,7 +2099,7 @@ async def get_dealing_pnl_records(
     limit: int = 30,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.LP_MANAGEMENT, Actions.VIEW))
 ):
     """Get all dealing P&L records with calculated values"""
     query = {}
@@ -2187,7 +2187,7 @@ async def get_dealing_pnl_records(
 @api_router.get("/dealing-pnl/summary")
 async def get_dealing_pnl_summary(
     days: int = 30,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.LP_MANAGEMENT, Actions.VIEW))
 ):
     """Get summary statistics for dealing P&L"""
     from datetime import timedelta
@@ -2267,7 +2267,7 @@ async def get_dealing_pnl_summary(
 
 
 @api_router.post("/dealing-pnl")
-async def create_dealing_pnl(data: DealingPnLCreate, user: dict = Depends(require_accountant_or_admin)):
+async def create_dealing_pnl(data: DealingPnLCreate, user: dict = Depends(require_permission(Modules.LP_MANAGEMENT, Actions.CREATE))):
     """Create or update a dealing P&L record for a specific date"""
     now = datetime.now(timezone.utc)
     
@@ -2319,7 +2319,7 @@ async def create_dealing_pnl(data: DealingPnLCreate, user: dict = Depends(requir
 
 
 @api_router.get("/dealing-pnl/{date}")
-async def get_dealing_pnl_by_date(date: str, user: dict = Depends(get_current_user)):
+async def get_dealing_pnl_by_date(date: str, user: dict = Depends(require_permission(Modules.LP_MANAGEMENT, Actions.VIEW))):
     """Get dealing P&L record for a specific date"""
     record = await db.dealing_pnl.find_one({"date": date}, {"_id": 0})
     if not record:
@@ -2328,7 +2328,7 @@ async def get_dealing_pnl_by_date(date: str, user: dict = Depends(get_current_us
 
 
 @api_router.delete("/dealing-pnl/{date}")
-async def delete_dealing_pnl(date: str, user: dict = Depends(require_admin)):
+async def delete_dealing_pnl(date: str, user: dict = Depends(require_permission(Modules.LP_MANAGEMENT, Actions.DELETE))):
     """Delete a dealing P&L record"""
     result = await db.dealing_pnl.delete_one({"date": date})
     if result.deleted_count == 0:
@@ -2337,7 +2337,7 @@ async def delete_dealing_pnl(date: str, user: dict = Depends(require_admin)):
 
 
 @api_router.post("/dealing-pnl/{date}/send-email")
-async def send_dealing_pnl_email(date: str, user: dict = Depends(require_accountant_or_admin)):
+async def send_dealing_pnl_email(date: str, user: dict = Depends(require_permission(Modules.LP_MANAGEMENT, Actions.EXPORT))):
     """Send Dealing P&L email notification for a specific date"""
     import smtplib
     from email.mime.text import MIMEText
@@ -2524,7 +2524,7 @@ async def send_dealing_pnl_email(date: str, user: dict = Depends(require_account
 # ============== PSP ROUTES ==============
 
 @api_router.get("/psp")
-async def get_psps(user: dict = Depends(get_current_user)):
+async def get_psps(user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
     psps = await db.psps.find({}, {"_id": 0}).to_list(1000)
     
     # Batch fetch treasury accounts to avoid N+1 queries
@@ -2542,14 +2542,14 @@ async def get_psps(user: dict = Depends(get_current_user)):
     return psps
 
 @api_router.get("/psp/{psp_id}")
-async def get_psp(psp_id: str, user: dict = Depends(get_current_user)):
+async def get_psp(psp_id: str, user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
     psp = await db.psps.find_one({"psp_id": psp_id}, {"_id": 0})
     if not psp:
         raise HTTPException(status_code=404, detail="PSP not found")
     return psp
 
 @api_router.post("/psp")
-async def create_psp(psp_data: PSPCreate, user: dict = Depends(require_accountant_or_admin)):
+async def create_psp(psp_data: PSPCreate, user: dict = Depends(require_permission(Modules.PSP, Actions.CREATE))):
     # Verify settlement destination exists
     dest = await db.treasury_accounts.find_one({"account_id": psp_data.settlement_destination_id}, {"_id": 0})
     if not dest:
@@ -2573,7 +2573,7 @@ async def create_psp(psp_data: PSPCreate, user: dict = Depends(require_accountan
     return await db.psps.find_one({"psp_id": psp_id}, {"_id": 0})
 
 @api_router.put("/psp/{psp_id}")
-async def update_psp(psp_id: str, update_data: PSPUpdate, user: dict = Depends(require_accountant_or_admin)):
+async def update_psp(psp_id: str, update_data: PSPUpdate, user: dict = Depends(require_permission(Modules.PSP, Actions.EDIT))):
     updates = {k: v for k, v in update_data.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No updates provided")
@@ -2593,7 +2593,7 @@ async def update_psp(psp_id: str, update_data: PSPUpdate, user: dict = Depends(r
     return await db.psps.find_one({"psp_id": psp_id}, {"_id": 0})
 
 @api_router.delete("/psp/{psp_id}")
-async def delete_psp(psp_id: str, user: dict = Depends(require_admin)):
+async def delete_psp(psp_id: str, user: dict = Depends(require_permission(Modules.PSP, Actions.DELETE))):
     result = await db.psps.delete_one({"psp_id": psp_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="PSP not found")
@@ -2601,13 +2601,13 @@ async def delete_psp(psp_id: str, user: dict = Depends(require_admin)):
 
 # PSP Settlements
 @api_router.get("/psp/{psp_id}/settlements")
-async def get_psp_settlements(psp_id: str, user: dict = Depends(get_current_user)):
+async def get_psp_settlements(psp_id: str, user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
     settlements = await db.psp_settlements.find({"psp_id": psp_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return settlements
 
 @api_router.get("/psp-settlements")
 async def get_all_settlements(
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW)),
     status: Optional[str] = None,
     limit: int = 100
 ):
@@ -2618,7 +2618,7 @@ async def get_all_settlements(
     return settlements
 
 @api_router.post("/psp/{psp_id}/settle")
-async def create_settlement(psp_id: str, user: dict = Depends(require_accountant_or_admin)):
+async def create_settlement(psp_id: str, user: dict = Depends(require_permission(Modules.PSP, Actions.CREATE))):
     """Create a settlement for pending PSP transactions"""
     psp = await db.psps.find_one({"psp_id": psp_id}, {"_id": 0})
     if not psp:
@@ -2708,7 +2708,7 @@ async def create_settlement(psp_id: str, user: dict = Depends(require_accountant
     return await db.psp_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
 
 @api_router.post("/psp-settlements/{settlement_id}/complete")
-async def complete_settlement(settlement_id: str, user: dict = Depends(require_accountant_or_admin)):
+async def complete_settlement(settlement_id: str, user: dict = Depends(require_permission(Modules.PSP, Actions.APPROVE))):
     """Mark a settlement as completed and transfer funds to treasury"""
     settlement = await db.psp_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
     if not settlement:
@@ -2766,7 +2766,7 @@ async def complete_settlement(settlement_id: str, user: dict = Depends(require_a
 
 # Get pending PSP transactions (not yet settled)
 @api_router.get("/psp/{psp_id}/pending-transactions")
-async def get_psp_pending_transactions(psp_id: str, user: dict = Depends(get_current_user)):
+async def get_psp_pending_transactions(psp_id: str, user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
     """Get all pending/approved transactions for a PSP that haven't been settled"""
     transactions = await db.transactions.find({
         "psp_id": psp_id,
@@ -2778,7 +2778,7 @@ async def get_psp_pending_transactions(psp_id: str, user: dict = Depends(get_cur
 
 # Get PSP dashboard summary
 @api_router.get("/psp-summary")
-async def get_psp_summary(user: dict = Depends(get_current_user)):
+async def get_psp_summary(user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
     """Get summary of all PSPs with pending settlements"""
     psps = await db.psps.find({"status": PSPStatus.ACTIVE}, {"_id": 0}).to_list(1000)
     now = datetime.now(timezone.utc)
@@ -2865,7 +2865,7 @@ class PSPTransactionCharges(BaseModel):
 async def update_psp_transaction_charges(
     transaction_id: str,
     charges: PSPTransactionCharges,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.PSP, Actions.EDIT))
 ):
     """Record reserve fund and extra charges on a PSP transaction"""
     tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
@@ -2908,7 +2908,7 @@ async def update_psp_transaction_charges(
 @api_router.post("/psp/transactions/{transaction_id}/mark-awaiting")
 async def mark_psp_transaction_awaiting(
     transaction_id: str, 
-    user: dict = Depends(require_admin)
+    user: dict = Depends(require_permission(Modules.PSP, Actions.EDIT))
 ):
     """Mark a PSP transaction as awaiting settlement (in holding period)"""
     tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
@@ -2949,7 +2949,7 @@ async def record_psp_payment(
     transaction_id: str, 
     destination_account_id: Optional[str] = None,
     actual_amount_received: Optional[float] = None,
-    user: dict = Depends(require_admin)
+    user: dict = Depends(require_permission(Modules.PSP, Actions.EDIT))
 ):
     """Record actual payment received from PSP and transfer to treasury"""
     tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
@@ -3092,7 +3092,7 @@ async def record_psp_payment(
 async def settle_psp_transaction(
     transaction_id: str, 
     destination_account_id: Optional[str] = None,
-    user: dict = Depends(require_accountant_or_admin)
+    user: dict = Depends(require_permission(Modules.PSP, Actions.APPROVE))
 ):
     """Mark a single PSP transaction as settled and transfer to treasury (immediate settlement)"""
     tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
@@ -3192,7 +3192,7 @@ async def settle_psp_transaction(
 
 # Migration endpoint: Backfill existing settled PSP transactions into psp_settlements
 @api_router.post("/psp/backfill-settlements")
-async def backfill_psp_settlements(user: dict = Depends(require_admin)):
+async def backfill_psp_settlements(user: dict = Depends(require_permission(Modules.PSP, Actions.CREATE))):
     """Backfill historical settled PSP transactions into psp_settlements collection."""
     # Find all settled PSP transactions that don't have a settlement_id
     settled_txs = await db.transactions.find({
@@ -3267,7 +3267,7 @@ async def backfill_psp_settlements(user: dict = Depends(require_admin)):
 
 # Migration endpoint: Fix treasury transaction dates to match linked income/expense entries
 @api_router.post("/treasury/sync-ie-dates")
-async def sync_treasury_ie_dates(user: dict = Depends(require_admin)):
+async def sync_treasury_ie_dates(user: dict = Depends(require_permission(Modules.TREASURY, Actions.EDIT))):
     """Fix treasury transaction dates to match their linked income/expense entry dates."""
     # Find all treasury transactions with income_expense_id
     txs = await db.treasury_transactions.find({"income_expense_id": {"$exists": True}}, {"_id": 0}).to_list(10000)
@@ -3302,7 +3302,7 @@ async def sync_treasury_ie_dates(user: dict = Depends(require_admin)):
 
 # Migration endpoint: Assign role_ids to existing users
 @api_router.post("/users/assign-role-ids")
-async def assign_role_ids(user: dict = Depends(require_admin)):
+async def assign_role_ids(user: dict = Depends(require_permission(Modules.USERS, Actions.EDIT))):
     """Assign role_ids to existing users based on their role field."""
     # Role mapping from old role names to new role_ids
     role_mapping = {
@@ -3345,7 +3345,7 @@ async def assign_role_ids(user: dict = Depends(require_admin)):
 # ============== RESERVE FUND MANAGEMENT ==============
 
 @api_router.get("/psps/{psp_id}/reserve-funds")
-async def get_psp_reserve_funds(psp_id: str, user: dict = Depends(get_current_user)):
+async def get_psp_reserve_funds(psp_id: str, user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
     """Get reserve fund ledger for a PSP — all transactions with reserve fund amounts."""
     psp = await db.psps.find_one({"psp_id": psp_id}, {"_id": 0})
     if not psp:
@@ -3439,7 +3439,7 @@ async def get_psp_reserve_funds(psp_id: str, user: dict = Depends(get_current_us
     }
 
 @api_router.post("/psps/reserve-funds/{transaction_id}/release")
-async def release_reserve_fund(transaction_id: str, user: dict = Depends(require_admin)):
+async def release_reserve_fund(transaction_id: str, user: dict = Depends(require_permission(Modules.PSP, Actions.APPROVE))):
     """Mark a reserve fund as released back."""
     tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
     if not tx:
@@ -3503,7 +3503,7 @@ async def release_reserve_fund(transaction_id: str, user: dict = Depends(require
     return {"message": "Reserve fund released", "amount": rf_amount, "transaction_id": transaction_id}
 
 @api_router.post("/psps/reserve-funds/bulk-release")
-async def bulk_release_reserve_funds(request: Request, user: dict = Depends(require_admin)):
+async def bulk_release_reserve_funds(request: Request, user: dict = Depends(require_permission(Modules.PSP, Actions.APPROVE))):
     """Bulk release multiple reserve funds."""
     data = await request.json()
     tx_ids = data.get("transaction_ids", [])
@@ -3575,7 +3575,7 @@ async def bulk_release_reserve_funds(request: Request, user: dict = Depends(requ
     return {"message": f"Released {released_count} reserve funds", "total_released": round(total_released, 2), "count": released_count}
 
 @api_router.get("/psps/reserve-funds/global-summary")
-async def get_global_reserve_fund_summary(user: dict = Depends(get_current_user)):
+async def get_global_reserve_fund_summary(user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
     """Get global reserve fund summary across all PSPs."""
     psps = await db.psps.find({"status": PSPStatus.ACTIVE}, {"_id": 0, "psp_id": 1, "psp_name": 1, "reserve_fund_rate": 1, "chargeback_rate": 1, "holding_days": 1}).to_list(1000)
     now = datetime.now(timezone.utc)
@@ -3624,7 +3624,7 @@ async def get_global_reserve_fund_summary(user: dict = Depends(get_current_user)
 # ============== VENDOR ROUTES ==============
 
 @api_router.get("/vendors")
-async def get_vendors(user: dict = Depends(get_current_user)):
+async def get_vendors(user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.VIEW))):
     vendors = await db.vendors.find({}, {"_id": 0}).to_list(1000)
     
     # Batch fetch treasury accounts to avoid N+1 queries
@@ -3740,7 +3740,7 @@ async def get_vendors(user: dict = Depends(get_current_user)):
     return vendors
 
 @api_router.get("/vendors/{vendor_id}")
-async def get_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
+async def get_vendor(vendor_id: str, user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.VIEW))):
     vendor = await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
@@ -3891,7 +3891,7 @@ async def get_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
     return vendor
 
 @api_router.post("/vendors")
-async def create_vendor(vendor_data: VendorCreate, request: Request, user: dict = Depends(require_accountant_or_admin)):
+async def create_vendor(vendor_data: VendorCreate, request: Request, user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.CREATE))):
     # Check if email already exists
     existing = await db.users.find_one({"email": vendor_data.email}, {"_id": 0})
     if existing:
@@ -3940,7 +3940,7 @@ async def create_vendor(vendor_data: VendorCreate, request: Request, user: dict 
     return await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
 
 @api_router.put("/vendors/{vendor_id}")
-async def update_vendor(vendor_id: str, update_data: VendorUpdate, user: dict = Depends(require_accountant_or_admin)):
+async def update_vendor(vendor_id: str, update_data: VendorUpdate, user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.EDIT))):
     updates = {k: v for k, v in update_data.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No updates provided")
@@ -3960,7 +3960,7 @@ async def update_vendor(vendor_id: str, update_data: VendorUpdate, user: dict = 
     return await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
 
 @api_router.delete("/vendors/{vendor_id}")
-async def delete_vendor(vendor_id: str, user: dict = Depends(require_accountant_or_admin)):
+async def delete_vendor(vendor_id: str, user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.DELETE))):
     vendor = await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
@@ -3978,7 +3978,7 @@ async def delete_vendor(vendor_id: str, user: dict = Depends(require_accountant_
 async def get_vendor_transactions(
     vendor_id: str, 
     status: Optional[str] = None,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.VIEW))
 ):
     # Vendors can only see their own transactions
     if user.get("role") == UserRole.VENDOR:
@@ -4341,12 +4341,12 @@ async def vendor_complete_withdrawal(
 
 # Vendor settlements
 @api_router.get("/vendors/{vendor_id}/settlements")
-async def get_vendor_settlements(vendor_id: str, user: dict = Depends(get_current_user)):
+async def get_vendor_settlements(vendor_id: str, user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.VIEW))):
     settlements = await db.vendor_settlements.find({"vendor_id": vendor_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return settlements
 
 @api_router.get("/settlements/{settlement_id}/statement")
-async def get_settlement_statement(settlement_id: str, user: dict = Depends(get_current_user)):
+async def get_settlement_statement(settlement_id: str, user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.VIEW))):
     """Get full settlement statement with underlying transactions."""
     settlement = await db.vendor_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
     if not settlement:
@@ -4384,7 +4384,7 @@ class VendorSettlementRequest(BaseModel):
 async def settle_vendor_balance(
     vendor_id: str, 
     settlement_request: VendorSettlementRequest,
-    user: dict = Depends(require_accountant_or_admin)
+    user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.CREATE))
 ):
     vendor = await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
     if not vendor:
@@ -4520,7 +4520,7 @@ async def settle_vendor_balance(
 
 # Get all pending settlements (for approval page)
 @api_router.get("/settlements/pending")
-async def get_pending_settlements(user: dict = Depends(require_accountant_or_admin)):
+async def get_pending_settlements(user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.VIEW))):
     """Get all pending vendor settlements awaiting approval"""
     settlements = await db.vendor_settlements.find(
         {"status": VendorSettlementStatus.PENDING}, 
@@ -4530,7 +4530,7 @@ async def get_pending_settlements(user: dict = Depends(require_accountant_or_adm
 
 # Approve vendor settlement
 @api_router.post("/settlements/{settlement_id}/approve")
-async def approve_settlement(settlement_id: str, user: dict = Depends(require_accountant_or_admin)):
+async def approve_settlement(settlement_id: str, user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.APPROVE))):
     """Approve a pending vendor settlement"""
     settlement = await db.vendor_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
     if not settlement:
@@ -4605,7 +4605,7 @@ async def approve_settlement(settlement_id: str, user: dict = Depends(require_ac
 
 # Reject vendor settlement
 @api_router.post("/settlements/{settlement_id}/reject")
-async def reject_settlement(settlement_id: str, reason: str = "", user: dict = Depends(require_accountant_or_admin)):
+async def reject_settlement(settlement_id: str, reason: str = "", user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.APPROVE))):
     """Reject a pending vendor settlement"""
     settlement = await db.vendor_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
     if not settlement:
@@ -4640,7 +4640,7 @@ async def reject_settlement(settlement_id: str, reason: str = "", user: dict = D
 
 @api_router.get("/transactions")
 async def get_transactions(
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.VIEW)),
     client_id: Optional[str] = None,
     transaction_type: Optional[str] = None,
     status: Optional[str] = None,
@@ -4669,7 +4669,7 @@ async def get_transactions(
     return transactions
 
 @api_router.get("/transactions/pending")
-async def get_pending_transactions(user: dict = Depends(require_accountant_or_admin)):
+async def get_pending_transactions(user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.VIEW))):
     """Get all pending transactions for accountant approval"""
     transactions = await db.transactions.find(
         {"status": TransactionStatus.PENDING}, 
@@ -4678,7 +4678,7 @@ async def get_pending_transactions(user: dict = Depends(require_accountant_or_ad
     return transactions
 
 @api_router.get("/transactions/{transaction_id}")
-async def get_transaction(transaction_id: str, user: dict = Depends(get_current_user)):
+async def get_transaction(transaction_id: str, user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.VIEW))):
     transaction = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
@@ -4713,7 +4713,7 @@ async def create_transaction(
     collecting_person_name: Optional[str] = Form(None),
     collecting_person_number: Optional[str] = Form(None),
     proof_image: Optional[UploadFile] = File(None),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.CREATE))
 ):
     now = datetime.now(timezone.utc)
     
@@ -4965,7 +4965,7 @@ async def create_transaction(
     return result
 
 @api_router.put("/transactions/{transaction_id}")
-async def update_transaction(transaction_id: str, update_data: TransactionUpdate, user: dict = Depends(get_current_user)):
+async def update_transaction(transaction_id: str, update_data: TransactionUpdate, user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.EDIT))):
     updates = {k: v for k, v in update_data.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No updates provided")
@@ -4999,7 +4999,7 @@ async def approve_transaction(
     transaction_id: str, 
     source_account_id: Optional[str] = None,
     require_proof: bool = True,
-    user: dict = Depends(require_accountant_or_admin)
+    user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.APPROVE))
 ):
     """Approve a pending transaction"""
     tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
@@ -5140,7 +5140,7 @@ async def approve_transaction(
 async def upload_transaction_proof(
     transaction_id: str,
     proof_image: UploadFile = File(...),
-    user: dict = Depends(require_accountant_or_admin)
+    user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.EDIT))
 ):
     """Upload proof of payment for deposit and withdrawal transactions"""
     tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
@@ -5168,7 +5168,7 @@ async def upload_transaction_proof(
     return {"message": "Proof uploaded successfully", "transaction_id": transaction_id}
 
 @api_router.post("/transactions/{transaction_id}/reject")
-async def reject_transaction(transaction_id: str, reason: str = "", user: dict = Depends(require_accountant_or_admin)):
+async def reject_transaction(transaction_id: str, reason: str = "", user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.APPROVE))):
     """Reject a pending transaction"""
     tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
     if not tx:
@@ -5194,7 +5194,7 @@ async def reject_transaction(transaction_id: str, reason: str = "", user: dict =
 # ============== REPORTS/ANALYTICS ROUTES ==============
 
 @api_router.get("/reports/dashboard")
-async def get_dashboard_stats(user: dict = Depends(get_current_user)):
+async def get_dashboard_stats(user: dict = Depends(require_permission(Modules.DASHBOARD, Actions.VIEW))):
     # Get client stats
     total_clients = await db.clients.count_documents({})
     approved_clients = await db.clients.count_documents({"kyc_status": ClientStatus.APPROVED})
@@ -5249,7 +5249,7 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
 
 @api_router.get("/reports/transactions-summary")
 async def get_transactions_summary(
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_permission(Modules.REPORTS, Actions.VIEW)),
     days: int = 30
 ):
     from_date = datetime.now(timezone.utc) - timedelta(days=days)
@@ -5286,7 +5286,7 @@ async def get_transactions_summary(
     return list(summary.values())
 
 @api_router.get("/reports/client-analytics")
-async def get_client_analytics(user: dict = Depends(get_current_user)):
+async def get_client_analytics(user: dict = Depends(require_permission(Modules.REPORTS, Actions.VIEW))):
     # KYC status distribution
     kyc_pipeline = [
         {"$group": {"_id": "$kyc_status", "count": {"$sum": 1}}}
@@ -5308,7 +5308,7 @@ async def get_client_analytics(user: dict = Depends(get_current_user)):
     }
 
 @api_router.get("/reports/recent-activity")
-async def get_recent_activity(user: dict = Depends(get_current_user), limit: int = 10):
+async def get_recent_activity(user: dict = Depends(require_permission(Modules.REPORTS, Actions.VIEW)), limit: int = 10):
     transactions = await db.transactions.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
     clients = await db.clients.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
     
@@ -5532,7 +5532,7 @@ async def get_income_expenses(
     treasury_account_id: Optional[str] = None,
     vendor_id: Optional[str] = None,
     limit: int = 100,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.VIEW))
 ):
     """Get all income and expense entries with optional filters"""
     query = {}
@@ -5572,7 +5572,7 @@ async def get_income_expenses(
 async def get_income_expense_summary(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.VIEW))
 ):
     """Get income vs expense summary report"""
     query = {}
@@ -5616,7 +5616,7 @@ async def get_income_expense_summary(
 @api_router.get("/income-expenses/reports/monthly")
 async def get_monthly_report(
     year: Optional[int] = None,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.VIEW))
 ):
     """Get monthly P&L report"""
     if not year:
@@ -5658,7 +5658,7 @@ async def get_monthly_report(
     return result
 
 @api_router.get("/income-expenses/categories")
-async def get_categories(user: dict = Depends(get_current_user)):
+async def get_categories(user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.VIEW))):
     """Get available categories and custom categories"""
     income_categories = [
         {"value": "commission", "label": "Commission Income"},
@@ -5689,7 +5689,7 @@ async def get_categories(user: dict = Depends(get_current_user)):
     }
 
 @api_router.get("/income-expenses/export-template")
-async def get_ie_import_template_route(user: dict = Depends(get_current_user)):
+async def get_ie_import_template_route(user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.EXPORT))):
     """Download Excel template for bulk importing income/expense entries"""
     import openpyxl
     from io import BytesIO
@@ -5734,7 +5734,7 @@ async def get_ie_import_template_route(user: dict = Depends(get_current_user)):
 
 @api_router.post("/income-expenses/bulk-import")
 async def bulk_import_ie_entries_route(
-    user: dict = Depends(require_accountant_or_admin),
+    user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.CREATE)),
     file: UploadFile = File(...),
     treasury_account_id: str = Form(...)
 ):
@@ -5862,7 +5862,7 @@ async def bulk_import_ie_entries_route(
     }
 
 @api_router.get("/income-expenses/{entry_id}")
-async def get_income_expense(entry_id: str, user: dict = Depends(get_current_user)):
+async def get_income_expense(entry_id: str, user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.VIEW))):
     """Get a single income/expense entry"""
     entry = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
     if not entry:
@@ -5870,7 +5870,7 @@ async def get_income_expense(entry_id: str, user: dict = Depends(get_current_use
     return entry
 
 @api_router.post("/income-expenses")
-async def create_income_expense(entry_data: IncomeExpenseCreate, request: Request, user: dict = Depends(get_current_user)):
+async def create_income_expense(entry_data: IncomeExpenseCreate, request: Request, user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.CREATE))):
     """Create a new income or expense entry, optionally linked to a vendor/supplier/client for approval"""
     if entry_data.amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")
@@ -6049,7 +6049,7 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, request: Reques
     return entry_doc
 
 @api_router.put("/income-expenses/{entry_id}")
-async def update_income_expense(entry_id: str, update_data: IncomeExpenseUpdate, user: dict = Depends(get_current_user)):
+async def update_income_expense(entry_id: str, update_data: IncomeExpenseUpdate, user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.EDIT))):
     """Update an income/expense entry (only description, reference, category - not amount)"""
     entry = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
     if not entry:
@@ -6071,7 +6071,7 @@ async def update_income_expense(entry_id: str, update_data: IncomeExpenseUpdate,
     return updated
 
 @api_router.delete("/income-expenses/{entry_id}")
-async def delete_income_expense(entry_id: str, request: Request, user: dict = Depends(require_admin)):
+async def delete_income_expense(entry_id: str, request: Request, user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.DELETE))):
     """Delete an income/expense entry and reverse treasury balance"""
     entry = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
     if not entry:
@@ -6112,7 +6112,7 @@ class ConvertToLoanRequest(BaseModel):
     notes: Optional[str] = None
 
 @api_router.get("/loans/borrowers")
-async def get_loan_borrowers(user: dict = Depends(get_current_user)):
+async def get_loan_borrowers(user: dict = Depends(require_permission(Modules.LOANS, Actions.VIEW))):
     """Get list of borrower companies (vendors) plus unique borrower names from existing loans"""
     # Get all vendor companies as potential borrowers
     vendors = await db.vendors.find({"status": "active"}, {"_id": 0, "vendor_id": 1, "vendor_name": 1, "email": 1}).to_list(length=1000)
@@ -6150,7 +6150,7 @@ async def get_loan_borrowers(user: dict = Depends(get_current_user)):
     return {"borrowers": sorted(borrowers, key=lambda x: x["name"])}
 
 @api_router.post("/income-expenses/{entry_id}/convert-to-loan")
-async def convert_expense_to_loan(entry_id: str, req: ConvertToLoanRequest, user: dict = Depends(get_current_user)):
+async def convert_expense_to_loan(entry_id: str, req: ConvertToLoanRequest, user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.EDIT))):
     """Convert an expense entry to a loan (marks expense as converted, creates loan)"""
     entry = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
     if not entry:
@@ -6359,7 +6359,7 @@ async def vendor_upload_ie_proof(entry_id: str, user: dict = Depends(require_ven
     return {"message": "Proof uploaded"}
 
 @api_router.post("/income-expenses/{entry_id}/upload-invoice")
-async def upload_ie_invoice(entry_id: str, user: dict = Depends(get_current_user), invoice_file: UploadFile = File(...)):
+async def upload_ie_invoice(entry_id: str, user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.EDIT)), invoice_file: UploadFile = File(...)):
     """Upload invoice/document to an income/expense entry"""
     entry = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
     if not entry:
@@ -6406,7 +6406,7 @@ async def get_vendor_ie_entries(user: dict = Depends(require_vendor)):
 async def get_vendor_suppliers(
     status: Optional[str] = None,
     search: Optional[str] = None,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.VIEW))
 ):
     """Get all vendor suppliers (service providers like rent, utilities)"""
     query = {}
@@ -6423,7 +6423,7 @@ async def get_vendor_suppliers(
     return suppliers
 
 @api_router.get("/vendor-suppliers/{supplier_id}")
-async def get_vendor_supplier(supplier_id: str, user: dict = Depends(get_current_user)):
+async def get_vendor_supplier(supplier_id: str, user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.VIEW))):
     """Get a specific vendor supplier"""
     supplier = await db.vendor_suppliers.find_one({"supplier_id": supplier_id}, {"_id": 0})
     if not supplier:
@@ -6431,7 +6431,7 @@ async def get_vendor_supplier(supplier_id: str, user: dict = Depends(get_current
     return supplier
 
 @api_router.post("/vendor-suppliers")
-async def create_vendor_supplier(data: VendorSupplierCreate, user: dict = Depends(get_current_user)):
+async def create_vendor_supplier(data: VendorSupplierCreate, user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.CREATE))):
     """Create a new vendor supplier (for services like rent, utilities)"""
     # Check for duplicate name
     existing = await db.vendor_suppliers.find_one({"name": {"$regex": f"^{data.name}$", "$options": "i"}})
@@ -6465,7 +6465,7 @@ async def create_vendor_supplier(data: VendorSupplierCreate, user: dict = Depend
     return supplier_doc
 
 @api_router.put("/vendor-suppliers/{supplier_id}")
-async def update_vendor_supplier(supplier_id: str, data: VendorSupplierUpdate, user: dict = Depends(get_current_user)):
+async def update_vendor_supplier(supplier_id: str, data: VendorSupplierUpdate, user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.EDIT))):
     """Update a vendor supplier"""
     supplier = await db.vendor_suppliers.find_one({"supplier_id": supplier_id})
     if not supplier:
@@ -6480,7 +6480,7 @@ async def update_vendor_supplier(supplier_id: str, data: VendorSupplierUpdate, u
     return updated
 
 @api_router.delete("/vendor-suppliers/{supplier_id}")
-async def delete_vendor_supplier(supplier_id: str, user: dict = Depends(get_current_user)):
+async def delete_vendor_supplier(supplier_id: str, user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.DELETE))):
     """Delete a vendor supplier"""
     # Check if there are linked income/expenses
     linked_entries = await db.income_expenses.count_documents({"vendor_supplier_id": supplier_id})
@@ -6503,7 +6503,7 @@ async def delete_vendor_supplier(supplier_id: str, user: dict = Depends(get_curr
 async def get_ie_categories(
     category_type: Optional[str] = None,
     active_only: bool = True,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.VIEW))
 ):
     """Get all income/expense account categories"""
     query = {}
@@ -6516,7 +6516,7 @@ async def get_ie_categories(
     return categories
 
 @api_router.get("/ie-categories/{category_id}")
-async def get_ie_category(category_id: str, user: dict = Depends(get_current_user)):
+async def get_ie_category(category_id: str, user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.VIEW))):
     """Get a specific category"""
     category = await db.ie_categories.find_one({"category_id": category_id}, {"_id": 0})
     if not category:
@@ -6524,7 +6524,7 @@ async def get_ie_category(category_id: str, user: dict = Depends(get_current_use
     return category
 
 @api_router.post("/ie-categories")
-async def create_ie_category(data: IECategoryCreate, user: dict = Depends(get_current_user)):
+async def create_ie_category(data: IECategoryCreate, user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.CREATE))):
     """Create a new income/expense category"""
     # Check for duplicate name within same type
     existing = await db.ie_categories.find_one({
@@ -6554,7 +6554,7 @@ async def create_ie_category(data: IECategoryCreate, user: dict = Depends(get_cu
     return category_doc
 
 @api_router.put("/ie-categories/{category_id}")
-async def update_ie_category(category_id: str, data: IECategoryUpdate, user: dict = Depends(get_current_user)):
+async def update_ie_category(category_id: str, data: IECategoryUpdate, user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.EDIT))):
     """Update a category"""
     category = await db.ie_categories.find_one({"category_id": category_id})
     if not category:
@@ -6569,7 +6569,7 @@ async def update_ie_category(category_id: str, data: IECategoryUpdate, user: dic
     return updated
 
 @api_router.delete("/ie-categories/{category_id}")
-async def delete_ie_category(category_id: str, user: dict = Depends(get_current_user)):
+async def delete_ie_category(category_id: str, user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.DELETE))):
     """Delete a category (soft delete if linked to entries)"""
     # Check if there are linked income/expenses
     linked_entries = await db.income_expenses.count_documents({"ie_category_id": category_id})
@@ -6592,7 +6592,7 @@ async def delete_ie_category(category_id: str, user: dict = Depends(get_current_
 # === Static loan routes (MUST come before /{loan_id} route) ===
 
 @api_router.get("/loans/dashboard")
-async def get_loan_dashboard(user: dict = Depends(get_current_user)):
+async def get_loan_dashboard(user: dict = Depends(require_permission(Modules.LOANS, Actions.VIEW))):
     """Get comprehensive loan dashboard data"""
     loans = await db.loans.find({}, {"_id": 0}).to_list(10000)
     now = datetime.now(timezone.utc)
@@ -6734,7 +6734,7 @@ async def get_loan_transactions(
     loan_id: Optional[str] = None,
     transaction_type: Optional[str] = None,
     limit: int = 100,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.LOANS, Actions.VIEW))
 ):
     """Get loan transactions log"""
     query = {}
@@ -6747,7 +6747,7 @@ async def get_loan_transactions(
     return transactions
 
 @api_router.get("/loans/vendors")
-async def get_vendor_borrowers(user: dict = Depends(get_current_user)):
+async def get_vendor_borrowers(user: dict = Depends(require_permission(Modules.LOANS, Actions.VIEW))):
     """Get all vendors that can be borrowers with their loan stats"""
     vendors = await db.vendors.find({}, {"_id": 0}).to_list(1000)
     
@@ -6797,7 +6797,7 @@ async def get_loans(
     status: Optional[str] = None,
     borrower: Optional[str] = None,
     limit: int = 100,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.LOANS, Actions.VIEW))
 ):
     """Get all loans with optional filters"""
     query = {}
@@ -6843,7 +6843,7 @@ async def get_loans(
     return loans
 
 @api_router.get("/loans/{loan_id}")
-async def get_loan(loan_id: str, user: dict = Depends(get_current_user)):
+async def get_loan(loan_id: str, user: dict = Depends(require_permission(Modules.LOANS, Actions.VIEW))):
     """Get a single loan with repayment history"""
     loan = await db.loans.find_one({"loan_id": loan_id}, {"_id": 0})
     if not loan:
@@ -6867,7 +6867,7 @@ async def get_loan(loan_id: str, user: dict = Depends(get_current_user)):
     return loan
 
 @api_router.post("/loans")
-async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depends(get_current_user)):
+async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depends(require_permission(Modules.LOANS, Actions.CREATE))):
     """Create a new loan and deduct from treasury"""
     # Verify treasury account exists and has sufficient balance
     treasury = await db.treasury_accounts.find_one({"account_id": loan_data.treasury_account_id}, {"_id": 0})
@@ -6983,7 +6983,7 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
     return loan_doc
 
 @api_router.put("/loans/{loan_id}")
-async def update_loan(loan_id: str, update_data: LoanUpdate, user: dict = Depends(get_current_user)):
+async def update_loan(loan_id: str, update_data: LoanUpdate, user: dict = Depends(require_permission(Modules.LOANS, Actions.EDIT))):
     """Update loan details (not amount)"""
     loan = await db.loans.find_one({"loan_id": loan_id}, {"_id": 0})
     if not loan:
@@ -7001,7 +7001,7 @@ async def update_loan(loan_id: str, update_data: LoanUpdate, user: dict = Depend
     return updated
 
 @api_router.post("/loans/{loan_id}/repayment")
-async def record_loan_repayment(loan_id: str, repayment: LoanRepaymentCreate, user: dict = Depends(get_current_user)):
+async def record_loan_repayment(loan_id: str, repayment: LoanRepaymentCreate, user: dict = Depends(require_permission(Modules.LOANS, Actions.CREATE))):
     """Record a loan repayment"""
     loan = await db.loans.find_one({"loan_id": loan_id}, {"_id": 0})
     if not loan:
@@ -7136,7 +7136,7 @@ async def record_loan_repayment(loan_id: str, repayment: LoanRepaymentCreate, us
     return repayment_doc
 
 @api_router.get("/loans/{loan_id}/repayments")
-async def get_loan_repayments(loan_id: str, user: dict = Depends(get_current_user)):
+async def get_loan_repayments(loan_id: str, user: dict = Depends(require_permission(Modules.LOANS, Actions.VIEW))):
     """Get repayment history for a loan"""
     loan = await db.loans.find_one({"loan_id": loan_id}, {"_id": 0})
     if not loan:
@@ -7152,7 +7152,7 @@ async def get_loan_repayments(loan_id: str, user: dict = Depends(get_current_use
     return repayments
 
 @api_router.delete("/loans/{loan_id}")
-async def delete_loan(loan_id: str, user: dict = Depends(require_admin)):
+async def delete_loan(loan_id: str, user: dict = Depends(require_permission(Modules.LOANS, Actions.DELETE))):
     """Delete a loan (admin only) - reverses treasury if no repayments"""
     loan = await db.loans.find_one({"loan_id": loan_id}, {"_id": 0})
     if not loan:
@@ -7180,7 +7180,7 @@ async def delete_loan(loan_id: str, user: dict = Depends(require_admin)):
     return {"message": "Loan deleted successfully"}
 
 @api_router.get("/loans/reports/summary")
-async def get_loans_summary(user: dict = Depends(get_current_user)):
+async def get_loans_summary(user: dict = Depends(require_permission(Modules.LOANS, Actions.VIEW))):
     """Get loan portfolio summary"""
     loans = await db.loans.find({}, {"_id": 0}).to_list(10000)
     
@@ -7259,7 +7259,7 @@ async def get_loans_summary(user: dict = Depends(get_current_user)):
     }
 
 @api_router.get("/loans/export/csv")
-async def export_loans_csv(user: dict = Depends(get_current_user)):
+async def export_loans_csv(user: dict = Depends(require_permission(Modules.LOANS, Actions.EXPORT))):
     """Export all loans as CSV"""
     from io import StringIO
     import csv
@@ -7379,7 +7379,7 @@ def get_debt_status(debt: dict) -> str:
 
 @api_router.get("/debts")
 async def get_debts(
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_permission(Modules.DEBTS, Actions.VIEW)),
     debt_type: Optional[str] = None,
     status: Optional[str] = None,
     party_type: Optional[str] = None
@@ -7433,7 +7433,7 @@ async def get_debts(
     return debts
 
 @api_router.get("/debts/{debt_id}")
-async def get_debt(debt_id: str, user: dict = Depends(get_current_user)):
+async def get_debt(debt_id: str, user: dict = Depends(require_permission(Modules.DEBTS, Actions.VIEW))):
     """Get single debt with full details and payment history"""
     debt = await db.debts.find_one({"debt_id": debt_id}, {"_id": 0})
     if not debt:
@@ -7477,7 +7477,7 @@ async def get_debt(debt_id: str, user: dict = Depends(get_current_user)):
     return debt
 
 @api_router.post("/debts")
-async def create_debt(debt_data: DebtCreate, user: dict = Depends(get_current_user)):
+async def create_debt(debt_data: DebtCreate, user: dict = Depends(require_permission(Modules.DEBTS, Actions.CREATE))):
     """Create a new debt record"""
     debt_id = f"debt_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
@@ -7521,7 +7521,7 @@ async def create_debt(debt_data: DebtCreate, user: dict = Depends(get_current_us
     return await db.debts.find_one({"debt_id": debt_id}, {"_id": 0})
 
 @api_router.put("/debts/{debt_id}")
-async def update_debt(debt_id: str, update_data: DebtUpdate, user: dict = Depends(get_current_user)):
+async def update_debt(debt_id: str, update_data: DebtUpdate, user: dict = Depends(require_permission(Modules.DEBTS, Actions.EDIT))):
     """Update a debt record"""
     debt = await db.debts.find_one({"debt_id": debt_id}, {"_id": 0})
     if not debt:
@@ -7541,7 +7541,7 @@ async def update_debt(debt_id: str, update_data: DebtUpdate, user: dict = Depend
     return await db.debts.find_one({"debt_id": debt_id}, {"_id": 0})
 
 @api_router.delete("/debts/{debt_id}")
-async def delete_debt(debt_id: str, user: dict = Depends(require_admin)):
+async def delete_debt(debt_id: str, user: dict = Depends(require_permission(Modules.DEBTS, Actions.DELETE))):
     """Delete a debt record (admin only)"""
     debt = await db.debts.find_one({"debt_id": debt_id}, {"_id": 0})
     if not debt:
@@ -7557,7 +7557,7 @@ async def delete_debt(debt_id: str, user: dict = Depends(require_admin)):
 async def record_debt_payment(
     debt_id: str,
     payment_data: DebtPaymentCreate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.DEBTS, Actions.CREATE))
 ):
     """Record a payment against a debt"""
     debt = await db.debts.find_one({"debt_id": debt_id}, {"_id": 0})
@@ -7715,13 +7715,13 @@ async def record_debt_payment(
     return await db.debts.find_one({"debt_id": debt_id}, {"_id": 0})
 
 @api_router.get("/debts/{debt_id}/payments")
-async def get_debt_payments(debt_id: str, user: dict = Depends(get_current_user)):
+async def get_debt_payments(debt_id: str, user: dict = Depends(require_permission(Modules.DEBTS, Actions.VIEW))):
     """Get all payments for a debt"""
     payments = await db.debt_payments.find({"debt_id": debt_id}, {"_id": 0}).sort("payment_date", -1).to_list(100)
     return payments
 
 @api_router.get("/debts/summary/overview")
-async def get_debts_summary(user: dict = Depends(get_current_user)):
+async def get_debts_summary(user: dict = Depends(require_permission(Modules.DEBTS, Actions.VIEW))):
     """Get summary of all debts"""
     now = datetime.now(timezone.utc)
     
@@ -7808,7 +7808,7 @@ async def get_debts_summary(user: dict = Depends(get_current_user)):
 
 @api_router.get("/reports/transactions-detailed")
 async def get_transactions_detailed_report(
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_permission(Modules.REPORTS, Actions.VIEW)),
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     transaction_type: Optional[str] = None,
@@ -7888,7 +7888,7 @@ async def get_transactions_detailed_report(
 
 @api_router.get("/reports/vendor-summary")
 async def get_vendor_summary_report(
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_permission(Modules.REPORTS, Actions.VIEW)),
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     vendor_id: Optional[str] = None
@@ -8009,7 +8009,7 @@ async def get_vendor_summary_report(
 
 @api_router.get("/reports/vendor-commissions")
 async def get_vendor_commissions_report(
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_permission(Modules.REPORTS, Actions.VIEW)),
     start_date: Optional[str] = None,
     end_date: Optional[str] = None
 ):
@@ -8076,7 +8076,7 @@ async def get_vendor_commissions_report(
 
 @api_router.get("/reports/client-balances")
 async def get_client_balances_report(
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_permission(Modules.REPORTS, Actions.VIEW)),
     min_balance: Optional[float] = None,
     max_balance: Optional[float] = None,
     sort_by: str = "net_balance",
@@ -8183,7 +8183,7 @@ async def get_client_balances_report(
 
 @api_router.get("/reports/treasury-summary")
 async def get_treasury_summary_report(
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_permission(Modules.REPORTS, Actions.VIEW)),
     start_date: Optional[str] = None,
     end_date: Optional[str] = None
 ):
@@ -8248,7 +8248,7 @@ async def get_treasury_summary_report(
 
 @api_router.get("/reports/psp-summary")
 async def get_psp_summary_report(
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_permission(Modules.REPORTS, Actions.VIEW)),
     start_date: Optional[str] = None,
     end_date: Optional[str] = None
 ):
@@ -8312,7 +8312,7 @@ async def get_psp_summary_report(
 
 @api_router.get("/reports/financial-summary")
 async def get_financial_summary_report(
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_permission(Modules.REPORTS, Actions.VIEW)),
     start_date: Optional[str] = None,
     end_date: Optional[str] = None
 ):
@@ -8421,7 +8421,7 @@ class ReconciliationType(str, Enum):
 async def upload_bank_statement(
     account_id: str = Form(...),
     file: UploadFile = File(...),
-    user: dict = Depends(require_admin)
+    user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.CREATE))
 ):
     """Upload bank statement CSV/Excel/PDF for reconciliation"""
     import pdfplumber
@@ -8627,7 +8627,7 @@ async def upload_bank_statement(
 async def get_reconciliation_batches(
     type: Optional[str] = None,
     limit: int = 50,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.VIEW))
 ):
     """Get reconciliation batch history"""
     query = {}
@@ -8638,7 +8638,7 @@ async def get_reconciliation_batches(
     return batches
 
 @api_router.get("/reconciliation/batch/{batch_id}")
-async def get_reconciliation_batch(batch_id: str, user: dict = Depends(get_current_user)):
+async def get_reconciliation_batch(batch_id: str, user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.VIEW))):
     """Get reconciliation batch details with entries"""
     batch = await db.reconciliation_batches.find_one({"batch_id": batch_id}, {"_id": 0})
     if not batch:
@@ -8655,7 +8655,7 @@ async def get_reconciliation_batch(batch_id: str, user: dict = Depends(get_curre
 async def manually_match_entry(
     entry_id: str,
     transaction_id: str,
-    user: dict = Depends(require_admin)
+    user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.EDIT))
 ):
     """Manually match a reconciliation entry to a transaction"""
     entry = await db.reconciliation_entries.find_one({"entry_id": entry_id}, {"_id": 0})
@@ -8691,7 +8691,7 @@ async def manually_match_entry(
     return {"message": "Entry matched successfully"}
 
 @api_router.put("/reconciliation/entry/{entry_id}/ignore")
-async def ignore_reconciliation_entry(entry_id: str, reason: str = "", user: dict = Depends(require_admin)):
+async def ignore_reconciliation_entry(entry_id: str, reason: str = "", user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.EDIT))):
     """Mark an entry as ignored/resolved"""
     await db.reconciliation_entries.update_one(
         {"entry_id": entry_id},
@@ -8708,7 +8708,7 @@ async def ignore_reconciliation_entry(entry_id: str, reason: str = "", user: dic
 @api_router.get("/reconciliation/psp")
 async def get_psp_reconciliation(
     psp_id: Optional[str] = None,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.VIEW))
 ):
     """Get PSP reconciliation summary - expected vs actual settlements"""
     query = {"destination_type": "psp", "settled": True}
@@ -8746,7 +8746,7 @@ async def get_psp_reconciliation(
     return list(psp_summary.values())
 
 @api_router.get("/reconciliation/psp/{psp_id}/details")
-async def get_psp_reconciliation_details(psp_id: str, user: dict = Depends(get_current_user)):
+async def get_psp_reconciliation_details(psp_id: str, user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.VIEW))):
     """Get detailed PSP reconciliation with individual transaction variances"""
     txs = await db.transactions.find({
         "destination_type": "psp",
@@ -8779,7 +8779,7 @@ async def get_psp_reconciliation_details(psp_id: str, user: dict = Depends(get_c
 
 # Client Account Reconciliation
 @api_router.get("/reconciliation/clients")
-async def get_client_reconciliation(user: dict = Depends(get_current_user)):
+async def get_client_reconciliation(user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.VIEW))):
     """Get client account reconciliation - verify balances match transactions"""
     clients = await db.clients.find({}, {"_id": 0}).to_list(10000)
     
@@ -8820,7 +8820,7 @@ async def get_client_reconciliation(user: dict = Depends(get_current_user)):
     return result
 
 @api_router.get("/reconciliation/client/{client_id}/details")
-async def get_client_reconciliation_details(client_id: str, user: dict = Depends(get_current_user)):
+async def get_client_reconciliation_details(client_id: str, user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.VIEW))):
     """Get detailed transaction history for client reconciliation"""
     client = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
     if not client:
@@ -8863,7 +8863,7 @@ async def get_client_reconciliation_details(client_id: str, user: dict = Depends
 
 # Vendor Reconciliation
 @api_router.get("/reconciliation/vendors")
-async def get_vendor_reconciliation(user: dict = Depends(get_current_user)):
+async def get_vendor_reconciliation(user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.VIEW))):
     """Get vendor reconciliation - commission calculations vs payments"""
     vendors = await db.vendors.find({}, {"_id": 0}).to_list(1000)
     
@@ -8908,7 +8908,7 @@ async def get_vendor_reconciliation(user: dict = Depends(get_current_user)):
 
 # Reconciliation Dashboard Summary
 @api_router.get("/reconciliation/summary")
-async def get_reconciliation_summary(user: dict = Depends(get_current_user)):
+async def get_reconciliation_summary(user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.VIEW))):
     """Get overall reconciliation status summary"""
     
     # Bank reconciliation status
@@ -8962,7 +8962,7 @@ async def get_reconciliation_summary(user: dict = Depends(get_current_user)):
 
 # Daily Reconciliation Dashboard
 @api_router.get("/reconciliation/daily")
-async def get_daily_reconciliation(user: dict = Depends(get_current_user)):
+async def get_daily_reconciliation(user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.VIEW))):
     """Get today's transactions pending reconciliation"""
     from datetime import datetime, timezone, timedelta
     
@@ -9065,7 +9065,7 @@ async def quick_reconcile(
     reference_id: str,
     item_type: str,
     notes: str = "",
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.EDIT))
 ):
     """Quick reconcile a single item"""
     from datetime import datetime, timezone
@@ -9122,7 +9122,7 @@ async def quick_reconcile(
 async def bulk_reconcile(
     items: List[dict] = Body(...),  # List of {reference_id, item_type}
     notes: str = "",
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.EDIT))
 ):
     """Bulk reconcile multiple items"""
     from datetime import datetime, timezone
@@ -9187,7 +9187,7 @@ async def flag_for_review(
     reference_id: str,
     item_type: str,
     reason: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.EDIT))
 ):
     """Flag an item for supervisor review"""
     from datetime import datetime, timezone
@@ -9247,7 +9247,7 @@ async def create_adjustment(
     currency: str,
     reason: str,
     treasury_account_id: str = None,
-    user: dict = Depends(require_admin)
+    user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.CREATE))
 ):
     """Create an adjustment entry for reconciliation discrepancy"""
     from datetime import datetime, timezone
@@ -9329,7 +9329,7 @@ async def get_reconciliation_history(
     end_date: str = None,
     action_type: str = None,
     limit: int = 100,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.VIEW))
 ):
     """Get reconciliation audit trail"""
     from datetime import datetime, timezone, timedelta
@@ -9352,7 +9352,7 @@ async def get_reconciliation_history(
 
 # Get Flagged Items
 @api_router.get("/reconciliation/flagged")
-async def get_flagged_items(user: dict = Depends(get_current_user)):
+async def get_flagged_items(user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.VIEW))):
     """Get all items flagged for review"""
     items = await db.reconciliation_items.find({"status": "flagged"}, {"_id": 0}).sort("flagged_at", -1).to_list(1000)
     return items
@@ -9362,7 +9362,7 @@ async def get_flagged_items(user: dict = Depends(get_current_user)):
 @api_router.get("/reconciliation/export-unmatched")
 async def export_unmatched(
     recon_type: str = "all",
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.EXPORT))
 ):
     """Export unmatched reconciliation items"""
     query = {"status": {"$in": ["pending", "unmatched", "discrepancy"]}}
@@ -9390,7 +9390,7 @@ async def write_off_variance(
     item_type: str,
     variance_amount: float,
     reason: str,
-    user: dict = Depends(require_admin)
+    user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.EDIT))
 ):
     """Write off small variance and mark as reconciled"""
     from datetime import datetime, timezone
@@ -9429,7 +9429,7 @@ async def write_off_variance(
 
 # Get Daily Reconciliation Summary for Reports
 @api_router.get("/reconciliation/daily-summary")
-async def get_daily_reconciliation_summary(user: dict = Depends(get_current_user)):
+async def get_daily_reconciliation_summary(user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.VIEW))):
     """Get daily reconciliation summary for reports"""
     from datetime import datetime, timezone, timedelta
     
@@ -9502,35 +9502,22 @@ async def get_daily_reconciliation_summary(user: dict = Depends(get_current_user
 # ============== ROLES & PERMISSIONS MANAGEMENT ==============
 
 @api_router.get("/roles")
-async def get_roles(user: dict = Depends(get_current_user)):
+async def get_roles(user: dict = Depends(require_permission(Modules.ROLES, Actions.VIEW))):
     """Get all roles"""
-    has_permission = await check_permission(user, Modules.ROLES, Actions.VIEW)
-    # Allow admins with old system to view
-    if not has_permission and user.get("role") != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Permission denied")
-    
     roles = await db.roles.find({"is_active": {"$ne": False}}, {"_id": 0}).to_list(100)
     return roles
 
 @api_router.get("/roles/{role_id}")
-async def get_role(role_id: str, user: dict = Depends(get_current_user)):
+async def get_role(role_id: str, user: dict = Depends(require_permission(Modules.ROLES, Actions.VIEW))):
     """Get a specific role"""
-    has_permission = await check_permission(user, Modules.ROLES, Actions.VIEW)
-    if not has_permission and user.get("role") != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Permission denied")
-    
     role = await db.roles.find_one({"role_id": role_id}, {"_id": 0})
     if not role:
         raise HTTPException(status_code=404, detail="Role not found")
     return role
 
 @api_router.post("/roles")
-async def create_role(role_data: RoleCreate, user: dict = Depends(get_current_user)):
+async def create_role(role_data: RoleCreate, user: dict = Depends(require_permission(Modules.ROLES, Actions.CREATE))):
     """Create a new role"""
-    has_permission = await check_permission(user, Modules.ROLES, Actions.CREATE)
-    if not has_permission and user.get("role") != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Permission denied")
-    
     # Check if role name already exists
     existing = await db.roles.find_one({"name": role_data.name}, {"_id": 0})
     if existing:
@@ -9570,12 +9557,8 @@ async def create_role(role_data: RoleCreate, user: dict = Depends(get_current_us
     return await db.roles.find_one({"role_id": role_id}, {"_id": 0})
 
 @api_router.put("/roles/{role_id}")
-async def update_role(role_id: str, role_data: RoleUpdate, user: dict = Depends(get_current_user)):
+async def update_role(role_id: str, role_data: RoleUpdate, user: dict = Depends(require_permission(Modules.ROLES, Actions.EDIT))):
     """Update a role"""
-    has_permission = await check_permission(user, Modules.ROLES, Actions.EDIT)
-    if not has_permission and user.get("role") != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Permission denied")
-    
     role = await db.roles.find_one({"role_id": role_id}, {"_id": 0})
     if not role:
         raise HTTPException(status_code=404, detail="Role not found")
@@ -9605,12 +9588,8 @@ async def update_role(role_id: str, role_data: RoleUpdate, user: dict = Depends(
     return await db.roles.find_one({"role_id": role_id}, {"_id": 0})
 
 @api_router.delete("/roles/{role_id}")
-async def delete_role(role_id: str, user: dict = Depends(get_current_user)):
+async def delete_role(role_id: str, user: dict = Depends(require_permission(Modules.ROLES, Actions.DELETE))):
     """Delete a role (soft delete)"""
-    has_permission = await check_permission(user, Modules.ROLES, Actions.EDIT)
-    if not has_permission and user.get("role") != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Permission denied")
-    
     role = await db.roles.find_one({"role_id": role_id}, {"_id": 0})
     if not role:
         raise HTTPException(status_code=404, detail="Role not found")
@@ -9628,12 +9607,8 @@ async def delete_role(role_id: str, user: dict = Depends(get_current_user)):
     return {"message": "Role deleted successfully"}
 
 @api_router.get("/permissions/modules")
-async def get_modules_and_actions(user: dict = Depends(get_current_user)):
+async def get_modules_and_actions(user: dict = Depends(require_permission(Modules.ROLES, Actions.VIEW))):
     """Get all available modules and actions for permission configuration"""
-    has_permission = await check_permission(user, Modules.ROLES, Actions.VIEW)
-    if not has_permission and user.get("role") != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Permission denied")
-    
     return {
         "modules": [{"id": m, "name": MODULE_DISPLAY_NAMES.get(m, m)} for m in ALL_MODULES],
         "actions": ALL_ACTIONS
@@ -9657,12 +9632,8 @@ async def get_my_permissions(user: dict = Depends(get_current_user)):
     }
 
 @api_router.put("/users/{user_id}/role")
-async def assign_user_role(user_id: str, role_id: str = Form(...), user: dict = Depends(get_current_user)):
+async def assign_user_role(user_id: str, role_id: str = Form(...), user: dict = Depends(require_permission(Modules.USERS, Actions.EDIT))):
     """Assign a role to a user"""
-    has_permission = await check_permission(user, Modules.USERS, Actions.EDIT)
-    if not has_permission and user.get("role") != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Permission denied")
-    
     target_user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -9695,13 +9666,9 @@ async def assign_user_role(user_id: str, role_id: str = Form(...), user: dict = 
 async def set_user_permission_overrides(
     user_id: str, 
     permissions: dict,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission(Modules.USERS, Actions.EDIT))
 ):
     """Set custom permission overrides for a user"""
-    has_permission = await check_permission(user, Modules.USERS, Actions.EDIT)
-    if not has_permission and user.get("role") != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Permission denied")
-    
     target_user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -9727,7 +9694,7 @@ class EmailSettingsUpdate(BaseModel):
     report_time: Optional[str] = None  # Format: "HH:MM"
 
 @api_router.get("/settings/email")
-async def get_email_settings(user: dict = Depends(require_admin)):
+async def get_email_settings(user: dict = Depends(require_permission(Modules.SETTINGS, Actions.VIEW))):
     """Get email/report settings (password masked)"""
     settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
     if not settings:
@@ -9753,7 +9720,7 @@ async def get_email_settings(user: dict = Depends(require_admin)):
     }
 
 @api_router.put("/settings/email")
-async def update_email_settings(settings: EmailSettingsUpdate, user: dict = Depends(require_admin)):
+async def update_email_settings(settings: EmailSettingsUpdate, user: dict = Depends(require_permission(Modules.SETTINGS, Actions.EDIT))):
     """Update email/report settings"""
     now = datetime.now(timezone.utc)
     
@@ -9795,7 +9762,7 @@ async def update_email_settings(settings: EmailSettingsUpdate, user: dict = Depe
     return {"message": "Email settings updated successfully"}
 
 @api_router.post("/settings/email/test")
-async def test_email_settings(user: dict = Depends(require_admin)):
+async def test_email_settings(user: dict = Depends(require_permission(Modules.SETTINGS, Actions.EDIT))):
     """Send a test email to verify SMTP settings"""
     settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
     
@@ -9830,7 +9797,7 @@ async def test_email_settings(user: dict = Depends(require_admin)):
 
 
 @api_router.post("/settings/email/send-daily-report")
-async def send_daily_report_now(user: dict = Depends(require_admin)):
+async def send_daily_report_now(user: dict = Depends(require_permission(Modules.REPORTS, Actions.EXPORT))):
     """Manually trigger and send the daily report"""
     try:
         settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
@@ -10377,7 +10344,7 @@ async def send_daily_report():
         })
 
 @api_router.post("/reports/send-now")
-async def send_report_now(user: dict = Depends(require_admin)):
+async def send_report_now(user: dict = Depends(require_permission(Modules.REPORTS, Actions.EXPORT))):
     """Manually trigger daily report send"""
     settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
     
@@ -10406,7 +10373,7 @@ async def send_report_now(user: dict = Depends(require_admin)):
         raise HTTPException(status_code=500, detail=f"Failed to send report: {str(e)}")
 
 @api_router.get("/reports/email-logs")
-async def get_email_logs(limit: int = 20, user: dict = Depends(require_admin)):
+async def get_email_logs(limit: int = 20, user: dict = Depends(require_permission(Modules.REPORTS, Actions.VIEW))):
     """Get email send history"""
     logs = await db.email_logs.find({}, {"_id": 0}).sort("sent_at", -1).to_list(limit)
     return logs
@@ -10692,7 +10659,7 @@ async def run_audit_checks() -> dict:
     }
 
 @api_router.post("/audit/run-scan")
-async def run_audit_scan(user: dict = Depends(require_admin)):
+async def run_audit_scan(user: dict = Depends(require_permission(Modules.AUDIT, Actions.CREATE))):
     """Run a full audit scan and save results."""
     result = await run_audit_checks()
     
@@ -10704,7 +10671,7 @@ async def run_audit_scan(user: dict = Depends(require_admin)):
     return result
 
 @api_router.get("/audit/latest")
-async def get_latest_audit(user: dict = Depends(get_current_user)):
+async def get_latest_audit(user: dict = Depends(require_permission(Modules.AUDIT, Actions.VIEW))):
     """Get the latest audit scan result."""
     scan = await db.audit_scans.find_one({}, {"_id": 0}, sort=[("scanned_at", -1)])
     if not scan:
@@ -10712,13 +10679,13 @@ async def get_latest_audit(user: dict = Depends(get_current_user)):
     return scan
 
 @api_router.get("/audit/history")
-async def get_audit_history(user: dict = Depends(get_current_user), limit: int = 20):
+async def get_audit_history(user: dict = Depends(require_permission(Modules.AUDIT, Actions.VIEW)), limit: int = 20):
     """Get audit scan history."""
     scans = await db.audit_scans.find({}, {"_id": 0, "findings": 0}).sort("scanned_at", -1).to_list(limit)
     return scans
 
 @api_router.get("/audit/settings")
-async def get_audit_settings(user: dict = Depends(require_admin)):
+async def get_audit_settings(user: dict = Depends(require_permission(Modules.AUDIT, Actions.VIEW))):
     """Get audit module settings."""
     settings = await db.app_settings.find_one({"setting_type": "audit"}, {"_id": 0})
     if not settings:
@@ -10740,7 +10707,7 @@ class AuditSettingsUpdate(BaseModel):
     alert_emails: Optional[List[str]] = None
 
 @api_router.put("/audit/settings")
-async def update_audit_settings(settings: AuditSettingsUpdate, user: dict = Depends(require_admin)):
+async def update_audit_settings(settings: AuditSettingsUpdate, user: dict = Depends(require_permission(Modules.AUDIT, Actions.EDIT))):
     """Update audit module settings."""
     updates = {k: v for k, v in settings.model_dump().items() if v is not None}
     updates["setting_type"] = "audit"
@@ -10866,7 +10833,7 @@ async def get_fx_rates_endpoint(user: dict = Depends(get_current_user)):
     }
 
 @api_router.post("/fx-rates/refresh")
-async def refresh_fx_rates(user: dict = Depends(require_admin)):
+async def refresh_fx_rates(user: dict = Depends(require_permission(Modules.SETTINGS, Actions.EDIT))):
     """Force-refresh exchange rates from the live API."""
     _fx_cache["fetched_at"] = None  # invalidate cache
     rates = await get_fx_rates()
@@ -10901,7 +10868,7 @@ async def convert_currency_endpoint(
 
 # ============== COMMISSION SETTINGS ENDPOINTS ==============
 @api_router.get("/settings/commission")
-async def get_commission_settings(user: dict = Depends(require_admin)):
+async def get_commission_settings(user: dict = Depends(require_permission(Modules.SETTINGS, Actions.VIEW))):
     """Get global commission settings for deposits and withdrawals."""
     settings = await db.app_settings.find_one({"setting_type": "commission"}, {"_id": 0})
     if not settings:
@@ -10917,7 +10884,7 @@ async def get_commission_settings(user: dict = Depends(require_admin)):
     }
 
 @api_router.put("/settings/commission")
-async def update_commission_settings(request: Request, user: dict = Depends(require_admin)):
+async def update_commission_settings(request: Request, user: dict = Depends(require_permission(Modules.SETTINGS, Actions.EDIT))):
     """Update global commission settings."""
     data = await request.json()
     deposit_rate = float(data.get("deposit_commission_rate", 0))
@@ -10942,7 +10909,7 @@ async def update_commission_settings(request: Request, user: dict = Depends(requ
 
 @api_router.get("/logs")
 async def get_all_logs(
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_permission(Modules.LOGS, Actions.VIEW)),
     log_type: Optional[str] = None,
     action: Optional[str] = None,
     module: Optional[str] = None,
@@ -10991,7 +10958,7 @@ async def get_all_logs(
     }
 
 @api_router.get("/logs/stats")
-async def get_logs_stats(user: dict = Depends(require_admin)):
+async def get_logs_stats(user: dict = Depends(require_permission(Modules.LOGS, Actions.VIEW))):
     """Get logs statistics"""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
@@ -11046,7 +11013,7 @@ async def get_logs_stats(user: dict = Depends(require_admin)):
 
 @api_router.get("/logs/activity")
 async def get_activity_logs(
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_permission(Modules.LOGS, Actions.VIEW)),
     module: Optional[str] = None,
     user_id: Optional[str] = None,
     date_from: Optional[str] = None,
@@ -11072,7 +11039,7 @@ async def get_activity_logs(
 
 @api_router.get("/logs/auth")
 async def get_auth_logs(
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_permission(Modules.LOGS, Actions.VIEW)),
     action: Optional[str] = None,
     user_id: Optional[str] = None,
     date_from: Optional[str] = None,
@@ -11098,7 +11065,7 @@ async def get_auth_logs(
 
 @api_router.get("/logs/audit")
 async def get_audit_logs(
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_permission(Modules.LOGS, Actions.VIEW)),
     module: Optional[str] = None,
     reference_id: Optional[str] = None,
     date_from: Optional[str] = None,
@@ -11124,7 +11091,7 @@ async def get_audit_logs(
 
 @api_router.delete("/logs/clear")
 async def clear_old_logs(
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_permission(Modules.LOGS, Actions.DELETE)),
     days_to_keep: int = 90
 ):
     """Clear logs older than specified days (default: 90 days)"""
@@ -11232,7 +11199,7 @@ async def stop_impersonation(request: Request, user: dict = Depends(get_current_
 @api_router.get("/admin/impersonation-logs")
 async def get_impersonation_logs(
     limit: int = 50,
-    admin: dict = Depends(require_admin)
+    user: dict = Depends(require_permission(Modules.LOGS, Actions.VIEW))
 ):
     """Get impersonation audit logs"""
     logs = await db.impersonation_logs.find(
