@@ -6523,16 +6523,6 @@ async def convert_expense_to_loan(request: Request, entry_id: str, req: ConvertT
         if treasury:
             treasury_name = treasury["account_name"]
     
-    # If expense was already completed and had treasury impact, reverse it
-    # (since converting to loan means the expense tracking should be via loan instead)
-    if entry.get("treasury_account_id") and entry.get("status") == "completed":
-        await db.treasury_accounts.update_one(
-            {"account_id": entry["treasury_account_id"]},
-            {"$inc": {"balance": entry["amount"]}, "$set": {"updated_at": now.isoformat()}}
-        )
-        # Delete old treasury transaction
-        await db.treasury_transactions.delete_one({"income_expense_id": entry_id})
-    
     loan_doc = {
         "loan_id": loan_id,
         "borrower_name": req.borrower_name,
