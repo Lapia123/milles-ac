@@ -18,7 +18,17 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 
 **Vendor Portal Enhancement (COMPLETE)** — All transaction statuses, filters (status/type/date/search), Excel + PDF export
 
-**Settlement Balance Fix (COMPLETE)** — I&E entries with status `converted_to_loan` now included
+**Settlement Balance Fix (COMPLETE)** — I&E entries with status `converted_to_loan` now correctly excluded from settlement calculation
+
+**Expense-to-Loan Settlement Bug Fix (COMPLETE - Dec 2025):**
+- **Issue**: When expense was converted to loan, the amount was incorrectly affecting vendor settlement balance
+- **Root Cause**: Settlement pipelines included `converted_to_loan` status in the match criteria
+- **Fix**: Added `"converted_to_loan": {"$ne": True}` filter to 3 settlement pipelines:
+  - `/api/vendors` (vendor list endpoint)
+  - `/api/vendors/{vendor_id}` (single vendor endpoint)
+  - `/api/vendor/me` (vendor portal endpoint)
+- **Result**: Converted expenses are now excluded from settlement; accounting integrity maintained
+- **Verified**: 10/10 tests passed - Reference: /app/test_reports/iteration_30.json
 
 **Comprehensive Logging Audit & Fix (COMPLETE):**
 - **Root cause**: Only 7 `log_activity` calls existed across 89+ write endpoints
