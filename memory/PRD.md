@@ -49,10 +49,17 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
    - Items requiring attention
 
 **Other Fixes:**
-- Super Admin role removed (safvan → Admin)
+- Super Admin role removed (safvan -> Admin)
 - Delete action added to permission system
 - Admin role updated to Level 100 with full permissions (102 total)
 - Delete buttons added to: Treasury, PSP, Vendors, Loans, Income/Expenses
+
+### Date: Mar 4, 2026
+
+**P0 Bug Fix - Daily Report:**
+- Fixed incorrect DB query in `send_dealing_pnl_email` (`type: 'email_settings'` -> `setting_type: 'email'`)
+- Both daily report endpoints verified working: `/settings/email/send-daily-report` and `/reports/send-now`
+- Daily report successfully sent to 7209safvan@gmail.com
 
 ---
 
@@ -71,6 +78,13 @@ GET  /api/reconciliation/export-unmatched- Export unmatched items
 POST /api/reconciliation/write-off       - Write off small variance
 GET  /api/reconciliation/daily-summary   - Summary for reports
 POST /api/reconciliation/bank/upload     - Upload bank statement (CSV/Excel/PDF)
+```
+
+### Report Endpoints
+```
+POST /api/settings/email/send-daily-report - Manual trigger daily report
+POST /api/reports/send-now                 - Manual trigger daily report (alt)
+GET  /api/reports/email-logs               - Email send history
 ```
 
 ---
@@ -107,13 +121,17 @@ reconciliation_entries     - Uploaded bank statement entries
 ## Prioritized Backlog
 
 ### P1 - High Priority
+- [ ] Comprehensive E2E test run of entire application
+- [ ] Reconciliation System Phase 2 & 3 (PSP, Client, Exchanger enhancements)
+- [ ] Complete backend RBAC migration (replace old decorators with `require_permission`)
 - [ ] Implement frontend permission gates (conditional UI based on permissions)
-- [ ] Enforce granular permissions across ALL backend endpoints
 
 ### P2 - Medium Priority
 - [ ] Add more reconciliation matching rules
 - [ ] Auto-match bank statement entries with treasury transactions
 - [ ] PSP settlement report upload
+- [ ] Investigate withdrawal creation to Exchanger error
+- [ ] Fix session management redirect bug
 
 ### P3 - Low Priority
 - [ ] Refactor `backend/server.py` into modular routers

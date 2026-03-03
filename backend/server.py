@@ -2349,7 +2349,7 @@ async def send_dealing_pnl_email(date: str, user: dict = Depends(require_account
         raise HTTPException(status_code=404, detail="No record found for this date")
     
     # Get email settings
-    settings = await db.app_settings.find_one({"type": "email_settings"}, {"_id": 0})
+    settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
     if not settings:
         raise HTTPException(status_code=400, detail="Email settings not configured")
     
