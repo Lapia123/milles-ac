@@ -8405,7 +8405,8 @@ async def upload_bank_statement(
     file: UploadFile = File(...),
     user: dict = Depends(require_admin)
 ):
-    """Upload bank statement CSV/Excel for reconciliation"""
+    """Upload bank statement CSV/Excel/PDF for reconciliation"""
+    import pdfplumber
     
     # Verify treasury account exists
     account = await db.treasury_accounts.find_one({"account_id": account_id}, {"_id": 0})
@@ -8433,8 +8434,46 @@ async def upload_bank_statement(
             for row in ws.iter_rows(min_row=2, values_only=True):
                 row_dict = {headers[i]: row[i] for i in range(len(headers)) if i < len(row)}
                 parsed_rows.append(row_dict)
+        elif filename.endswith('.pdf'):
+            # Parse PDF using pdfplumber
+            with pdfplumber.open(io.BytesIO(content)) as pdf:
+                for page in pdf.pages:
+                    tables = page.extract_tables()
+                    for table in tables:
+                        if table and len(table) > 1:
+                            # First row is header
+                            headers = table[0]
+                            for row in table[1:]:
+                                if row and any(cell for cell in row):
+                                    row_dict = {}
+                                    for i, cell in enumerate(row):
+                                        if i < len(headers) and headers[i]:
+                                            row_dict[headers[i]] = cell
+                                    if row_dict:
+                                        parsed_rows.append(row_dict)
+                    
+                    # If no tables found, try to extract text
+                    if not tables:
+                        text = page.extract_text()
+                        if text:
+                            lines = text.split('\n')
+                            for line in lines:
+                                parts = line.split()
+                                if len(parts) >= 3:
+                                    # Try to detect amount-like values
+                                    for i, part in enumerate(parts):
+                                        try:
+                                            amount = float(part.replace(',', '').replace('$', ''))
+                                            parsed_rows.append({
+                                                "description": ' '.join(parts[:i]),
+                                                "amount": amount,
+                                                "raw_line": line
+                                            })
+                                            break
+                                        except ValueError:
+                                            continue
         else:
-            raise HTTPException(status_code=400, detail="Unsupported file format. Use CSV or Excel.")
+            raise HTTPException(status_code=400, detail="Unsupported file format. Use CSV, Excel, or PDF.")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to parse file: {str(e)}")
     
@@ -8901,6 +8940,547 @@ async def get_reconciliation_summary(user: dict = Depends(get_current_user)):
         }
     }
 
+# ============== ENHANCED RECONCILIATION FEATURES ==============
+
+# Daily Reconciliation Dashboard
+@api_router.get("/reconciliation/daily")
+async def get_daily_reconciliation(user: dict = Depends(get_current_user)):
+    """Get today's transactions pending reconciliation"""
+    from datetime import datetime, timezone, timedelta
+    
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    tomorrow = today + timedelta(days=1)
+    
+    # Get today's transactions
+    transactions = await db.transactions.find({
+        "created_at": {"$gte": today.isoformat(), "$lt": tomorrow.isoformat()}
+    }, {"_id": 0}).to_list(1000)
+    
+    # Get today's income/expenses
+    ie_entries = await db.income_expenses.find({
+        "created_at": {"$gte": today.isoformat(), "$lt": tomorrow.isoformat()}
+    }, {"_id": 0}).to_list(1000)
+    
+    # Get today's treasury transactions
+    treasury_txs = await db.treasury_transactions.find({
+        "created_at": {"$gte": today.isoformat(), "$lt": tomorrow.isoformat()}
+    }, {"_id": 0}).to_list(1000)
+    
+    # Get reconciliation items for today
+    recon_items = await db.reconciliation_items.find({
+        "date": {"$gte": today.isoformat(), "$lt": tomorrow.isoformat()}
+    }, {"_id": 0}).to_list(1000)
+    
+    reconciled_ids = {item["reference_id"] for item in recon_items if item.get("status") == "reconciled"}
+    flagged_ids = {item["reference_id"] for item in recon_items if item.get("status") == "flagged"}
+    
+    # Build pending items list
+    pending_items = []
+    
+    for tx in transactions:
+        tx_id = tx.get("transaction_id")
+        status = "reconciled" if tx_id in reconciled_ids else ("flagged" if tx_id in flagged_ids else "pending")
+        pending_items.append({
+            "id": tx_id,
+            "type": "transaction",
+            "category": tx.get("transaction_type", "unknown"),
+            "description": f"{tx.get('transaction_type', 'Transaction')} - {tx.get('client_name', 'N/A')}",
+            "amount": tx.get("amount", 0),
+            "currency": tx.get("currency", "USD"),
+            "date": tx.get("created_at"),
+            "status": status,
+            "reference": tx.get("reference_number")
+        })
+    
+    for ie in ie_entries:
+        ie_id = ie.get("entry_id")
+        status = "reconciled" if ie_id in reconciled_ids else ("flagged" if ie_id in flagged_ids else "pending")
+        pending_items.append({
+            "id": ie_id,
+            "type": "income_expense",
+            "category": ie.get("entry_type", "unknown"),
+            "description": ie.get("description", "Income/Expense"),
+            "amount": ie.get("amount", 0),
+            "currency": ie.get("currency", "USD"),
+            "date": ie.get("created_at"),
+            "status": status,
+            "reference": ie.get("reference_number")
+        })
+    
+    for ttx in treasury_txs:
+        ttx_id = ttx.get("transaction_id")
+        status = "reconciled" if ttx_id in reconciled_ids else ("flagged" if ttx_id in flagged_ids else "pending")
+        pending_items.append({
+            "id": ttx_id,
+            "type": "treasury",
+            "category": ttx.get("transaction_type", "unknown"),
+            "description": ttx.get("description", "Treasury Transaction"),
+            "amount": ttx.get("amount", 0),
+            "currency": ttx.get("currency", "USD"),
+            "date": ttx.get("created_at"),
+            "status": status,
+            "reference": ttx.get("reference")
+        })
+    
+    # Calculate stats
+    total = len(pending_items)
+    reconciled = sum(1 for item in pending_items if item["status"] == "reconciled")
+    flagged = sum(1 for item in pending_items if item["status"] == "flagged")
+    pending = total - reconciled - flagged
+    
+    return {
+        "date": today.isoformat(),
+        "items": pending_items,
+        "stats": {
+            "total": total,
+            "reconciled": reconciled,
+            "pending": pending,
+            "flagged": flagged,
+            "reconciled_percent": round((reconciled / total * 100) if total > 0 else 100, 1)
+        }
+    }
+
+
+# Quick Reconcile - Mark item as reconciled
+@api_router.post("/reconciliation/quick-reconcile")
+async def quick_reconcile(
+    reference_id: str,
+    item_type: str,
+    notes: str = "",
+    user: dict = Depends(get_current_user)
+):
+    """Quick reconcile a single item"""
+    from datetime import datetime, timezone
+    
+    now = datetime.now(timezone.utc)
+    
+    # Check if item already exists
+    existing = await db.reconciliation_items.find_one({"reference_id": reference_id})
+    
+    if existing:
+        await db.reconciliation_items.update_one(
+            {"reference_id": reference_id},
+            {"$set": {
+                "status": "reconciled",
+                "reconciled_by": user.get("user_id"),
+                "reconciled_by_name": user.get("name"),
+                "reconciled_at": now.isoformat(),
+                "notes": notes,
+                "updated_at": now.isoformat()
+            }}
+        )
+    else:
+        await db.reconciliation_items.insert_one({
+            "item_id": f"recon_{uuid.uuid4().hex[:12]}",
+            "reference_id": reference_id,
+            "item_type": item_type,
+            "status": "reconciled",
+            "reconciled_by": user.get("user_id"),
+            "reconciled_by_name": user.get("name"),
+            "reconciled_at": now.isoformat(),
+            "notes": notes,
+            "date": now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat(),
+            "created_at": now.isoformat(),
+            "updated_at": now.isoformat()
+        })
+    
+    # Log to history
+    await db.reconciliation_history.insert_one({
+        "history_id": f"rh_{uuid.uuid4().hex[:12]}",
+        "reference_id": reference_id,
+        "item_type": item_type,
+        "action": "reconciled",
+        "performed_by": user.get("user_id"),
+        "performed_by_name": user.get("name"),
+        "notes": notes,
+        "created_at": now.isoformat()
+    })
+    
+    return {"message": "Item reconciled successfully", "reference_id": reference_id}
+
+
+# Bulk Reconcile - Mark multiple items as reconciled
+@api_router.post("/reconciliation/bulk-reconcile")
+async def bulk_reconcile(
+    items: list,  # List of {reference_id, item_type}
+    notes: str = "",
+    user: dict = Depends(get_current_user)
+):
+    """Bulk reconcile multiple items"""
+    from datetime import datetime, timezone
+    
+    now = datetime.now(timezone.utc)
+    reconciled_count = 0
+    
+    for item in items:
+        reference_id = item.get("reference_id")
+        item_type = item.get("item_type", "unknown")
+        
+        existing = await db.reconciliation_items.find_one({"reference_id": reference_id})
+        
+        if existing:
+            await db.reconciliation_items.update_one(
+                {"reference_id": reference_id},
+                {"$set": {
+                    "status": "reconciled",
+                    "reconciled_by": user.get("user_id"),
+                    "reconciled_by_name": user.get("name"),
+                    "reconciled_at": now.isoformat(),
+                    "notes": notes,
+                    "updated_at": now.isoformat()
+                }}
+            )
+        else:
+            await db.reconciliation_items.insert_one({
+                "item_id": f"recon_{uuid.uuid4().hex[:12]}",
+                "reference_id": reference_id,
+                "item_type": item_type,
+                "status": "reconciled",
+                "reconciled_by": user.get("user_id"),
+                "reconciled_by_name": user.get("name"),
+                "reconciled_at": now.isoformat(),
+                "notes": notes,
+                "date": now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat(),
+                "created_at": now.isoformat(),
+                "updated_at": now.isoformat()
+            })
+        
+        reconciled_count += 1
+    
+    # Log bulk action to history
+    await db.reconciliation_history.insert_one({
+        "history_id": f"rh_{uuid.uuid4().hex[:12]}",
+        "reference_id": "bulk_action",
+        "item_type": "bulk",
+        "action": "bulk_reconciled",
+        "item_count": reconciled_count,
+        "performed_by": user.get("user_id"),
+        "performed_by_name": user.get("name"),
+        "notes": notes,
+        "created_at": now.isoformat()
+    })
+    
+    return {"message": f"Reconciled {reconciled_count} items", "count": reconciled_count}
+
+
+# Flag for Review
+@api_router.post("/reconciliation/flag")
+async def flag_for_review(
+    reference_id: str,
+    item_type: str,
+    reason: str,
+    user: dict = Depends(get_current_user)
+):
+    """Flag an item for supervisor review"""
+    from datetime import datetime, timezone
+    
+    now = datetime.now(timezone.utc)
+    
+    existing = await db.reconciliation_items.find_one({"reference_id": reference_id})
+    
+    if existing:
+        await db.reconciliation_items.update_one(
+            {"reference_id": reference_id},
+            {"$set": {
+                "status": "flagged",
+                "flagged_by": user.get("user_id"),
+                "flagged_by_name": user.get("name"),
+                "flagged_at": now.isoformat(),
+                "flag_reason": reason,
+                "updated_at": now.isoformat()
+            }}
+        )
+    else:
+        await db.reconciliation_items.insert_one({
+            "item_id": f"recon_{uuid.uuid4().hex[:12]}",
+            "reference_id": reference_id,
+            "item_type": item_type,
+            "status": "flagged",
+            "flagged_by": user.get("user_id"),
+            "flagged_by_name": user.get("name"),
+            "flagged_at": now.isoformat(),
+            "flag_reason": reason,
+            "date": now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat(),
+            "created_at": now.isoformat(),
+            "updated_at": now.isoformat()
+        })
+    
+    # Log to history
+    await db.reconciliation_history.insert_one({
+        "history_id": f"rh_{uuid.uuid4().hex[:12]}",
+        "reference_id": reference_id,
+        "item_type": item_type,
+        "action": "flagged",
+        "performed_by": user.get("user_id"),
+        "performed_by_name": user.get("name"),
+        "notes": reason,
+        "created_at": now.isoformat()
+    })
+    
+    return {"message": "Item flagged for review", "reference_id": reference_id}
+
+
+# Create Adjustment Entry
+@api_router.post("/reconciliation/adjustment")
+async def create_adjustment(
+    reference_id: str,
+    item_type: str,
+    adjustment_amount: float,
+    currency: str,
+    reason: str,
+    treasury_account_id: str = None,
+    user: dict = Depends(require_admin)
+):
+    """Create an adjustment entry for reconciliation discrepancy"""
+    from datetime import datetime, timezone
+    
+    now = datetime.now(timezone.utc)
+    adjustment_id = f"adj_{uuid.uuid4().hex[:12]}"
+    
+    adjustment_doc = {
+        "adjustment_id": adjustment_id,
+        "reference_id": reference_id,
+        "item_type": item_type,
+        "amount": adjustment_amount,
+        "currency": currency,
+        "reason": reason,
+        "treasury_account_id": treasury_account_id,
+        "created_by": user.get("user_id"),
+        "created_by_name": user.get("name"),
+        "status": "approved",
+        "created_at": now.isoformat()
+    }
+    
+    await db.reconciliation_adjustments.insert_one(adjustment_doc)
+    
+    # If treasury account specified, create treasury transaction
+    if treasury_account_id:
+        tx_type = "credit" if adjustment_amount > 0 else "debit"
+        await db.treasury_transactions.insert_one({
+            "transaction_id": f"ttx_{uuid.uuid4().hex[:12]}",
+            "account_id": treasury_account_id,
+            "type": tx_type,
+            "amount": abs(adjustment_amount),
+            "currency": currency,
+            "description": f"Reconciliation Adjustment: {reason}",
+            "reference": adjustment_id,
+            "category": "adjustment",
+            "created_by": user.get("user_id"),
+            "created_at": now.isoformat()
+        })
+        
+        # Update treasury balance
+        update_op = {"$inc": {"balance": adjustment_amount}}
+        await db.treasury_accounts.update_one({"account_id": treasury_account_id}, update_op)
+    
+    # Mark original item as reconciled with adjustment
+    await db.reconciliation_items.update_one(
+        {"reference_id": reference_id},
+        {"$set": {
+            "status": "reconciled",
+            "adjustment_id": adjustment_id,
+            "reconciled_by": user.get("user_id"),
+            "reconciled_at": now.isoformat(),
+            "updated_at": now.isoformat()
+        }},
+        upsert=True
+    )
+    
+    # Log to history
+    await db.reconciliation_history.insert_one({
+        "history_id": f"rh_{uuid.uuid4().hex[:12]}",
+        "reference_id": reference_id,
+        "item_type": item_type,
+        "action": "adjustment_created",
+        "adjustment_id": adjustment_id,
+        "amount": adjustment_amount,
+        "performed_by": user.get("user_id"),
+        "performed_by_name": user.get("name"),
+        "notes": reason,
+        "created_at": now.isoformat()
+    })
+    
+    adjustment_doc.pop("_id", None)
+    return adjustment_doc
+
+
+# Get Reconciliation History / Audit Trail
+@api_router.get("/reconciliation/history")
+async def get_reconciliation_history(
+    start_date: str = None,
+    end_date: str = None,
+    action_type: str = None,
+    limit: int = 100,
+    user: dict = Depends(get_current_user)
+):
+    """Get reconciliation audit trail"""
+    from datetime import datetime, timezone, timedelta
+    
+    query = {}
+    
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = end_date
+        else:
+            query["created_at"] = {"$lte": end_date}
+    if action_type:
+        query["action"] = action_type
+    
+    history = await db.reconciliation_history.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    return history
+
+
+# Get Flagged Items
+@api_router.get("/reconciliation/flagged")
+async def get_flagged_items(user: dict = Depends(get_current_user)):
+    """Get all items flagged for review"""
+    items = await db.reconciliation_items.find({"status": "flagged"}, {"_id": 0}).sort("flagged_at", -1).to_list(1000)
+    return items
+
+
+# Export Unmatched Items
+@api_router.get("/reconciliation/export-unmatched")
+async def export_unmatched(
+    recon_type: str = "all",
+    user: dict = Depends(get_current_user)
+):
+    """Export unmatched reconciliation items"""
+    query = {"status": {"$in": ["pending", "unmatched", "discrepancy"]}}
+    if recon_type != "all":
+        query["item_type"] = recon_type
+    
+    items = await db.reconciliation_items.find(query, {"_id": 0}).to_list(10000)
+    
+    # Also get unmatched bank entries
+    bank_entries = await db.reconciliation_entries.find(
+        {"status": {"$in": ["pending", "unmatched"]}}, {"_id": 0}
+    ).to_list(10000)
+    
+    return {
+        "reconciliation_items": items,
+        "bank_entries": bank_entries,
+        "total_count": len(items) + len(bank_entries)
+    }
+
+
+# Write-off Small Variance
+@api_router.post("/reconciliation/write-off")
+async def write_off_variance(
+    reference_id: str,
+    item_type: str,
+    variance_amount: float,
+    reason: str,
+    user: dict = Depends(require_admin)
+):
+    """Write off small variance and mark as reconciled"""
+    from datetime import datetime, timezone
+    
+    now = datetime.now(timezone.utc)
+    
+    await db.reconciliation_items.update_one(
+        {"reference_id": reference_id},
+        {"$set": {
+            "status": "reconciled",
+            "write_off_amount": variance_amount,
+            "write_off_reason": reason,
+            "reconciled_by": user.get("user_id"),
+            "reconciled_by_name": user.get("name"),
+            "reconciled_at": now.isoformat(),
+            "updated_at": now.isoformat()
+        }},
+        upsert=True
+    )
+    
+    # Log to history
+    await db.reconciliation_history.insert_one({
+        "history_id": f"rh_{uuid.uuid4().hex[:12]}",
+        "reference_id": reference_id,
+        "item_type": item_type,
+        "action": "write_off",
+        "amount": variance_amount,
+        "performed_by": user.get("user_id"),
+        "performed_by_name": user.get("name"),
+        "notes": reason,
+        "created_at": now.isoformat()
+    })
+    
+    return {"message": "Variance written off successfully", "reference_id": reference_id}
+
+
+# Get Daily Reconciliation Summary for Reports
+@api_router.get("/reconciliation/daily-summary")
+async def get_daily_reconciliation_summary(user: dict = Depends(get_current_user)):
+    """Get daily reconciliation summary for reports"""
+    from datetime import datetime, timezone, timedelta
+    
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    tomorrow = today + timedelta(days=1)
+    
+    # Get today's reconciliation stats
+    today_items = await db.reconciliation_items.find({
+        "date": {"$gte": today.isoformat(), "$lt": tomorrow.isoformat()}
+    }, {"_id": 0}).to_list(10000)
+    
+    bank_entries = await db.reconciliation_entries.find({
+        "created_at": {"$gte": today.isoformat(), "$lt": tomorrow.isoformat()}
+    }, {"_id": 0}).to_list(10000)
+    
+    # Calculate by category
+    by_category = {
+        "bank": {"reconciled": 0, "pending": 0, "flagged": 0},
+        "psp": {"reconciled": 0, "pending": 0, "flagged": 0},
+        "transaction": {"reconciled": 0, "pending": 0, "flagged": 0},
+        "income_expense": {"reconciled": 0, "pending": 0, "flagged": 0},
+        "treasury": {"reconciled": 0, "pending": 0, "flagged": 0},
+    }
+    
+    for item in today_items:
+        cat = item.get("item_type", "other")
+        if cat not in by_category:
+            by_category[cat] = {"reconciled": 0, "pending": 0, "flagged": 0}
+        
+        status = item.get("status", "pending")
+        if status == "reconciled":
+            by_category[cat]["reconciled"] += 1
+        elif status == "flagged":
+            by_category[cat]["flagged"] += 1
+        else:
+            by_category[cat]["pending"] += 1
+    
+    # Add bank entries
+    for entry in bank_entries:
+        status = entry.get("status", "pending")
+        if status == "matched":
+            by_category["bank"]["reconciled"] += 1
+        elif status in ["unmatched", "pending", "discrepancy"]:
+            by_category["bank"]["pending"] += 1
+    
+    total_reconciled = sum(c["reconciled"] for c in by_category.values())
+    total_pending = sum(c["pending"] for c in by_category.values())
+    total_flagged = sum(c["flagged"] for c in by_category.values())
+    
+    # Get flagged items details
+    flagged_items = await db.reconciliation_items.find(
+        {"status": "flagged", "date": {"$gte": today.isoformat(), "$lt": tomorrow.isoformat()}},
+        {"_id": 0, "reference_id": 1, "item_type": 1, "flag_reason": 1}
+    ).to_list(100)
+    
+    return {
+        "date": today.strftime("%Y-%m-%d"),
+        "total": {
+            "reconciled": total_reconciled,
+            "pending": total_pending,
+            "flagged": total_flagged,
+            "total": total_reconciled + total_pending + total_flagged
+        },
+        "by_category": by_category,
+        "flagged_items": flagged_items,
+        "attention_required": total_pending > 0 or total_flagged > 0
+    }
+
+
 # ============== ROLES & PERMISSIONS MANAGEMENT ==============
 
 @api_router.get("/roles")
@@ -9267,6 +9847,138 @@ async def send_email(to_emails: List[str], subject: str, html_content: str,
             password=smtp_password,
         )
 
+
+async def generate_reconciliation_section_html():
+    """Generate reconciliation section for daily report"""
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    tomorrow = today_start + timedelta(days=1)
+    
+    # Get today's reconciliation stats
+    today_items = await db.reconciliation_items.find({
+        "date": {"$gte": today_start.isoformat(), "$lt": tomorrow.isoformat()}
+    }, {"_id": 0}).to_list(10000)
+    
+    bank_entries = await db.reconciliation_entries.find({
+        "created_at": {"$gte": today_start.isoformat(), "$lt": tomorrow.isoformat()}
+    }, {"_id": 0}).to_list(10000)
+    
+    # Calculate by category
+    by_category = {
+        "bank": {"reconciled": 0, "pending": 0, "flagged": 0},
+        "psp": {"reconciled": 0, "pending": 0, "flagged": 0},
+        "transaction": {"reconciled": 0, "pending": 0, "flagged": 0},
+        "income_expense": {"reconciled": 0, "pending": 0, "flagged": 0},
+        "treasury": {"reconciled": 0, "pending": 0, "flagged": 0},
+    }
+    
+    for item in today_items:
+        cat = item.get("item_type", "other")
+        if cat not in by_category:
+            by_category[cat] = {"reconciled": 0, "pending": 0, "flagged": 0}
+        
+        status = item.get("status", "pending")
+        if status == "reconciled":
+            by_category[cat]["reconciled"] += 1
+        elif status == "flagged":
+            by_category[cat]["flagged"] += 1
+        else:
+            by_category[cat]["pending"] += 1
+    
+    # Add bank entries
+    for entry in bank_entries:
+        status = entry.get("status", "pending")
+        if status == "matched":
+            by_category["bank"]["reconciled"] += 1
+        elif status in ["unmatched", "pending", "discrepancy"]:
+            by_category["bank"]["pending"] += 1
+    
+    total_reconciled = sum(c["reconciled"] for c in by_category.values())
+    total_pending = sum(c["pending"] for c in by_category.values())
+    total_flagged = sum(c["flagged"] for c in by_category.values())
+    total = total_reconciled + total_pending + total_flagged
+    
+    # Get flagged items details
+    flagged_items = await db.reconciliation_items.find(
+        {"status": "flagged"},
+        {"_id": 0, "reference_id": 1, "item_type": 1, "flag_reason": 1}
+    ).to_list(10)
+    
+    # Build category rows
+    category_rows = ""
+    for cat_name, stats in by_category.items():
+        if stats["reconciled"] + stats["pending"] + stats["flagged"] > 0:
+            cat_label = cat_name.replace("_", " ").title()
+            category_rows += f"<tr><td>{cat_label}</td><td class='green'>{stats['reconciled']}</td><td class='yellow'>{stats['pending']}</td><td class='red'>{stats['flagged']}</td></tr>"
+    
+    # Build flagged items rows
+    flagged_rows = ""
+    for item in flagged_items[:5]:
+        flagged_rows += f"<tr><td>{item.get('item_type', 'Unknown')}</td><td>{item.get('reference_id', 'N/A')[:20]}</td><td>{item.get('flag_reason', 'No reason')[:50]}</td></tr>"
+    
+    # Determine status color
+    if total == 0:
+        status_text = "✅ No items to reconcile"
+        status_color = "green"
+    elif total_pending == 0 and total_flagged == 0:
+        status_text = "✅ All items reconciled"
+        status_color = "green"
+    elif total_flagged > 0:
+        status_text = f"⚠️ {total_flagged} items need review"
+        status_color = "red"
+    else:
+        status_text = f"⏳ {total_pending} items pending"
+        status_color = "yellow"
+    
+    # Build category table
+    category_table = ""
+    if category_rows:
+        category_table = f'''<table>
+                        <tr><th>Category</th><th>Reconciled</th><th>Pending</th><th>Flagged</th></tr>
+                        {category_rows}
+                    </table>'''
+    
+    # Build flagged section
+    flagged_section = ""
+    if flagged_rows:
+        flagged_section = f'''<div style="margin-top: 15px;">
+                        <strong>Items Requiring Attention:</strong>
+                        <table style="margin-top: 10px;">
+                            <tr><th>Type</th><th>Reference</th><th>Reason</th></tr>
+                            {flagged_rows}
+                        </table>
+                    </div>'''
+    
+    reconciliation_html = f'''
+                <!-- Daily Reconciliation Summary -->
+                <div class="section">
+                    <div class="section-title">Daily Reconciliation Summary</div>
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">Reconciled</div>
+                            <div class="stat-value green">{total_reconciled}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Pending</div>
+                            <div class="stat-value yellow">{total_pending}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Flagged</div>
+                            <div class="stat-value red">{total_flagged}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Status</div>
+                            <div class="stat-value {status_color}">{status_text}</div>
+                        </div>
+                    </div>
+                    {category_table}
+                    {flagged_section}
+                </div>
+    '''
+    
+    return reconciliation_html
+
+
 async def generate_daily_report_html():
     """Generate comprehensive daily report HTML"""
     now = datetime.now(timezone.utc)
@@ -9531,6 +10243,8 @@ async def generate_daily_report_html():
                         </div>
                     </div>
                 </div>
+                
+                {await generate_reconciliation_section_html()}
             </div>
             
             <div class="footer">

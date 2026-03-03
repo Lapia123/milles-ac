@@ -4,6 +4,8 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
+import { Checkbox } from '../components/ui/checkbox';
+import { Textarea } from '../components/ui/textarea';
 import {
   Table,
   TableBody,
@@ -17,6 +19,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '../components/ui/dialog';
 import {
   Select,
@@ -49,15 +52,31 @@ import {
   RefreshCw,
   Download,
   ArrowUpDown,
+  Calendar,
+  Flag,
+  Check,
+  X,
+  Clock,
+  History,
+  FileText,
+  DollarSign,
+  AlertCircle,
+  Trash2,
+  Edit,
+  Plus,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function Reconciliation() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('summary');
+  const [activeTab, setActiveTab] = useState('daily');
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Daily reconciliation state
+  const [dailyData, setDailyData] = useState(null);
+  const [selectedItems, setSelectedItems] = useState([]);
   
   // Bank reconciliation state
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
@@ -79,6 +98,20 @@ export default function Reconciliation() {
   
   // Exchanger reconciliation state
   const [vendorRecon, setExchangerRecon] = useState([]);
+  
+  // History state
+  const [history, setHistory] = useState([]);
+  const [flaggedItems, setFlaggedItems] = useState([]);
+  
+  // Dialog states
+  const [flagDialogOpen, setFlagDialogOpen] = useState(false);
+  const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
+  const [selectedItemForAction, setSelectedItemForAction] = useState(null);
+  const [flagReason, setFlagReason] = useState('');
+  const [adjustmentData, setAdjustmentData] = useState({ amount: '', reason: '', treasury_account_id: '' });
+  const [reconcileNotes, setReconcileNotes] = useState('');
+
+  const isAdmin = user?.role === 'admin';
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -98,8 +131,20 @@ export default function Reconciliation() {
       }
     } catch (error) {
       console.error('Error fetching summary:', error);
-    } finally {
-      setLoading(false);
+    }
+  }, []);
+
+  const fetchDailyData = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/reconciliation/daily`, {
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      if (response.ok) {
+        setDailyData(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching daily data:', error);
     }
   }, []);
 
@@ -113,13 +158,13 @@ export default function Reconciliation() {
         setTreasuryAccounts(await response.json());
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching treasury accounts:', error);
     }
   };
 
   const fetchBankBatches = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/reconciliation/batches?type=bank`, {
+      const response = await fetch(`${API_URL}/api/reconciliation/batches`, {
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         credentials: 'include',
       });
@@ -127,7 +172,7 @@ export default function Reconciliation() {
         setBankBatches(await response.json());
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching batches:', error);
     }
   };
 
@@ -141,7 +186,7 @@ export default function Reconciliation() {
         setBatchDetails(await response.json());
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching batch details:', error);
     }
   };
 
@@ -155,7 +200,7 @@ export default function Reconciliation() {
         setPspRecon(await response.json());
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching PSP reconciliation:', error);
     }
   };
 
@@ -169,7 +214,7 @@ export default function Reconciliation() {
         setPspDetails(await response.json());
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching PSP details:', error);
     }
   };
 
@@ -183,7 +228,7 @@ export default function Reconciliation() {
         setClientRecon(await response.json());
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching client reconciliation:', error);
     }
   };
 
@@ -197,7 +242,7 @@ export default function Reconciliation() {
         setClientDetails(await response.json());
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching client details:', error);
     }
   };
 
@@ -211,27 +256,60 @@ export default function Reconciliation() {
         setExchangerRecon(await response.json());
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching exchanger reconciliation:', error);
+    }
+  };
+
+  const fetchHistory = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/reconciliation/history?limit=50`, {
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      if (response.ok) {
+        setHistory(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching history:', error);
+    }
+  };
+
+  const fetchFlaggedItems = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/reconciliation/flagged`, {
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      if (response.ok) {
+        setFlaggedItems(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching flagged items:', error);
     }
   };
 
   useEffect(() => {
-    fetchSummary();
-    fetchTreasuryAccounts();
-    fetchBankBatches();
-    fetchPspRecon();
-    fetchClientRecon();
-    fetchExchangerRecon();
-  }, [fetchSummary]);
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchSummary(),
+        fetchDailyData(),
+        fetchTreasuryAccounts(),
+        fetchBankBatches(),
+        fetchPspRecon(),
+        fetchClientRecon(),
+        fetchExchangerRecon(),
+        fetchHistory(),
+        fetchFlaggedItems(),
+      ]);
+      setLoading(false);
+    };
+    loadData();
+  }, [fetchSummary, fetchDailyData]);
 
   const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    if (!selectedAccount) {
-      toast.error('Please select a treasury account first');
-      return;
-    }
+    const file = e.target.files?.[0];
+    if (!file || !selectedAccount) return;
     
     setUploading(true);
     const formData = new FormData();
@@ -263,122 +341,264 @@ export default function Reconciliation() {
     }
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'matched':
-      case 'ok':
-        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Matched</Badge>;
-      case 'discrepancy':
-      case 'variance':
-      case 'attention':
-        return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Discrepancy</Badge>;
-      case 'unmatched':
-        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Unmatched</Badge>;
-      default:
-        return <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">{status}</Badge>;
+  // Quick reconcile single item
+  const handleQuickReconcile = async (item) => {
+    try {
+      const response = await fetch(`${API_URL}/api/reconciliation/quick-reconcile?reference_id=${item.id}&item_type=${item.type}&notes=${encodeURIComponent(reconcileNotes)}`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        toast.success('Item reconciled');
+        fetchDailyData();
+        fetchSummary();
+        fetchHistory();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to reconcile');
+      }
+    } catch (error) {
+      toast.error('Failed to reconcile');
     }
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
+  // Bulk reconcile selected items
+  const handleBulkReconcile = async () => {
+    if (selectedItems.length === 0) {
+      toast.error('No items selected');
+      return;
+    }
+    
+    try {
+      const items = selectedItems.map(id => {
+        const item = dailyData?.items?.find(i => i.id === id);
+        return { reference_id: id, item_type: item?.type || 'unknown' };
+      });
+      
+      const response = await fetch(`${API_URL}/api/reconciliation/bulk-reconcile?notes=${encodeURIComponent(reconcileNotes)}`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(items),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(result.message);
+        setSelectedItems([]);
+        setReconcileNotes('');
+        fetchDailyData();
+        fetchSummary();
+        fetchHistory();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to reconcile');
+      }
+    } catch (error) {
+      toast.error('Failed to reconcile');
+    }
+  };
+
+  // Flag for review
+  const handleFlag = async () => {
+    if (!selectedItemForAction || !flagReason) return;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/reconciliation/flag?reference_id=${selectedItemForAction.id}&item_type=${selectedItemForAction.type}&reason=${encodeURIComponent(flagReason)}`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        toast.success('Item flagged for review');
+        setFlagDialogOpen(false);
+        setFlagReason('');
+        setSelectedItemForAction(null);
+        fetchDailyData();
+        fetchFlaggedItems();
+        fetchHistory();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to flag item');
+      }
+    } catch (error) {
+      toast.error('Failed to flag item');
+    }
+  };
+
+  // Create adjustment
+  const handleCreateAdjustment = async () => {
+    if (!selectedItemForAction || !adjustmentData.amount || !adjustmentData.reason) return;
+    
+    try {
+      const params = new URLSearchParams({
+        reference_id: selectedItemForAction.id,
+        item_type: selectedItemForAction.type,
+        adjustment_amount: adjustmentData.amount,
+        currency: selectedItemForAction.currency || 'USD',
+        reason: adjustmentData.reason,
+      });
+      if (adjustmentData.treasury_account_id) {
+        params.append('treasury_account_id', adjustmentData.treasury_account_id);
+      }
+      
+      const response = await fetch(`${API_URL}/api/reconciliation/adjustment?${params}`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        toast.success('Adjustment created');
+        setAdjustmentDialogOpen(false);
+        setAdjustmentData({ amount: '', reason: '', treasury_account_id: '' });
+        setSelectedItemForAction(null);
+        fetchDailyData();
+        fetchSummary();
+        fetchHistory();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to create adjustment');
+      }
+    } catch (error) {
+      toast.error('Failed to create adjustment');
+    }
+  };
+
+  // Export unmatched
+  const handleExportUnmatched = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/reconciliation/export-unmatched`, {
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `unmatched_items_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        toast.success(`Exported ${data.total_count} items`);
+      }
+    } catch (error) {
+      toast.error('Export failed');
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'reconciled':
+      case 'matched':
+        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30"><CheckCircle2 className="w-3 h-3 mr-1" />Reconciled</Badge>;
+      case 'pending':
+        return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+      case 'flagged':
+        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30"><Flag className="w-3 h-3 mr-1" />Flagged</Badge>;
+      case 'unmatched':
+        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30"><XCircle className="w-3 h-3 mr-1" />Unmatched</Badge>;
+      case 'discrepancy':
+        return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30"><AlertTriangle className="w-3 h-3 mr-1" />Discrepancy</Badge>;
+      default:
+        return <Badge className="bg-slate-200 text-slate-600">{status}</Badge>;
+    }
   };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
+  const toggleItemSelection = (itemId) => {
+    setSelectedItems(prev => 
+      prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
+    );
+  };
+
+  const selectAllPending = () => {
+    const pendingIds = dailyData?.items?.filter(i => i.status === 'pending').map(i => i.id) || [];
+    setSelectedItems(pendingIds);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 animate-fade-in" data-testid="reconciliation-page">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
-            Reconciliation
-          </h1>
-          <p className="text-[#C5C6C7]">Match and verify transactions across all accounts</p>
+          <h1 className="text-3xl font-bold text-slate-800">Reconciliation</h1>
+          <p className="text-slate-500 mt-1">Match and verify transactions across all accounts</p>
         </div>
-        <Button
-          onClick={() => { fetchSummary(); fetchBankBatches(); fetchPspRecon(); fetchClientRecon(); fetchExchangerRecon(); }}
-          variant="outline"
-          className="border-slate-200 text-[#C5C6C7] hover:bg-white/5"
-        >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportUnmatched} className="border-slate-200 text-slate-600">
+            <Download className="w-4 h-4 mr-2" /> Export Unmatched
+          </Button>
+          <Button variant="outline" onClick={() => { fetchSummary(); fetchDailyData(); }} className="border-slate-200 text-slate-600">
+            <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
       {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className={`bg-white border-slate-200 ${summary.bank.status === 'attention' ? 'border-l-4 border-l-yellow-500' : ''}`}>
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card className={`bg-white border-l-4 ${summary.bank.status === 'attention' ? 'border-l-yellow-500' : 'border-l-green-500'}`}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <Building2 className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-[#C5C6C7] uppercase">Bank</p>
-                    <p className="text-xl font-bold text-white">{summary.bank.unmatched_entries}</p>
-                    <p className="text-xs text-[#C5C6C7]">Unmatched</p>
-                  </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider">Bank</p>
+                  <p className="text-2xl font-bold text-slate-800">{summary.bank.unmatched_entries}</p>
+                  <p className="text-xs text-slate-500">Unmatched</p>
                 </div>
-                {summary.bank.status === 'attention' && <AlertTriangle className="w-5 h-5 text-yellow-400" />}
+                <Building2 className="w-8 h-8 text-blue-500" />
               </div>
             </CardContent>
           </Card>
-
-          <Card className={`bg-white border-slate-200 ${summary.psp.status === 'attention' ? 'border-l-4 border-l-yellow-500' : ''}`}>
+          <Card className={`bg-white border-l-4 ${summary.psp.status === 'attention' ? 'border-l-yellow-500' : 'border-l-green-500'}`}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-500/10 rounded-lg">
-                    <CreditCard className="w-5 h-5 text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-[#C5C6C7] uppercase">PSP</p>
-                    <p className="text-xl font-bold text-white">{formatCurrency(summary.psp.total_variance)}</p>
-                    <p className="text-xs text-[#C5C6C7]">Variance</p>
-                  </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider">PSP</p>
+                  <p className="text-2xl font-bold text-slate-800">${Math.abs(summary.psp.total_variance).toLocaleString()}</p>
+                  <p className="text-xs text-slate-500">Variance</p>
                 </div>
-                {summary.psp.status === 'attention' && <AlertTriangle className="w-5 h-5 text-yellow-400" />}
+                <CreditCard className="w-8 h-8 text-purple-500" />
               </div>
             </CardContent>
           </Card>
-
-          <Card className={`bg-white border-slate-200 ${summary.clients.status === 'attention' ? 'border-l-4 border-l-yellow-500' : ''}`}>
+          <Card className={`bg-white border-l-4 ${summary.clients.status === 'attention' ? 'border-l-yellow-500' : 'border-l-green-500'}`}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-500/10 rounded-lg">
-                    <Users className="w-5 h-5 text-green-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-[#C5C6C7] uppercase">Clients</p>
-                    <p className="text-xl font-bold text-white">{summary.clients.clients_with_discrepancy}</p>
-                    <p className="text-xs text-[#C5C6C7]">Discrepancies</p>
-                  </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider">Clients</p>
+                  <p className="text-2xl font-bold text-slate-800">{summary.clients.clients_with_discrepancy}</p>
+                  <p className="text-xs text-slate-500">Discrepancies</p>
                 </div>
-                {summary.clients.status === 'attention' && <AlertTriangle className="w-5 h-5 text-yellow-400" />}
+                <Users className="w-8 h-8 text-amber-500" />
               </div>
             </CardContent>
           </Card>
-
-          <Card className={`bg-white border-slate-200 ${summary.vendors.status === 'attention' ? 'border-l-4 border-l-yellow-500' : ''}`}>
+          <Card className={`bg-white border-l-4 ${summary.vendors.status === 'attention' ? 'border-l-yellow-500' : 'border-l-green-500'}`}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-500/10 rounded-lg">
-                    <Store className="w-5 h-5 text-orange-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-[#C5C6C7] uppercase">Exchangers</p>
-                    <p className="text-xl font-bold text-white">{summary.vendors.vendors_with_discrepancy}</p>
-                    <p className="text-xs text-[#C5C6C7]">Discrepancies</p>
-                  </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider">Exchangers</p>
+                  <p className="text-2xl font-bold text-slate-800">{summary.vendors.vendors_with_discrepancy}</p>
+                  <p className="text-xs text-slate-500">Discrepancies</p>
                 </div>
-                {summary.vendors.status === 'attention' && <AlertTriangle className="w-5 h-5 text-yellow-400" />}
+                <Store className="w-8 h-8 text-green-500" />
               </div>
             </CardContent>
           </Card>
@@ -387,23 +607,174 @@ export default function Reconciliation() {
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-slate-50 border border-slate-200">
-          <TabsTrigger value="summary" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-            Summary
+        <TabsList className="bg-slate-50 border border-slate-200 flex-wrap">
+          <TabsTrigger value="daily" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+            <Calendar className="w-4 h-4 mr-1" /> Daily
           </TabsTrigger>
           <TabsTrigger value="bank" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-            Bank
+            <Building2 className="w-4 h-4 mr-1" /> Bank
           </TabsTrigger>
           <TabsTrigger value="psp" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-            PSP
+            <CreditCard className="w-4 h-4 mr-1" /> PSP
           </TabsTrigger>
           <TabsTrigger value="clients" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-            Clients
+            <Users className="w-4 h-4 mr-1" /> Clients
           </TabsTrigger>
-          <TabsTrigger value="vendors" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-            Exchangers
+          <TabsTrigger value="exchangers" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+            <Store className="w-4 h-4 mr-1" /> Exchangers
+          </TabsTrigger>
+          <TabsTrigger value="flagged" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+            <Flag className="w-4 h-4 mr-1" /> Flagged ({flaggedItems.length})
+          </TabsTrigger>
+          <TabsTrigger value="history" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+            <History className="w-4 h-4 mr-1" /> History
           </TabsTrigger>
         </TabsList>
+
+        {/* Daily Reconciliation Tab */}
+        <TabsContent value="daily" className="mt-4">
+          <Card className="bg-white border-slate-200">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-[#66FCF1]" />
+                  Today's Reconciliation
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={selectAllPending} className="text-slate-600">
+                    Select All Pending
+                  </Button>
+                  {selectedItems.length > 0 && (
+                    <Button onClick={handleBulkReconcile} size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+                      <Check className="w-4 h-4 mr-1" /> Reconcile Selected ({selectedItems.length})
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {dailyData?.stats && (
+                <div className="grid grid-cols-4 gap-4 mt-4">
+                  <div className="bg-slate-50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-slate-800">{dailyData.stats.total}</p>
+                    <p className="text-xs text-slate-500">Total Items</p>
+                  </div>
+                  <div className="bg-green-50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-green-600">{dailyData.stats.reconciled}</p>
+                    <p className="text-xs text-green-600">Reconciled</p>
+                  </div>
+                  <div className="bg-yellow-50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-yellow-600">{dailyData.stats.pending}</p>
+                    <p className="text-xs text-yellow-600">Pending</p>
+                  </div>
+                  <div className="bg-red-50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-red-600">{dailyData.stats.flagged}</p>
+                    <p className="text-xs text-red-600">Flagged</p>
+                  </div>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              {selectedItems.length > 0 && (
+                <div className="mb-4 p-3 bg-slate-50 rounded-lg">
+                  <Label className="text-xs text-slate-500 uppercase">Notes for Reconciliation (Optional)</Label>
+                  <Textarea 
+                    value={reconcileNotes}
+                    onChange={(e) => setReconcileNotes(e.target.value)}
+                    placeholder="Add any notes about this reconciliation..."
+                    className="mt-1 bg-white border-slate-200"
+                  />
+                </div>
+              )}
+              <ScrollArea className="h-[500px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-200">
+                      <TableHead className="w-10"></TableHead>
+                      <TableHead className="text-slate-500 text-xs uppercase">Date</TableHead>
+                      <TableHead className="text-slate-500 text-xs uppercase">Type</TableHead>
+                      <TableHead className="text-slate-500 text-xs uppercase">Description</TableHead>
+                      <TableHead className="text-slate-500 text-xs uppercase">Reference</TableHead>
+                      <TableHead className="text-slate-500 text-xs uppercase text-right">Amount</TableHead>
+                      <TableHead className="text-slate-500 text-xs uppercase">Status</TableHead>
+                      <TableHead className="text-slate-500 text-xs uppercase w-32">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dailyData?.items?.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-slate-500 py-8">
+                          <CheckCircle2 className="w-12 h-12 mx-auto mb-2 text-green-500" />
+                          <p>No transactions today</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      dailyData?.items?.map((item) => (
+                        <TableRow key={item.id} className={`border-slate-200 hover:bg-slate-50 ${item.status === 'reconciled' ? 'opacity-60' : ''}`}>
+                          <TableCell>
+                            {item.status !== 'reconciled' && (
+                              <Checkbox
+                                checked={selectedItems.includes(item.id)}
+                                onCheckedChange={() => toggleItemSelection(item.id)}
+                              />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-slate-800 text-sm">{formatDate(item.date)}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {item.type?.replace('_', ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-slate-800 text-sm max-w-[200px] truncate">{item.description}</TableCell>
+                          <TableCell className="text-slate-500 text-xs font-mono">{item.reference || '-'}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">
+                            <span className={item.category === 'income' || item.category === 'deposit' ? 'text-green-600' : 'text-red-600'}>
+                              {item.amount?.toLocaleString()} {item.currency}
+                            </span>
+                          </TableCell>
+                          <TableCell>{getStatusBadge(item.status)}</TableCell>
+                          <TableCell>
+                            {item.status !== 'reconciled' && (
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleQuickReconcile(item)}
+                                  className="text-green-600 hover:bg-green-50 h-7 px-2"
+                                  title="Quick Reconcile"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => { setSelectedItemForAction(item); setFlagDialogOpen(true); }}
+                                  className="text-red-500 hover:bg-red-50 h-7 px-2"
+                                  title="Flag for Review"
+                                >
+                                  <Flag className="w-3.5 h-3.5" />
+                                </Button>
+                                {isAdmin && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => { setSelectedItemForAction(item); setAdjustmentDialogOpen(true); }}
+                                    className="text-blue-600 hover:bg-blue-50 h-7 px-2"
+                                    title="Create Adjustment"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Bank Reconciliation Tab */}
         <TabsContent value="bank" className="mt-4">
@@ -411,21 +782,21 @@ export default function Reconciliation() {
             {/* Upload Section */}
             <Card className="bg-white border-slate-200">
               <CardHeader>
-                <CardTitle className="text-lg text-white flex items-center gap-2">
+                <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
                   <Upload className="w-5 h-5 text-[#66FCF1]" />
                   Upload Bank Statement
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase">Treasury Account</Label>
+                  <Label className="text-slate-500 text-xs uppercase">Treasury Account</Label>
                   <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-                    <SelectTrigger className="bg-slate-50 border-slate-200 text-white">
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
                       <SelectValue placeholder="Select account..." />
                     </SelectTrigger>
                     <SelectContent className="bg-white border-slate-200">
                       {treasuryAccounts.map((acc) => (
-                        <SelectItem key={acc.account_id} value={acc.account_id} className="text-white hover:bg-white/5">
+                        <SelectItem key={acc.account_id} value={acc.account_id} className="text-slate-800 hover:bg-slate-50">
                           {acc.account_name} - {acc.bank_name} ({acc.currency})
                         </SelectItem>
                       ))}
@@ -433,15 +804,16 @@ export default function Reconciliation() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase">Statement File (CSV/Excel)</Label>
+                  <Label className="text-slate-500 text-xs uppercase">Statement File (CSV/Excel/PDF)</Label>
                   <Input
                     type="file"
-                    accept=".csv,.xlsx,.xls"
+                    accept=".csv,.xlsx,.xls,.pdf"
                     onChange={handleFileUpload}
                     disabled={uploading || !selectedAccount}
-                    className="bg-slate-50 border-slate-200 text-white file:bg-[#66FCF1] file:text-[#0B0C10] file:border-0 file:rounded file:px-3 file:py-1 file:mr-3 file:font-bold"
+                    className="bg-slate-50 border-slate-200 text-slate-800 file:bg-[#66FCF1] file:text-[#0B0C10] file:border-0 file:rounded file:px-3 file:py-1 file:mr-3 file:font-bold"
                     data-testid="bank-statement-upload"
                   />
+                  <p className="text-xs text-slate-500">Supported: CSV, Excel (.xlsx, .xls), PDF</p>
                 </div>
                 {uploading && (
                   <div className="flex items-center gap-2 text-[#66FCF1]">
@@ -455,7 +827,7 @@ export default function Reconciliation() {
             {/* Recent Batches */}
             <Card className="bg-white border-slate-200">
               <CardHeader>
-                <CardTitle className="text-lg text-white flex items-center gap-2">
+                <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
                   <FileSpreadsheet className="w-5 h-5 text-[#66FCF1]" />
                   Recent Uploads
                 </CardTitle>
@@ -463,23 +835,27 @@ export default function Reconciliation() {
               <CardContent>
                 <ScrollArea className="h-[200px]">
                   {bankBatches.length === 0 ? (
-                    <p className="text-[#C5C6C7] text-center py-4">No uploads yet</p>
+                    <p className="text-slate-500 text-center py-4">No uploads yet</p>
                   ) : (
                     <div className="space-y-2">
                       {bankBatches.map((batch) => (
                         <div
                           key={batch.batch_id}
-                          className="p-3 bg-slate-50 rounded-lg border border-slate-200 cursor-pointer hover:border-[#66FCF1]/30"
+                          className="p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors"
                           onClick={() => { setSelectedBatch(batch); fetchBatchDetails(batch.batch_id); }}
                         >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-white font-medium text-sm">{batch.filename}</span>
-                            <span className="text-xs text-[#C5C6C7]">{formatDate(batch.created_at)}</span>
-                          </div>
-                          <div className="flex items-center gap-4 text-xs">
-                            <span className="text-green-400">{batch.matched} matched</span>
-                            <span className="text-red-400">{batch.unmatched} unmatched</span>
-                            <span className="text-yellow-400">{batch.discrepancies} discrepancy</span>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-slate-800 text-sm">{batch.account_name}</p>
+                              <p className="text-xs text-slate-500">{batch.filename}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-slate-500">{formatDate(batch.created_at)}</p>
+                              <div className="flex gap-1 mt-1">
+                                <Badge className="bg-green-500/20 text-green-600 text-[10px]">{batch.matched} matched</Badge>
+                                <Badge className="bg-red-500/20 text-red-600 text-[10px]">{batch.unmatched} unmatched</Badge>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -490,429 +866,386 @@ export default function Reconciliation() {
             </Card>
           </div>
 
-          {/* Batch Details Dialog */}
-          <Dialog open={!!batchDetails} onOpenChange={() => setBatchDetails(null)}>
-            <DialogContent className="bg-white border-slate-200 text-white max-w-4xl max-h-[80vh]">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
-                  Reconciliation Details - {batchDetails?.batch?.filename}
-                </DialogTitle>
-              </DialogHeader>
-              <ScrollArea className="h-[500px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-slate-200">
-                      <TableHead className="text-[#C5C6C7] text-xs">Row</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs">Amount</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs">Date</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs">Reference</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs">Status</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs">Variance</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {batchDetails?.entries?.map((entry) => (
-                      <TableRow key={entry.entry_id} className="border-slate-200 hover:bg-white/5">
-                        <TableCell className="text-white">{entry.row_number}</TableCell>
-                        <TableCell className="text-white font-mono">{formatCurrency(entry.parsed_amount)}</TableCell>
-                        <TableCell className="text-[#C5C6C7]">{entry.parsed_date || '-'}</TableCell>
-                        <TableCell className="text-[#C5C6C7] font-mono text-xs">{entry.parsed_reference || '-'}</TableCell>
-                        <TableCell>{getStatusBadge(entry.status)}</TableCell>
-                        <TableCell className={entry.variance ? (entry.variance > 0 ? 'text-green-400' : 'text-red-400') : 'text-[#C5C6C7]'}>
-                          {entry.variance ? formatCurrency(entry.variance) : '-'}
-                        </TableCell>
+          {/* Batch Details */}
+          {batchDetails && (
+            <Card className="bg-white border-slate-200 mt-4">
+              <CardHeader>
+                <CardTitle className="text-lg text-slate-800">
+                  Batch Details: {selectedBatch?.filename}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[300px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-slate-200">
+                        <TableHead className="text-slate-500 text-xs">Date</TableHead>
+                        <TableHead className="text-slate-500 text-xs">Reference</TableHead>
+                        <TableHead className="text-slate-500 text-xs">Description</TableHead>
+                        <TableHead className="text-slate-500 text-xs text-right">Amount</TableHead>
+                        <TableHead className="text-slate-500 text-xs">Status</TableHead>
+                        <TableHead className="text-slate-500 text-xs">Matched To</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-            </DialogContent>
-          </Dialog>
+                    </TableHeader>
+                    <TableBody>
+                      {batchDetails.entries?.map((entry) => (
+                        <TableRow key={entry.entry_id} className="border-slate-200">
+                          <TableCell className="text-slate-800 text-sm">{entry.date || '-'}</TableCell>
+                          <TableCell className="text-slate-500 text-xs font-mono">{entry.reference || '-'}</TableCell>
+                          <TableCell className="text-slate-800 text-sm max-w-[200px] truncate">{entry.description || '-'}</TableCell>
+                          <TableCell className="text-right font-mono text-sm text-slate-800">{entry.amount?.toLocaleString()}</TableCell>
+                          <TableCell>{getStatusBadge(entry.status)}</TableCell>
+                          <TableCell className="text-slate-500 text-xs">{entry.matched_transaction_id || '-'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
-        {/* PSP Reconciliation Tab */}
+        {/* PSP Tab */}
         <TabsContent value="psp" className="mt-4">
           <Card className="bg-white border-slate-200">
             <CardHeader>
-              <CardTitle className="text-lg text-white flex items-center gap-2">
+              <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-[#66FCF1]" />
-                PSP Settlement Reconciliation
+                PSP Reconciliation
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-200">
-                    <TableHead className="text-[#C5C6C7] text-xs">PSP</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs">Transactions</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs">Expected</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs">Actual</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs">Variance</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs">Status</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pspRecon.map((psp) => (
-                    <TableRow key={psp.psp_id} className="border-slate-200 hover:bg-white/5">
-                      <TableCell className="text-white font-medium">{psp.psp_name}</TableCell>
-                      <TableCell className="text-white">{psp.total_transactions}</TableCell>
-                      <TableCell className="text-white font-mono">{formatCurrency(psp.expected_amount)}</TableCell>
-                      <TableCell className="text-white font-mono">{formatCurrency(psp.actual_amount)}</TableCell>
-                      <TableCell className={`font-mono ${psp.total_variance !== 0 ? (psp.total_variance > 0 ? 'text-green-400' : 'text-red-400') : 'text-[#C5C6C7]'}`}>
-                        {formatCurrency(psp.total_variance)}
-                      </TableCell>
-                      <TableCell>
-                        {psp.transactions_with_variance > 0 ? (
-                          <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-                            {psp.transactions_with_variance} variance
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-green-500/20 text-green-400 border-green-500/30">OK</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => { setSelectedPsp(psp); fetchPspDetails(psp.psp_id); }}
-                          className="text-[#66FCF1] hover:bg-[#66FCF1]/10"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          {/* PSP Details Dialog */}
-          <Dialog open={!!selectedPsp && pspDetails.length > 0} onOpenChange={() => { setSelectedPsp(null); setPspDetails([]); }}>
-            <DialogContent className="bg-white border-slate-200 text-white max-w-4xl max-h-[80vh]">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
-                  {selectedPsp?.psp_name} - Settlement Details
-                </DialogTitle>
-              </DialogHeader>
-              <ScrollArea className="h-[500px]">
+              <ScrollArea className="h-[400px]">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-slate-200">
-                      <TableHead className="text-[#C5C6C7] text-xs">Reference</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs">Gross</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs">Deductions</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs">Expected</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs">Actual</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs">Variance</TableHead>
-                      <TableHead className="text-[#C5C6C7] text-xs">Status</TableHead>
+                      <TableHead className="text-slate-500 text-xs">PSP Name</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Our Records</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Settled</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Variance</TableHead>
+                      <TableHead className="text-slate-500 text-xs">Status</TableHead>
+                      <TableHead className="text-slate-500 text-xs">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pspDetails.map((tx) => (
-                      <TableRow key={tx.transaction_id} className="border-slate-200 hover:bg-white/5">
-                        <TableCell className="text-white font-mono text-xs">{tx.reference}</TableCell>
-                        <TableCell className="text-white font-mono">{formatCurrency(tx.gross_amount)}</TableCell>
-                        <TableCell className="text-red-400 font-mono text-xs">
-                          -{formatCurrency(tx.commission + tx.chargeback + tx.extra_charges)}
+                    {pspRecon.map((psp) => (
+                      <TableRow key={psp.psp_id} className="border-slate-200 hover:bg-slate-50">
+                        <TableCell className="text-slate-800 font-medium">{psp.psp_name}</TableCell>
+                        <TableCell className="text-right font-mono text-slate-800">${psp.our_total?.toLocaleString()}</TableCell>
+                        <TableCell className="text-right font-mono text-slate-800">${psp.settled_total?.toLocaleString()}</TableCell>
+                        <TableCell className={`text-right font-mono ${psp.total_variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          ${psp.total_variance?.toLocaleString()}
                         </TableCell>
-                        <TableCell className="text-white font-mono">{formatCurrency(tx.expected_net)}</TableCell>
-                        <TableCell className="text-[#66FCF1] font-mono">{formatCurrency(tx.actual_received)}</TableCell>
-                        <TableCell className={`font-mono ${tx.variance !== 0 ? (tx.variance > 0 ? 'text-green-400' : 'text-red-400') : 'text-[#C5C6C7]'}`}>
-                          {formatCurrency(tx.variance)}
+                        <TableCell>{getStatusBadge(Math.abs(psp.total_variance) < 1 ? 'matched' : 'discrepancy')}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" onClick={() => { setSelectedPsp(psp); fetchPspDetails(psp.psp_id); }}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
                         </TableCell>
-                        <TableCell>{getStatusBadge(tx.status)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </ScrollArea>
-            </DialogContent>
-          </Dialog>
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        {/* Client Reconciliation Tab */}
+        {/* Clients Tab */}
         <TabsContent value="clients" className="mt-4">
           <Card className="bg-white border-slate-200">
             <CardHeader>
-              <CardTitle className="text-lg text-white flex items-center gap-2">
+              <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
                 <Users className="w-5 h-5 text-[#66FCF1]" />
-                Client Account Reconciliation
+                Client Reconciliation
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-200">
-                    <TableHead className="text-[#C5C6C7] text-xs">Client</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs">Transactions</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs">Recorded Balance</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs">Calculated Balance</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs">Variance</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs">Status</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {clientRecon.map((client) => (
-                    <TableRow key={client.client_id} className="border-slate-200 hover:bg-white/5">
-                      <TableCell className="text-white font-medium">{client.client_name}</TableCell>
-                      <TableCell className="text-white">{client.transaction_count}</TableCell>
-                      <TableCell className="text-white font-mono">{formatCurrency(client.recorded_balance)}</TableCell>
-                      <TableCell className="text-[#66FCF1] font-mono">{formatCurrency(client.calculated_balance)}</TableCell>
-                      <TableCell className={`font-mono ${client.variance !== 0 ? (client.variance > 0 ? 'text-green-400' : 'text-red-400') : 'text-[#C5C6C7]'}`}>
-                        {formatCurrency(client.variance)}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(client.status)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => { setSelectedClient(client); fetchClientDetails(client.client_id); }}
-                          className="text-[#66FCF1] hover:bg-[#66FCF1]/10"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
+              <ScrollArea className="h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-200">
+                      <TableHead className="text-slate-500 text-xs">Client</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Our Balance</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Client Claims</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Variance</TableHead>
+                      <TableHead className="text-slate-500 text-xs">Status</TableHead>
+                      <TableHead className="text-slate-500 text-xs">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {clientRecon.map((client) => (
+                      <TableRow key={client.client_id} className="border-slate-200 hover:bg-slate-50">
+                        <TableCell className="text-slate-800 font-medium">{client.name}</TableCell>
+                        <TableCell className="text-right font-mono text-slate-800">${client.our_balance?.toLocaleString()}</TableCell>
+                        <TableCell className="text-right font-mono text-slate-800">${client.client_balance?.toLocaleString()}</TableCell>
+                        <TableCell className={`text-right font-mono ${client.variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          ${client.variance?.toLocaleString()}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(client.status)}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" onClick={() => { setSelectedClient(client); fetchClientDetails(client.client_id); }}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
             </CardContent>
           </Card>
-
-          {/* Client Details Dialog */}
-          <Dialog open={!!clientDetails} onOpenChange={() => setClientDetails(null)}>
-            <DialogContent className="bg-white border-slate-200 text-white max-w-4xl max-h-[80vh]">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
-                  {clientDetails?.client?.name} - Transaction History
-                </DialogTitle>
-              </DialogHeader>
-              {clientDetails && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg">
-                    <div>
-                      <p className="text-xs text-[#C5C6C7] uppercase">Recorded Balance</p>
-                      <p className="text-xl font-bold text-white">{formatCurrency(clientDetails.client.recorded_balance)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#C5C6C7] uppercase">Calculated Balance</p>
-                      <p className="text-xl font-bold text-[#66FCF1]">{formatCurrency(clientDetails.client.calculated_balance)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#C5C6C7] uppercase">Variance</p>
-                      <p className={`text-xl font-bold ${clientDetails.client.variance !== 0 ? 'text-red-400' : 'text-green-400'}`}>
-                        {formatCurrency(clientDetails.client.variance)}
-                      </p>
-                    </div>
-                  </div>
-                  <ScrollArea className="h-[400px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-slate-200">
-                          <TableHead className="text-[#C5C6C7] text-xs">Date</TableHead>
-                          <TableHead className="text-[#C5C6C7] text-xs">Type</TableHead>
-                          <TableHead className="text-[#C5C6C7] text-xs">Amount</TableHead>
-                          <TableHead className="text-[#C5C6C7] text-xs">Running Balance</TableHead>
-                          <TableHead className="text-[#C5C6C7] text-xs">Reference</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {clientDetails.transactions?.map((tx, idx) => (
-                          <TableRow key={idx} className="border-slate-200 hover:bg-white/5">
-                            <TableCell className="text-[#C5C6C7] text-xs">{formatDate(tx.date)}</TableCell>
-                            <TableCell>
-                              <Badge className={tx.type === 'deposit' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}>
-                                {tx.type}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className={`font-mono ${tx.type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
-                              {tx.type === 'deposit' ? '+' : '-'}{formatCurrency(tx.amount)}
-                            </TableCell>
-                            <TableCell className="text-white font-mono">{formatCurrency(tx.running_balance)}</TableCell>
-                            <TableCell className="text-[#C5C6C7] font-mono text-xs">{tx.reference || '-'}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                </div>
-              )}
-            </DialogContent>
-          </Dialog>
         </TabsContent>
 
-        {/* Exchanger Reconciliation Tab */}
-        <TabsContent value="vendors" className="mt-4">
+        {/* Exchangers Tab */}
+        <TabsContent value="exchangers" className="mt-4">
           <Card className="bg-white border-slate-200">
             <CardHeader>
-              <CardTitle className="text-lg text-white flex items-center gap-2">
+              <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
                 <Store className="w-5 h-5 text-[#66FCF1]" />
-                Exchanger Commission Reconciliation
+                Exchanger Reconciliation
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-200">
-                    <TableHead className="text-[#C5C6C7] text-xs">Exchanger</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs">Rate</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs">Volume</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs">Expected Comm.</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs">Paid</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs">Pending</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs">Variance</TableHead>
-                    <TableHead className="text-[#C5C6C7] text-xs">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {vendorRecon.map((vendor) => (
-                    <TableRow key={vendor.vendor_id} className="border-slate-200 hover:bg-white/5">
-                      <TableCell className="text-white font-medium">{vendor.vendor_name}</TableCell>
-                      <TableCell className="text-white">{vendor.commission_rate}%</TableCell>
-                      <TableCell className="text-white font-mono">{formatCurrency(vendor.total_volume)}</TableCell>
-                      <TableCell className="text-[#66FCF1] font-mono">{formatCurrency(vendor.expected_commission)}</TableCell>
-                      <TableCell className="text-green-400 font-mono">{formatCurrency(vendor.paid_commission)}</TableCell>
-                      <TableCell className="text-yellow-400 font-mono">{formatCurrency(vendor.pending_commission)}</TableCell>
-                      <TableCell className={`font-mono ${vendor.variance !== 0 ? (vendor.variance > 0 ? 'text-green-400' : 'text-red-400') : 'text-[#C5C6C7]'}`}>
-                        {formatCurrency(vendor.variance)}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(vendor.status)}</TableCell>
+              <ScrollArea className="h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-200">
+                      <TableHead className="text-slate-500 text-xs">Exchanger</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Bank Balance</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Cash Balance</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Total</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Variance</TableHead>
+                      <TableHead className="text-slate-500 text-xs">Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {vendorRecon.map((vendor) => (
+                      <TableRow key={vendor.vendor_id} className="border-slate-200 hover:bg-slate-50">
+                        <TableCell className="text-slate-800 font-medium">{vendor.name}</TableCell>
+                        <TableCell className="text-right font-mono text-blue-600">${vendor.bank_balance?.toLocaleString()}</TableCell>
+                        <TableCell className="text-right font-mono text-amber-600">${vendor.cash_balance?.toLocaleString()}</TableCell>
+                        <TableCell className="text-right font-mono text-slate-800">${vendor.total_balance?.toLocaleString()}</TableCell>
+                        <TableCell className={`text-right font-mono ${vendor.variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          ${vendor.variance?.toLocaleString()}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(vendor.status)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Summary Tab */}
-        <TabsContent value="summary" className="mt-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            {summary && (
-              <>
-                <Card className="bg-white border-slate-200">
-                  <CardHeader>
-                    <CardTitle className="text-lg text-white flex items-center gap-2">
-                      <Building2 className="w-5 h-5 text-blue-400" />
-                      Bank Reconciliation
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="text-[#C5C6C7]">Recent Batches</span>
-                        <span className="text-white font-bold">{summary.bank.recent_batches}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#C5C6C7]">Unmatched Entries</span>
-                        <span className={`font-bold ${summary.bank.unmatched_entries > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                          {summary.bank.unmatched_entries}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#C5C6C7]">Discrepancies</span>
-                        <span className={`font-bold ${summary.bank.discrepancies > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
-                          {summary.bank.discrepancies}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+        {/* Flagged Tab */}
+        <TabsContent value="flagged" className="mt-4">
+          <Card className="bg-white border-slate-200">
+            <CardHeader>
+              <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
+                <Flag className="w-5 h-5 text-red-500" />
+                Flagged Items for Review
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {flaggedItems.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <CheckCircle2 className="w-12 h-12 mx-auto mb-2 text-green-500" />
+                  <p>No flagged items</p>
+                </div>
+              ) : (
+                <ScrollArea className="h-[400px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-slate-200">
+                        <TableHead className="text-slate-500 text-xs">Reference</TableHead>
+                        <TableHead className="text-slate-500 text-xs">Type</TableHead>
+                        <TableHead className="text-slate-500 text-xs">Reason</TableHead>
+                        <TableHead className="text-slate-500 text-xs">Flagged By</TableHead>
+                        <TableHead className="text-slate-500 text-xs">Date</TableHead>
+                        <TableHead className="text-slate-500 text-xs">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {flaggedItems.map((item) => (
+                        <TableRow key={item.item_id} className="border-slate-200 hover:bg-slate-50">
+                          <TableCell className="text-slate-800 font-mono text-sm">{item.reference_id}</TableCell>
+                          <TableCell><Badge variant="outline">{item.item_type}</Badge></TableCell>
+                          <TableCell className="text-slate-800 max-w-[200px] truncate">{item.flag_reason}</TableCell>
+                          <TableCell className="text-slate-500 text-sm">{item.flagged_by_name}</TableCell>
+                          <TableCell className="text-slate-500 text-sm">{formatDate(item.flagged_at)}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleQuickReconcile(item)}
+                                className="text-green-600 hover:bg-green-50"
+                                title="Resolve & Reconcile"
+                              >
+                                <Check className="w-4 h-4" />
+                              </Button>
+                              {isAdmin && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => { setSelectedItemForAction(item); setAdjustmentDialogOpen(true); }}
+                                  className="text-blue-600 hover:bg-blue-50"
+                                  title="Create Adjustment"
+                                >
+                                  <Plus className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-                <Card className="bg-white border-slate-200">
-                  <CardHeader>
-                    <CardTitle className="text-lg text-white flex items-center gap-2">
-                      <CreditCard className="w-5 h-5 text-purple-400" />
-                      PSP Reconciliation
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="text-[#C5C6C7]">Total PSPs</span>
-                        <span className="text-white font-bold">{summary.psp.total_psps}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#C5C6C7]">PSPs with Variance</span>
-                        <span className={`font-bold ${summary.psp.psps_with_variance > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
-                          {summary.psp.psps_with_variance}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#C5C6C7]">Total Variance</span>
-                        <span className={`font-bold ${summary.psp.total_variance !== 0 ? 'text-yellow-400' : 'text-green-400'}`}>
-                          {formatCurrency(summary.psp.total_variance)}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white border-slate-200">
-                  <CardHeader>
-                    <CardTitle className="text-lg text-white flex items-center gap-2">
-                      <Users className="w-5 h-5 text-green-400" />
-                      Client Reconciliation
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="text-[#C5C6C7]">Total Clients</span>
-                        <span className="text-white font-bold">{summary.clients.total_clients}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#C5C6C7]">With Discrepancy</span>
-                        <span className={`font-bold ${summary.clients.clients_with_discrepancy > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                          {summary.clients.clients_with_discrepancy}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#C5C6C7]">Total Variance</span>
-                        <span className={`font-bold ${summary.clients.total_variance > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
-                          {formatCurrency(summary.clients.total_variance)}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white border-slate-200">
-                  <CardHeader>
-                    <CardTitle className="text-lg text-white flex items-center gap-2">
-                      <Store className="w-5 h-5 text-orange-400" />
-                      Exchanger Reconciliation
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="text-[#C5C6C7]">Total Exchangers</span>
-                        <span className="text-white font-bold">{summary.vendors.total_vendors}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#C5C6C7]">With Discrepancy</span>
-                        <span className={`font-bold ${summary.vendors.vendors_with_discrepancy > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                          {summary.vendors.vendors_with_discrepancy}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#C5C6C7]">Total Variance</span>
-                        <span className={`font-bold ${summary.vendors.total_variance > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
-                          {formatCurrency(summary.vendors.total_variance)}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
-            )}
-          </div>
+        {/* History Tab */}
+        <TabsContent value="history" className="mt-4">
+          <Card className="bg-white border-slate-200">
+            <CardHeader>
+              <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
+                <History className="w-5 h-5 text-[#66FCF1]" />
+                Reconciliation Audit Trail
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-200">
+                      <TableHead className="text-slate-500 text-xs">Date/Time</TableHead>
+                      <TableHead className="text-slate-500 text-xs">Action</TableHead>
+                      <TableHead className="text-slate-500 text-xs">Reference</TableHead>
+                      <TableHead className="text-slate-500 text-xs">Type</TableHead>
+                      <TableHead className="text-slate-500 text-xs">Performed By</TableHead>
+                      <TableHead className="text-slate-500 text-xs">Notes</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {history.map((entry) => (
+                      <TableRow key={entry.history_id} className="border-slate-200 hover:bg-slate-50">
+                        <TableCell className="text-slate-800 text-sm">{formatDate(entry.created_at)}</TableCell>
+                        <TableCell>
+                          <Badge className={
+                            entry.action === 'reconciled' ? 'bg-green-500/20 text-green-600' :
+                            entry.action === 'flagged' ? 'bg-red-500/20 text-red-600' :
+                            entry.action === 'adjustment_created' ? 'bg-blue-500/20 text-blue-600' :
+                            'bg-slate-200 text-slate-600'
+                          }>
+                            {entry.action?.replace('_', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-slate-500 font-mono text-xs">{entry.reference_id?.substring(0, 20)}</TableCell>
+                        <TableCell><Badge variant="outline" className="text-xs">{entry.item_type}</Badge></TableCell>
+                        <TableCell className="text-slate-800 text-sm">{entry.performed_by_name}</TableCell>
+                        <TableCell className="text-slate-500 text-sm max-w-[200px] truncate">{entry.notes || '-'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Flag Dialog */}
+      <Dialog open={flagDialogOpen} onOpenChange={setFlagDialogOpen}>
+        <DialogContent className="bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-slate-800">Flag for Review</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-slate-600">Item Reference</Label>
+              <p className="text-slate-800 font-mono text-sm mt-1">{selectedItemForAction?.id}</p>
+            </div>
+            <div>
+              <Label className="text-slate-600">Reason for Flagging *</Label>
+              <Textarea
+                value={flagReason}
+                onChange={(e) => setFlagReason(e.target.value)}
+                placeholder="Describe why this item needs review..."
+                className="mt-1 border-slate-200"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFlagDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleFlag} className="bg-red-600 hover:bg-red-700 text-white" disabled={!flagReason}>
+              <Flag className="w-4 h-4 mr-2" /> Flag Item
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Adjustment Dialog */}
+      <Dialog open={adjustmentDialogOpen} onOpenChange={setAdjustmentDialogOpen}>
+        <DialogContent className="bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-slate-800">Create Adjustment Entry</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-slate-600">Item Reference</Label>
+              <p className="text-slate-800 font-mono text-sm mt-1">{selectedItemForAction?.id}</p>
+            </div>
+            <div>
+              <Label className="text-slate-600">Adjustment Amount *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={adjustmentData.amount}
+                onChange={(e) => setAdjustmentData({ ...adjustmentData, amount: e.target.value })}
+                placeholder="Enter amount (positive or negative)"
+                className="mt-1 border-slate-200"
+              />
+              <p className="text-xs text-slate-500 mt-1">Use negative for debits, positive for credits</p>
+            </div>
+            <div>
+              <Label className="text-slate-600">Treasury Account (Optional)</Label>
+              <Select value={adjustmentData.treasury_account_id} onValueChange={(v) => setAdjustmentData({ ...adjustmentData, treasury_account_id: v })}>
+                <SelectTrigger className="mt-1 border-slate-200">
+                  <SelectValue placeholder="Select account to adjust..." />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  {treasuryAccounts.map((acc) => (
+                    <SelectItem key={acc.account_id} value={acc.account_id}>
+                      {acc.account_name} ({acc.currency})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-slate-600">Reason *</Label>
+              <Textarea
+                value={adjustmentData.reason}
+                onChange={(e) => setAdjustmentData({ ...adjustmentData, reason: e.target.value })}
+                placeholder="Explain the reason for this adjustment..."
+                className="mt-1 border-slate-200"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAdjustmentDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateAdjustment} className="bg-blue-600 hover:bg-blue-700 text-white" disabled={!adjustmentData.amount || !adjustmentData.reason}>
+              <Plus className="w-4 h-4 mr-2" /> Create Adjustment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
