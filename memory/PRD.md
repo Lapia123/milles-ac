@@ -6,42 +6,34 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 ## What's Been Implemented
 
 ### Core Modules (Completed)
-- Client Management (CRUD, bank accounts)
-- Transactions (deposits, withdrawals, approvals)
-- Treasury (accounts, transfers, history)
-- LP Management (deposits, withdrawals, P&L)
-- Dealing P&L (daily entries, email reports)
-- PSP Management (settlements, reserves)
-- Exchangers/Vendors (settlements, approvals)
-- Income & Expenses (CRUD, vendor suppliers, categories, bulk import)
-- Loans (CRUD, repayments, borrowers)
-- Debts/O/S Accounts (CRUD, payments)
-- Reconciliation System Phase 1 (bank upload, daily dashboard, flagging, adjustments)
-- Audit & Compliance (scans, history, settings)
-- Logs (activity, auth, audit)
-- Reports (dashboard, financial summaries, email dispatch)
-- Settings (email SMTP, commission, FX rates)
+- Client Management, Transactions, Treasury, LP Management, Dealing P&L
+- PSP Management, Exchangers/Vendors, Income & Expenses, Loans, Debts
+- Reconciliation Phase 1, Audit & Compliance, Logs, Reports, Settings
 
 ### Date: Mar 4, 2026
 
-**Admin Impersonation Feature (COMPLETE):**
-- Secure impersonation with audit logging
-- Red banner with "Return to Admin" button
-- Cannot impersonate other admins
+**Admin Impersonation (COMPLETE)** — Secure token switching with audit logging
 
-**Full RBAC Migration (COMPLETE):**
-- 184+ backend routes migrated to `require_permission(Module, Action)`
-- Dashboard API now requires `dashboard:view` permission
-- Frontend `usePermissions` hook for dynamic sidebar navigation
-- `ProtectedRoute` in App.js now uses permission-based checks (not hardcoded roles)
+**Full RBAC Migration (COMPLETE)** — 184+ routes → `require_permission(Module, Action)`, frontend permission-based sidebar
 
-**Vendor Portal Enhancement (COMPLETE):**
-- New `GET /api/vendor/transactions` endpoint — returns ALL statuses (not just pending)
-- Filtering: status (all/pending/approved/rejected/completed), type (deposit/withdrawal), date range, search
-- `GET /api/vendor/transactions/export/excel` — Excel export with styled headers
-- `GET /api/vendor/transactions/export/pdf` — PDF export with summary stats
-- Frontend: filter bar, transaction count, Excel & PDF export buttons
-- Testing: 19/19 backend tests pass, all frontend UI verified
+**Vendor Portal Enhancement (COMPLETE)** — All transaction statuses, filters (status/type/date/search), Excel + PDF export
+
+**Settlement Balance Fix (COMPLETE)** — I&E entries with status `converted_to_loan` now included
+
+**Comprehensive Logging Audit & Fix (COMPLETE):**
+- **Root cause**: Only 7 `log_activity` calls existed across 89+ write endpoints
+- **Fix**: Added `request: Request` parameter to 73 functions and `log_activity` calls to 74 endpoints
+- Modules now fully logged: transactions, clients, users, treasury, lp_management, psp, exchangers, income_expenses, loans, debts, roles, reconciliation, settings, audit
+- Transaction logs now appear in Logs page when filtering by module ✅
+- Testing: 10/10 backend tests pass, all frontend pages verified
+
+**Auto-Refresh UI (COMPLETE):**
+- Created `useAutoRefresh` hook (visibility change + interval polling)
+- Dashboard: 30s polling
+- Transactions: 30s polling
+- AccountantDashboard (Approvals): 15s polling
+- VendorDashboard: 15s polling
+- Pages auto-refresh when user switches back to tab
 
 ---
 
@@ -56,7 +48,6 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 
 ## Test Credentials
 - **Admin:** admin@fxbroker.com / admin123
-- **Accountant:** admin3@fxbroker.com / admin123
 - **Exchanger:** kenway@fxbroker.com / password
 
 ---
@@ -65,7 +56,7 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 
 ### P1 - High Priority
 - [ ] Reconciliation System Phase 2 & 3 (PSP, Client, Exchanger)
-- [ ] Complete frontend permission gates (hide CRUD buttons on all pages)
+- [ ] Extend frontend permission gates to hide CRUD buttons per page
 
 ### P2 - Medium Priority
 - [ ] Auto-match bank statement entries with treasury transactions
@@ -74,15 +65,9 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 
 ### P3 - Low Priority
 - [ ] Refactor `backend/server.py` into modular routers
-- [ ] Clean up migration endpoints
 
 ---
 
 ## 3rd Party Integrations
-- MongoDB Atlas (database)
-- Gmail SMTP (email dispatch)
-- ExchangeRate-API (currency conversion)
-- APScheduler (daily email automation)
-- pdfplumber (PDF parsing for bank statements)
-- reportlab (PDF generation for exports)
-- openpyxl (Excel generation for exports)
+- MongoDB Atlas, Gmail SMTP, ExchangeRate-API, APScheduler
+- pdfplumber, reportlab, openpyxl
