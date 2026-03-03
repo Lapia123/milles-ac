@@ -1554,7 +1554,7 @@ async def get_treasury_account(account_id: str, user: dict = Depends(get_current
     return account
 
 @api_router.post("/treasury")
-async def create_treasury_account(account_data: TreasuryAccountCreate, user: dict = Depends(require_accountant_or_admin)):
+async def create_treasury_account(account_data: TreasuryAccountCreate, request: Request, user: dict = Depends(require_accountant_or_admin)):
     account_id = f"treasury_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
     
@@ -1569,6 +1569,9 @@ async def create_treasury_account(account_data: TreasuryAccountCreate, user: dic
     }
     
     await db.treasury_accounts.insert_one(account_doc)
+    
+    # Log activity
+    await log_activity(request, user, "create", "treasury", f"Created treasury account: {account_data.account_name}", reference_id=account_id)
     
     return await db.treasury_accounts.find_one({"account_id": account_id}, {"_id": 0})
 
@@ -3888,7 +3891,7 @@ async def get_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
     return vendor
 
 @api_router.post("/vendors")
-async def create_vendor(vendor_data: VendorCreate, user: dict = Depends(require_accountant_or_admin)):
+async def create_vendor(vendor_data: VendorCreate, request: Request, user: dict = Depends(require_accountant_or_admin)):
     # Check if email already exists
     existing = await db.users.find_one({"email": vendor_data.email}, {"_id": 0})
     if existing:
@@ -3930,6 +3933,10 @@ async def create_vendor(vendor_data: VendorCreate, user: dict = Depends(require_
     }
     
     await db.vendors.insert_one(vendor_doc)
+    
+    # Log activity
+    await log_activity(request, user, "create", "exchangers", f"Created exchanger: {vendor_data.vendor_name}", reference_id=vendor_id)
+    
     return await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
 
 @api_router.put("/vendors/{vendor_id}")
@@ -5863,7 +5870,7 @@ async def get_income_expense(entry_id: str, user: dict = Depends(get_current_use
     return entry
 
 @api_router.post("/income-expenses")
-async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = Depends(get_current_user)):
+async def create_income_expense(entry_data: IncomeExpenseCreate, request: Request, user: dict = Depends(get_current_user)):
     """Create a new income or expense entry, optionally linked to a vendor/supplier/client for approval"""
     if entry_data.amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")
@@ -6035,6 +6042,10 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, user: dict = De
     entry_doc.pop("_id", None)
     if treasury:
         entry_doc["treasury_account_name"] = treasury["account_name"]
+    
+    # Log activity
+    await log_activity(request, user, "create", "income_expenses", f"Created {entry_data.entry_type}: {entry_data.description or entry_data.category}", reference_id=entry_id)
+    
     return entry_doc
 
 @api_router.put("/income-expenses/{entry_id}")
@@ -6060,7 +6071,7 @@ async def update_income_expense(entry_id: str, update_data: IncomeExpenseUpdate,
     return updated
 
 @api_router.delete("/income-expenses/{entry_id}")
-async def delete_income_expense(entry_id: str, user: dict = Depends(require_admin)):
+async def delete_income_expense(entry_id: str, request: Request, user: dict = Depends(require_admin)):
     """Delete an income/expense entry and reverse treasury balance"""
     entry = await db.income_expenses.find_one({"entry_id": entry_id}, {"_id": 0})
     if not entry:
@@ -6087,6 +6098,9 @@ async def delete_income_expense(entry_id: str, user: dict = Depends(require_admi
     
     # Delete related treasury transaction
     await db.treasury_transactions.delete_one({"income_expense_id": entry_id})
+    
+    # Log activity
+    await log_activity(request, user, "delete", "income_expenses", f"Deleted {entry['entry_type']}: {entry.get('description', 'N/A')}", reference_id=entry_id)
     
     return {"message": "Entry deleted successfully"}
 
@@ -6853,7 +6867,7 @@ async def get_loan(loan_id: str, user: dict = Depends(get_current_user)):
     return loan
 
 @api_router.post("/loans")
-async def create_loan(loan_data: LoanCreate, user: dict = Depends(get_current_user)):
+async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depends(get_current_user)):
     """Create a new loan and deduct from treasury"""
     # Verify treasury account exists and has sufficient balance
     treasury = await db.treasury_accounts.find_one({"account_id": loan_data.treasury_account_id}, {"_id": 0})
@@ -6962,6 +6976,10 @@ async def create_loan(loan_data: LoanCreate, user: dict = Depends(get_current_us
     loan_doc.pop("_id", None)
     loan_doc["source_treasury_name"] = treasury["account_name"]
     loan_doc["outstanding_balance"] = loan_data.amount + total_interest
+    
+    # Log activity
+    await log_activity(request, user, "create", "loans", f"Created loan to {loan_data.borrower_name}: {loan_data.amount} {loan_data.currency}", reference_id=loan_id)
+    
     return loan_doc
 
 @api_router.put("/loans/{loan_id}")
