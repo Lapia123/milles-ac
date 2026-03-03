@@ -937,40 +937,13 @@ def require_permission(module: str, action: str):
 # Default role templates
 DEFAULT_ROLES = [
     {
-        "role_id": "super_admin",
-        "name": "super_admin",
-        "display_name": "Super Admin",
+        "role_id": "admin",
+        "name": "admin",
+        "display_name": "Admin",
         "description": "Full system access with all permissions",
         "is_system_role": True,
         "hierarchy_level": 100,
         "permissions": {module: ALL_ACTIONS.copy() for module in ALL_MODULES}
-    },
-    {
-        "role_id": "admin",
-        "name": "admin",
-        "display_name": "Admin",
-        "description": "Administrative access to most modules",
-        "is_system_role": True,
-        "hierarchy_level": 90,
-        "permissions": {
-            Modules.DASHBOARD: [Actions.VIEW],
-            Modules.CLIENTS: ALL_ACTIONS.copy(),
-            Modules.TRANSACTIONS: ALL_ACTIONS.copy(),
-            Modules.TREASURY: ALL_ACTIONS.copy(),
-            Modules.LP_MANAGEMENT: ALL_ACTIONS.copy(),
-            Modules.INCOME_EXPENSES: ALL_ACTIONS.copy(),
-            Modules.LOANS: ALL_ACTIONS.copy(),
-            Modules.DEBTS: ALL_ACTIONS.copy(),
-            Modules.PSP: ALL_ACTIONS.copy(),
-            Modules.EXCHANGERS: ALL_ACTIONS.copy(),
-            Modules.RECONCILIATION: ALL_ACTIONS.copy(),
-            Modules.AUDIT: [Actions.VIEW, Actions.EXPORT],
-            Modules.LOGS: [Actions.VIEW, Actions.EXPORT],
-            Modules.REPORTS: [Actions.VIEW, Actions.EXPORT],
-            Modules.SETTINGS: ALL_ACTIONS.copy(),
-            Modules.USERS: ALL_ACTIONS.copy(),
-            Modules.ROLES: [Actions.VIEW]
-        }
     },
     {
         "role_id": "accountant",
