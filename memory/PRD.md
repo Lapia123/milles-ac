@@ -53,19 +53,47 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - Delete action added to permission system
 - Admin role updated to Level 100 with full permissions (102 total)
 - Delete buttons added to: Treasury, PSP, Vendors, Loans, Income/Expenses
+- Fixed daily report manual trigger (wrong DB query)
 
 ### Date: Mar 4, 2026
 
-**P0 Bug Fix - Daily Report:**
-- Fixed incorrect DB query in `send_dealing_pnl_email` (`type: 'email_settings'` -> `setting_type: 'email'`)
-- Both daily report endpoints verified working: `/settings/email/send-daily-report` and `/reports/send-now`
-- Daily report successfully sent to 7209safvan@gmail.com
+**Admin Impersonation Feature (COMPLETE):**
+
+1. **Backend Endpoints:**
+   - `POST /api/admin/impersonate/{user_id}` - Start impersonation, generates JWT for target user
+   - `POST /api/admin/stop-impersonate` - End impersonation, logs logout time
+   - `GET /api/admin/impersonation-logs` - Full audit trail of all impersonation activity
+
+2. **Security:**
+   - Only Admin role can impersonate (403 for non-admins)
+   - Cannot impersonate another Admin (403)
+   - Cannot impersonate inactive users (400)
+   - IP address logged for every impersonation
+   - Activity logged in system_logs collection
+
+3. **Frontend - Settings > Users Tab:**
+   - "Login as User" button in dropdown for each non-admin user
+   - Confirmation dialog before impersonation
+   - Role-based redirect after impersonation (vendor -> /vendor-portal, sub_admin -> /clients, etc.)
+
+4. **Frontend - Impersonation Banner (Layout):**
+   - Red sticky banner at top of page showing "You are impersonating [User Name]"
+   - Shows admin name who initiated the impersonation
+   - "Return to Admin" button restores original admin session securely
+
+5. **Secure Token Management:**
+   - Admin token saved in sessionStorage (survives page navigation, cleared on tab close)
+   - Impersonated user token in localStorage
+   - On "Return to Admin", admin token restored and user profile reloaded
+
+6. **Database:**
+   - `impersonation_logs` collection: log_id, admin_id, admin_name, user_id, user_name, login_time, logout_time, ip_address, status
 
 ---
 
-## New API Endpoints
+## API Endpoints
 
-### Reconciliation Endpoints
+### Reconciliation
 ```
 GET  /api/reconciliation/daily           - Get today's pending items
 POST /api/reconciliation/quick-reconcile - Reconcile single item
@@ -80,7 +108,14 @@ GET  /api/reconciliation/daily-summary   - Summary for reports
 POST /api/reconciliation/bank/upload     - Upload bank statement (CSV/Excel/PDF)
 ```
 
-### Report Endpoints
+### Admin Impersonation
+```
+POST /api/admin/impersonate/{user_id}    - Start impersonation
+POST /api/admin/stop-impersonate         - End impersonation session
+GET  /api/admin/impersonation-logs       - Audit trail of impersonations
+```
+
+### Reports
 ```
 POST /api/settings/email/send-daily-report - Manual trigger daily report
 POST /api/reports/send-now                 - Manual trigger daily report (alt)
@@ -89,13 +124,13 @@ GET  /api/reports/email-logs               - Email send history
 
 ---
 
-## Database Collections (New)
-
+## Database Collections
 ```
 reconciliation_items       - Items pending/completed reconciliation
 reconciliation_history     - Audit trail of all actions
 reconciliation_adjustments - Adjustment entries
 reconciliation_entries     - Uploaded bank statement entries
+impersonation_logs         - Admin impersonation audit trail
 ```
 
 ---
