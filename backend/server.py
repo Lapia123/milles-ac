@@ -7390,6 +7390,7 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
         await db.treasury_transactions.insert_one(tx_doc)
     elif disburse_vendor:
         # Create an expense entry for the source vendor (loan disbursement = money going OUT from vendor)
+        # Status is pending_vendor - requires exchanger approval with proof upload
         entry_id = f"ie_{uuid.uuid4().hex[:12]}"
         ie_doc = {
             "entry_id": entry_id,
@@ -7403,7 +7404,7 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
             "description": f"Loan disbursement to {loan_data.borrower_name}",
             "date": loan_data.loan_date,
             "payment_mode": "bank",
-            "status": "completed",
+            "status": "pending_vendor",
             "loan_id": loan_id,
             "created_at": now.isoformat(),
             "created_by": user["user_id"],
@@ -7412,6 +7413,7 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
         await db.income_expenses.insert_one(ie_doc)
     
     # If borrower is an Exchanger (vendor_id provided), create an income entry for them (loan received = money IN)
+    # Status is pending_vendor - requires exchanger approval with proof upload
     if loan_data.vendor_id:
         borrower_entry_id = f"ie_{uuid.uuid4().hex[:12]}"
         source_name = disburse_vendor.get("name") or disburse_vendor.get("vendor_name") if disburse_vendor else (treasury["account_name"] if treasury else "Treasury")
@@ -7427,7 +7429,7 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
             "description": f"Loan received from {source_name}",
             "date": loan_data.loan_date,
             "payment_mode": "bank",
-            "status": "completed",
+            "status": "pending_vendor",
             "loan_id": loan_id,
             "created_at": now.isoformat(),
             "created_by": user["user_id"],
@@ -7617,6 +7619,7 @@ async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanR
         await db.treasury_transactions.insert_one(tx_doc)
     elif credit_vendor:
         # Create an income entry for the vendor (loan repayment = money coming IN to vendor)
+        # Status is pending_vendor - requires exchanger approval with proof upload
         amount_usd = convert_to_usd(repayment.amount, repayment.currency)
         entry_id = f"ie_{uuid.uuid4().hex[:12]}"
         ie_doc = {
@@ -7631,7 +7634,7 @@ async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanR
             "description": f"Loan repayment from {loan['borrower_name']}",
             "date": payment_date,
             "payment_mode": "bank",
-            "status": "completed",
+            "status": "pending_vendor",
             "loan_id": loan_id,
             "repayment_id": repayment_id,
             "created_at": now.isoformat(),
@@ -7641,6 +7644,7 @@ async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanR
         await db.income_expenses.insert_one(ie_doc)
     
     # If borrower is an Exchanger, create an expense entry for them (loan repayment = money OUT from borrower)
+    # Status is pending_vendor - requires exchanger approval with proof upload
     if loan.get("vendor_id"):
         borrower_amount_usd = convert_to_usd(repayment.amount, repayment.currency)
         dest_name = credit_vendor.get("name") or credit_vendor.get("vendor_name") if credit_vendor else (treasury["account_name"] if treasury else "Treasury")
@@ -7657,7 +7661,7 @@ async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanR
             "description": f"Loan repayment to {dest_name}",
             "date": payment_date,
             "payment_mode": "bank",
-            "status": "completed",
+            "status": "pending_vendor",
             "loan_id": loan_id,
             "repayment_id": repayment_id,
             "created_at": now.isoformat(),
