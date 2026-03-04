@@ -1152,7 +1152,9 @@ export default function ExchangerDashboard() {
                       {/* Income/Expense Entries */}
                       {ieEntries.map((entry) => {
                         const isIncome = entry.entry_type === 'income';
-                        const displayCurrency = entry.currency || 'USD';
+                        // Use base_currency/base_amount (payment currency) if available, otherwise fall back to amount/currency
+                        const displayCurrency = entry.base_currency || entry.currency || 'USD';
+                        const displayAmount = entry.base_amount || entry.amount;
                         const isPending = entry.status === 'pending_vendor';
                         return (
                           <TableRow key={entry.entry_id} className={`border-slate-200 hover:bg-slate-100 ${isPending ? 'bg-amber-50' : ''}`}>
@@ -1167,8 +1169,8 @@ export default function ExchangerDashboard() {
                               </span>
                             </TableCell>
                             <TableCell className="text-slate-800 text-sm capitalize">{entry.category?.replace('_', ' ') || '-'}</TableCell>
-                            <TableCell className="font-mono font-medium text-green-500">{isIncome ? entry.amount?.toLocaleString() : '-'}</TableCell>
-                            <TableCell className="font-mono font-medium text-red-500">{!isIncome ? entry.amount?.toLocaleString() : '-'}</TableCell>
+                            <TableCell className="font-mono font-medium text-green-500">{isIncome ? displayAmount?.toLocaleString() : '-'}</TableCell>
+                            <TableCell className="font-mono font-medium text-red-500">{!isIncome ? displayAmount?.toLocaleString() : '-'}</TableCell>
                             <TableCell><Badge className="bg-green-500/20 text-green-400">{displayCurrency}</Badge></TableCell>
                             <TableCell className="text-slate-400 text-xs">-</TableCell>
                             <TableCell>

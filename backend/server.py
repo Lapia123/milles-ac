@@ -3812,12 +3812,13 @@ async def get_vendors(user: dict = Depends(require_permission(Modules.EXCHANGERS
             currency_breakdown[currency]["commission_usd"] += commission_usd
         
         # Include income/expense entries: income = Money In, expense = Money Out
+        # Use base_currency/base_amount (payment currency) when available
         for ie in ie_by_vendor.get(vendor["vendor_id"], []):
-            currency = ie.get("currency", "USD")
+            currency = ie.get("base_currency") or ie.get("currency", "USD")
             ensure_currency(currency)
             
-            base_amount = ie.get("amount", 0)
-            usd_amount = ie.get("amount_usd") or base_amount
+            base_amount = ie.get("base_amount") or ie.get("amount", 0)
+            usd_amount = ie.get("amount_usd") or ie.get("amount", 0)
             commission_base = ie.get("vendor_commission_base_amount", 0)
             commission_usd = ie.get("vendor_commission_amount", 0)
             
@@ -3978,6 +3979,7 @@ async def get_vendor(vendor_id: str, user: dict = Depends(require_permission(Mod
     
     # Also fetch completed income/expense entries for this vendor
     # IMPORTANT: Exclude converted_to_loan entries - they're tracked under Loans, not as settlement
+    # Group by base_currency (payment currency) - this is what the exchanger actually handles
     ie_pipeline = [
         {"$match": {
             "vendor_id": vendor_id,
@@ -3986,12 +3988,12 @@ async def get_vendor(vendor_id: str, user: dict = Depends(require_permission(Mod
             "settled": {"$ne": True}
         }},
         {"$group": {
-            "_id": "$currency",
+            "_id": {"$ifNull": ["$base_currency", "$currency"]},  # Group by payment currency
             "income_base": {
-                "$sum": {"$cond": [{"$eq": ["$entry_type", "income"]}, "$amount", 0]}
+                "$sum": {"$cond": [{"$eq": ["$entry_type", "income"]}, {"$ifNull": ["$base_amount", "$amount"]}, 0]}
             },
             "expense_base": {
-                "$sum": {"$cond": [{"$eq": ["$entry_type", "expense"]}, "$amount", 0]}
+                "$sum": {"$cond": [{"$eq": ["$entry_type", "expense"]}, {"$ifNull": ["$base_amount", "$amount"]}, 0]}
             },
             "income_usd": {
                 "$sum": {"$cond": [{"$eq": ["$entry_type", "income"]}, {"$ifNull": ["$amount_usd", "$amount"]}, 0]}
@@ -4310,6 +4312,7 @@ async def get_my_vendor_info(user: dict = Depends(require_vendor)):
     # Also fetch approved/completed income/expense entries for this vendor
     # IMPORTANT: Exclude "converted_to_loan" status - when an expense is converted to loan,
     # it's a reclassification, NOT a cash settlement event. The loan module tracks it instead.
+    # Group by base_currency (payment currency) - this is what the exchanger actually handles
     ie_pipeline = [
         {"$match": {
             "vendor_id": vendor["vendor_id"],
@@ -4318,12 +4321,12 @@ async def get_my_vendor_info(user: dict = Depends(require_vendor)):
             "settled": {"$ne": True}
         }},
         {"$group": {
-            "_id": "$currency",
+            "_id": {"$ifNull": ["$base_currency", "$currency"]},  # Group by payment currency
             "income_base": {
-                "$sum": {"$cond": [{"$eq": ["$entry_type", "income"]}, "$amount", 0]}
+                "$sum": {"$cond": [{"$eq": ["$entry_type", "income"]}, {"$ifNull": ["$base_amount", "$amount"]}, 0]}
             },
             "expense_base": {
-                "$sum": {"$cond": [{"$eq": ["$entry_type", "expense"]}, "$amount", 0]}
+                "$sum": {"$cond": [{"$eq": ["$entry_type", "expense"]}, {"$ifNull": ["$base_amount", "$amount"]}, 0]}
             },
             "income_usd": {
                 "$sum": {"$cond": [{"$eq": ["$entry_type", "income"]}, {"$ifNull": ["$amount_usd", "$amount"]}, 0]}
