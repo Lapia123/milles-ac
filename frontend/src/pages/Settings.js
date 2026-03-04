@@ -104,17 +104,6 @@ export default function Settings() {
   const [sendingReport, setSendingReport] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
 
-  // Commission & FX State
-  const [commissionSettings, setCommissionSettings] = useState({
-    deposit_commission_rate: 0,
-    withdrawal_commission_rate: 0,
-    commission_enabled: false,
-  });
-  const [savingCommission, setSavingCommission] = useState(false);
-  const [fxRates, setFxRates] = useState(null);
-  const [fxLoading, setFxLoading] = useState(true);
-  const [fxRefreshing, setFxRefreshing] = useState(false);
-
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
     return {
@@ -185,76 +174,11 @@ export default function Settings() {
     }
   };
 
-  const fetchCommissionSettings = async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/settings/commission`, { headers: getAuthHeaders(), credentials: 'include' });
-      if (response.ok) {
-        const data = await response.json();
-        setCommissionSettings(data);
-      }
-    } catch (error) {
-      console.error('Error fetching commission settings:', error);
-    }
-  };
-
-  const fetchFxRates = async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/fx-rates`, { headers: getAuthHeaders(), credentials: 'include' });
-      if (response.ok) {
-        setFxRates(await response.json());
-      }
-    } catch (error) {
-      console.error('Error fetching FX rates:', error);
-    } finally {
-      setFxLoading(false);
-    }
-  };
-
-  const handleRefreshRates = async () => {
-    setFxRefreshing(true);
-    try {
-      const response = await fetch(`${API_URL}/api/fx-rates/refresh`, { method: 'POST', headers: getAuthHeaders(), credentials: 'include' });
-      if (response.ok) {
-        toast.success('FX rates refreshed');
-        await fetchFxRates();
-      } else {
-        toast.error('Failed to refresh rates');
-      }
-    } catch (error) {
-      toast.error('Error refreshing rates');
-    } finally {
-      setFxRefreshing(false);
-    }
-  };
-
-  const handleSaveCommission = async () => {
-    setSavingCommission(true);
-    try {
-      const response = await fetch(`${API_URL}/api/settings/commission`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        credentials: 'include',
-        body: JSON.stringify(commissionSettings),
-      });
-      if (response.ok) {
-        toast.success('Commission settings saved');
-      } else {
-        toast.error('Failed to save commission settings');
-      }
-    } catch (error) {
-      toast.error('Error saving commission settings');
-    } finally {
-      setSavingCommission(false);
-    }
-  };
-
   useEffect(() => {
     fetchUsers();
     fetchRoles();
     fetchEmailSettings();
     fetchEmailLogs();
-    fetchCommissionSettings();
-    fetchFxRates();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -541,10 +465,6 @@ export default function Settings() {
             <TabsTrigger value="email" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
               <Mail className="w-4 h-4 mr-2" />
               Email Reports
-            </TabsTrigger>
-            <TabsTrigger value="commission" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-              <Percent className="w-4 h-4 mr-2" />
-              Commission & FX
             </TabsTrigger>
           </TabsList>
           
@@ -1047,133 +967,6 @@ export default function Settings() {
                       </div>
                     )}
                   </ScrollArea>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Commission & FX Tab */}
-          <TabsContent value="commission">
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Commission Settings Card */}
-              <Card className="bg-white border-slate-200">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-                    <Percent className="w-5 h-5 text-[#66FCF1]" />
-                    Broker Commission Rates
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-sm border border-slate-200">
-                    <div>
-                      <Label className="text-white">Enable Commission</Label>
-                      <p className="text-xs text-[#C5C6C7]">Apply broker commission on deposits & withdrawals</p>
-                    </div>
-                    <Switch
-                      checked={commissionSettings.commission_enabled}
-                      onCheckedChange={(checked) => setCommissionSettings(prev => ({ ...prev, commission_enabled: checked }))}
-                      data-testid="commission-enabled-switch"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Money In Commission (%)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                      value={commissionSettings.deposit_commission_rate}
-                      onChange={(e) => setCommissionSettings(prev => ({ ...prev, deposit_commission_rate: parseFloat(e.target.value) || 0 }))}
-                      className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1] font-mono"
-                      placeholder="0.00"
-                      data-testid="deposit-commission-rate"
-                    />
-                    <p className="text-xs text-[#C5C6C7]">Applied to all deposit transactions</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Money Out Commission (%)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                      value={commissionSettings.withdrawal_commission_rate}
-                      onChange={(e) => setCommissionSettings(prev => ({ ...prev, withdrawal_commission_rate: parseFloat(e.target.value) || 0 }))}
-                      className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1] font-mono"
-                      placeholder="0.00"
-                      data-testid="withdrawal-commission-rate"
-                    />
-                    <p className="text-xs text-[#C5C6C7]">Applied to all withdrawal transactions</p>
-                  </div>
-                  <Button
-                    onClick={handleSaveCommission}
-                    disabled={savingCommission}
-                    className="w-full bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase"
-                    data-testid="save-commission-btn"
-                  >
-                    {savingCommission ? (
-                      <div className="w-4 h-4 border-2 border-[#0B0C10] border-t-transparent rounded-full animate-spin mr-2" />
-                    ) : (
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                    )}
-                    Save Commission Settings
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Live FX Rates Card */}
-              <Card className="bg-white border-slate-200">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-[#66FCF1]" />
-                      Live FX Rates
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                      {fxRates && (
-                        <Badge className={`text-xs ${fxRates.source === 'live' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'}`}>
-                          {fxRates.source === 'live' ? 'LIVE' : 'FALLBACK'}
-                        </Badge>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleRefreshRates}
-                        disabled={fxRefreshing}
-                        className="text-[#66FCF1] hover:bg-[#66FCF1]/10 h-8 w-8 p-0"
-                        data-testid="refresh-fx-btn"
-                      >
-                        <RefreshCw className={`w-4 h-4 ${fxRefreshing ? 'animate-spin' : ''}`} />
-                      </Button>
-                    </div>
-                  </div>
-                  {fxRates?.fetched_at && (
-                    <p className="text-xs text-[#C5C6C7]">
-                      Updated: {new Date(fxRates.fetched_at).toLocaleString()}
-                    </p>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  {fxLoading ? (
-                    <div className="flex justify-center py-8">
-                      <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
-                    </div>
-                  ) : fxRates?.rates ? (
-                    <ScrollArea className="h-[340px]">
-                      <div className="grid grid-cols-2 gap-2">
-                        {Object.entries(fxRates.rates)
-                          .sort(([a], [b]) => a.localeCompare(b))
-                          .map(([code, rate]) => (
-                          <div key={code} className="flex items-center justify-between p-2 bg-slate-50 rounded-sm border border-slate-200" data-testid={`fx-rate-${code}`}>
-                            <span className="text-white font-mono text-sm font-medium">{code}</span>
-                            <span className="text-[#66FCF1] font-mono text-sm">${rate?.toFixed(4)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  ) : (
-                    <p className="text-[#C5C6C7] text-sm text-center py-8">Unable to load rates</p>
-                  )}
                 </CardContent>
               </Card>
             </div>

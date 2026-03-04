@@ -106,6 +106,7 @@ export default function Transactions() {
     currency: 'USD',
     base_currency: 'USD',
     base_amount: '',
+    exchange_rate: '',
     destination_type: 'treasury',
     destination_account_id: '',
     psp_id: '',
@@ -128,16 +129,6 @@ export default function Transactions() {
   });
 
   const currencies = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY', 'USDT'];
-  
-  const exchangeRates = {
-    USD: 1.0,
-    EUR: 1.08,
-    GBP: 1.27,
-    AED: 0.27,
-    SAR: 0.27,
-    INR: 0.012,
-    JPY: 0.0067,
-  };
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -269,6 +260,9 @@ export default function Transactions() {
       formDataToSend.append('destination_type', formData.destination_type);
       if (formData.base_currency !== 'USD' && formData.base_amount) {
         formDataToSend.append('base_amount', formData.base_amount);
+        if (formData.exchange_rate) {
+          formDataToSend.append('exchange_rate', formData.exchange_rate);
+        }
       }
       if ((formData.destination_type === 'treasury' || formData.destination_type === 'usdt') && formData.destination_account_id) {
         formDataToSend.append('destination_account_id', formData.destination_account_id);
@@ -350,6 +344,7 @@ export default function Transactions() {
       currency: 'USD',
       base_currency: 'USD',
       base_amount: '',
+      exchange_rate: '',
       destination_type: 'treasury',
       destination_account_id: '',
       psp_id: '',
@@ -704,12 +699,7 @@ export default function Transactions() {
                   <Select
                     value={formData.base_currency}
                     onValueChange={(value) => {
-                      setFormData({ ...formData, base_currency: value });
-                      // Auto-calculate USD if base currency changes
-                      if (value !== 'USD' && formData.base_amount) {
-                        const usdAmount = (parseFloat(formData.base_amount) * exchangeRates[value]).toFixed(2);
-                        setFormData(prev => ({ ...prev, base_currency: value, amount: usdAmount }));
-                      }
+                      setFormData({ ...formData, base_currency: value, exchange_rate: '', amount: '' });
                     }}
                   >
                     <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="select-base-currency">
@@ -727,23 +717,46 @@ export default function Transactions() {
               </div>
               
               {formData.base_currency !== 'USD' && (
-                <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Amount in {formData.base_currency} *</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.base_amount}
-                    onChange={(e) => {
-                      const baseAmt = e.target.value;
-                      const usdAmount = baseAmt ? (parseFloat(baseAmt) * exchangeRates[formData.base_currency]).toFixed(2) : '';
-                      setFormData({ ...formData, base_amount: baseAmt, amount: usdAmount });
-                    }}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
-                    placeholder={`0.00 ${formData.base_currency}`}
-                    data-testid="tx-base-amount"
-                    required
-                  />
-                </div>
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-slate-500 text-xs uppercase tracking-wider">Amount in {formData.base_currency} *</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={formData.base_amount}
+                        onChange={(e) => {
+                          const baseAmt = e.target.value;
+                          const rate = parseFloat(formData.exchange_rate) || 0;
+                          const usdAmount = baseAmt && rate ? (parseFloat(baseAmt) * rate).toFixed(2) : '';
+                          setFormData({ ...formData, base_amount: baseAmt, amount: usdAmount });
+                        }}
+                        className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                        placeholder={`0.00 ${formData.base_currency}`}
+                        data-testid="tx-base-amount"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-slate-500 text-xs uppercase tracking-wider">Exchange Rate (1 {formData.base_currency} = ? USD) *</Label>
+                      <Input
+                        type="number"
+                        step="0.0001"
+                        value={formData.exchange_rate}
+                        onChange={(e) => {
+                          const rate = e.target.value;
+                          const baseAmt = parseFloat(formData.base_amount) || 0;
+                          const usdAmount = rate && baseAmt ? (baseAmt * parseFloat(rate)).toFixed(2) : '';
+                          setFormData({ ...formData, exchange_rate: rate, amount: usdAmount });
+                        }}
+                        className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                        placeholder="0.0000"
+                        data-testid="tx-exchange-rate"
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
               )}
               
               <div className="space-y-2">
@@ -761,9 +774,9 @@ export default function Transactions() {
                   readOnly={formData.base_currency !== 'USD'}
                   required
                 />
-                {formData.base_currency !== 'USD' && formData.base_amount && (
+                {formData.base_currency !== 'USD' && formData.base_amount && formData.exchange_rate && (
                   <p className="text-xs text-blue-600">
-                    Rate: 1 {formData.base_currency} = {exchangeRates[formData.base_currency]} USD
+                    {formData.base_amount} {formData.base_currency} × {formData.exchange_rate} = {formData.amount} USD
                   </p>
                 )}
               </div>
