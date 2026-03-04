@@ -1276,7 +1276,9 @@ export default function Loans() {
                       <TableHead className="text-slate-500 text-xs">Date</TableHead>
                       <TableHead className="text-slate-500 text-xs">Type</TableHead>
                       <TableHead className="text-slate-500 text-xs">Description</TableHead>
+                      <TableHead className="text-slate-500 text-xs">Source / Destination</TableHead>
                       <TableHead className="text-slate-500 text-xs text-right">Amount</TableHead>
+                      <TableHead className="text-slate-500 text-xs">Status</TableHead>
                       <TableHead className="text-slate-500 text-xs">By</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1295,16 +1297,41 @@ export default function Loans() {
                             {tx.transaction_type?.replace(/_/g, ' ')}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-slate-500 text-sm max-w-[300px] truncate">{tx.description}</TableCell>
+                        <TableCell className="text-slate-500 text-sm max-w-[200px] truncate">{tx.description}</TableCell>
+                        <TableCell className="text-sm">
+                          {tx.transaction_type === 'disbursement' && (
+                            <div className="flex flex-col">
+                              <span className="text-red-500 text-xs font-medium">Disburse From:</span>
+                              <span className="text-slate-700">{tx.treasury_account_name || tx.source_vendor_name || '-'}</span>
+                            </div>
+                          )}
+                          {tx.transaction_type === 'repayment' && (
+                            <div className="flex flex-col">
+                              <span className="text-green-500 text-xs font-medium">Credit To:</span>
+                              <span className="text-slate-700">{tx.treasury_account_name || tx.credit_vendor_name || '-'}</span>
+                            </div>
+                          )}
+                          {tx.transaction_type !== 'disbursement' && tx.transaction_type !== 'repayment' && '-'}
+                        </TableCell>
                         <TableCell className="text-slate-800 font-mono text-sm text-right">
                           {tx.currency === 'USD' ? '$' : ''}{tx.amount?.toLocaleString()}{tx.currency !== 'USD' ? ` ${tx.currency}` : ''}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={
+                            tx.status === 'completed' ? 'bg-green-100 text-green-700' :
+                            tx.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                            tx.status === 'failed' ? 'bg-red-100 text-red-700' :
+                            'bg-blue-100 text-blue-700'
+                          }>
+                            {tx.status || 'Completed'}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-slate-400 text-sm">{tx.created_by_name}</TableCell>
                       </TableRow>
                     ))}
                     {loanTransactions.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-slate-400 py-8">
+                        <TableCell colSpan={7} className="text-center text-slate-400 py-8">
                           No transactions yet
                         </TableCell>
                       </TableRow>

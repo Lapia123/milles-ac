@@ -7114,6 +7114,48 @@ async def get_loan_transactions(
         query["transaction_type"] = transaction_type
     
     transactions = await db.loan_transactions.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    # Enrich with treasury/vendor names
+    treasury_ids = list(set([tx.get("treasury_account_id") for tx in transactions if tx.get("treasury_account_id")]))
+    vendor_ids = list(set([tx.get("credit_to_vendor_id") for tx in transactions if tx.get("credit_to_vendor_id")]))
+    
+    # Get treasury accounts
+    treasury_map = {}
+    if treasury_ids:
+        treasuries = await db.treasury_accounts.find({"account_id": {"$in": treasury_ids}}, {"_id": 0}).to_list(100)
+        treasury_map = {t["account_id"]: t["account_name"] for t in treasuries}
+    
+    # Get vendors
+    vendor_map = {}
+    if vendor_ids:
+        vendors = await db.vendors.find({"vendor_id": {"$in": vendor_ids}}, {"_id": 0}).to_list(100)
+        vendor_map = {v["vendor_id"]: v.get("name") or v.get("vendor_name") for v in vendors}
+    
+    # Also get loan details to find source vendor/treasury
+    loan_ids = list(set([tx.get("loan_id") for tx in transactions if tx.get("loan_id")]))
+    loan_map = {}
+    if loan_ids:
+        loans = await db.loans.find({"loan_id": {"$in": loan_ids}}, {"_id": 0}).to_list(500)
+        for loan in loans:
+            loan_map[loan["loan_id"]] = loan
+    
+    # Enrich transactions
+    for tx in transactions:
+        tx["treasury_account_name"] = treasury_map.get(tx.get("treasury_account_id"))
+        tx["credit_vendor_name"] = vendor_map.get(tx.get("credit_to_vendor_id"))
+        tx["status"] = tx.get("status", "completed")
+        
+        # For disbursements, get source from loan
+        if tx.get("transaction_type") == "disbursement" and tx.get("loan_id"):
+            loan = loan_map.get(tx["loan_id"])
+            if loan:
+                if loan.get("source_treasury_id"):
+                    source_treasury = await db.treasury_accounts.find_one({"account_id": loan["source_treasury_id"]}, {"_id": 0})
+                    tx["treasury_account_name"] = source_treasury["account_name"] if source_treasury else None
+                elif loan.get("source_vendor_id"):
+                    source_vendor = await db.vendors.find_one({"vendor_id": loan["source_vendor_id"]}, {"_id": 0})
+                    tx["source_vendor_name"] = source_vendor.get("name") or source_vendor.get("vendor_name") if source_vendor else None
+    
     return transactions
 
 @api_router.get("/loans/vendors")
