@@ -1728,14 +1728,25 @@ async def get_treasury_history(
     regular_txs = await db.transactions.find(tx_query, {"_id": 0}).sort("created_at", -1).to_list(limit)
     
     # Convert regular transactions to history format ONLY if they don't already have a treasury_transaction
+    account_currency = account.get("currency", "USD")
     for tx in regular_txs:
         if tx.get("transaction_id") not in existing_tx_ids:
+            # For non-USD accounts, use base_amount if available and currency matches
+            display_amount = tx.get("amount", 0)
+            if account_currency != "USD":
+                # If the transaction has base_amount in the same currency as the account, use it
+                if tx.get("base_currency") == account_currency and tx.get("base_amount"):
+                    display_amount = tx.get("base_amount")
+                else:
+                    # Convert USD amount to account currency
+                    display_amount = convert_from_usd(tx.get("amount", 0), account_currency)
+            
             treasury_txs.append({
                 "treasury_transaction_id": tx.get("transaction_id"),
                 "account_id": account_id,
                 "transaction_type": tx.get("transaction_type"),
-                "amount": tx.get("amount") if tx.get("transaction_type") == "deposit" else -tx.get("amount", 0),
-                "currency": account.get("currency", "USD"),
+                "amount": display_amount if tx.get("transaction_type") == "deposit" else -display_amount,
+                "currency": account_currency,
                 "reference": f"{tx.get('transaction_type', '').capitalize()}: {tx.get('client_name', 'Unknown')} - {tx.get('reference', '')}",
                 "client_id": tx.get("client_id"),
                 "client_name": tx.get("client_name"),
@@ -5780,8 +5791,11 @@ async def approve_transaction(
             tx_currency = tx.get("currency", "USD")
             deposit_amount = tx["amount"]
             
-            # Convert if currencies are different
-            if tx_currency == "USD" and dest_currency != "USD":
+            # Check if transaction has base_amount in the same currency as destination
+            if tx.get("base_currency") == dest_currency and tx.get("base_amount"):
+                # Use the actual base_amount (e.g., 100,000 AED deposited to AED account)
+                deposit_amount = tx["base_amount"]
+            elif tx_currency == "USD" and dest_currency != "USD":
                 # Convert from USD to destination currency
                 deposit_amount = convert_from_usd(tx["amount"], dest_currency)
             elif tx_currency != "USD" and dest_currency == "USD":
@@ -5799,15 +5813,19 @@ async def approve_transaction(
             
             # Record treasury transaction for deposit
             treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+            # Determine the original amount and currency for reference
+            original_amt = tx.get("base_amount") if tx.get("base_amount") else tx["amount"]
+            original_curr = tx.get("base_currency") if tx.get("base_currency") else tx_currency
+            
             treasury_tx_doc = {
                 "treasury_transaction_id": treasury_tx_id,
                 "account_id": tx["destination_account_id"],
                 "transaction_type": "deposit",
                 "amount": deposit_amount,
                 "currency": dest_currency,
-                "original_amount": tx["amount"],
-                "original_currency": tx_currency,
-                "exchange_rate": deposit_amount / tx["amount"] if tx["amount"] > 0 else 1,
+                "original_amount": original_amt,
+                "original_currency": original_curr,
+                "exchange_rate": tx.get("exchange_rate") or (deposit_amount / tx["amount"] if tx["amount"] > 0 else 1),
                 "reference": f"Deposit: {tx.get('client_name', 'Client')} - {tx.get('reference', '')}",
                 "transaction_id": transaction_id,
                 "client_id": tx.get("client_id"),
