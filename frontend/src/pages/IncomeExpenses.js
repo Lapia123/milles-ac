@@ -18,6 +18,14 @@ import {
 } from '../components/ui/tabs';
 import { Textarea } from '../components/ui/textarea';
 import { ScrollArea } from '../components/ui/scroll-area';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '../components/ui/pagination';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -25,6 +33,7 @@ import {
   Trash2, BarChart3, ArrowUpRight, ArrowDownRight,
   Wallet, X, Store, Clock, Search, Building2,
   Users, FolderTree, Pencil, User, Upload, FileSpreadsheet, Download, FileText, Eye,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -45,6 +54,12 @@ export default function IncomeExpenses() {
   const [activeTab, setActiveTab] = useState('all');
   const [summary, setSummary] = useState(null);
   const [monthlyData, setMonthlyData] = useState([]);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const pageSize = 10;
   
   // Vendor Suppliers state
   const [vendorSupplierDialog, setVendorSupplierDialog] = useState({ open: false, mode: 'create', data: null });
@@ -94,16 +109,32 @@ export default function IncomeExpenses() {
     return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
   };
 
-  const fetchEntries = useCallback(async () => {
+  const fetchEntries = useCallback(async (page = 1) => {
+    setLoading(true);
     try {
-      let url = `${API_URL}/api/income-expenses?limit=200`;
+      let url = `${API_URL}/api/income-expenses?page=${page}&page_size=${pageSize}`;
       if (activeTab !== 'all' && activeTab !== 'reports' && activeTab !== 'vendors' && activeTab !== 'categories') url += `&entry_type=${activeTab}`;
       if (filters.startDate) url += `&start_date=${filters.startDate}`;
       if (filters.endDate) url += `&end_date=${filters.endDate}`;
       if (filters.category) url += `&category=${filters.category}`;
       if (filters.treasuryAccountId) url += `&treasury_account_id=${filters.treasuryAccountId}`;
+      if (filters.vendorId) url += `&vendor_id=${filters.vendorId}`;
       const response = await fetch(url, { headers: getAuthHeaders() });
-      if (response.ok) setEntries(await response.json());
+      if (response.ok) {
+        const data = await response.json();
+        // Handle paginated response format
+        if (data.items) {
+          setEntries(data.items);
+          setTotalPages(data.total_pages || 1);
+          setTotalItems(data.total || 0);
+          setCurrentPage(data.page || 1);
+        } else {
+          // Fallback for non-paginated response
+          setEntries(Array.isArray(data) ? data : []);
+          setTotalPages(1);
+          setTotalItems(Array.isArray(data) ? data.length : 0);
+        }
+      }
     } catch { toast.error('Failed to load entries'); }
     finally { setLoading(false); }
   }, [activeTab, filters]);
@@ -120,8 +151,12 @@ export default function IncomeExpenses() {
 
   const fetchExchangers = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/vendors`, { headers: getAuthHeaders() });
-      if (response.ok) setExchangers(await response.json());
+      const response = await fetch(`${API_URL}/api/vendors?page_size=200`, { headers: getAuthHeaders() });
+      if (response.ok) {
+        const data = await response.json();
+        // Handle paginated response format
+        setExchangers(data.items || (Array.isArray(data) ? data : []));
+      }
     } catch {}
   };
   
@@ -177,12 +212,12 @@ export default function IncomeExpenses() {
   };
 
   useEffect(() => { 
-    fetchEntries(); fetchTreasuryAccounts(); fetchExchangers(); 
+    fetchEntries(1); fetchTreasuryAccounts(); fetchExchangers(); 
     fetchVendorSuppliers(); fetchIeCategories(); fetchClients();
     fetchBorrowers(); fetchSummary(); fetchMonthlyData(); 
   }, []);
   
-  useEffect(() => { fetchEntries(); fetchSummary(); }, [fetchEntries]);
+  useEffect(() => { fetchEntries(currentPage); fetchSummary(); }, [fetchEntries, currentPage]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -224,7 +259,7 @@ export default function IncomeExpenses() {
           ? `${formData.entry_type === 'income' ? 'Income' : 'Expense'} sent to exchanger for approval`
           : `${formData.entry_type === 'income' ? 'Income' : 'Expense'} recorded successfully`;
         toast.success(msg);
-        setIsDialogOpen(false); resetForm(); fetchEntries(); fetchSummary(); fetchTreasuryAccounts();
+        setIsDialogOpen(false); resetForm(); fetchEntries(currentPage); fetchSummary(); fetchTreasuryAccounts();
       } else {
         const error = await response.json();
         toast.error(error.detail || 'Failed to save entry');
@@ -236,7 +271,7 @@ export default function IncomeExpenses() {
     if (!window.confirm('Delete this entry? This will reverse the treasury balance change.')) return;
     try {
       const response = await fetch(`${API_URL}/api/income-expenses/${entryId}`, { method: 'DELETE', headers: getAuthHeaders() });
-      if (response.ok) { toast.success('Entry deleted'); fetchEntries(); fetchSummary(); fetchTreasuryAccounts(); }
+      if (response.ok) { toast.success('Entry deleted'); fetchEntries(currentPage); fetchSummary(); fetchTreasuryAccounts(); }
       else { const err = await response.json(); toast.error(err.detail || 'Delete failed'); }
     } catch { toast.error('Delete failed'); }
   };
@@ -340,7 +375,7 @@ export default function IncomeExpenses() {
         setImportDialog(false);
         setImportFile(null);
         setImportTreasuryId('');
-        fetchEntries();
+        fetchEntries(currentPage);
         fetchSummary();
         fetchTreasuryAccounts();
       } else {
@@ -390,7 +425,7 @@ export default function IncomeExpenses() {
         toast.success('Invoice uploaded successfully');
         setInvoiceDialog({ open: false, entry: null });
         setInvoiceFile(null);
-        fetchEntries();
+        fetchEntries(currentPage);
       } else {
         const err = await response.json();
         toast.error(err.detail || 'Upload failed');
@@ -424,7 +459,7 @@ export default function IncomeExpenses() {
     setCategoryForm({ name: '', category_type: 'both', description: '' });
   };
 
-  const clearFilters = () => setFilters({ startDate: '', endDate: '', category: '', treasuryAccountId: '', status: '', vendorId: '', entryType: '' });
+  const clearFilters = () => { setFilters({ startDate: '', endDate: '', category: '', treasuryAccountId: '', status: '', vendorId: '', entryType: '' }); setCurrentPage(1); };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
@@ -580,7 +615,7 @@ export default function IncomeExpenses() {
       )}
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); setCurrentPage(1); }} className="w-full">
         <TabsList className="bg-white border border-slate-200">
           <TabsTrigger value="all" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">All Entries</TabsTrigger>
           <TabsTrigger value="income" className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-600">Income</TabsTrigger>
@@ -706,6 +741,56 @@ export default function IncomeExpenses() {
               formatDate={formatDate} getCategoryLabel={getCategoryLabel}
               onUploadInvoice={(entry) => setInvoiceDialog({ open: true, entry })}
               onViewInvoice={(file) => setViewInvoiceDialog({ open: true, file })} />
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-between items-center mt-6">
+                <div className="text-sm text-slate-500">
+                  Showing {entries.length} of {totalItems} entries
+                </div>
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+                        className={`cursor-pointer ${currentPage === 1 ? 'pointer-events-none opacity-50' : ''}`}
+                      />
+                    </PaginationItem>
+                    
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      return (
+                        <PaginationItem key={pageNum}>
+                          <PaginationLink
+                            onClick={() => setCurrentPage(pageNum)}
+                            isActive={currentPage === pageNum}
+                            className="cursor-pointer"
+                          >
+                            {pageNum}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+                    
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+                        className={`cursor-pointer ${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}`}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </TabsContent>
         )})}
         

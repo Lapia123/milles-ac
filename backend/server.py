@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response, UploadFile, File, Form, BackgroundTasks, Body
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response, UploadFile, File, Form, BackgroundTasks, Body, Query
 from fastapi.security import HTTPBearer
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -20,6 +20,11 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from cache import (
+    get_cached, set_cached, get_cache_key, CACHE_TTL,
+    invalidate_vendor_cache, invalidate_ie_cache, invalidate_transaction_cache,
+    invalidate_loan_cache, invalidate_treasury_cache, is_redis_available
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -46,6 +51,39 @@ security = HTTPBearer(auto_error=False)
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# ============== PAGINATION HELPER ==============
+class PaginatedResponse(BaseModel):
+    items: List
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+async def paginate_query(collection, query: dict, page: int = 1, page_size: int = 50, 
+                         sort_field: str = "created_at", sort_order: int = -1,
+                         projection: dict = None) -> dict:
+    """Helper function for paginated queries with caching"""
+    if projection is None:
+        projection = {"_id": 0}
+    
+    skip = (page - 1) * page_size
+    
+    # Get total count
+    total = await collection.count_documents(query)
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 1
+    
+    # Get items
+    cursor = collection.find(query, projection).sort(sort_field, sort_order).skip(skip).limit(page_size)
+    items = await cursor.to_list(page_size)
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages
+    }
 
 # ============== MODELS ==============
 
@@ -3716,8 +3754,27 @@ async def get_global_reserve_fund_summary(user: dict = Depends(require_permissio
 # ============== VENDOR ROUTES ==============
 
 @api_router.get("/vendors")
-async def get_vendors(user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.VIEW))):
-    vendors = await db.vendors.find({}, {"_id": 0}).to_list(1000)
+async def get_vendors(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    search: Optional[str] = None,
+    user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.VIEW))
+):
+    # Build query
+    query = {}
+    if search:
+        query["vendor_name"] = {"$regex": search, "$options": "i"}
+    
+    # Check cache for list
+    cache_key = get_cache_key("vendors:list", page=page, page_size=page_size, search=search)
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+    
+    # Get paginated vendors
+    skip = (page - 1) * page_size
+    total = await db.vendors.count_documents(query)
+    vendors = await db.vendors.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(page_size).to_list(page_size)
     
     # Batch fetch treasury accounts to avoid N+1 queries
     treasury_ids = list(set(v.get("settlement_destination_id") for v in vendors if v.get("settlement_destination_id")))
@@ -3864,7 +3921,19 @@ async def get_vendors(user: dict = Depends(require_permission(Modules.EXCHANGERS
         vendor["settlement_by_currency"] = settlement_by_currency
         vendor["pending_amount"] = total_net_usd
     
-    return vendors
+    # Build response with pagination
+    response = {
+        "items": vendors,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size if total > 0 else 1
+    }
+    
+    # Cache the response
+    set_cached(cache_key, response, CACHE_TTL['vendors_list'])
+    
+    return response
 
 @api_router.get("/vendors/{vendor_id}")
 async def get_vendor(vendor_id: str, user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.VIEW))):
@@ -6146,10 +6215,11 @@ async def get_income_expenses(
     end_date: Optional[str] = None,
     treasury_account_id: Optional[str] = None,
     vendor_id: Optional[str] = None,
-    limit: int = 100,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     user: dict = Depends(require_permission(Modules.INCOME_EXPENSES, Actions.VIEW))
 ):
-    """Get all income and expense entries with optional filters"""
+    """Get all income and expense entries with optional filters and pagination"""
     query = {}
     
     if entry_type:
@@ -6168,7 +6238,20 @@ async def get_income_expenses(
         else:
             query["date"] = {"$lte": end_date}
     
-    entries = await db.income_expenses.find(query, {"_id": 0}).sort("date", -1).limit(limit).to_list(limit)
+    # Check cache
+    cache_key = get_cache_key("ie:list", page=page, page_size=page_size, 
+                              entry_type=entry_type, category=category, 
+                              start_date=start_date, end_date=end_date,
+                              treasury_account_id=treasury_account_id, vendor_id=vendor_id)
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+    
+    # Paginated query
+    skip = (page - 1) * page_size
+    total = await db.income_expenses.count_documents(query)
+    # Sort by date descending, then by entry_id descending for stable pagination
+    entries = await db.income_expenses.find(query, {"_id": 0}).sort([("date", -1), ("entry_id", -1)]).skip(skip).limit(page_size).to_list(page_size)
     
     # Batch fetch treasury accounts to avoid N+1 queries
     treasury_ids = list(set(e.get("treasury_account_id") for e in entries if e.get("treasury_account_id")))
@@ -6181,7 +6264,18 @@ async def get_income_expenses(
         if entry.get("treasury_account_id"):
             entry["treasury_account_name"] = treasury_map.get(entry["treasury_account_id"], "Unknown")
     
-    return entries
+    response = {
+        "items": entries,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size if total > 0 else 1
+    }
+    
+    # Cache response
+    set_cached(cache_key, response, CACHE_TTL['income_expenses'])
+    
+    return response
 
 @api_router.get("/income-expenses/reports/summary")
 async def get_income_expense_summary(

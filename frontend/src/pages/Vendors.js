@@ -40,6 +40,14 @@ import {
   TabsList,
   TabsTrigger,
 } from '../components/ui/tabs';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '../components/ui/pagination';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -61,6 +69,9 @@ import {
   FileText,
   Printer,
   X,
+  Search,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -88,6 +99,14 @@ export default function Exchangers() {
   const [settlementCharges, setSettlementCharges] = useState('');
   const [settlementChargesDescription, setSettlementChargesDescription] = useState('');
   const [settlementAmountInDestCurrency, setSettlementAmountInDestCurrency] = useState('');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const pageSize = 10;
+  
   const [formData, setFormData] = useState({
     vendor_name: '',
     email: '',
@@ -111,11 +130,26 @@ export default function Exchangers() {
     };
   };
 
-  const fetchExchangers = async () => {
+  const fetchExchangers = async (page = 1, search = '') => {
+    setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/vendors`, { headers: getAuthHeaders(), credentials: 'include' });
+      let url = `${API_URL}/api/vendors?page=${page}&page_size=${pageSize}`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+      const response = await fetch(url, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setExchangers(await response.json());
+        const data = await response.json();
+        // Handle paginated response format
+        if (data.items) {
+          setExchangers(data.items);
+          setTotalPages(data.total_pages || 1);
+          setTotalItems(data.total || 0);
+          setCurrentPage(data.page || 1);
+        } else {
+          // Fallback for non-paginated response
+          setExchangers(Array.isArray(data) ? data : []);
+          setTotalPages(1);
+          setTotalItems(Array.isArray(data) ? data.length : 0);
+        }
       }
     } catch (error) {
       console.error('Error fetching vendors:', error);
@@ -257,9 +291,9 @@ export default function Exchangers() {
   };
 
   useEffect(() => {
-    fetchExchangers();
+    fetchExchangers(currentPage, searchTerm);
     fetchTreasuryAccounts();
-  }, []);
+  }, [currentPage, searchTerm]);
 
   useEffect(() => {
     if (viewExchanger) {
@@ -304,7 +338,7 @@ export default function Exchangers() {
         toast.success(selectedExchanger ? 'Exchanger updated' : 'Exchanger created');
         setIsDialogOpen(false);
         resetForm();
-        fetchExchangers();
+        fetchExchangers(currentPage, searchTerm);
       } else {
         const error = await response.json();
         toast.error(error.detail || 'Operation failed');
@@ -326,7 +360,7 @@ export default function Exchangers() {
       });
       if (response.ok) {
         toast.success('Exchanger deleted');
-        fetchExchangers();
+        fetchExchangers(currentPage, searchTerm);
       } else {
         const error = await response.json();
         toast.error(error.detail || 'Delete failed');
@@ -405,7 +439,7 @@ export default function Exchangers() {
         setSettlementAmountInDestCurrency('');
         fetchExchangerTransactions(viewExchanger.vendor_id);
         fetchExchangerSettlements(viewExchanger.vendor_id);
-        fetchExchangers();
+        fetchExchangers(currentPage, searchTerm);
       } else {
         const error = await response.json();
         toast.error(error.detail || 'Settlement failed');
@@ -644,6 +678,27 @@ export default function Exchangers() {
         </Card>
       </div>
 
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            type="text"
+            placeholder="Search exchangers..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="pl-10 bg-white border-slate-200"
+            data-testid="vendor-search"
+          />
+        </div>
+        <div className="text-sm text-slate-500">
+          Showing {vendors.length} of {totalItems} exchangers
+        </div>
+      </div>
+
       {/* Exchangers Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
@@ -760,6 +815,53 @@ export default function Exchangers() {
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-6">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+                  className={`cursor-pointer ${currentPage === 1 ? 'pointer-events-none opacity-50' : ''}`}
+                />
+              </PaginationItem>
+              
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+                return (
+                  <PaginationItem key={pageNum}>
+                    <PaginationLink
+                      onClick={() => setCurrentPage(pageNum)}
+                      isActive={currentPage === pageNum}
+                      className="cursor-pointer"
+                    >
+                      {pageNum}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+              
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+                  className={`cursor-pointer ${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}`}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
       {/* View Exchanger Details Dialog */}
       <Dialog open={!!viewExchanger} onOpenChange={() => { setViewExchanger(null); setPendingTransactions([]); setSettlements([]); }}>
