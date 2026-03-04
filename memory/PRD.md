@@ -12,6 +12,19 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 
 ### Date: Mar 4, 2026
 
+**Exchanger Portal Tab Merge (COMPLETE):**
+- **Request**: Merge "Income & Expense Entries" and "Loan Transactions" tabs into single "Other Transactions" tab
+- **Changes**: 
+  - Removed duplicate/broken TabsContent blocks from VendorDashboard.js
+  - Fixed function name from `openIeActionDialog` to `openIeAction`
+  - Portal now has 3 tabs: "Transactions", "Other Transactions", "Settlement History"
+  - "Other Transactions" displays unified table with:
+    - Source column: I&E badge (amber) or Loan badge (purple)
+    - Type: IN/OUT classification
+    - Combined pending count badge
+    - Approve/Reject actions for pending entries
+- **Verified**: 17/17 tests passed - Reference: /app/test_reports/iteration_31.json
+
 **Admin Impersonation (COMPLETE)** — Secure token switching with audit logging
 
 **Full RBAC Migration (COMPLETE)** — 184+ routes → `require_permission(Module, Action)`, frontend permission-based sidebar
