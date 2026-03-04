@@ -71,7 +71,8 @@ export default function IncomeExpenses() {
 
   const [formData, setFormData] = useState({
     entry_type: 'income', category: '', custom_category: '', amount: '',
-    currency: 'USD', treasury_account_id: '', vendor_id: '',
+    currency: 'USD', base_currency: 'USD', base_amount: '', exchange_rate: '',
+    treasury_account_id: '', vendor_id: '',
     vendor_supplier_id: '', client_id: '', ie_category_id: '',
     vendor_bank_account_name: '', vendor_bank_account_number: '',
     vendor_bank_ifsc: '', vendor_bank_branch: '',
@@ -187,9 +188,17 @@ export default function IncomeExpenses() {
     if (!formData.category && !formData.ie_category_id) { toast.error('Please select a category'); return; }
     if (!formData.amount || parseFloat(formData.amount) <= 0) { toast.error('Please enter a valid amount'); return; }
     if (!formData.treasury_account_id && !formData.vendor_id) { toast.error('Please select an account or exchanger'); return; }
+    if (formData.base_currency !== 'USD' && (!formData.base_amount || !formData.exchange_rate)) {
+      toast.error('Please enter base amount and exchange rate for non-USD currency');
+      return;
+    }
 
     try {
       const payload = { ...formData, amount: parseFloat(formData.amount) };
+      if (formData.base_currency !== 'USD') {
+        payload.base_amount = parseFloat(formData.base_amount);
+        payload.exchange_rate = parseFloat(formData.exchange_rate);
+      }
       // Clean up empty fields
       Object.keys(payload).forEach(key => {
         if (payload[key] === '' || payload[key] === null) delete payload[key];
@@ -391,11 +400,13 @@ export default function IncomeExpenses() {
   const resetForm = () => {
     setFormData({
       entry_type: 'income', category: '', custom_category: '', amount: '',
-      currency: 'USD', treasury_account_id: '', vendor_id: '',
+      currency: 'USD', base_currency: 'USD', base_amount: '', exchange_rate: '',
+      treasury_account_id: '', vendor_id: '',
       vendor_supplier_id: '', client_id: '', ie_category_id: '',
       vendor_bank_account_name: '', vendor_bank_account_number: '',
       vendor_bank_ifsc: '', vendor_bank_branch: '',
       description: '', reference: '', date: new Date().toISOString().split('T')[0],
+      transaction_mode: 'bank', collecting_person_name: '', collecting_person_number: '',
     });
     setExchangerSearch(''); setVendorSearch(''); setClientSearch(''); setCategorySearch('');
   };
@@ -985,7 +996,9 @@ export default function IncomeExpenses() {
             {/* Amount & Currency */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Amount *</Label>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  {formData.base_currency !== 'USD' ? 'Amount in USD (Auto-calculated)' : 'Amount in USD *'}
+                </Label>
                 <Input 
                   type="text" 
                   inputMode="decimal"
@@ -993,19 +1006,19 @@ export default function IncomeExpenses() {
                   value={formData.amount} 
                   onChange={(e) => {
                     const value = e.target.value;
-                    // Allow empty, numbers, and decimal point
                     if (value === '' || /^\d*\.?\d*$/.test(value)) {
                       setFormData({ ...formData, amount: value });
                     }
                   }} 
                   className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono" 
-                  placeholder="0.00" 
-                  data-testid="entry-amount" 
+                  placeholder="0.00 USD" 
+                  data-testid="entry-amount"
+                  readOnly={formData.base_currency !== 'USD'}
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Currency</Label>
-                <Select value={formData.currency} onValueChange={(value) => setFormData({ ...formData, currency: value })}>
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Payment Currency</Label>
+                <Select value={formData.base_currency} onValueChange={(value) => setFormData({ ...formData, base_currency: value, currency: value, base_amount: '', exchange_rate: '', amount: '' })}>
                   <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-white border-slate-200">
                     {currencies.map((cur) => (<SelectItem key={cur} value={cur} className="text-slate-800 hover:bg-slate-100">{cur}</SelectItem>))}
@@ -1013,6 +1026,57 @@ export default function IncomeExpenses() {
                 </Select>
               </div>
             </div>
+
+            {formData.base_currency !== 'USD' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Amount in {formData.base_currency} *</Label>
+                  <Input 
+                    type="text" 
+                    inputMode="decimal"
+                    pattern="[0-9]*\.?[0-9]*"
+                    value={formData.base_amount} 
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                        const rate = parseFloat(formData.exchange_rate) || 0;
+                        const usdAmount = value && rate ? (parseFloat(value) * rate).toFixed(2) : '';
+                        setFormData({ ...formData, base_amount: value, amount: usdAmount });
+                      }
+                    }} 
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono" 
+                    placeholder={`0.00 ${formData.base_currency}`}
+                    data-testid="entry-base-amount"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Exchange Rate (1 {formData.base_currency} = ? USD) *</Label>
+                  <Input 
+                    type="text" 
+                    inputMode="decimal"
+                    pattern="[0-9]*\.?[0-9]*"
+                    value={formData.exchange_rate} 
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                        const baseAmt = parseFloat(formData.base_amount) || 0;
+                        const usdAmount = value && baseAmt ? (baseAmt * parseFloat(value)).toFixed(2) : '';
+                        setFormData({ ...formData, exchange_rate: value, amount: usdAmount });
+                      }
+                    }} 
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono" 
+                    placeholder="0.0000"
+                    data-testid="entry-exchange-rate"
+                  />
+                </div>
+              </div>
+            )}
+
+            {formData.base_currency !== 'USD' && formData.base_amount && formData.exchange_rate && (
+              <p className="text-xs text-blue-600">
+                {formData.base_amount} {formData.base_currency} × {formData.exchange_rate} = {formData.amount} USD
+              </p>
+            )}
 
             {/* Account / Exchanger Selection */}
             <div className="space-y-2">
