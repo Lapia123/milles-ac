@@ -1324,7 +1324,8 @@ export default function Loans() {
                       <TableHead className="text-slate-500 text-xs">Type</TableHead>
                       <TableHead className="text-slate-500 text-xs">Description</TableHead>
                       <TableHead className="text-slate-500 text-xs">Source / Destination</TableHead>
-                      <TableHead className="text-slate-500 text-xs text-right">Amount</TableHead>
+                      <TableHead className="text-slate-500 text-xs">Payment Currency</TableHead>
+                      <TableHead className="text-slate-500 text-xs text-right">Amount (USD)</TableHead>
                       <TableHead className="text-slate-500 text-xs">Status</TableHead>
                       <TableHead className="text-slate-500 text-xs">By</TableHead>
                     </TableRow>
@@ -1360,8 +1361,16 @@ export default function Loans() {
                           )}
                           {tx.transaction_type !== 'disbursement' && tx.transaction_type !== 'repayment' && '-'}
                         </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <Badge className="bg-blue-100 text-blue-700 text-xs w-fit">{tx.currency || 'USD'}</Badge>
+                            <span className="font-mono text-xs text-slate-600 mt-0.5">
+                              {tx.amount?.toLocaleString()} {tx.currency || 'USD'}
+                            </span>
+                          </div>
+                        </TableCell>
                         <TableCell className="text-slate-800 font-mono text-sm text-right">
-                          {tx.currency === 'USD' ? '$' : ''}{tx.amount?.toLocaleString()}{tx.currency !== 'USD' ? ` ${tx.currency}` : ''}
+                          ${tx.amount_usd?.toLocaleString() || tx.amount?.toLocaleString()}
                         </TableCell>
                         <TableCell>
                           <Badge className={
@@ -1378,7 +1387,7 @@ export default function Loans() {
                     ))}
                     {loanTransactions.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-slate-400 py-8">
+                        <TableCell colSpan={8} className="text-center text-slate-400 py-8">
                           No transactions yet
                         </TableCell>
                       </TableRow>

@@ -1575,7 +1575,8 @@ function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCate
                 <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Description</TableHead>
                 <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Account / Linked</TableHead>
                 <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
+                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Payment Currency</TableHead>
+                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Amount (USD)</TableHead>
                 {isAdmin && <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs w-24">Actions</TableHead>}
               </TableRow>
             </TableHeader>
@@ -1584,6 +1585,8 @@ function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCate
                 const isIncome = entry.entry_type === 'income';
                 const borderColor = isIncome ? 'border-l-green-500' : 'border-l-red-500';
                 const isConverted = entry.converted_to_loan;
+                const paymentCurrency = entry.base_currency || entry.currency || 'USD';
+                const paymentAmount = entry.base_amount || entry.amount;
                 return (
                   <TableRow key={entry.entry_id} className={`border-slate-200 hover:bg-slate-100 border-l-4 ${borderColor} ${isConverted ? 'opacity-50' : ''}`} data-testid={`entry-row-${entry.entry_id}`}>
                     <TableCell className="text-slate-800 text-sm">{formatDate(entry.date)}</TableCell>
@@ -1608,8 +1611,16 @@ function EntriesTable({ entries, loading, onDelete, isAdmin, formatDate, getCate
                       {entry.vendor_supplier_name && <p className="text-[10px] text-purple-500 mt-0.5">Vendor: {entry.vendor_supplier_name}</p>}
                     </TableCell>
                     <TableCell>{getStatusBadge(entry)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <Badge className="bg-blue-100 text-blue-700 text-xs w-fit">{paymentCurrency}</Badge>
+                        <span className={`font-mono text-xs mt-0.5 ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
+                          {isIncome ? '+' : '-'}{paymentAmount?.toLocaleString()}
+                        </span>
+                      </div>
+                    </TableCell>
                     <TableCell className={`font-mono text-right ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
-                      {isIncome ? '+' : '-'}{entry.amount?.toLocaleString()} {entry.currency}
+                      {isIncome ? '+' : '-'}{entry.amount?.toLocaleString()} USD
                     </TableCell>
                     {isAdmin && (
                       <TableCell>
