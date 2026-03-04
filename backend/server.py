@@ -560,7 +560,8 @@ class LoanCreate(BaseModel):
     installment_amount: Optional[float] = None  # For EMI mode
     installment_frequency: Optional[str] = None  # monthly, weekly, etc.
     num_installments: Optional[int] = None  # Number of EMIs
-    treasury_account_id: str  # Source treasury account
+    treasury_account_id: Optional[str] = None  # Source treasury account (optional if disburse_from_vendor_id is provided)
+    disburse_from_vendor_id: Optional[str] = None  # Source vendor/exchanger account
     collateral: Optional[str] = None  # Security/collateral description
     notes: Optional[str] = None
 
@@ -579,7 +580,8 @@ class LoanUpdate(BaseModel):
 class LoanRepaymentCreate(BaseModel):
     amount: float
     currency: str = "USD"
-    treasury_account_id: str  # Where repayment goes
+    treasury_account_id: Optional[str] = None  # Where repayment goes (optional if credit_to_vendor_id provided)
+    credit_to_vendor_id: Optional[str] = None  # Credit to vendor/exchanger instead of treasury
     payment_date: Optional[str] = None
     reference: Optional[str] = None
     notes: Optional[str] = None
@@ -7236,14 +7238,28 @@ async def get_loan(loan_id: str, user: dict = Depends(require_permission(Modules
 
 @api_router.post("/loans")
 async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depends(require_permission(Modules.LOANS, Actions.CREATE))):
-    """Create a new loan and deduct from treasury"""
-    # Verify treasury account exists and has sufficient balance
-    treasury = await db.treasury_accounts.find_one({"account_id": loan_data.treasury_account_id}, {"_id": 0})
-    if not treasury:
-        raise HTTPException(status_code=404, detail="Treasury account not found")
+    """Create a new loan and deduct from treasury or vendor"""
     
-    if treasury.get("balance", 0) < loan_data.amount:
-        raise HTTPException(status_code=400, detail="Insufficient balance in treasury account")
+    # Validate that at least one source is provided
+    if not loan_data.treasury_account_id and not loan_data.disburse_from_vendor_id:
+        raise HTTPException(status_code=400, detail="Please select Treasury or Exchanger to disburse from")
+    
+    treasury = None
+    disburse_vendor = None
+    
+    # Check treasury source
+    if loan_data.treasury_account_id:
+        treasury = await db.treasury_accounts.find_one({"account_id": loan_data.treasury_account_id}, {"_id": 0})
+        if not treasury:
+            raise HTTPException(status_code=404, detail="Treasury account not found")
+        if treasury.get("balance", 0) < loan_data.amount:
+            raise HTTPException(status_code=400, detail="Insufficient balance in treasury account")
+    
+    # Check vendor source
+    if loan_data.disburse_from_vendor_id:
+        disburse_vendor = await db.vendors.find_one({"vendor_id": loan_data.disburse_from_vendor_id}, {"_id": 0})
+        if not disburse_vendor:
+            raise HTTPException(status_code=404, detail="Exchanger not found")
     
     if loan_data.amount <= 0:
         raise HTTPException(status_code=400, detail="Loan amount must be positive")
@@ -7286,6 +7302,8 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
         "num_installments": loan_data.num_installments,
         "collateral": loan_data.collateral,
         "source_treasury_id": loan_data.treasury_account_id,
+        "source_vendor_id": loan_data.disburse_from_vendor_id,
+        "source_vendor_name": disburse_vendor.get("name") or disburse_vendor.get("vendor_name") if disburse_vendor else None,
         "total_repaid": 0,
         "repayment_count": 0,
         "status": LoanStatus.ACTIVE,
@@ -7297,35 +7315,59 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
     
     await db.loans.insert_one(loan_doc)
     
-    # Deduct from treasury account - convert if currencies differ
-    treasury_currency = treasury.get("currency", "USD")
-    treasury_deduct_amount = loan_data.amount
-    if treasury_currency.upper() != loan_data.currency.upper():
-        treasury_deduct_amount = convert_currency(loan_data.amount, loan_data.currency, treasury_currency)
-    
-    await db.treasury_accounts.update_one(
-        {"account_id": loan_data.treasury_account_id},
-        {"$inc": {"balance": -treasury_deduct_amount}, "$set": {"updated_at": now.isoformat()}}
-    )
-    
-    # Record treasury transaction
-    conversion_note = f" (Converted from {loan_data.amount:,.2f} {loan_data.currency})" if treasury_currency.upper() != loan_data.currency.upper() else ""
-    tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
-    tx_doc = {
-        "treasury_transaction_id": tx_id,
-        "account_id": loan_data.treasury_account_id,
-        "transaction_type": "loan_disbursement",
-        "amount": -treasury_deduct_amount,
-        "currency": treasury_currency,
-        "original_amount": loan_data.amount,
-        "original_currency": loan_data.currency,
-        "reference": f"Loan to {loan_data.borrower_name}{conversion_note}",
-        "loan_id": loan_id,
-        "created_at": now.isoformat(),
-        "created_by": user["user_id"],
-        "created_by_name": user["name"]
-    }
-    await db.treasury_transactions.insert_one(tx_doc)
+    # Deduct from treasury OR create expense entry for vendor
+    if treasury:
+        # Deduct from treasury account - convert if currencies differ
+        treasury_currency = treasury.get("currency", "USD")
+        treasury_deduct_amount = loan_data.amount
+        if treasury_currency.upper() != loan_data.currency.upper():
+            treasury_deduct_amount = convert_currency(loan_data.amount, loan_data.currency, treasury_currency)
+        
+        await db.treasury_accounts.update_one(
+            {"account_id": loan_data.treasury_account_id},
+            {"$inc": {"balance": -treasury_deduct_amount}, "$set": {"updated_at": now.isoformat()}}
+        )
+        
+        # Record treasury transaction
+        conversion_note = f" (Converted from {loan_data.amount:,.2f} {loan_data.currency})" if treasury_currency.upper() != loan_data.currency.upper() else ""
+        tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+        tx_doc = {
+            "treasury_transaction_id": tx_id,
+            "account_id": loan_data.treasury_account_id,
+            "transaction_type": "loan_disbursement",
+            "amount": -treasury_deduct_amount,
+            "currency": treasury_currency,
+            "original_amount": loan_data.amount,
+            "original_currency": loan_data.currency,
+            "reference": f"Loan to {loan_data.borrower_name}{conversion_note}",
+            "loan_id": loan_id,
+            "created_at": now.isoformat(),
+            "created_by": user["user_id"],
+            "created_by_name": user["name"]
+        }
+        await db.treasury_transactions.insert_one(tx_doc)
+    elif disburse_vendor:
+        # Create an income entry for the vendor (loan disbursement = money going OUT from vendor to borrower)
+        entry_id = f"ie_{uuid.uuid4().hex[:12]}"
+        ie_doc = {
+            "entry_id": entry_id,
+            "entry_type": "expense",
+            "vendor_id": loan_data.disburse_from_vendor_id,
+            "vendor_name": disburse_vendor.get("name") or disburse_vendor.get("vendor_name"),
+            "amount": loan_data.amount,
+            "currency": loan_data.currency,
+            "amount_usd": amount_usd,
+            "category": "loan_disbursement",
+            "description": f"Loan disbursement to {loan_data.borrower_name}",
+            "date": loan_data.loan_date,
+            "payment_mode": "bank",
+            "status": "completed",
+            "loan_id": loan_id,
+            "created_at": now.isoformat(),
+            "created_by": user["user_id"],
+            "created_by_name": user["name"]
+        }
+        await db.income_expenses.insert_one(ie_doc)
     
     # Record loan transaction
     await db.loan_transactions.insert_one({
@@ -7342,7 +7384,10 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
     })
     
     loan_doc.pop("_id", None)
-    loan_doc["source_treasury_name"] = treasury["account_name"]
+    if treasury:
+        loan_doc["source_treasury_name"] = treasury["account_name"]
+    elif disburse_vendor:
+        loan_doc["source_vendor_name"] = disburse_vendor.get("name") or disburse_vendor.get("vendor_name")
     loan_doc["outstanding_balance"] = loan_data.amount + total_interest
     
     # Log activity
@@ -7382,10 +7427,24 @@ async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanR
     if loan["status"] == LoanStatus.FULLY_PAID:
         raise HTTPException(status_code=400, detail="Loan is already fully paid")
     
-    # Verify treasury account exists
-    treasury = await db.treasury_accounts.find_one({"account_id": repayment.treasury_account_id}, {"_id": 0})
-    if not treasury:
-        raise HTTPException(status_code=404, detail="Treasury account not found")
+    # Validate that at least one destination is provided
+    if not repayment.treasury_account_id and not repayment.credit_to_vendor_id:
+        raise HTTPException(status_code=400, detail="Please select Treasury or Exchanger to credit")
+    
+    treasury = None
+    credit_vendor = None
+    
+    # Verify treasury account exists if provided
+    if repayment.treasury_account_id:
+        treasury = await db.treasury_accounts.find_one({"account_id": repayment.treasury_account_id}, {"_id": 0})
+        if not treasury:
+            raise HTTPException(status_code=404, detail="Treasury account not found")
+    
+    # Verify vendor exists if provided
+    if repayment.credit_to_vendor_id:
+        credit_vendor = await db.vendors.find_one({"vendor_id": repayment.credit_to_vendor_id}, {"_id": 0})
+        if not credit_vendor:
+            raise HTTPException(status_code=404, detail="Exchanger not found")
     
     if repayment.amount <= 0:
         raise HTTPException(status_code=400, detail="Repayment amount must be positive")
@@ -7409,7 +7468,8 @@ async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanR
         else:
             # Convert using live FX rates
             amount_usd = convert_to_usd(repayment.amount, repayment.currency)
-            loan_rate = EXCHANGE_RATES_TO_USD.get(loan["currency"].upper(), 1.0)
+            rates = _fx_cache.get("rates") or FALLBACK_RATES_TO_USD
+            loan_rate = rates.get(loan["currency"].upper(), 1.0)
             repayment_amount_in_loan_currency = round(amount_usd / loan_rate, 2) if loan_rate else repayment.amount
             exchange_rate_used = round(repayment_amount_in_loan_currency / repayment.amount, 6) if repayment.amount else 1.0
     
@@ -7422,6 +7482,7 @@ async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanR
         "loan_currency": loan["currency"],
         "exchange_rate": exchange_rate_used,
         "treasury_account_id": repayment.treasury_account_id,
+        "credit_to_vendor_id": repayment.credit_to_vendor_id,
         "payment_date": payment_date,
         "reference": repayment.reference,
         "notes": repayment.notes,
@@ -7456,36 +7517,62 @@ async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanR
         }
     )
     
-    # Credit treasury account - convert if currency differs
-    treasury_currency = treasury.get("currency", "USD")
-    treasury_credit_amount = repayment.amount
-    if treasury_currency.upper() != repayment.currency.upper():
-        treasury_credit_amount = convert_currency(repayment.amount, repayment.currency, treasury_currency)
-    
-    await db.treasury_accounts.update_one(
-        {"account_id": repayment.treasury_account_id},
-        {"$inc": {"balance": treasury_credit_amount}, "$set": {"updated_at": now.isoformat()}}
-    )
-    
-    # Record treasury transaction
-    conversion_note = f" (Converted from {repayment.amount:,.2f} {repayment.currency})" if treasury_currency.upper() != repayment.currency.upper() else ""
-    tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
-    tx_doc = {
-        "treasury_transaction_id": tx_id,
-        "account_id": repayment.treasury_account_id,
-        "transaction_type": "loan_repayment",
-        "amount": treasury_credit_amount,
-        "currency": treasury_currency,
-        "original_amount": repayment.amount,
-        "original_currency": repayment.currency,
-        "reference": f"Loan repayment from {loan['borrower_name']}{conversion_note}",
-        "loan_id": loan_id,
-        "repayment_id": repayment_id,
-        "created_at": now.isoformat(),
-        "created_by": user["user_id"],
-        "created_by_name": user["name"]
-    }
-    await db.treasury_transactions.insert_one(tx_doc)
+    # Credit to treasury OR create income entry for vendor
+    if treasury:
+        # Credit treasury account - convert if currency differs
+        treasury_currency = treasury.get("currency", "USD")
+        treasury_credit_amount = repayment.amount
+        if treasury_currency.upper() != repayment.currency.upper():
+            treasury_credit_amount = convert_currency(repayment.amount, repayment.currency, treasury_currency)
+        
+        await db.treasury_accounts.update_one(
+            {"account_id": repayment.treasury_account_id},
+            {"$inc": {"balance": treasury_credit_amount}, "$set": {"updated_at": now.isoformat()}}
+        )
+        
+        # Record treasury transaction
+        conversion_note = f" (Converted from {repayment.amount:,.2f} {repayment.currency})" if treasury_currency.upper() != repayment.currency.upper() else ""
+        tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+        tx_doc = {
+            "treasury_transaction_id": tx_id,
+            "account_id": repayment.treasury_account_id,
+            "transaction_type": "loan_repayment",
+            "amount": treasury_credit_amount,
+            "currency": treasury_currency,
+            "original_amount": repayment.amount,
+            "original_currency": repayment.currency,
+            "reference": f"Loan repayment from {loan['borrower_name']}{conversion_note}",
+            "loan_id": loan_id,
+            "repayment_id": repayment_id,
+            "created_at": now.isoformat(),
+            "created_by": user["user_id"],
+            "created_by_name": user["name"]
+        }
+        await db.treasury_transactions.insert_one(tx_doc)
+    elif credit_vendor:
+        # Create an income entry for the vendor (loan repayment = money coming IN to vendor)
+        amount_usd = convert_to_usd(repayment.amount, repayment.currency)
+        entry_id = f"ie_{uuid.uuid4().hex[:12]}"
+        ie_doc = {
+            "entry_id": entry_id,
+            "entry_type": "income",
+            "vendor_id": repayment.credit_to_vendor_id,
+            "vendor_name": credit_vendor.get("name") or credit_vendor.get("vendor_name"),
+            "amount": repayment.amount,
+            "currency": repayment.currency,
+            "amount_usd": amount_usd,
+            "category": "loan_repayment",
+            "description": f"Loan repayment from {loan['borrower_name']}",
+            "date": payment_date,
+            "payment_mode": "bank",
+            "status": "completed",
+            "loan_id": loan_id,
+            "repayment_id": repayment_id,
+            "created_at": now.isoformat(),
+            "created_by": user["user_id"],
+            "created_by_name": user["name"]
+        }
+        await db.income_expenses.insert_one(ie_doc)
     
     # Record loan transaction
     await db.loan_transactions.insert_one({
@@ -7495,6 +7582,7 @@ async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanR
         "amount": repayment.amount,
         "currency": repayment.currency,
         "treasury_account_id": repayment.treasury_account_id,
+        "credit_to_vendor_id": repayment.credit_to_vendor_id,
         "description": f"Repayment from {loan['borrower_name']}",
         "created_at": now.isoformat(),
         "created_by": user["user_id"],
@@ -7502,7 +7590,10 @@ async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanR
     })
     
     repayment_doc.pop("_id", None)
-    repayment_doc["treasury_account_name"] = treasury["account_name"]
+    if treasury:
+        repayment_doc["treasury_account_name"] = treasury["account_name"]
+    elif credit_vendor:
+        repayment_doc["vendor_name"] = credit_vendor.get("name") or credit_vendor.get("vendor_name")
     repayment_doc["new_outstanding"] = max(0, outstanding)
     repayment_doc["loan_status"] = new_status
     await log_activity(request, user, "create", "loans", "Recorded loan repayment")
