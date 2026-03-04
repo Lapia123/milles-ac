@@ -137,6 +137,7 @@ export default function Loans() {
     num_installments: '',
     treasury_account_id: '',
     disburse_from_vendor_id: '',
+    bank_details: '',
     collateral: '',
     notes: '',
   });
@@ -524,6 +525,7 @@ export default function Loans() {
       num_installments: '',
       treasury_account_id: '',
       disburse_from_vendor_id: '',
+      bank_details: '',
       collateral: '',
       notes: '',
     });
@@ -1606,6 +1608,22 @@ export default function Loans() {
                 placeholder="e.g., Property deed, Bank guarantee..."
               />
             </div>
+
+            {/* Bank Account Details - shown when disbursing from Exchanger */}
+            {loanForm.disburse_from_vendor_id && (
+              <div className="space-y-2">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Bank Account Details *</Label>
+                <Textarea
+                  value={loanForm.bank_details}
+                  onChange={(e) => setLoanForm({ ...loanForm, bank_details: e.target.value })}
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                  rows={3}
+                  placeholder="Enter bank account details for the exchanger (Account Name, Account Number, Bank Name, IFSC/SWIFT, etc.)"
+                  data-testid="loan-bank-details"
+                />
+                <p className="text-xs text-amber-600">These details will be visible to the Exchanger for approval</p>
+              </div>
+            )}
 
             {/* Notes */}
             <div className="space-y-2">

@@ -43,6 +43,8 @@ import {
   Filter,
   Calendar,
   Search,
+  Wallet,
+  CheckCircle,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -80,6 +82,15 @@ export default function ExchangerDashboard() {
   const [txSearchQuery, setTxSearchQuery] = useState('');
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  
+  // Loan Transactions state
+  const [loanTransactions, setLoanTransactions] = useState([]);
+  const [loanTxActionDialog, setLoanTxActionDialog] = useState({ open: false, tx: null, type: '' });
+  const [loanTxProofImage, setLoanTxProofImage] = useState(null);
+  const [loanTxProofPreview, setLoanTxProofPreview] = useState(null);
+  const [loanTxCaptcha, setLoanTxCaptcha] = useState({ num1: 0, num2: 0 });
+  const [loanTxCaptchaAnswer, setLoanTxCaptchaAnswer] = useState('');
+  const [loanTxRejectionReason, setLoanTxRejectionReason] = useState('');
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -160,6 +171,20 @@ export default function ExchangerDashboard() {
     }
   };
 
+  const fetchLoanTransactions = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/vendor/loan-transactions`, {
+        headers: getAuthHeaders(),
+        credentials: 'include'
+      });
+      if (response.ok) {
+        setLoanTransactions(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching loan transactions:', error);
+    }
+  };
+
   const openStatement = async (settlementId) => {
     setStatementLoading(true);
     setStatementOpen(true);
@@ -210,6 +235,7 @@ export default function ExchangerDashboard() {
       fetchTransactions();
       fetchSettlements();
       fetchIeEntries();
+      fetchLoanTransactions();
     }
   }, [vendorInfo]);
 
@@ -227,6 +253,7 @@ export default function ExchangerDashboard() {
       fetchSettlements();
       fetchIeEntries();
       fetchExchangerInfo();
+      fetchLoanTransactions();
     }
   }, 15000);
 
@@ -377,9 +404,90 @@ export default function ExchangerDashboard() {
 
   const pendingCount = transactions.filter(t => t.status === 'pending').length;
   const pendingIeCount = ieEntries.filter(e => e.status === 'pending_vendor').length;
+  const pendingLoanTxCount = loanTransactions.filter(t => t.status === 'pending_vendor').length;
   const pendingDeposits = transactions.filter(t => t.status === 'pending' && t.transaction_type === 'deposit');
   const pendingWithdrawals = transactions.filter(t => t.status === 'pending' && t.transaction_type === 'withdrawal');
   const approvedWithdrawals = transactions.filter(t => t.status === 'approved' && t.transaction_type === 'withdrawal');
+
+  // Loan Transaction Actions
+  const handleLoanTxAction = (tx, action) => {
+    setLoanTxActionDialog({ open: true, tx, type: action });
+    const num1 = Math.floor(Math.random() * 10) + 1;
+    const num2 = Math.floor(Math.random() * 10) + 1;
+    setLoanTxCaptcha({ num1, num2 });
+    setLoanTxCaptchaAnswer('');
+    setLoanTxProofImage(null);
+    setLoanTxProofPreview(null);
+    setLoanTxRejectionReason('');
+  };
+
+  const handleLoanTxImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setLoanTxProofImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setLoanTxProofPreview(reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const executeLoanTxApprove = async () => {
+    const expectedAnswer = loanTxCaptcha.num1 + loanTxCaptcha.num2;
+    if (parseInt(loanTxCaptchaAnswer) !== expectedAnswer) {
+      toast.error('Incorrect captcha answer');
+      const num1 = Math.floor(Math.random() * 10) + 1;
+      const num2 = Math.floor(Math.random() * 10) + 1;
+      setLoanTxCaptcha({ num1, num2 });
+      setLoanTxCaptchaAnswer('');
+      return;
+    }
+    if (!loanTxProofImage) {
+      toast.error('Please upload proof screenshot');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('auth_token');
+      const formData = new FormData();
+      formData.append('proof_image', loanTxProofImage);
+      const response = await fetch(`${API_URL}/api/vendor/loan-transactions/${loanTxActionDialog.tx.transaction_id}/approve`, {
+        method: 'POST',
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        credentials: 'include',
+        body: formData,
+      });
+      if (response.ok) {
+        toast.success('Loan transaction approved!');
+        fetchLoanTransactions();
+        setLoanTxActionDialog({ open: false, tx: null, type: '' });
+      } else {
+        const err = await response.json();
+        toast.error(err.detail || 'Approval failed');
+      }
+    } catch { toast.error('Approval failed'); }
+  };
+
+  const executeLoanTxReject = async () => {
+    const expectedAnswer = loanTxCaptcha.num1 + loanTxCaptcha.num2;
+    if (parseInt(loanTxCaptchaAnswer) !== expectedAnswer) {
+      toast.error('Incorrect captcha answer');
+      return;
+    }
+    try {
+      const response = await fetch(`${API_URL}/api/vendor/loan-transactions/${loanTxActionDialog.tx.transaction_id}/reject?reason=${encodeURIComponent(loanTxRejectionReason)}`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      if (response.ok) {
+        toast.success('Loan transaction rejected');
+        fetchLoanTransactions();
+        setLoanTxActionDialog({ open: false, tx: null, type: '' });
+      } else {
+        const err = await response.json();
+        toast.error(err.detail || 'Rejection failed');
+      }
+    } catch { toast.error('Rejection failed'); }
+  };
 
   const handleIeApprove = async (entryId) => {
     try {
@@ -733,6 +841,9 @@ export default function ExchangerDashboard() {
           </TabsTrigger>
           <TabsTrigger value="income-expenses" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
             Income/Expenses {pendingIeCount > 0 && <Badge className="ml-1 bg-amber-500/30 text-amber-400 text-[10px]">{pendingIeCount}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="loan-transactions" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
+            Loan Transactions {pendingLoanTxCount > 0 && <Badge className="ml-1 bg-purple-500/30 text-purple-400 text-[10px]">{pendingLoanTxCount}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="settlements" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
             Settlement History
@@ -1121,6 +1232,116 @@ export default function ExchangerDashboard() {
                   </Table>
                 </ScrollArea>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Loan Transactions Tab */}
+        <TabsContent value="loan-transactions" className="mt-4">
+          <Card className="bg-white border-slate-200">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-purple-600" /> Loan Transactions
+                </CardTitle>
+                <Badge className={`${pendingLoanTxCount > 0 ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-500'}`}>
+                  {pendingLoanTxCount} pending
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[500px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-200 hover:bg-transparent">
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Borrower</TableHead>
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Amount</TableHead>
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Bank Details</TableHead>
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loanTransactions.map((tx) => {
+                      const isDisbursement = tx.transaction_type === 'disbursement';
+                      const isPending = tx.status === 'pending_vendor';
+                      return (
+                        <TableRow key={tx.transaction_id} className={`border-slate-200 hover:bg-slate-100 ${isPending ? 'bg-purple-50' : ''}`}>
+                          <TableCell className="font-mono text-slate-800 text-sm">{tx.transaction_id?.slice(-12).toUpperCase()}</TableCell>
+                          <TableCell>
+                            <Badge className={isDisbursement ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}>
+                              {isDisbursement ? 'OUT (Disbursement)' : 'IN (Repayment)'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-slate-800 text-sm">{tx.borrower_name || '-'}</TableCell>
+                          <TableCell className={`font-mono font-semibold ${isDisbursement ? 'text-red-500' : 'text-green-500'}`}>
+                            {isDisbursement ? '-' : '+'}{tx.amount?.toLocaleString()} {tx.currency}
+                          </TableCell>
+                          <TableCell className="text-slate-600 text-xs max-w-[200px]">
+                            {tx.bank_details ? (
+                              <div className="whitespace-pre-wrap">{tx.bank_details}</div>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={
+                              tx.status === 'pending_vendor' ? 'bg-yellow-100 text-yellow-700' :
+                              tx.status === 'completed' ? 'bg-green-100 text-green-700' :
+                              tx.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                              'bg-slate-100 text-slate-600'
+                            }>
+                              {tx.status === 'pending_vendor' ? 'PENDING' : tx.status?.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-slate-500 text-xs">{formatDate(tx.created_at)}</TableCell>
+                          <TableCell className="text-right">
+                            {isPending && (
+                              <div className="flex gap-1 justify-end">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleLoanTxAction(tx, 'approve')}
+                                  className="text-green-600 hover:bg-green-100 h-7 px-2"
+                                  title="Approve"
+                                  data-testid={`approve-loan-tx-${tx.transaction_id}`}
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleLoanTxAction(tx, 'reject')}
+                                  className="text-red-600 hover:bg-red-100 h-7 px-2"
+                                  title="Reject"
+                                  data-testid={`reject-loan-tx-${tx.transaction_id}`}
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            )}
+                            {tx.status === 'completed' && tx.vendor_proof_image && (
+                              <Button variant="ghost" size="sm" className="text-blue-600 h-7 px-2" title="View Proof">
+                                <ImageIcon className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    {loanTransactions.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-slate-400 py-8">
+                          No loan transactions assigned to you
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1712,6 +1933,73 @@ export default function ExchangerDashboard() {
                   className={ieActionDialog.type === 'approve' ? 'bg-green-500 hover:bg-green-600 text-slate-800 font-bold' : 'bg-red-500 hover:bg-red-600 text-slate-800 font-bold'}
                   data-testid="ie-confirm-action">
                   {ieActionDialog.type === 'approve' ? 'Confirm Approve' : 'Confirm Reject'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Loan Transaction Action Dialog */}
+      <Dialog open={loanTxActionDialog.open} onOpenChange={(open) => { if (!open) setLoanTxActionDialog({ open: false, tx: null, type: '' }); }}>
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              {loanTxActionDialog.type === 'approve' ? (
+                <><CheckCircle className="w-5 h-5 text-green-500" /> Approve Loan Transaction</>
+              ) : (
+                <><XCircle className="w-5 h-5 text-red-500" /> Reject Loan Transaction</>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {loanTxActionDialog.tx && (
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-50 rounded border border-slate-200">
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div><span className="text-slate-400">Type:</span> <span className={loanTxActionDialog.tx.transaction_type === 'disbursement' ? 'text-red-600 font-medium' : 'text-green-600 font-medium'}>{loanTxActionDialog.tx.transaction_type === 'disbursement' ? 'Disbursement (OUT)' : 'Repayment (IN)'}</span></div>
+                  <div><span className="text-slate-400">Borrower:</span> <span className="text-slate-800">{loanTxActionDialog.tx.borrower_name}</span></div>
+                  <div><span className="text-slate-400">Amount:</span> <span className="font-mono font-bold text-slate-800">{loanTxActionDialog.tx.amount?.toLocaleString()} {loanTxActionDialog.tx.currency}</span></div>
+                </div>
+                {loanTxActionDialog.tx.bank_details && (
+                  <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200">
+                    <p className="text-xs text-blue-600 font-bold uppercase mb-1">Bank Details:</p>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{loanTxActionDialog.tx.bank_details}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Proof Upload (approve only) */}
+              {loanTxActionDialog.type === 'approve' && (
+                <div className="space-y-2">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Upload Proof Screenshot *</Label>
+                  <Input type="file" accept="image/*" onChange={handleLoanTxImageChange} className="bg-slate-50 border-slate-200 text-slate-800 file:bg-blue-500 file:text-white file:border-0 file:rounded file:px-3 file:py-1 file:mr-3 file:cursor-pointer" data-testid="loan-tx-proof-upload" />
+                  {loanTxProofPreview && (
+                    <img src={loanTxProofPreview} alt="Proof" className="w-full max-h-32 object-contain rounded border border-slate-200 mt-1" />
+                  )}
+                </div>
+              )}
+
+              {/* Rejection Reason */}
+              {loanTxActionDialog.type === 'reject' && (
+                <div className="space-y-2">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Rejection Reason</Label>
+                  <Textarea value={loanTxRejectionReason} onChange={(e) => setLoanTxRejectionReason(e.target.value)} className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]" rows={2} placeholder="Enter reason..." data-testid="loan-tx-rejection-reason" />
+                </div>
+              )}
+
+              {/* Math Captcha */}
+              <div className="space-y-2 p-3 bg-slate-50 border border-slate-200 rounded">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Verification: What is {loanTxCaptcha.num1} + {loanTxCaptcha.num2}?</Label>
+                <Input type="number" value={loanTxCaptchaAnswer} onChange={(e) => setLoanTxCaptchaAnswer(e.target.value)} className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono text-center text-lg" placeholder="?" data-testid="loan-tx-captcha-answer" />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="outline" onClick={() => setLoanTxActionDialog({ open: false, tx: null, type: '' })} className="border-slate-200 text-slate-500 hover:bg-slate-100">Cancel</Button>
+                <Button onClick={loanTxActionDialog.type === 'approve' ? executeLoanTxApprove : executeLoanTxReject}
+                  className={loanTxActionDialog.type === 'approve' ? 'bg-green-500 hover:bg-green-600 text-slate-800 font-bold' : 'bg-red-500 hover:bg-red-600 text-slate-800 font-bold'}
+                  data-testid="loan-tx-confirm-action">
+                  {loanTxActionDialog.type === 'approve' ? 'Confirm Approve' : 'Confirm Reject'}
                 </Button>
               </div>
             </div>

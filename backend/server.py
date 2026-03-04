@@ -562,6 +562,7 @@ class LoanCreate(BaseModel):
     num_installments: Optional[int] = None  # Number of EMIs
     treasury_account_id: Optional[str] = None  # Source treasury account (optional if disburse_from_vendor_id is provided)
     disburse_from_vendor_id: Optional[str] = None  # Source vendor/exchanger account
+    bank_details: Optional[str] = None  # Bank account details for Exchanger to see
     collateral: Optional[str] = None  # Security/collateral description
     notes: Optional[str] = None
 
@@ -4649,6 +4650,121 @@ async def vendor_complete_withdrawal(
 
     return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
 
+# Vendor Loan Transactions - Get pending loan transactions for exchanger
+@api_router.get("/vendor/loan-transactions")
+async def get_vendor_loan_transactions(request: Request, user: dict = Depends(require_vendor)):
+    """Get loan transactions assigned to this vendor (disbursements from or repayments to)"""
+    vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    # Get transactions where this vendor is source (disbursement) or destination (repayment)
+    transactions = await db.loan_transactions.find({
+        "$or": [
+            {"source_vendor_id": vendor["vendor_id"]},
+            {"credit_to_vendor_id": vendor["vendor_id"]}
+        ]
+    }, {"_id": 0}).sort("created_at", -1).to_list(500)
+    
+    # Enrich with loan details
+    loan_ids = list(set([tx.get("loan_id") for tx in transactions if tx.get("loan_id")]))
+    loan_map = {}
+    if loan_ids:
+        loans = await db.loans.find({"loan_id": {"$in": loan_ids}}, {"_id": 0}).to_list(500)
+        loan_map = {loan["loan_id"]: loan for loan in loans}
+    
+    for tx in transactions:
+        loan = loan_map.get(tx.get("loan_id"))
+        if loan:
+            tx["bank_details"] = loan.get("bank_details")
+            tx["borrower_name"] = loan.get("borrower_name")
+    
+    return transactions
+
+# Vendor approve loan transaction with proof upload
+@api_router.post("/vendor/loan-transactions/{transaction_id}/approve")
+async def vendor_approve_loan_transaction(
+    request: Request,
+    transaction_id: str,
+    proof_image: UploadFile = File(...),
+    user: dict = Depends(require_vendor)
+):
+    """Vendor approves loan transaction with proof screenshot"""
+    vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    tx = await db.loan_transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Loan transaction not found")
+    
+    # Verify this vendor is related to the transaction
+    if tx.get("source_vendor_id") != vendor["vendor_id"] and tx.get("credit_to_vendor_id") != vendor["vendor_id"]:
+        raise HTTPException(status_code=403, detail="Transaction does not belong to this vendor")
+    
+    if tx.get("status") != "pending_vendor":
+        raise HTTPException(status_code=400, detail="Transaction is not pending vendor approval")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Handle proof image upload
+    content = await proof_image.read()
+    proof_image_data = base64.b64encode(content).decode('utf-8')
+    
+    updates = {
+        "status": "completed",
+        "vendor_proof_image": proof_image_data,
+        "approved_by": user["user_id"],
+        "approved_by_name": user["name"],
+        "approved_at": now.isoformat()
+    }
+    
+    await db.loan_transactions.update_one({"transaction_id": transaction_id}, {"$set": updates})
+    
+    await log_activity(request, user, "approve", "loans", "Vendor approved loan transaction")
+
+    return await db.loan_transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+
+# Vendor reject loan transaction
+@api_router.post("/vendor/loan-transactions/{transaction_id}/reject")
+async def vendor_reject_loan_transaction(
+    request: Request,
+    transaction_id: str,
+    reason: str = "",
+    user: dict = Depends(require_vendor)
+):
+    """Vendor rejects loan transaction"""
+    vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    tx = await db.loan_transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Loan transaction not found")
+    
+    # Verify this vendor is related to the transaction
+    if tx.get("source_vendor_id") != vendor["vendor_id"] and tx.get("credit_to_vendor_id") != vendor["vendor_id"]:
+        raise HTTPException(status_code=403, detail="Transaction does not belong to this vendor")
+    
+    if tx.get("status") != "pending_vendor":
+        raise HTTPException(status_code=400, detail="Transaction is not pending vendor approval")
+    
+    now = datetime.now(timezone.utc)
+    
+    updates = {
+        "status": "rejected",
+        "rejection_reason": reason,
+        "rejected_by": user["user_id"],
+        "rejected_by_name": user["name"],
+        "rejected_at": now.isoformat()
+    }
+    
+    await db.loan_transactions.update_one({"transaction_id": transaction_id}, {"$set": updates})
+    
+    await log_activity(request, user, "reject", "loans", "Vendor rejected loan transaction")
+
+    return await db.loan_transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+
 # Vendor settlements
 @api_router.get("/vendors/{vendor_id}/settlements")
 async def get_vendor_settlements(vendor_id: str, user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.VIEW))):
@@ -7346,6 +7462,7 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
         "source_treasury_id": loan_data.treasury_account_id,
         "source_vendor_id": loan_data.disburse_from_vendor_id,
         "source_vendor_name": disburse_vendor.get("name") or disburse_vendor.get("vendor_name") if disburse_vendor else None,
+        "bank_details": loan_data.bank_details,
         "total_repaid": 0,
         "repayment_count": 0,
         "status": LoanStatus.ACTIVE,
@@ -7392,7 +7509,8 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
         # Disbursing from vendor - no I&E entry needed (loan tracking is separate from I&E)
         pass
     
-    # Record loan transaction
+    # Record loan transaction - set pending_vendor status if disbursing from Exchanger
+    tx_status = "pending_vendor" if loan_data.disburse_from_vendor_id else "completed"
     await db.loan_transactions.insert_one({
         "transaction_id": f"ltx_{uuid.uuid4().hex[:12]}",
         "loan_id": loan_id,
@@ -7400,6 +7518,11 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
         "amount": loan_data.amount,
         "currency": loan_data.currency,
         "treasury_account_id": loan_data.treasury_account_id,
+        "source_vendor_id": loan_data.disburse_from_vendor_id,
+        "source_vendor_name": disburse_vendor.get("name") or disburse_vendor.get("vendor_name") if disburse_vendor else None,
+        "bank_details": loan_data.bank_details,
+        "borrower_name": loan_data.borrower_name,
+        "status": tx_status,
         "description": f"Loan disbursement to {loan_data.borrower_name}",
         "created_at": now.isoformat(),
         "created_by": user["user_id"],
@@ -7576,7 +7699,8 @@ async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanR
         # Crediting to vendor - no I&E entry needed (loan tracking is separate from I&E)
         pass
     
-    # Record loan transaction
+    # Record loan transaction - set pending_vendor status if crediting to Exchanger
+    tx_status = "pending_vendor" if repayment.credit_to_vendor_id else "completed"
     await db.loan_transactions.insert_one({
         "transaction_id": f"ltx_{uuid.uuid4().hex[:12]}",
         "loan_id": loan_id,
@@ -7585,6 +7709,9 @@ async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanR
         "currency": repayment.currency,
         "treasury_account_id": repayment.treasury_account_id,
         "credit_to_vendor_id": repayment.credit_to_vendor_id,
+        "credit_vendor_name": credit_vendor.get("name") or credit_vendor.get("vendor_name") if credit_vendor else None,
+        "borrower_name": loan.get("borrower_name"),
+        "status": tx_status,
         "description": f"Repayment from {loan['borrower_name']}",
         "created_at": now.isoformat(),
         "created_by": user["user_id"],
