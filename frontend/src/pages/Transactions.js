@@ -191,9 +191,11 @@ export default function Transactions() {
 
   const fetchExchangers = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/vendors`, { headers: getAuthHeaders(), credentials: 'include' });
+      const response = await fetch(`${API_URL}/api/vendors?page_size=200`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setExchangers(await response.json());
+        const data = await response.json();
+        // Handle paginated response format
+        setExchangers(data.items || (Array.isArray(data) ? data : []));
       }
     } catch (error) {
       console.error('Error fetching vendors:', error);

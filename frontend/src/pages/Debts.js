@@ -113,14 +113,17 @@ export default function Debts() {
         fetch(`${API_URL}/api/debts`, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(`${API_URL}/api/debts/summary/overview`, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(`${API_URL}/api/clients`, { headers: getAuthHeaders(), credentials: 'include' }),
-        fetch(`${API_URL}/api/vendors`, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(`${API_URL}/api/vendors?page_size=200`, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(`${API_URL}/api/treasury`, { headers: getAuthHeaders(), credentials: 'include' }),
       ]);
 
       if (debtsRes.ok) setDebts(await debtsRes.json());
       if (summaryRes.ok) setSummary(await summaryRes.json());
       if (clientsRes.ok) setClients(await clientsRes.json());
-      if (vendorsRes.ok) setExchangers(await vendorsRes.json());
+      if (vendorsRes.ok) {
+        const vendorData = await vendorsRes.json();
+        setExchangers(vendorData.items || (Array.isArray(vendorData) ? vendorData : []));
+      }
       if (treasuryRes.ok) setTreasuryAccounts(await treasuryRes.json());
     } catch (error) {
       console.error('Error fetching data:', error);
