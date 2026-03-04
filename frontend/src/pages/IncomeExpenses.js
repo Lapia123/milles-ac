@@ -1018,7 +1018,7 @@ export default function IncomeExpenses() {
               </div>
               <div className="space-y-2">
                 <Label className="text-slate-500 text-xs uppercase tracking-wider">Payment Currency</Label>
-                <Select value={formData.base_currency} onValueChange={(value) => setFormData({ ...formData, base_currency: value, currency: value, base_amount: '', exchange_rate: '', amount: '' })}>
+                <Select value={formData.base_currency} onValueChange={(value) => setFormData({ ...formData, base_currency: value, currency: 'USD', base_amount: '', exchange_rate: '', amount: '' })}>
                   <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-white border-slate-200">
                     {currencies.map((cur) => (<SelectItem key={cur} value={cur} className="text-slate-800 hover:bg-slate-100">{cur}</SelectItem>))}

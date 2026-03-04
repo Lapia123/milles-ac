@@ -388,6 +388,9 @@ class IncomeExpenseCreate(BaseModel):
     custom_category: Optional[str] = None
     amount: float
     currency: str = "USD"
+    base_currency: Optional[str] = None  # Payment currency (e.g., INR)
+    base_amount: Optional[float] = None  # Amount in payment currency
+    exchange_rate: Optional[float] = None  # Rate: 1 base_currency = ? USD
     treasury_account_id: Optional[str] = None  # Optional when vendor handles it
     vendor_id: Optional[str] = None  # If linked to an exchanger (money partner)
     vendor_supplier_id: Optional[str] = None  # If linked to a service supplier (rent, utilities)
@@ -6566,6 +6569,9 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, request: Reques
         "custom_category": entry_data.custom_category,
         "amount": entry_data.amount,
         "currency": entry_data.currency,
+        "base_currency": entry_data.base_currency,
+        "base_amount": entry_data.base_amount,
+        "exchange_rate": entry_data.exchange_rate,
         "amount_usd": amount_usd,
         "treasury_account_id": entry_data.treasury_account_id,
         "treasury_account_name": treasury["account_name"] if treasury else None,
