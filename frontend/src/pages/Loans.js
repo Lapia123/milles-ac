@@ -94,6 +94,8 @@ export default function Loans() {
   const [dashboard, setDashboard] = useState(null);
   const [loanTransactions, setLoanTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submittingLoan, setSubmittingLoan] = useState(false);
+  const [submittingRepayment, setSubmittingRepayment] = useState(false);
   const [mainTab, setMainTab] = useState('dashboard');
   const [isLoanDialogOpen, setIsLoanDialogOpen] = useState(false);
   const [isRepaymentDialogOpen, setIsRepaymentDialogOpen] = useState(false);
@@ -296,6 +298,7 @@ export default function Loans() {
       return;
     }
     
+    setSubmittingLoan(true);
     try {
       const payload = {
         ...loanForm,
@@ -329,6 +332,8 @@ export default function Loans() {
       }
     } catch (error) {
       toast.error('Failed to create loan');
+    } finally {
+      setSubmittingLoan(false);
     }
   };
 
@@ -452,6 +457,7 @@ export default function Loans() {
       return;
     }
     
+    setSubmittingRepayment(true);
     try {
       const payload = {
         ...repaymentForm,
@@ -483,6 +489,8 @@ export default function Loans() {
       }
     } catch (error) {
       toast.error('Failed to record repayment');
+    } finally {
+      setSubmittingRepayment(false);
     }
   };
 
@@ -1686,10 +1694,15 @@ export default function Loans() {
               </Button>
               <Button
                 type="submit"
-                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+                disabled={submittingLoan}
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
                 data-testid="create-loan-btn"
               >
-                Create Loan
+                {submittingLoan ? (
+                  <><div className="w-4 h-4 border-2 border-[#0B0C10] border-t-transparent rounded-full animate-spin mr-2" />Creating...</>
+                ) : (
+                  'Create Loan'
+                )}
               </Button>
             </div>
           </form>
@@ -1883,10 +1896,15 @@ export default function Loans() {
               </Button>
               <Button
                 type="submit"
-                className="bg-green-500 hover:bg-green-600 text-slate-800 font-bold uppercase tracking-wider"
+                disabled={submittingRepayment}
+                className="bg-green-500 hover:bg-green-600 text-slate-800 font-bold uppercase tracking-wider disabled:opacity-50"
                 data-testid="record-repayment-btn"
               >
-                Record Payment
+                {submittingRepayment ? (
+                  <><div className="w-4 h-4 border-2 border-slate-800 border-t-transparent rounded-full animate-spin mr-2" />Recording...</>
+                ) : (
+                  'Record Payment'
+                )}
               </Button>
             </div>
           </form>

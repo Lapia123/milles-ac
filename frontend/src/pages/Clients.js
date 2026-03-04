@@ -72,6 +72,7 @@ export default function Clients() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [viewClient, setViewClient] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   
   // Transaction filter states
   const [txTypeFilter, setTxTypeFilter] = useState('all');
@@ -224,6 +225,7 @@ export default function Clients() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       const url = selectedClient
         ? `${API_URL}/api/clients/${selectedClient.client_id}`
@@ -248,6 +250,8 @@ export default function Clients() {
       }
     } catch (error) {
       toast.error('Operation failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -451,10 +455,15 @@ export default function Clients() {
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+                  disabled={submitting}
+                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
                   data-testid="save-client-btn"
                 >
-                  {selectedClient ? 'Update' : 'Create'}
+                  {submitting ? (
+                    <><div className="w-4 h-4 border-2 border-[#0B0C10] border-t-transparent rounded-full animate-spin mr-2" />Saving...</>
+                  ) : (
+                    selectedClient ? 'Update' : 'Create'
+                  )}
                 </Button>
               </div>
             </form>

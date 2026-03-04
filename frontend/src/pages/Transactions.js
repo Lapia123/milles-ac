@@ -86,6 +86,7 @@ export default function Transactions() {
   const [psps, setPsps] = useState([]);
   const [vendors, setExchangers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -250,6 +251,7 @@ export default function Transactions() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('client_id', formData.client_id);
@@ -333,6 +335,8 @@ export default function Transactions() {
       }
     } catch (error) {
       toast.error('Operation failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -1316,10 +1320,15 @@ export default function Transactions() {
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+                  disabled={submitting}
+                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
                   data-testid="save-tx-btn"
                 >
-                  Create
+                  {submitting ? (
+                    <><div className="w-4 h-4 border-2 border-[#0B0C10] border-t-transparent rounded-full animate-spin mr-2" />Creating...</>
+                  ) : (
+                    'Create'
+                  )}
                 </Button>
               </div>
             </form>

@@ -79,6 +79,8 @@ export default function Treasury() {
   const { user } = useAuth();
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [submittingTransfer, setSubmittingTransfer] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [viewAccount, setViewAccount] = useState(null);
@@ -315,6 +317,7 @@ export default function Treasury() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       const url = selectedAccount
         ? `${API_URL}/api/treasury/${selectedAccount.account_id}`
@@ -346,6 +349,8 @@ export default function Treasury() {
       }
     } catch (error) {
       toast.error('Operation failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -690,10 +695,15 @@ export default function Treasury() {
                   </Button>
                   <Button
                     type="submit"
-                    className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+                    disabled={submitting}
+                    className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
                     data-testid="save-treasury-btn"
                   >
-                    {selectedAccount ? 'Update' : 'Create'}
+                    {submitting ? (
+                      <><div className="w-4 h-4 border-2 border-[#0B0C10] border-t-transparent rounded-full animate-spin mr-2" />Saving...</>
+                    ) : (
+                      selectedAccount ? 'Update' : 'Create'
+                    )}
                   </Button>
                 </div>
               </form>

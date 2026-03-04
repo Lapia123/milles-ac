@@ -62,6 +62,7 @@ export default function IncomeExpenses() {
   const [importFile, setImportFile] = useState(null);
   const [importTreasuryId, setImportTreasuryId] = useState('');
   const [importing, setImporting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [invoiceDialog, setInvoiceDialog] = useState({ open: false, entry: null });
   const [invoiceFile, setInvoiceFile] = useState(null);
   const [uploadingInvoice, setUploadingInvoice] = useState(false);
@@ -193,6 +194,7 @@ export default function IncomeExpenses() {
       return;
     }
 
+    setSubmitting(true);
     try {
       const payload = { ...formData, amount: parseFloat(formData.amount) };
       if (formData.base_currency !== 'USD') {
@@ -227,7 +229,7 @@ export default function IncomeExpenses() {
         const error = await response.json();
         toast.error(error.detail || 'Failed to save entry');
       }
-    } catch { toast.error('Failed to save entry'); }
+    } catch { toast.error('Failed to save entry'); } finally { setSubmitting(false); }
   };
 
   const handleDelete = async (entryId) => {
@@ -1244,8 +1246,12 @@ export default function IncomeExpenses() {
             {/* Buttons */}
             <div className="flex justify-end gap-3 pt-4">
               <Button type="button" variant="outline" onClick={() => { setIsDialogOpen(false); resetForm(); }} className="border-slate-200 text-slate-500 hover:bg-slate-100">Cancel</Button>
-              <Button type="submit" className={formData.entry_type === 'income' ? 'bg-green-500 hover:bg-green-600 text-white font-bold uppercase tracking-wider' : 'bg-red-500 hover:bg-red-600 text-white font-bold uppercase tracking-wider'} data-testid="save-entry-btn">
-                {formData.vendor_id ? 'Send for Approval' : `Save ${formData.entry_type === 'income' ? 'Income' : 'Expense'}`}
+              <Button type="submit" disabled={submitting} className={`${formData.entry_type === 'income' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white font-bold uppercase tracking-wider disabled:opacity-50`} data-testid="save-entry-btn">
+                {submitting ? (
+                  <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />Saving...</>
+                ) : (
+                  formData.vendor_id ? 'Send for Approval' : `Save ${formData.entry_type === 'income' ? 'Income' : 'Expense'}`
+                )}
               </Button>
             </div>
           </form>

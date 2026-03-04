@@ -74,6 +74,7 @@ export default function Exchangers() {
   const [vendorIeEntries, setVendorIeEntries] = useState([]);
   const [vendorLoanTxs, setVendorLoanTxs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedExchanger, setSelectedExchanger] = useState(null);
   const [viewExchanger, setViewExchanger] = useState(null);
@@ -269,6 +270,7 @@ export default function Exchangers() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       const url = selectedExchanger
         ? `${API_URL}/api/vendors/${selectedExchanger.vendor_id}`
@@ -309,6 +311,8 @@ export default function Exchangers() {
       }
     } catch (error) {
       toast.error('Operation failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -578,10 +582,15 @@ export default function Exchangers() {
                   </Button>
                   <Button
                     type="submit"
-                    className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+                    disabled={submitting}
+                    className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
                     data-testid="save-vendor-btn"
                   >
-                    {selectedExchanger ? 'Update' : 'Create'}
+                    {submitting ? (
+                      <><div className="w-4 h-4 border-2 border-[#0B0C10] border-t-transparent rounded-full animate-spin mr-2" />Saving...</>
+                    ) : (
+                      selectedExchanger ? 'Update' : 'Create'
+                    )}
                   </Button>
                 </div>
               </form>
