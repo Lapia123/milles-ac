@@ -7347,7 +7347,7 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
         }
         await db.treasury_transactions.insert_one(tx_doc)
     elif disburse_vendor:
-        # Create an income entry for the vendor (loan disbursement = money going OUT from vendor to borrower)
+        # Create an expense entry for the source vendor (loan disbursement = money going OUT from vendor)
         entry_id = f"ie_{uuid.uuid4().hex[:12]}"
         ie_doc = {
             "entry_id": entry_id,
@@ -7368,6 +7368,30 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
             "created_by_name": user["name"]
         }
         await db.income_expenses.insert_one(ie_doc)
+    
+    # If borrower is an Exchanger (vendor_id provided), create an income entry for them (loan received = money IN)
+    if loan_data.vendor_id:
+        borrower_entry_id = f"ie_{uuid.uuid4().hex[:12]}"
+        source_name = disburse_vendor.get("name") or disburse_vendor.get("vendor_name") if disburse_vendor else (treasury["account_name"] if treasury else "Treasury")
+        borrower_ie_doc = {
+            "entry_id": borrower_entry_id,
+            "entry_type": "income",
+            "vendor_id": loan_data.vendor_id,
+            "vendor_name": vendor.get("name") or vendor.get("vendor_name") if vendor else loan_data.borrower_name,
+            "amount": loan_data.amount,
+            "currency": loan_data.currency,
+            "amount_usd": amount_usd,
+            "category": "loan_received",
+            "description": f"Loan received from {source_name}",
+            "date": loan_data.loan_date,
+            "payment_mode": "bank",
+            "status": "completed",
+            "loan_id": loan_id,
+            "created_at": now.isoformat(),
+            "created_by": user["user_id"],
+            "created_by_name": user["name"]
+        }
+        await db.income_expenses.insert_one(borrower_ie_doc)
     
     # Record loan transaction
     await db.loan_transactions.insert_one({
@@ -7573,6 +7597,32 @@ async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanR
             "created_by_name": user["name"]
         }
         await db.income_expenses.insert_one(ie_doc)
+    
+    # If borrower is an Exchanger, create an expense entry for them (loan repayment = money OUT from borrower)
+    if loan.get("vendor_id"):
+        borrower_amount_usd = convert_to_usd(repayment.amount, repayment.currency)
+        dest_name = credit_vendor.get("name") or credit_vendor.get("vendor_name") if credit_vendor else (treasury["account_name"] if treasury else "Treasury")
+        borrower_entry_id = f"ie_{uuid.uuid4().hex[:12]}"
+        borrower_ie_doc = {
+            "entry_id": borrower_entry_id,
+            "entry_type": "expense",
+            "vendor_id": loan["vendor_id"],
+            "vendor_name": loan.get("vendor_name") or loan.get("borrower_name"),
+            "amount": repayment.amount,
+            "currency": repayment.currency,
+            "amount_usd": borrower_amount_usd,
+            "category": "loan_repayment_out",
+            "description": f"Loan repayment to {dest_name}",
+            "date": payment_date,
+            "payment_mode": "bank",
+            "status": "completed",
+            "loan_id": loan_id,
+            "repayment_id": repayment_id,
+            "created_at": now.isoformat(),
+            "created_by": user["user_id"],
+            "created_by_name": user["name"]
+        }
+        await db.income_expenses.insert_one(borrower_ie_doc)
     
     # Record loan transaction
     await db.loan_transactions.insert_one({
