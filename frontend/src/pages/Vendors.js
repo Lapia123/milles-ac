@@ -72,6 +72,7 @@ export default function Exchangers() {
   const [pendingTransactions, setPendingTransactions] = useState([]);
   const [settlements, setSettlements] = useState([]);
   const [vendorIeEntries, setVendorIeEntries] = useState([]);
+  const [vendorLoanTxs, setVendorLoanTxs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedExchanger, setSelectedExchanger] = useState(null);
@@ -167,6 +168,17 @@ export default function Exchangers() {
     }
   };
 
+  const fetchVendorLoanTransactions = async (vendorId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/loans/transactions?vendor_id=${vendorId}`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setVendorLoanTxs(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching vendor loan transactions:', error);
+    }
+  };
+
   const fetchExchangerDetails = async (vendorId) => {
     try {
       const response = await fetch(`${API_URL}/api/vendors/${vendorId}`, { headers: getAuthHeaders(), credentials: 'include' });
@@ -183,6 +195,7 @@ export default function Exchangers() {
     setViewExchanger(vendor);
     fetchExchangerDetails(vendor.vendor_id);
     fetchVendorIeEntries(vendor.vendor_id);
+    fetchVendorLoanTransactions(vendor.vendor_id);
   };
 
   const openStatement = async (settlementId) => {
@@ -858,6 +871,9 @@ export default function Exchangers() {
                   <TabsTrigger value="ie" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
                     Income/Expenses ({vendorIeEntries.length})
                   </TabsTrigger>
+                  <TabsTrigger value="loans" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+                    Loan Transactions ({vendorLoanTxs.length})
+                  </TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="transactions" className="mt-4">
@@ -1090,6 +1106,68 @@ export default function Exchangers() {
                                 </TableCell>
                                 <TableCell className="text-slate-500 text-xs">
                                   {entry.date ? new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </ScrollArea>
+                </TabsContent>
+
+                {/* Loan Transactions Tab */}
+                <TabsContent value="loans" className="mt-4">
+                  <ScrollArea className="h-[250px]">
+                    {vendorLoanTxs.length === 0 ? (
+                      <div className="text-center py-8 text-slate-500">
+                        No loan transactions involving this exchanger
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-slate-200 hover:bg-transparent">
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Borrower</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Amount</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Currency</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {vendorLoanTxs.map((tx) => {
+                            const isDisbursement = tx.transaction_type === 'disbursement';
+                            const isVendorSource = tx.source_vendor_id === viewExchanger?.vendor_id;
+                            return (
+                              <TableRow key={tx.transaction_id} className="border-slate-200 hover:bg-slate-100">
+                                <TableCell className="font-mono text-slate-800 text-xs">{tx.transaction_id?.slice(-12).toUpperCase()}</TableCell>
+                                <TableCell>
+                                  <span className={`flex items-center gap-1 ${isVendorSource ? 'text-red-400' : 'text-green-400'}`}>
+                                    {isVendorSource ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                                    <span className="text-xs font-medium">{isVendorSource ? 'OUT (Disbursement)' : 'IN (Repayment)'}</span>
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-slate-800 text-sm">{tx.borrower_name || '-'}</TableCell>
+                                <TableCell className={`font-mono ${isVendorSource ? 'text-red-400' : 'text-green-400'}`}>
+                                  {isVendorSource ? '-' : '+'}{tx.amount?.toLocaleString()}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className="bg-green-500/20 text-green-400">{tx.currency || 'USD'}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={
+                                    tx.status === 'pending_vendor' ? 'bg-amber-100 text-amber-700 text-[10px]' :
+                                    tx.status === 'completed' ? 'bg-green-100 text-green-700 text-[10px]' :
+                                    tx.status === 'rejected' ? 'bg-red-100 text-red-700 text-[10px]' :
+                                    'bg-slate-100 text-slate-600 text-[10px]'
+                                  }>
+                                    {tx.status === 'pending_vendor' ? 'Pending' : tx.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-slate-500 text-xs">
+                                  {tx.created_at ? new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
                                 </TableCell>
                               </TableRow>
                             );
