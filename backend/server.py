@@ -5358,6 +5358,7 @@ async def create_transaction(
     currency: str = Form("USD"),
     base_currency: str = Form("USD"),
     base_amount: Optional[float] = Form(None),
+    exchange_rate: Optional[float] = Form(None),
     destination_type: str = Form("treasury"),
     destination_account_id: Optional[str] = Form(None),
     psp_id: Optional[str] = Form(None),
@@ -5478,8 +5479,16 @@ async def create_transaction(
     
     # Calculate USD amount if base currency is different
     usd_amount = amount
+    actual_exchange_rate = exchange_rate
     if base_currency and base_currency != "USD" and base_amount:
-        usd_amount = convert_to_usd(base_amount, base_currency)
+        # Use user-provided exchange rate if available, otherwise fall back to convert_to_usd
+        if exchange_rate and exchange_rate > 0:
+            usd_amount = round(base_amount * exchange_rate, 2)
+        else:
+            usd_amount = convert_to_usd(base_amount, base_currency)
+            # Calculate the implicit exchange rate for storage
+            if base_amount > 0:
+                actual_exchange_rate = round(usd_amount / base_amount, 6)
     
     # Calculate PSP commission if applicable
     commission_amount = 0.0
@@ -5552,6 +5561,7 @@ async def create_transaction(
         "currency": "USD",
         "base_currency": base_currency or "USD",
         "base_amount": base_amount if base_currency != "USD" else None,
+        "exchange_rate": actual_exchange_rate if (base_currency and base_currency != "USD") else None,
         "destination_type": destination_type,
         "destination_account_id": destination_account_id if destination_type in ["treasury", "usdt"] else None,
         "destination_account_name": destination_account["account_name"] if destination_account else None,
