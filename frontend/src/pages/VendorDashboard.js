@@ -833,17 +833,14 @@ export default function ExchangerDashboard() {
         </Card>
       </div>
 
-      {/* Tabbed Content: Transactions, Income/Expenses, Settlements */}
+      {/* Tabbed Content: Transactions, Other Transactions, Settlements */}
       <Tabs value={activeExchangerTab} onValueChange={setActiveExchangerTab}>
         <TabsList className="bg-white border border-slate-200">
           <TabsTrigger value="transactions" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
             Transactions {pendingCount > 0 && <Badge className="ml-1 bg-yellow-500/30 text-yellow-400 text-[10px]">{pendingCount}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="income-expenses" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
-            Income/Expenses {pendingIeCount > 0 && <Badge className="ml-1 bg-amber-500/30 text-amber-400 text-[10px]">{pendingIeCount}</Badge>}
-          </TabsTrigger>
-          <TabsTrigger value="loan-transactions" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
-            Loan Transactions {pendingLoanTxCount > 0 && <Badge className="ml-1 bg-purple-500/30 text-purple-400 text-[10px]">{pendingLoanTxCount}</Badge>}
+          <TabsTrigger value="other-transactions" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
+            Other Transactions {(pendingIeCount + pendingLoanTxCount) > 0 && <Badge className="ml-1 bg-purple-500/30 text-purple-400 text-[10px]">{pendingIeCount + pendingLoanTxCount}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="settlements" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600">
             Settlement History
@@ -1113,19 +1110,25 @@ export default function ExchangerDashboard() {
       </Card>
         </TabsContent>
 
-        {/* Income/Expenses Tab */}
-        <TabsContent value="income-expenses" className="mt-4">
-          <Card className="bg-white border-slate-200" data-testid="vendor-ie-entries">
+        {/* Other Transactions Tab - Merged Income/Expenses and Loan Transactions */}
+        <TabsContent value="other-transactions" className="mt-4">
+          <Card className="bg-white border-slate-200" data-testid="vendor-other-transactions">
             <CardHeader>
-              <CardTitle className="text-xl text-slate-800 uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
-                Income & Expense Entries
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl text-slate-800 uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+                  <Wallet className="w-5 h-5 text-purple-600" />
+                  Other Transactions
+                </CardTitle>
+                <Badge className={`${(pendingIeCount + pendingLoanTxCount) > 0 ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-500'}`}>
+                  {pendingIeCount + pendingLoanTxCount} pending
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
-              {ieEntries.length === 0 ? (
+              {(ieEntries.length === 0 && loanTransactions.length === 0) ? (
                 <div className="text-center py-10 text-slate-500">
                   <Receipt className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm">No income/expense entries assigned to you</p>
+                  <p className="text-sm">No other transactions assigned to you</p>
                 </div>
               ) : (
                 <ScrollArea className="h-[500px]">
@@ -1133,30 +1136,30 @@ export default function ExchangerDashboard() {
                     <TableHeader>
                       <TableRow className="border-slate-200 hover:bg-transparent">
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Source</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Category</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Category / Borrower</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-green-500">IN Amount</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-red-500">OUT Amount</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Currency</TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Commission</TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Mode</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Bank Details</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
+                      {/* Income/Expense Entries */}
                       {ieEntries.map((entry) => {
                         const isIncome = entry.entry_type === 'income';
                         const displayCurrency = entry.currency || 'USD';
+                        const isPending = entry.status === 'pending_vendor';
                         return (
-                          <TableRow key={entry.entry_id} className="border-slate-200 hover:bg-slate-100">
+                          <TableRow key={entry.entry_id} className={`border-slate-200 hover:bg-slate-100 ${isPending ? 'bg-amber-50' : ''}`}>
                             <TableCell>
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono text-slate-800">{entry.entry_id?.slice(-10)?.toUpperCase()}</span>
-                                {entry.vendor_proof_image && <ImageIcon className="w-4 h-4 text-blue-600" />}
-                              </div>
+                              <span className="font-mono text-slate-800">{entry.entry_id?.slice(-10)?.toUpperCase()}</span>
                             </TableCell>
+                            <TableCell><Badge className="bg-amber-100 text-amber-700 text-xs">I&E</Badge></TableCell>
                             <TableCell>
                               <span className={`flex items-center gap-1 font-bold ${isIncome ? 'text-green-500' : 'text-red-500'}`}>
                                 {isIncome ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
@@ -1164,66 +1167,59 @@ export default function ExchangerDashboard() {
                               </span>
                             </TableCell>
                             <TableCell className="text-slate-800 text-sm capitalize">{entry.category?.replace('_', ' ') || '-'}</TableCell>
-                            <TableCell className="font-mono font-medium text-green-500">
-                              {isIncome ? entry.amount?.toLocaleString() : '-'}
-                            </TableCell>
-                            <TableCell className="font-mono font-medium text-red-500">
-                              {!isIncome ? entry.amount?.toLocaleString() : '-'}
-                            </TableCell>
+                            <TableCell className="font-mono font-medium text-green-500">{isIncome ? entry.amount?.toLocaleString() : '-'}</TableCell>
+                            <TableCell className="font-mono font-medium text-red-500">{!isIncome ? entry.amount?.toLocaleString() : '-'}</TableCell>
+                            <TableCell><Badge className="bg-green-500/20 text-green-400">{displayCurrency}</Badge></TableCell>
+                            <TableCell className="text-slate-400 text-xs">-</TableCell>
                             <TableCell>
-                              <Badge className={`${
-                                displayCurrency === 'USD' ? 'bg-green-500/20 text-green-400' :
-                                displayCurrency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
-                                displayCurrency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
-                                displayCurrency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
-                                displayCurrency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
-                                'bg-gray-500/20 text-gray-400'
-                              }`}>
-                                {displayCurrency}
-                              </Badge>
+                              {isPending ? <Badge className="bg-yellow-100 text-yellow-700 text-xs">PENDING</Badge> :
+                               entry.status === 'approved' || entry.status === 'completed' ? <Badge className="bg-green-100 text-green-700 text-xs">APPROVED</Badge> :
+                               <Badge className="bg-slate-100 text-slate-600 text-xs">{entry.status}</Badge>}
                             </TableCell>
-                            <TableCell>
-                              {entry.vendor_commission_amount ? (
-                                <div className="font-mono text-yellow-400">
-                                  <span>${entry.vendor_commission_amount?.toLocaleString()}</span>
-                                  {entry.vendor_commission_base_currency && entry.vendor_commission_base_currency !== 'USD' && entry.vendor_commission_base_amount && (
-                                    <span className="text-slate-500 text-xs block">({entry.vendor_commission_base_amount?.toLocaleString()} {entry.vendor_commission_base_currency})</span>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-slate-500 text-xs">-</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={entry.transaction_mode === 'cash' ? 'bg-amber-100 text-amber-700 text-[10px]' : 'bg-blue-100 text-blue-700 text-[10px]'}>
-                                {entry.transaction_mode === 'cash' ? 'Cash' : 'Bank'}
-                              </Badge>
-                              {entry.transaction_mode === 'cash' && entry.collecting_person_name && (
-                                <div className="text-[10px] text-slate-600 mt-0.5 space-y-0.5">
-                                  <p className="font-medium">{entry.collecting_person_name}</p>
-                                  {entry.collecting_person_number && <p className="text-slate-500">{entry.collecting_person_number}</p>}
-                                </div>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {entry.status === 'pending_vendor' && <Badge className="status-pending text-xs uppercase">Pending</Badge>}
-                              {(entry.status === 'completed' || entry.status === 'approved' || entry.status === 'converted_to_loan') && <Badge className="status-approved text-xs uppercase">Approved</Badge>}
-                              {entry.status === 'rejected' && <Badge className="status-rejected text-xs uppercase">Rejected</Badge>}
-                            </TableCell>
-                            <TableCell className="text-slate-500 text-sm">{formatDate(entry.date || entry.created_at)}</TableCell>
+                            <TableCell className="text-slate-500 text-xs">{formatDate(entry.date || entry.created_at)}</TableCell>
                             <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                {entry.status === 'pending_vendor' && (
-                                  <>
-                                    <Button size="sm" onClick={() => openIeAction(entry, 'approve')} className="bg-green-500/20 text-green-400 hover:bg-green-500/30" data-testid={`ie-approve-${entry.entry_id}`}>
-                                      <CheckCircle2 className="w-4 h-4" />
-                                    </Button>
-                                    <Button size="sm" onClick={() => openIeAction(entry, 'reject')} className="bg-red-500/20 text-red-400 hover:bg-red-500/30" data-testid={`ie-reject-${entry.entry_id}`}>
-                                      <XCircle className="w-4 h-4" />
-                                    </Button>
-                                  </>
-                                )}
-                              </div>
+                              {isPending && (
+                                <div className="flex gap-1 justify-end">
+                                  <Button variant="ghost" size="sm" onClick={() => openIeAction(entry, 'approve')} className="text-green-600 hover:bg-green-100 h-7 px-2" title="Approve"><CheckCircle className="w-4 h-4" /></Button>
+                                  <Button variant="ghost" size="sm" onClick={() => openIeAction(entry, 'reject')} className="text-red-600 hover:bg-red-100 h-7 px-2" title="Reject"><XCircle className="w-4 h-4" /></Button>
+                                </div>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {/* Loan Transactions */}
+                      {loanTransactions.map((tx) => {
+                        const isDisbursement = tx.transaction_type === 'disbursement';
+                        const isPending = tx.status === 'pending_vendor';
+                        return (
+                          <TableRow key={tx.transaction_id} className={`border-slate-200 hover:bg-slate-100 ${isPending ? 'bg-purple-50' : ''}`}>
+                            <TableCell className="font-mono text-slate-800 text-sm">{tx.transaction_id?.slice(-12).toUpperCase()}</TableCell>
+                            <TableCell><Badge className="bg-purple-100 text-purple-700 text-xs">Loan</Badge></TableCell>
+                            <TableCell>
+                              <span className={`flex items-center gap-1 font-bold ${isDisbursement ? 'text-red-500' : 'text-green-500'}`}>
+                                {isDisbursement ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                                <span>{isDisbursement ? 'OUT' : 'IN'}</span>
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-slate-800 text-sm">{tx.borrower_name || '-'}</TableCell>
+                            <TableCell className="font-mono font-medium text-green-500">{!isDisbursement ? tx.amount?.toLocaleString() : '-'}</TableCell>
+                            <TableCell className="font-mono font-medium text-red-500">{isDisbursement ? tx.amount?.toLocaleString() : '-'}</TableCell>
+                            <TableCell><Badge className="bg-green-500/20 text-green-400">{tx.currency}</Badge></TableCell>
+                            <TableCell className="text-slate-600 text-xs max-w-[150px] truncate">{tx.bank_details || '-'}</TableCell>
+                            <TableCell>
+                              <Badge className={tx.status === 'pending_vendor' ? 'bg-yellow-100 text-yellow-700' : tx.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}>
+                                {tx.status === 'pending_vendor' ? 'PENDING' : tx.status?.toUpperCase()}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-slate-500 text-xs">{formatDate(tx.created_at)}</TableCell>
+                            <TableCell className="text-right">
+                              {isPending && (
+                                <div className="flex gap-1 justify-end">
+                                  <Button variant="ghost" size="sm" onClick={() => handleLoanTxAction(tx, 'approve')} className="text-green-600 hover:bg-green-100 h-7 px-2" title="Approve"><CheckCircle className="w-4 h-4" /></Button>
+                                  <Button variant="ghost" size="sm" onClick={() => handleLoanTxAction(tx, 'reject')} className="text-red-600 hover:bg-red-100 h-7 px-2" title="Reject"><XCircle className="w-4 h-4" /></Button>
+                                </div>
+                              )}
                             </TableCell>
                           </TableRow>
                         );
@@ -1232,116 +1228,6 @@ export default function ExchangerDashboard() {
                   </Table>
                 </ScrollArea>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Loan Transactions Tab */}
-        <TabsContent value="loan-transactions" className="mt-4">
-          <Card className="bg-white border-slate-200">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
-                  <Wallet className="w-5 h-5 text-purple-600" /> Loan Transactions
-                </CardTitle>
-                <Badge className={`${pendingLoanTxCount > 0 ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-500'}`}>
-                  {pendingLoanTxCount} pending
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[500px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-slate-200 hover:bg-transparent">
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Borrower</TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Amount</TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Bank Details</TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loanTransactions.map((tx) => {
-                      const isDisbursement = tx.transaction_type === 'disbursement';
-                      const isPending = tx.status === 'pending_vendor';
-                      return (
-                        <TableRow key={tx.transaction_id} className={`border-slate-200 hover:bg-slate-100 ${isPending ? 'bg-purple-50' : ''}`}>
-                          <TableCell className="font-mono text-slate-800 text-sm">{tx.transaction_id?.slice(-12).toUpperCase()}</TableCell>
-                          <TableCell>
-                            <Badge className={isDisbursement ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}>
-                              {isDisbursement ? 'OUT (Disbursement)' : 'IN (Repayment)'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-slate-800 text-sm">{tx.borrower_name || '-'}</TableCell>
-                          <TableCell className={`font-mono font-semibold ${isDisbursement ? 'text-red-500' : 'text-green-500'}`}>
-                            {isDisbursement ? '-' : '+'}{tx.amount?.toLocaleString()} {tx.currency}
-                          </TableCell>
-                          <TableCell className="text-slate-600 text-xs max-w-[200px]">
-                            {tx.bank_details ? (
-                              <div className="whitespace-pre-wrap">{tx.bank_details}</div>
-                            ) : (
-                              <span className="text-slate-400">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={
-                              tx.status === 'pending_vendor' ? 'bg-yellow-100 text-yellow-700' :
-                              tx.status === 'completed' ? 'bg-green-100 text-green-700' :
-                              tx.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                              'bg-slate-100 text-slate-600'
-                            }>
-                              {tx.status === 'pending_vendor' ? 'PENDING' : tx.status?.toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-slate-500 text-xs">{formatDate(tx.created_at)}</TableCell>
-                          <TableCell className="text-right">
-                            {isPending && (
-                              <div className="flex gap-1 justify-end">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleLoanTxAction(tx, 'approve')}
-                                  className="text-green-600 hover:bg-green-100 h-7 px-2"
-                                  title="Approve"
-                                  data-testid={`approve-loan-tx-${tx.transaction_id}`}
-                                >
-                                  <CheckCircle className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleLoanTxAction(tx, 'reject')}
-                                  className="text-red-600 hover:bg-red-100 h-7 px-2"
-                                  title="Reject"
-                                  data-testid={`reject-loan-tx-${tx.transaction_id}`}
-                                >
-                                  <XCircle className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            )}
-                            {tx.status === 'completed' && tx.vendor_proof_image && (
-                              <Button variant="ghost" size="sm" className="text-blue-600 h-7 px-2" title="View Proof">
-                                <ImageIcon className="w-4 h-4" />
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    {loanTransactions.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center text-slate-400 py-8">
-                          No loan transactions assigned to you
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
             </CardContent>
           </Card>
         </TabsContent>

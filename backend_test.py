@@ -3,7 +3,7 @@ import sys
 from datetime import datetime
 
 class FXBrokerAPITester:
-    def __init__(self, base_url="https://vendor-balance-patch.preview.emergentagent.com"):
+    def __init__(self, base_url="https://loan-approval-portal-1.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
         self.tests_run = 0
