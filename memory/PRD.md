@@ -12,6 +12,18 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 
 ### Date: Mar 4, 2026
 
+**Redis Caching & Pagination (COMPLETE):**
+- **Request**: Improve performance on slow-loading Vendors and Income/Expenses pages
+- **Changes**:
+  - Backend: Pagination with `page` and `page_size` query params (default: 10)
+  - Backend: Redis caching for `/api/vendors` and `/api/income-expenses` endpoints
+  - Backend: Cache invalidation on CRUD operations
+  - Frontend (Vendors.js): Search bar, "Showing X of Y exchangers", pagination controls
+  - Frontend (IncomeExpenses.js): "Showing X of Y entries", classic pagination with page numbers
+  - Fixed pagination stability bug (secondary sort by entry_id)
+- **Cache TTL**: vendors_list: 30s, income_expenses: 30s
+- **Verified**: 100% tests passed - Reference: /app/test_reports/iteration_32.json
+
 **Exchanger Portal Tab Merge (COMPLETE):**
 - **Request**: Merge "Income & Expense Entries" and "Loan Transactions" tabs into single "Other Transactions" tab
 - **Changes**: 
@@ -85,12 +97,15 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - [ ] Auto-match bank statement entries with treasury transactions
 - [ ] Investigate withdrawal creation to Exchanger error
 - [ ] Fix session management redirect bug
+- [ ] Apply pagination/caching to other endpoints (loans, clients)
 
 ### P3 - Low Priority
 - [ ] Refactor `backend/server.py` into modular routers
+- [ ] Fix React duplicate key warning in IncomeExpenses.js
 
 ---
 
 ## 3rd Party Integrations
 - MongoDB Atlas, Gmail SMTP, ExchangeRate-API, APScheduler
 - pdfplumber, reportlab, openpyxl
+- Redis (for caching)
