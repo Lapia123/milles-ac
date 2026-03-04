@@ -1,37 +1,41 @@
-name: Sync Subfolders to Separate Repos
+name: Sync Subfolders
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  sync-repos:
+  sync-frontend:
+    if: contains(join(github.event.commits.*.modified, ','), 'frontend/')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Source Repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # SYNC FRONTEND
-      - name: Push Frontend to Separate Repo
-        uses: cpina/github-action-push-to-another-repository@main
+      - uses: cpina/github-action-push-to-another-repository@main
         env:
           API_TOKEN_GITHUB: ${{ secrets.SYNC_TOKEN }}
         with:
-          source-directory: 'frontend' # The folder in your monorepo
+          source-directory: 'frontend'
           destination-github-username: 'Abshar777'
           destination-repository-name: 'miles-backoffice-frontend'
           user-email: absharameen625@gmail.com
           target-branch: main
 
-      # SYNC BACKEND
-      - name: Push Backend to Separate Repo
-        uses: cpina/github-action-push-to-another-repository@main
+  sync-backend:
+    if: contains(join(github.event.commits.*.modified, ','), 'backend/server.py')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cpina/github-action-push-to-another-repository@main
         env:
           API_TOKEN_GITHUB: ${{ secrets.SYNC_TOKEN }}
         with:
-          source-directory: 'backend' # The folder in your monorepo
+          source-directory: 'backend'
           destination-github-username: 'Abshar777'
           destination-repository-name: 'milescapitals-backoffice-backend'
           user-email: absharameen625@gmail.com
