@@ -667,15 +667,6 @@ export default function Loans() {
         </div>
         <div className="flex gap-2">
           <Button
-            variant="outline"
-            onClick={handleExportCSV}
-            className="border-slate-200 text-slate-500 hover:bg-slate-100 font-bold uppercase tracking-wider rounded-sm"
-            data-testid="export-loans-btn"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
-          <Button
             onClick={() => setIsLoanDialogOpen(true)}
             className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
             data-testid="add-loan-btn"
