@@ -7896,6 +7896,128 @@ async def export_loans_csv(user: dict = Depends(require_permission(Modules.LOANS
         headers={"Content-Disposition": "attachment; filename=loans_export.csv"}
     )
 
+
+@api_router.get("/loans/export/excel")
+async def export_loans_excel(user: dict = Depends(require_permission(Modules.LOANS, Actions.EXPORT))):
+    """Export all loans as Excel"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from io import BytesIO
+    
+    loans = await db.loans.find({}, {"_id": 0}).sort("loan_date", -1).to_list(50000)
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Loans"
+    
+    # Header styling
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="0B3D91", end_color="0B3D91", fill_type="solid")
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin')
+    )
+    
+    headers = ["Loan ID", "Borrower", "Amount", "Currency", "Interest Rate (%)",
+               "Loan Date", "Due Date", "Outstanding", "Total Repaid", "Status"]
+    
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = thin_border
+    
+    for row, loan in enumerate(loans, 2):
+        ws.cell(row=row, column=1, value=loan.get("loan_id", "")).border = thin_border
+        ws.cell(row=row, column=2, value=loan.get("borrower_name", "")).border = thin_border
+        ws.cell(row=row, column=3, value=loan.get("amount", 0)).border = thin_border
+        ws.cell(row=row, column=4, value=loan.get("currency", "USD")).border = thin_border
+        ws.cell(row=row, column=5, value=loan.get("interest_rate", 0)).border = thin_border
+        ws.cell(row=row, column=6, value=str(loan.get("loan_date", ""))).border = thin_border
+        ws.cell(row=row, column=7, value=str(loan.get("due_date", ""))).border = thin_border
+        ws.cell(row=row, column=8, value=loan.get("outstanding_balance", 0)).border = thin_border
+        ws.cell(row=row, column=9, value=loan.get("total_repaid", 0)).border = thin_border
+        ws.cell(row=row, column=10, value=loan.get("status", "")).border = thin_border
+    
+    # Auto-adjust column widths
+    for col in ws.columns:
+        max_length = max(len(str(cell.value or "")) for cell in col)
+        ws.column_dimensions[col[0].column_letter].width = min(max_length + 2, 30)
+    
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=loans_export.xlsx"}
+    )
+
+
+@api_router.get("/loans/export/pdf")
+async def export_loans_pdf(user: dict = Depends(require_permission(Modules.LOANS, Actions.EXPORT))):
+    """Export all loans as PDF"""
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from io import BytesIO
+    
+    loans = await db.loans.find({}, {"_id": 0}).sort("loan_date", -1).to_list(50000)
+    
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=18, alignment=1, spaceAfter=20)
+    
+    elements = []
+    elements.append(Paragraph("Loans Report", title_style))
+    elements.append(Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", styles['Normal']))
+    elements.append(Spacer(1, 20))
+    
+    # Table data
+    data = [["Loan ID", "Borrower", "Amount", "Currency", "Interest", "Due Date", "Outstanding", "Status"]]
+    for loan in loans:
+        data.append([
+            loan.get("loan_id", "")[:12],
+            loan.get("borrower_name", "")[:20],
+            f"${loan.get('amount', 0):,.2f}",
+            loan.get("currency", "USD"),
+            f"{loan.get('interest_rate', 0)}%",
+            str(loan.get("due_date", ""))[:10],
+            f"${loan.get('outstanding_balance', 0):,.2f}",
+            loan.get("status", "").replace("_", " ").title()
+        ])
+    
+    table = Table(data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0B3D91')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f5f5')]),
+    ]))
+    elements.append(table)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=loans_export.pdf"}
+    )
+
 # ============== DEBT MANAGEMENT ==============
 
 class DebtType:

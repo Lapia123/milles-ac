@@ -60,6 +60,7 @@ import {
   FileX,
   Filter,
   RotateCcw,
+  FileText,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -632,10 +633,10 @@ export default function Loans() {
 
   const hasActiveFilters = borrowerFilter || principalMinFilter || principalMaxFilter || outstandingMinFilter || outstandingMaxFilter || activeTab !== 'all';
 
-  const handleExportCSV = async () => {
+  const handleExportExcel = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_URL}/api/loans/export/csv`, {
+      const response = await fetch(`${API_URL}/api/loans/export/excel`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -643,16 +644,39 @@ export default function Loans() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `loans_export_${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = `loans_export_${new Date().toISOString().split('T')[0]}.xlsx`;
         document.body.appendChild(a);
         a.click();
         a.remove();
         window.URL.revokeObjectURL(url);
-        toast.success('Loans exported successfully');
+        toast.success('Loans exported to Excel');
       } else {
-        toast.error('Export failed');
+        toast.error('Excel export failed');
       }
-    } catch { toast.error('Export failed'); }
+    } catch { toast.error('Excel export failed'); }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${API_URL}/api/loans/export/pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `loans_export_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        toast.success('Loans exported to PDF');
+      } else {
+        toast.error('PDF export failed');
+      }
+    } catch { toast.error('PDF export failed'); }
   };
 
   return (
@@ -1033,12 +1057,34 @@ export default function Loans() {
                       variant="ghost"
                       size="sm"
                       onClick={clearAllFilters}
-                      className="ml-auto text-slate-500 hover:text-slate-700 h-7 px-2"
+                      className="text-slate-500 hover:text-slate-700 h-7 px-2"
                     >
                       <RotateCcw className="w-3 h-3 mr-1" />
                       Clear All
                     </Button>
                   )}
+                  <div className="ml-auto flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportExcel}
+                      className="border-green-200 text-green-600 hover:bg-green-50 h-7 px-3"
+                      data-testid="export-loans-excel"
+                    >
+                      <Download className="w-3.5 h-3.5 mr-1" />
+                      Excel
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportPDF}
+                      className="border-red-200 text-red-600 hover:bg-red-50 h-7 px-3"
+                      data-testid="export-loans-pdf"
+                    >
+                      <FileText className="w-3.5 h-3.5 mr-1" />
+                      PDF
+                    </Button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Borrower Filter */}
