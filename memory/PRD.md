@@ -10,6 +10,19 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - PSP Management, Exchangers/Vendors, Income & Expenses, Loans, Debts
 - Reconciliation Phase 1, Audit & Compliance, Logs, Reports, Settings
 
+### Date: Mar 5, 2026
+
+**UI Bug Fixes - Messages & Reconciliation Pages (COMPLETE):**
+- **Request**: Fix non-working dropdowns on Messages and Reconciliation pages
+- **Root Cause 1 (Messages)**: `getAuthHeaders` function was missing from AuthContext.js export
+- **Root Cause 2 (Reconciliation)**: Frontend calling `/api/psps` but backend route is `/api/psp` (singular)
+- **Changes**:
+  - Added `getAuthHeaders` as a useCallback function to AuthContext.js and exported it in the Provider value
+  - Fixed Reconciliation.js to use correct `/api/psp` endpoint
+  - Added better error handling to Reconciliation.js fetch functions
+- **Verified**: Testing agent confirmed Messages dropdown working with 10 users; all backend APIs confirmed working via curl
+- **Reference**: /app/test_reports/iteration_33.json
+
 ### Date: Mar 4, 2026
 
 **Redis Caching & Pagination (COMPLETE):**
