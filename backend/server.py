@@ -5319,8 +5319,21 @@ async def get_transactions(
     client_id: Optional[str] = None,
     transaction_type: Optional[str] = None,
     status: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 50,
     limit: int = 100
 ):
+    # Use page_size if provided, otherwise fall back to limit for backwards compatibility
+    actual_limit = min(page_size, limit, 100)  # Cap at 100 for performance
+    skip = (page - 1) * actual_limit
+    
+    # Try cache first
+    cache_key = get_cache_key("transactions:list", page=page, page_size=actual_limit, 
+                              client_id=client_id, transaction_type=transaction_type, status=status)
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+    
     query = {}
     if client_id:
         query["client_id"] = client_id
@@ -5329,7 +5342,7 @@ async def get_transactions(
     if status:
         query["status"] = status
     
-    transactions = await db.transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    transactions = await db.transactions.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(actual_limit).to_list(actual_limit)
     
     # Enrich transactions with client email
     client_ids = list(set(tx.get("client_id") for tx in transactions if tx.get("client_id")))
@@ -5340,6 +5353,9 @@ async def get_transactions(
     
     for tx in transactions:
         tx["client_email"] = clients_map.get(tx.get("client_id"), "")
+    
+    # Cache the result
+    set_cached(cache_key, transactions, CACHE_TTL.get('transactions', 30))
     
     return transactions
 
@@ -5635,6 +5651,9 @@ async def create_transaction(
     
     await db.transactions.insert_one(tx_doc)
     
+    # Invalidate transaction cache
+    invalidate_transaction_cache()
+    
     # Update PSP pending balance if this is a PSP transaction
     if destination_type == "psp" and psp_info:
         await db.psps.update_one(
@@ -5837,6 +5856,10 @@ async def approve_transaction(
     
     await db.transactions.update_one({"transaction_id": transaction_id}, {"$set": updates})
     
+    # Invalidate transaction cache
+    invalidate_transaction_cache()
+    invalidate_treasury_cache()
+    
     await log_activity(request, user, "approve", "transactions", "Approved transaction")
 
     return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
@@ -5899,6 +5922,9 @@ async def reject_transaction(request: Request, transaction_id: str, reason: str 
     }
     
     await db.transactions.update_one({"transaction_id": transaction_id}, {"$set": updates})
+    
+    # Invalidate transaction cache
+    invalidate_transaction_cache()
     
     await log_activity(request, user, "reject", "transactions", "Rejected transaction")
 
@@ -12500,6 +12526,30 @@ async def startup_db_indexes():
             ("amount", 1),
             ("created_at", -1)
         ])
+        # Index for common transaction queries
+        await db.transactions.create_index([("created_at", -1)])
+        await db.transactions.create_index([("status", 1), ("created_at", -1)])
+        await db.transactions.create_index([("vendor_id", 1), ("status", 1)])
+        await db.transactions.create_index([("destination_account_id", 1), ("status", 1)])
+        
+        # Vendor indexes
+        await db.vendors.create_index("vendor_id", unique=True, sparse=True)
+        await db.vendors.create_index([("status", 1)])
+        await db.vendors.create_index([("vendor_name", "text")])
+        
+        # Income/Expense indexes
+        await db.income_expense_entries.create_index([("created_at", -1)])
+        await db.income_expense_entries.create_index([("entry_type", 1), ("created_at", -1)])
+        await db.income_expense_entries.create_index([("vendor_id", 1), ("status", 1)])
+        
+        # Treasury transaction indexes
+        await db.treasury_transactions.create_index([("account_id", 1), ("created_at", -1)])
+        await db.treasury_transactions.create_index([("transaction_id", 1)])
+        
+        # Client indexes
+        await db.clients.create_index("client_id", unique=True, sparse=True)
+        await db.clients.create_index([("first_name", "text"), ("last_name", "text"), ("email", "text")])
+        
         # Index for roles
         await db.roles.create_index("role_id", unique=True, sparse=True)
         await db.roles.create_index("name", unique=True, sparse=True)
