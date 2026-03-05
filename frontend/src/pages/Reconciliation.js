@@ -686,7 +686,7 @@ export default function Reconciliation() {
     if (type === 'treasury') {
       return treasuryAccounts.find(a => a.account_id === id)?.account_name || id;
     } else if (type === 'psp') {
-      return psps.find(p => p.psp_id === id)?.name || id;
+      return psps.find(p => p.psp_id === id)?.psp_name || id;
     } else if (type === 'exchanger') {
       return exchangers.find(e => e.vendor_id === id)?.vendor_name || id;
     }
@@ -824,7 +824,7 @@ export default function Reconciliation() {
                           ))}
                           {selectedType === 'psp' && psps.map(psp => (
                             <SelectItem key={psp.psp_id} value={psp.psp_id}>
-                              {psp.name}
+                              {psp.psp_name}
                             </SelectItem>
                           ))}
                           {selectedType === 'exchanger' && exchangers.map(ex => (
