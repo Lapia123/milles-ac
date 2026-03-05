@@ -334,6 +334,8 @@ export default function Reconciliation() {
         const data = await response.json();
         setDatesWithTx(data.dates || []);
         setReconStatus(data.status || {});
+      } else {
+        console.error('Error fetching dates:', response.status);
       }
     } catch (error) {
       console.error('Error fetching dates:', error);
@@ -345,15 +347,27 @@ export default function Reconciliation() {
     try {
       const [treasuryRes, pspRes, exchangerRes] = await Promise.all([
         fetch(`${API_URL}/api/treasury`, { headers: getAuthHeaders() }),
-        fetch(`${API_URL}/api/psps`, { headers: getAuthHeaders() }),
+        fetch(`${API_URL}/api/psp`, { headers: getAuthHeaders() }),
         fetch(`${API_URL}/api/vendors?page_size=100`, { headers: getAuthHeaders() })
       ]);
       
-      if (treasuryRes.ok) setTreasuryAccounts(await treasuryRes.json());
-      if (pspRes.ok) setPsps(await pspRes.json());
+      if (treasuryRes.ok) {
+        const data = await treasuryRes.json();
+        setTreasuryAccounts(Array.isArray(data) ? data : []);
+      } else {
+        console.error('Error fetching treasury:', treasuryRes.status);
+      }
+      if (pspRes.ok) {
+        const data = await pspRes.json();
+        setPsps(Array.isArray(data) ? data : []);
+      } else {
+        console.error('Error fetching psps:', pspRes.status);
+      }
       if (exchangerRes.ok) {
         const data = await exchangerRes.json();
-        setExchangers(data.items || data);
+        setExchangers(data.items || data || []);
+      } else {
+        console.error('Error fetching exchangers:', exchangerRes.status);
       }
     } catch (error) {
       console.error('Error fetching accounts:', error);
@@ -405,7 +419,10 @@ export default function Reconciliation() {
         headers: getAuthHeaders()
       });
       if (response.ok) {
-        setReconHistory(await response.json());
+        const data = await response.json();
+        setReconHistory(Array.isArray(data) ? data : []);
+      } else {
+        console.error('Error fetching recon history:', response.status);
       }
     } catch (error) {
       console.error('Error fetching recon history:', error);

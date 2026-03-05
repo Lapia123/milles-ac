@@ -201,6 +201,12 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  // Helper function to get auth headers for API calls
+  const getAuthHeaders = useCallback(() => {
+    const token = localStorage.getItem('auth_token');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  }, []);
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -210,6 +216,7 @@ export const AuthProvider = ({ children }) => {
       processGoogleSession,
       logout,
       checkAuth,
+      getAuthHeaders,
       impersonating,
       adminName,
       startImpersonation,
