@@ -18,17 +18,268 @@ import {
 import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from '../components/ui/tabs';
-import { Calendar } from '../components/ui/calendar';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import {
   CalendarDays, Building2, CreditCard, Store, Upload, FileSpreadsheet,
   CheckCircle2, AlertTriangle, Clock, History, Link2, Flag, Check, X,
-  ChevronLeft, Loader2, FileText, Download, Eye,
+  ChevronLeft, ChevronRight, Loader2, FileText, Download, Eye,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// Big Calendar Component
+function BigCalendarView({ selectedDate, onSelectDate, datesWithTx, reconStatus, dailySummary, formatDate }) {
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'];
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDay = firstDay.getDay();
+    
+    const days = [];
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < startingDay; i++) {
+      days.push(null);
+    }
+    
+    // Add days of the month
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(new Date(year, month, i));
+    }
+    
+    return days;
+  };
+  
+  const getDateStatus = (date) => {
+    if (!date) return null;
+    const dateStr = date.toISOString().split('T')[0];
+    return reconStatus[dateStr];
+  };
+  
+  const hasTransactions = (date) => {
+    if (!date) return false;
+    const dateStr = date.toISOString().split('T')[0];
+    return datesWithTx.includes(dateStr);
+  };
+  
+  const isToday = (date) => {
+    if (!date) return false;
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
+  
+  const isSelected = (date) => {
+    if (!date || !selectedDate) return false;
+    return date.toDateString() === selectedDate.toDateString();
+  };
+  
+  const prevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  };
+  
+  const nextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  };
+  
+  const days = getDaysInMonth(currentMonth);
+  
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards at Top */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-700">Reconciled</p>
+                <p className="text-3xl font-bold text-green-600">{dailySummary?.reconciled || 0}</p>
+              </div>
+              <CheckCircle2 className="w-10 h-10 text-green-500 opacity-80" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-yellow-700">Pending</p>
+                <p className="text-3xl font-bold text-yellow-600">{dailySummary?.pending || 0}</p>
+              </div>
+              <Clock className="w-10 h-10 text-yellow-500 opacity-80" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-red-700">Flagged</p>
+                <p className="text-3xl font-bold text-red-600">{dailySummary?.flagged || 0}</p>
+              </div>
+              <AlertTriangle className="w-10 h-10 text-red-500 opacity-80" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-700">Total</p>
+                <p className="text-3xl font-bold text-blue-600">{dailySummary?.total || 0}</p>
+              </div>
+              <CalendarDays className="w-10 h-10 text-blue-500 opacity-80" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Big Calendar */}
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-slate-800 to-slate-700 text-white py-4">
+          <div className="flex items-center justify-between">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={prevMonth}
+              className="text-white hover:bg-white/20"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </Button>
+            <h2 className="text-2xl font-bold">
+              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+            </h2>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={nextMonth}
+              className="text-white hover:bg-white/20"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </Button>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="p-0">
+          {/* Day Headers */}
+          <div className="grid grid-cols-7 bg-slate-100 border-b">
+            {dayNames.map(day => (
+              <div key={day} className="py-3 text-center font-semibold text-slate-600 text-sm">
+                {day}
+              </div>
+            ))}
+          </div>
+          
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7">
+            {days.map((date, index) => {
+              const status = getDateStatus(date);
+              const hasTx = hasTransactions(date);
+              const today = isToday(date);
+              const selected = isSelected(date);
+              
+              return (
+                <div
+                  key={index}
+                  onClick={() => date && onSelectDate(date)}
+                  className={`
+                    min-h-[100px] p-2 border-b border-r relative
+                    ${!date ? 'bg-slate-50' : 'bg-white hover:bg-slate-50 cursor-pointer'}
+                    ${selected ? 'ring-2 ring-blue-500 ring-inset bg-blue-50' : ''}
+                    transition-all duration-150
+                  `}
+                >
+                  {date && (
+                    <>
+                      {/* Date Number */}
+                      <div className={`
+                        w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium
+                        ${today ? 'bg-blue-600 text-white' : ''}
+                        ${hasTx && !today ? 'bg-blue-100 text-blue-700 font-bold' : ''}
+                      `}>
+                        {date.getDate()}
+                      </div>
+                      
+                      {/* Status Indicators */}
+                      <div className="mt-1 space-y-1">
+                        {status === 'completed' && (
+                          <div className="flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Done</span>
+                          </div>
+                        )}
+                        {status === 'pending' && (
+                          <div className="flex items-center gap-1 text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">
+                            <Clock className="w-3 h-3" />
+                            <span>Pending</span>
+                          </div>
+                        )}
+                        {status === 'flagged' && (
+                          <div className="flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>Flagged</span>
+                          </div>
+                        )}
+                        {hasTx && !status && (
+                          <div className="flex items-center gap-1 text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">
+                            <CalendarDays className="w-3 h-3" />
+                            <span>Transactions</span>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Legend */}
+      <div className="flex flex-wrap gap-6 justify-center text-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs">15</div>
+          <span className="text-slate-600">Today</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-bold">15</div>
+          <span className="text-slate-600">Has Transactions</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3" /> Done
+          </div>
+          <span className="text-slate-600">Reconciled</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs flex items-center gap-1">
+            <Clock className="w-3 h-3" /> Pending
+          </div>
+          <span className="text-slate-600">In Progress</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" /> Flagged
+          </div>
+          <span className="text-slate-600">Needs Attention</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Reconciliation() {
   const { user, getAuthHeaders } = useAuth();
@@ -337,18 +588,6 @@ export default function Reconciliation() {
     return id;
   };
 
-  // Check if date has transactions
-  const hasTransactions = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return datesWithTx.includes(dateStr);
-  };
-
-  // Get date status
-  const getDateStatus = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return reconStatus[dateStr];
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -385,107 +624,17 @@ export default function Reconciliation() {
 
         {/* Calendar Tab */}
         <TabsContent value="calendar">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Calendar */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="text-lg">Select Date</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => {
-                    setSelectedDate(date);
-                    if (date) setActiveTab('reconcile');
-                  }}
-                  modifiers={{
-                    hasTransactions: (date) => hasTransactions(date),
-                    reconciled: (date) => getDateStatus(date) === 'completed',
-                    pending: (date) => getDateStatus(date) === 'pending',
-                    flagged: (date) => getDateStatus(date) === 'flagged',
-                  }}
-                  modifiersStyles={{
-                    hasTransactions: { fontWeight: 'bold', color: '#1e40af' },
-                    reconciled: { backgroundColor: '#dcfce7', color: '#166534' },
-                    pending: { backgroundColor: '#fef9c3', color: '#854d0e' },
-                    flagged: { backgroundColor: '#fee2e2', color: '#991b1b' },
-                  }}
-                  className="rounded-md border"
-                />
-                <div className="flex gap-4 mt-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded bg-blue-600"></div>
-                    <span>Has Transactions</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded bg-green-200"></div>
-                    <span>Reconciled</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded bg-yellow-200"></div>
-                    <span>Pending</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded bg-red-200"></div>
-                    <span>Flagged</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Daily Summary */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  {selectedDate ? `Summary: ${formatDate(selectedDate)}` : 'Daily Summary'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {dailySummary ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-green-50 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-green-600">{dailySummary.reconciled || 0}</div>
-                        <div className="text-xs text-green-700">Reconciled</div>
-                      </div>
-                      <div className="bg-yellow-50 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-yellow-600">{dailySummary.pending || 0}</div>
-                        <div className="text-xs text-yellow-700">Pending</div>
-                      </div>
-                      <div className="bg-red-50 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-red-600">{dailySummary.flagged || 0}</div>
-                        <div className="text-xs text-red-700">Flagged</div>
-                      </div>
-                      <div className="bg-blue-50 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-blue-600">{dailySummary.total || 0}</div>
-                        <div className="text-xs text-blue-700">Total</div>
-                      </div>
-                    </div>
-                    {dailySummary.total > 0 && (
-                      <div className="pt-2">
-                        <div className="text-xs text-slate-500 mb-1">Progress</div>
-                        <div className="w-full bg-slate-200 rounded-full h-2">
-                          <div 
-                            className="bg-green-500 h-2 rounded-full transition-all"
-                            style={{ width: `${(dailySummary.reconciled / dailySummary.total) * 100}%` }}
-                          ></div>
-                        </div>
-                        <div className="text-xs text-slate-500 mt-1 text-right">
-                          {Math.round((dailySummary.reconciled / dailySummary.total) * 100)}% Complete
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-slate-400">
-                    <CalendarDays className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>Select a date to view summary</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          <BigCalendarView
+            selectedDate={selectedDate}
+            onSelectDate={(date) => {
+              setSelectedDate(date);
+              if (date) setActiveTab('reconcile');
+            }}
+            datesWithTx={datesWithTx}
+            reconStatus={reconStatus}
+            dailySummary={dailySummary}
+            formatDate={formatDate}
+          />
         </TabsContent>
 
         {/* Reconcile Tab */}
