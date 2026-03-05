@@ -12,6 +12,24 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 
 ### Date: Mar 5, 2026
 
+**PSP Statement Parser Added (COMPLETE):**
+- **Request**: Add support for PSP (Payment Service Provider) statement formats
+- **Implementation**: Extended `backend/bank_parsers.py` to include:
+  - PSP detection patterns for 14 PSPs
+  - PSP-specific parsing rules
+  - Auto-detection of statement type (bank vs PSP)
+- **Supported PSPs** (14 total):
+  - PayTabs, Telr, Network International (N-Genius), PayFort (Amazon Payment Services)
+  - Checkout.com, Stripe, PayPal, Wise (TransferWise)
+  - Tap Payments, HyperPay, PayBy, Magnati (FAB Payments)
+  - MyFatoorah, Generic PSP
+- **New API Endpoints**:
+  - `GET /api/reconciliation/supported-psps` - List PSPs
+  - `GET /api/reconciliation/supported-sources` - List all sources (banks + PSPs)
+  - Updated upload endpoint with `statement_type` parameter (auto/bank/psp)
+- **Total Supported Sources**: 25 (11 banks + 14 PSPs)
+- **Verified**: Curl test confirmed correct response
+
 **Multi-Bank Statement Parser Added (COMPLETE):**
 - **Request**: Add support for more UAE bank statement formats
 - **Implementation**: Created `backend/bank_parsers.py` module with:

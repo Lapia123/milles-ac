@@ -463,6 +463,7 @@ export default function Reconciliation() {
     formData.append('account_type', selectedType);
     formData.append('account_id', selectedAccount);
     formData.append('date', selectedDate.toISOString().split('T')[0]);
+    formData.append('statement_type', 'auto');  // Auto-detect bank or PSP
 
     try {
       const response = await fetch(`${API_URL}/api/reconciliation/upload-statement`, {
@@ -476,9 +477,10 @@ export default function Reconciliation() {
         setParsedEntries(data.entries || []);
         setShowParsed(true);
         
-        // Show detected bank info
-        const bankName = data.detected_bank?.replace('_', ' ').toUpperCase() || 'Unknown';
-        toast.success(`Parsed ${data.entries?.length || 0} entries from ${bankName} statement`);
+        // Show detected source info (bank or PSP)
+        const sourceName = data.detected_source?.replace(/_/g, ' ').toUpperCase() || 'Unknown';
+        const sourceType = data.source_type === 'psp' ? 'PSP' : 'Bank';
+        toast.success(`Parsed ${data.entries?.length || 0} entries from ${sourceName} ${sourceType} statement`);
       } else {
         const error = await response.json();
         toast.error(error.detail || 'Failed to parse statement');

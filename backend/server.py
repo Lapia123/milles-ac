@@ -10230,34 +10230,70 @@ async def upload_statement_for_reconciliation(
     account_type: str = Form(...),
     account_id: str = Form(...),
     date: str = Form(...),
+    statement_type: str = Form(default="auto"),  # auto, bank, or psp
     user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.CREATE))
 ):
     """Upload and parse a statement file for reconciliation.
-    Supports multiple UAE bank formats: Emirates NBD, ADCB, FAB, Mashreq, RAK Bank, DIB, CBD, and more.
+    Supports:
+    - Banks: Emirates NBD, ADCB, FAB, Mashreq, RAK Bank, DIB, CBD, and more
+    - PSPs: PayTabs, Telr, Network International, Stripe, PayPal, and more
     """
     from bank_parsers import (
         parse_bank_statement_pdf, 
         parse_bank_statement_csv, 
         parse_bank_statement_excel,
-        SUPPORTED_BANKS
+        parse_psp_statement_pdf,
+        parse_psp_statement_csv,
+        detect_statement_type,
+        SUPPORTED_BANKS,
+        SUPPORTED_PSPS
     )
     
     content = await file.read()
     filename = file.filename.lower() if file.filename else ""
     
     parsed_entries = []
-    detected_bank = "unknown"
+    detected_source = "unknown"
+    source_type = "unknown"
     
     try:
+        # Auto-detect statement type if not specified
+        if statement_type == "auto":
+            # Try to detect from filename first
+            if filename.endswith('.pdf'):
+                # Need to read content for detection
+                try:
+                    from pdf2image import convert_from_bytes
+                    import pytesseract
+                    images = convert_from_bytes(content, dpi=100, first_page=1, last_page=1)
+                    sample_text = pytesseract.image_to_string(images[0]) if images else ""
+                    detected_type, detected_name = detect_statement_type(sample_text, filename)
+                    statement_type = detected_type if detected_type != "unknown" else "bank"
+                except:
+                    statement_type = "bank"  # Default to bank
+            else:
+                statement_type = "bank"  # Default for non-PDF
+        
         if filename.endswith('.csv'):
             decoded = content.decode('utf-8')
-            parsed_entries, detected_bank = parse_bank_statement_csv(decoded, filename)
+            if statement_type == "psp":
+                parsed_entries, detected_source = parse_psp_statement_csv(decoded, filename)
+                source_type = "psp"
+            else:
+                parsed_entries, detected_source = parse_bank_statement_csv(decoded, filename)
+                source_type = "bank"
                 
         elif filename.endswith(('.xlsx', '.xls')):
-            parsed_entries, detected_bank = parse_bank_statement_excel(content, filename)
+            parsed_entries, detected_source = parse_bank_statement_excel(content, filename)
+            source_type = "bank"
                 
         elif filename.endswith('.pdf'):
-            parsed_entries, detected_bank = parse_bank_statement_pdf(content, filename, date)
+            if statement_type == "psp":
+                parsed_entries, detected_source = parse_psp_statement_pdf(content, filename, date)
+                source_type = "psp"
+            else:
+                parsed_entries, detected_source = parse_bank_statement_pdf(content, filename, date)
+                source_type = "bank"
             
         else:
             raise HTTPException(status_code=400, detail="Unsupported file format. Use CSV, XLSX, or PDF.")
@@ -10271,8 +10307,10 @@ async def upload_statement_for_reconciliation(
     return {
         "entries": parsed_entries, 
         "count": len(parsed_entries),
-        "detected_bank": detected_bank,
-        "supported_banks": [b["name"] for b in SUPPORTED_BANKS]
+        "detected_source": detected_source,
+        "source_type": source_type,
+        "supported_banks": [b["name"] for b in SUPPORTED_BANKS],
+        "supported_psps": [p["name"] for p in SUPPORTED_PSPS]
     }
 
 
@@ -10281,6 +10319,24 @@ async def get_supported_banks(user: dict = Depends(get_current_user)):
     """Get list of supported bank statement formats"""
     from bank_parsers import SUPPORTED_BANKS
     return {"banks": SUPPORTED_BANKS}
+
+
+@api_router.get("/reconciliation/supported-psps")
+async def get_supported_psps(user: dict = Depends(get_current_user)):
+    """Get list of supported PSP statement formats"""
+    from bank_parsers import SUPPORTED_PSPS
+    return {"psps": SUPPORTED_PSPS}
+
+
+@api_router.get("/reconciliation/supported-sources")
+async def get_supported_sources(user: dict = Depends(get_current_user)):
+    """Get all supported statement sources (banks and PSPs)"""
+    from bank_parsers import SUPPORTED_BANKS, SUPPORTED_PSPS
+    return {
+        "banks": SUPPORTED_BANKS,
+        "psps": SUPPORTED_PSPS,
+        "total_count": len(SUPPORTED_BANKS) + len(SUPPORTED_PSPS)
+    }
 
 
 @api_router.post("/reconciliation/submit")
