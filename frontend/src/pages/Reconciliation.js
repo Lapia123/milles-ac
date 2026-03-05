@@ -593,6 +593,15 @@ export default function Reconciliation() {
     return `${currency} ${(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  // Get selected account currency
+  const getSelectedAccountCurrency = () => {
+    if (selectedType === 'treasury' && selectedAccount) {
+      const account = treasuryAccounts.find(a => a.account_id === selectedAccount);
+      return account?.currency || 'USD';
+    }
+    return 'USD';
+  };
+
   // Get account name by ID
   const getAccountName = (type, id) => {
     if (type === 'treasury') {
@@ -884,7 +893,7 @@ export default function Reconciliation() {
                                           {entry.description}
                                         </TableCell>
                                         <TableCell className={`text-right font-medium ${entry.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                          {formatCurrency(entry.amount)}
+                                          {formatCurrency(entry.amount, getSelectedAccountCurrency())}
                                         </TableCell>
                                         <TableCell>
                                           <Button 

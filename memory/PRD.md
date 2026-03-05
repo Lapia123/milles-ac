@@ -12,6 +12,22 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 
 ### Date: Mar 5, 2026
 
+**Reconciliation PDF Parsing Enhancement (COMPLETE):**
+- **Request**: Fix Statement Entries parsing - was showing "USD 0.00" for all entries from Emirates NBD bank statements
+- **Root Cause**: pdfplumber could not properly extract table data from bilingual (Arabic/English) PDF bank statements
+- **Fix**: Implemented OCR-based PDF parsing using `pdf2image` and `pytesseract`:
+  - Converts PDF pages to images
+  - Uses OCR to extract text
+  - Pattern matching to identify transaction lines (date DD/MM/YYYY format + amounts)
+  - Properly extracts: Date, Description, and Amount from each transaction
+  - Falls back to pdfplumber if OCR libraries unavailable
+- **Changes**:
+  - Modified `/api/reconciliation/upload-statement` endpoint in `backend/server.py`
+  - Added `pdf2image` and `pytesseract` dependencies
+  - Frontend now shows correct currency based on selected treasury account
+- **Result**: PDF parsing now extracts 23 entries (vs 3 broken entries before) with correct dates, amounts, and descriptions
+- **Verified**: Curl test confirmed proper parsing
+
 **Treasury Currency Conversion Fix (COMPLETE):**
 - **Request**: Fix incorrect currency conversion in treasury for withdrawals - should use manual exchange rate instead of live FX rates
 - **Affected Transactions**: REFD182CF5D (AED), REF810528D6 (INR)

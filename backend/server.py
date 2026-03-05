@@ -10298,36 +10298,182 @@ async def upload_statement_for_reconciliation(
                 parsed_entries.append(entry)
                 
         elif filename.endswith('.pdf'):
-            with pdfplumber.open(io.BytesIO(content)) as pdf:
-                for page in pdf.pages:
-                    tables = page.extract_tables()
-                    for table in tables:
-                        if table and len(table) > 1:
-                            headers = [str(h).lower() if h else "" for h in table[0]]
-                            date_col = next((i for i, h in enumerate(headers) if "date" in h), 0)
-                            desc_col = next((i for i, h in enumerate(headers) if any(x in h for x in ["description", "narration"])), 1)
-                            amount_col = next((i for i, h in enumerate(headers) if "amount" in h), -1)
+            # Try using OCR for better PDF parsing (especially for Emirates NBD and similar bilingual statements)
+            try:
+                from pdf2image import convert_from_bytes
+                import pytesseract
+                import re
+                
+                # Convert PDF to images for OCR
+                images = convert_from_bytes(content, dpi=200)
+                
+                all_text = ""
+                for img in images:
+                    text = pytesseract.image_to_string(img)
+                    all_text += text + "\n"
+                
+                # Parse transaction lines using regex patterns
+                # Date pattern: DD/MM/YYYY
+                date_pattern = r'(\d{2}/\d{2}/\d{4})'
+                # Amount pattern: numbers with commas and decimals
+                amount_pattern = r'([\d,]+\.\d{2})'
+                
+                lines = all_text.split('\n')
+                for line in lines:
+                    date_match = re.search(date_pattern, line)
+                    if date_match:
+                        amounts = re.findall(amount_pattern, line)
+                        if amounts:
+                            entry_id += 1
                             
-                            for row in table[1:]:
-                                if not any(row):
-                                    continue
-                                entry_id += 1
+                            # Extract date
+                            date_str = date_match.group(1)
+                            # Convert DD/MM/YYYY to YYYY-MM-DD
+                            try:
+                                parts = date_str.split('/')
+                                parsed_date = f"{parts[2]}-{parts[1].zfill(2)}-{parts[0].zfill(2)}"
+                            except:
+                                parsed_date = date
+                            
+                            # Get amounts - usually first amount is debit/credit, last might be balance
+                            # For bank statements: if there's "Cr" after, the amount before last is credit
+                            # If no "Cr", it's likely a debit
+                            amount = 0.0
+                            try:
+                                # Clean the first amount found
+                                first_amount = float(amounts[0].replace(',', ''))
                                 
-                                amount = 0
-                                if amount_col >= 0 and amount_col < len(row):
-                                    try:
-                                        amount = float(str(row[amount_col]).replace(",", "").replace("$", ""))
-                                    except:
-                                        pass
-                                
+                                # Determine if credit or debit based on context
+                                # If line contains "Cr" at the end, check if this is the balance or credit amount
+                                if len(amounts) >= 2:
+                                    # Multiple amounts: first is typically the transaction amount
+                                    amount = first_amount
+                                    # Check if it's likely a credit (positive) or debit (negative)
+                                    # Look for credit indicators in the line
+                                    if 'cr' not in line.lower() or line.lower().index('cr') < line.lower().rfind(amounts[0].replace(',', '')):
+                                        amount = -first_amount  # Debit
+                                else:
+                                    amount = first_amount
+                            except:
+                                pass
+                            
+                            # Extract description (text between date and first amount)
+                            desc_start = line.find(date_str) + len(date_str)
+                            desc_end = line.find(amounts[0]) if amounts else len(line)
+                            description = line[desc_start:desc_end].strip()
+                            # Clean up description
+                            description = re.sub(r'\s+', ' ', description).strip()
+                            
+                            if description or amount != 0:
                                 entry = {
                                     "id": f"stmt_{entry_id}",
-                                    "date": str(row[date_col]) if date_col < len(row) and row[date_col] else date,
-                                    "description": str(row[desc_col]) if desc_col < len(row) and row[desc_col] else "",
+                                    "date": parsed_date,
+                                    "description": description[:200],  # Limit description length
                                     "reference": "",
                                     "amount": amount
                                 }
                                 parsed_entries.append(entry)
+                
+            except ImportError:
+                # Fall back to pdfplumber if OCR libraries not available
+                logger.warning("OCR libraries not available, falling back to pdfplumber")
+                with pdfplumber.open(io.BytesIO(content)) as pdf:
+                    for page in pdf.pages:
+                        tables = page.extract_tables()
+                        for table in tables:
+                            if table and len(table) > 1:
+                                # Get headers - handle bilingual headers (Arabic/English)
+                                raw_headers = table[0]
+                                headers = []
+                                for h in raw_headers:
+                                    if h:
+                                        # Normalize header text
+                                        h_str = str(h).lower().strip()
+                                        headers.append(h_str)
+                                    else:
+                                        headers.append("")
+                                
+                                # Find column indices - support multiple header formats
+                                date_col = next((i for i, h in enumerate(headers) if any(x in h for x in ["date", "تاريخ", "التاريخ"])), 0)
+                                desc_col = next((i for i, h in enumerate(headers) if any(x in h for x in ["description", "narration", "details", "التفاصيل", "particulars"])), 1)
+                                debit_col = next((i for i, h in enumerate(headers) if any(x in h for x in ["debit", "مدين", "withdrawal", "dr"])), -1)
+                                credit_col = next((i for i, h in enumerate(headers) if any(x in h for x in ["credit", "دائن", "deposit", "cr"])), -1)
+                                balance_col = next((i for i, h in enumerate(headers) if any(x in h for x in ["balance", "الرصيد"])), -1)
+                                amount_col = next((i for i, h in enumerate(headers) if "amount" in h), -1)
+                                
+                                for row in table[1:]:
+                                    if not row or not any(cell for cell in row if cell):
+                                        continue
+                                    entry_id += 1
+                                    
+                                    # Parse amount - handle Debit/Credit columns
+                                    amount = 0.0
+                                    try:
+                                        if debit_col >= 0 and credit_col >= 0:
+                                            # Has separate debit/credit columns
+                                            debit_val = row[debit_col] if debit_col < len(row) else None
+                                            credit_val = row[credit_col] if credit_col < len(row) else None
+                                            
+                                            debit = 0.0
+                                            credit = 0.0
+                                            
+                                            if debit_val and str(debit_val).strip():
+                                                debit_str = str(debit_val).replace(",", "").replace(" ", "").strip()
+                                                if debit_str and debit_str not in ['', '-', 'None']:
+                                                    try:
+                                                        debit = abs(float(debit_str))
+                                                    except:
+                                                        pass
+                                            
+                                            if credit_val and str(credit_val).strip():
+                                                credit_str = str(credit_val).replace(",", "").replace(" ", "").strip()
+                                                if credit_str and credit_str not in ['', '-', 'None']:
+                                                    try:
+                                                        credit = abs(float(credit_str))
+                                                    except:
+                                                        pass
+                                            
+                                            # Credit is positive, Debit is negative
+                                            amount = credit - debit
+                                            
+                                        elif amount_col >= 0 and amount_col < len(row):
+                                            amount_str = str(row[amount_col]).replace(",", "").replace("$", "").strip()
+                                            if amount_str and amount_str not in ['', '-', 'None']:
+                                                amount = float(amount_str)
+                                    except Exception as e:
+                                        logger.warning(f"Failed to parse amount: {e}")
+                                        amount = 0.0
+                                    
+                                    # Parse date
+                                    date_val = row[date_col] if date_col < len(row) and row[date_col] else date
+                                    parsed_date = str(date_val).strip() if date_val else date
+                                    
+                                    # Try to convert DD/MM/YYYY to YYYY-MM-DD for consistency
+                                    if parsed_date and "/" in parsed_date:
+                                        try:
+                                            parts = parsed_date.split("/")
+                                            if len(parts) == 3:
+                                                day, month, year = parts
+                                                if len(year) == 4:  # DD/MM/YYYY
+                                                    parsed_date = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+                                        except:
+                                            pass
+                                    
+                                    # Parse description
+                                    desc_val = row[desc_col] if desc_col < len(row) and row[desc_col] else ""
+                                    description = str(desc_val).strip() if desc_val else ""
+                                    
+                                    entry = {
+                                        "id": f"stmt_{entry_id}",
+                                        "date": parsed_date,
+                                        "description": description,
+                                        "reference": "",
+                                        "amount": amount
+                                    }
+                                    
+                                    # Only add entries that have meaningful data
+                                    if description or amount != 0:
+                                        parsed_entries.append(entry)
         else:
             raise HTTPException(status_code=400, detail="Unsupported file format. Use CSV, XLSX, or PDF.")
             
