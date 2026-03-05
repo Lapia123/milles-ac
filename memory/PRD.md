@@ -12,6 +12,32 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 
 ### Date: Mar 5, 2026
 
+**Multi-Bank Statement Parser Added (COMPLETE):**
+- **Request**: Add support for more UAE bank statement formats
+- **Implementation**: Created `backend/bank_parsers.py` module with:
+  - Auto-detection of bank from PDF content/filename
+  - Bank-specific parsing rules for each UAE bank
+  - OCR-based text extraction using `pdf2image` + `pytesseract`
+  - Pattern matching for dates (DD/MM/YYYY) and amounts
+  - Debit/Credit identification based on context keywords
+- **Supported Banks** (11 total):
+  - Emirates NBD
+  - Abu Dhabi Commercial Bank (ADCB)
+  - First Abu Dhabi Bank (FAB)
+  - Mashreq Bank
+  - RAK Bank
+  - Dubai Islamic Bank (DIB)
+  - Commercial Bank of Dubai (CBD)
+  - Commercial Bank International (CBI)
+  - National Bank of Fujairah (NBF)
+  - Ajman Bank
+  - Generic/Other
+- **New API Endpoints**:
+  - `GET /api/reconciliation/supported-banks` - List all supported banks
+  - Updated `/api/reconciliation/upload-statement` - Returns detected_bank in response
+- **Result**: Emirates NBD statement now parses 23 entries correctly with proper debit/credit identification
+- **Verified**: Curl test confirmed correct parsing and bank detection
+
 **Reconciliation PDF Parsing Enhancement (COMPLETE):**
 - **Request**: Fix Statement Entries parsing - was showing "USD 0.00" for all entries from Emirates NBD bank statements
 - **Root Cause**: pdfplumber could not properly extract table data from bilingual (Arabic/English) PDF bank statements

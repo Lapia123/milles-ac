@@ -475,7 +475,10 @@ export default function Reconciliation() {
         const data = await response.json();
         setParsedEntries(data.entries || []);
         setShowParsed(true);
-        toast.success(`Parsed ${data.entries?.length || 0} entries from statement`);
+        
+        // Show detected bank info
+        const bankName = data.detected_bank?.replace('_', ' ').toUpperCase() || 'Unknown';
+        toast.success(`Parsed ${data.entries?.length || 0} entries from ${bankName} statement`);
       } else {
         const error = await response.json();
         toast.error(error.detail || 'Failed to parse statement');
