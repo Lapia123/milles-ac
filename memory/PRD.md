@@ -12,6 +12,20 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 
 ### Date: Mar 5, 2026
 
+**Reconciliation History Filters & Export (COMPLETE):**
+- **Request**: Add filter options and export functionality to Reconciliation History
+- **Implementation**:
+  - **Filters Added**: Date From, Date To, Type (Treasury/PSP/Exchanger), Account, Matched (Yes/No), Flagged (Yes/No), Status
+  - **Export Options**: PDF and Excel (XLSX)
+  - **UI Updates**: Filter bar with Apply/Reset buttons, export buttons in header
+- **Backend Changes**:
+  - Updated `/api/reconciliation/history` with filter parameters
+  - Added `/api/reconciliation/history/export` endpoint with PDF/Excel generation
+- **Files Modified**:
+  - `frontend/src/pages/Reconciliation.js` - Filter UI and export handlers
+  - `backend/server.py` - Filter logic and export endpoint
+- **Verified**: API tests and exports working correctly via curl
+
 **PSP Statement Parser Added (COMPLETE):**
 - **Request**: Add support for PSP (Payment Service Provider) statement formats
 - **Implementation**: Extended `backend/bank_parsers.py` to include:

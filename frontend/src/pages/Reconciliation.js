@@ -320,6 +320,16 @@ export default function Reconciliation() {
   // History
   const [reconHistory, setReconHistory] = useState([]);
   const [historyDialog, setHistoryDialog] = useState({ open: false, item: null });
+  const [historyFilters, setHistoryFilters] = useState({
+    dateFrom: '',
+    dateTo: '',
+    type: 'all',
+    account: 'all',
+    matched: 'all',
+    flagged: 'all',
+    status: 'all'
+  });
+  const [exporting, setExporting] = useState(false);
   
   // Daily summary
   const [dailySummary, setDailySummary] = useState(null);
@@ -415,7 +425,19 @@ export default function Reconciliation() {
   // Fetch reconciliation history
   const fetchReconHistory = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/api/reconciliation/calendar-history?limit=50`, {
+      // Build query params with filters
+      const params = new URLSearchParams();
+      params.append('limit', '100');
+      
+      if (historyFilters.dateFrom) params.append('date_from', historyFilters.dateFrom);
+      if (historyFilters.dateTo) params.append('date_to', historyFilters.dateTo);
+      if (historyFilters.type !== 'all') params.append('account_type', historyFilters.type);
+      if (historyFilters.account !== 'all') params.append('account_id', historyFilters.account);
+      if (historyFilters.status !== 'all') params.append('status', historyFilters.status);
+      if (historyFilters.matched !== 'all') params.append('has_matched', historyFilters.matched === 'yes' ? 'true' : 'false');
+      if (historyFilters.flagged !== 'all') params.append('has_flagged', historyFilters.flagged === 'yes' ? 'true' : 'false');
+      
+      const response = await fetch(`${API_URL}/api/reconciliation/history?${params.toString()}`, {
         headers: getAuthHeaders()
       });
       if (response.ok) {
@@ -427,7 +449,59 @@ export default function Reconciliation() {
     } catch (error) {
       console.error('Error fetching recon history:', error);
     }
-  }, [getAuthHeaders]);
+  }, [getAuthHeaders, historyFilters]);
+
+  // Export history to PDF or Excel
+  const handleExportHistory = async (format) => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      params.append('format', format);
+      
+      if (historyFilters.dateFrom) params.append('date_from', historyFilters.dateFrom);
+      if (historyFilters.dateTo) params.append('date_to', historyFilters.dateTo);
+      if (historyFilters.type !== 'all') params.append('account_type', historyFilters.type);
+      if (historyFilters.account !== 'all') params.append('account_id', historyFilters.account);
+      if (historyFilters.status !== 'all') params.append('status', historyFilters.status);
+      
+      const response = await fetch(`${API_URL}/api/reconciliation/history/export?${params.toString()}`, {
+        headers: getAuthHeaders()
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `reconciliation_history_${new Date().toISOString().split('T')[0]}.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        toast.success(`Exported to ${format.toUpperCase()}`);
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Export failed');
+      }
+    } catch (error) {
+      toast.error('Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Reset history filters
+  const resetHistoryFilters = () => {
+    setHistoryFilters({
+      dateFrom: '',
+      dateTo: '',
+      type: 'all',
+      account: 'all',
+      matched: 'all',
+      flagged: 'all',
+      status: 'all'
+    });
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -1009,13 +1083,155 @@ export default function Reconciliation() {
         {/* History Tab */}
         <TabsContent value="history">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
                 <History className="w-5 h-5" /> Reconciliation History
               </CardTitle>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleExportHistory('xlsx')}
+                  disabled={exporting || reconHistory.length === 0}
+                  data-testid="export-xlsx-btn"
+                >
+                  {exporting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <FileSpreadsheet className="w-4 h-4 mr-1" />}
+                  Excel
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleExportHistory('pdf')}
+                  disabled={exporting || reconHistory.length === 0}
+                  data-testid="export-pdf-btn"
+                >
+                  {exporting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <FileText className="w-4 h-4 mr-1" />}
+                  PDF
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[500px]">
+              {/* Filters */}
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-4 p-4 bg-slate-50 rounded-lg">
+                <div>
+                  <Label className="text-xs text-slate-500">Date From</Label>
+                  <Input
+                    type="date"
+                    value={historyFilters.dateFrom}
+                    onChange={(e) => setHistoryFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                    className="h-9"
+                    data-testid="filter-date-from"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500">Date To</Label>
+                  <Input
+                    type="date"
+                    value={historyFilters.dateTo}
+                    onChange={(e) => setHistoryFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                    className="h-9"
+                    data-testid="filter-date-to"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500">Type</Label>
+                  <Select value={historyFilters.type} onValueChange={(v) => setHistoryFilters(prev => ({ ...prev, type: v }))}>
+                    <SelectTrigger className="h-9" data-testid="filter-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="treasury">Treasury</SelectItem>
+                      <SelectItem value="psp">PSP</SelectItem>
+                      <SelectItem value="exchanger">Exchanger</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500">Account</Label>
+                  <Select value={historyFilters.account} onValueChange={(v) => setHistoryFilters(prev => ({ ...prev, account: v }))}>
+                    <SelectTrigger className="h-9" data-testid="filter-account">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Accounts</SelectItem>
+                      {treasuryAccounts.map(acc => (
+                        <SelectItem key={acc.account_id} value={acc.account_id}>{acc.account_name}</SelectItem>
+                      ))}
+                      {psps.map(psp => (
+                        <SelectItem key={psp.psp_id} value={psp.psp_id}>{psp.psp_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500">Matched</Label>
+                  <Select value={historyFilters.matched} onValueChange={(v) => setHistoryFilters(prev => ({ ...prev, matched: v }))}>
+                    <SelectTrigger className="h-9" data-testid="filter-matched">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="yes">Has Matched</SelectItem>
+                      <SelectItem value="no">No Matched</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500">Flagged</Label>
+                  <Select value={historyFilters.flagged} onValueChange={(v) => setHistoryFilters(prev => ({ ...prev, flagged: v }))}>
+                    <SelectTrigger className="h-9" data-testid="filter-flagged">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="yes">Has Flagged</SelectItem>
+                      <SelectItem value="no">No Flagged</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500">Status</Label>
+                  <Select value={historyFilters.status} onValueChange={(v) => setHistoryFilters(prev => ({ ...prev, status: v }))}>
+                    <SelectTrigger className="h-9" data-testid="filter-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {/* Filter Actions */}
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-sm text-slate-500">
+                  {reconHistory.length} record(s) found
+                </span>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={resetHistoryFilters}
+                    data-testid="reset-filters-btn"
+                  >
+                    <X className="w-4 h-4 mr-1" /> Reset
+                  </Button>
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    onClick={fetchReconHistory}
+                    data-testid="apply-filters-btn"
+                  >
+                    Apply Filters
+                  </Button>
+                </div>
+              </div>
+              
+              <ScrollArea className="h-[400px]">
                 <Table>
                   <TableHeader>
                     <TableRow>

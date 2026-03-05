@@ -10956,29 +10956,211 @@ async def create_adjustment(
 # Get Reconciliation History / Audit Trail
 @api_router.get("/reconciliation/history")
 async def get_reconciliation_history(
-    start_date: str = None,
-    end_date: str = None,
-    action_type: str = None,
+    date_from: str = None,
+    date_to: str = None,
+    account_type: str = None,
+    account_id: str = None,
+    status: str = None,
+    has_matched: str = None,
+    has_flagged: str = None,
     limit: int = 100,
     user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.VIEW))
 ):
-    """Get reconciliation audit trail"""
-    from datetime import datetime, timezone, timedelta
-    
+    """Get reconciliation submissions history with filters"""
     query = {}
     
-    if start_date:
-        query["created_at"] = {"$gte": start_date}
-    if end_date:
-        if "created_at" in query:
-            query["created_at"]["$lte"] = end_date
+    if date_from:
+        query["date"] = {"$gte": date_from}
+    if date_to:
+        if "date" in query:
+            query["date"]["$lte"] = date_to
         else:
-            query["created_at"] = {"$lte": end_date}
-    if action_type:
-        query["action"] = action_type
+            query["date"] = {"$lte": date_to}
+    if account_type:
+        query["account_type"] = account_type
+    if account_id:
+        query["account_id"] = account_id
+    if status:
+        query["status"] = status
+    if has_matched == "true":
+        query["matched_count"] = {"$gt": 0}
+    elif has_matched == "false":
+        query["$or"] = [{"matched_count": 0}, {"matched_count": {"$exists": False}}]
+    if has_flagged == "true":
+        query["flagged_count"] = {"$gt": 0}
+    elif has_flagged == "false":
+        query["$or"] = [{"flagged_count": 0}, {"flagged_count": {"$exists": False}}]
     
-    history = await db.reconciliation_history.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    history = await db.reconciliations.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
     return history
+
+
+@api_router.get("/reconciliation/history/export")
+async def export_reconciliation_history(
+    format: str = "xlsx",
+    date_from: str = None,
+    date_to: str = None,
+    account_type: str = None,
+    account_id: str = None,
+    status: str = None,
+    user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.EXPORT))
+):
+    """Export reconciliation history to PDF or Excel"""
+    from io import BytesIO
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import letter, landscape
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    
+    # Build query
+    query = {}
+    if date_from:
+        query["date"] = {"$gte": date_from}
+    if date_to:
+        if "date" in query:
+            query["date"]["$lte"] = date_to
+        else:
+            query["date"] = {"$lte": date_to}
+    if account_type:
+        query["account_type"] = account_type
+    if account_id:
+        query["account_id"] = account_id
+    if status:
+        query["status"] = status
+    
+    # Fetch data
+    history = await db.reconciliations.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    if format == "pdf":
+        # Generate PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=30, bottomMargin=30)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Title
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=18,
+            spaceAfter=20,
+            alignment=1  # Center
+        )
+        elements.append(Paragraph("Reconciliation History Report", title_style))
+        
+        # Subtitle with filters
+        filter_text = f"Generated on: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
+        if date_from or date_to:
+            filter_text += f" | Period: {date_from or 'Start'} to {date_to or 'Now'}"
+        elements.append(Paragraph(filter_text, styles['Normal']))
+        elements.append(Spacer(1, 20))
+        
+        # Table data
+        table_data = [["Date", "Type", "Account ID", "Matched", "Flagged", "Status", "Created By", "Created At"]]
+        for item in history:
+            table_data.append([
+                item.get("date", ""),
+                item.get("account_type", "").title(),
+                item.get("account_id", "")[:15],
+                str(item.get("matched_count", 0)),
+                str(item.get("flagged_count", 0)),
+                item.get("status", "").title(),
+                item.get("created_by_name", ""),
+                item.get("created_at", "")[:16]
+            ])
+        
+        # Create table
+        table = Table(table_data, repeatRows=1)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e3a5f')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8f9fa')]),
+        ]))
+        elements.append(table)
+        
+        # Summary
+        elements.append(Spacer(1, 20))
+        total = len(history)
+        completed = sum(1 for h in history if h.get("status") == "completed")
+        pending = sum(1 for h in history if h.get("status") == "pending")
+        elements.append(Paragraph(f"Total Records: {total} | Completed: {completed} | Pending: {pending}", styles['Normal']))
+        
+        doc.build(elements)
+        buffer.seek(0)
+        
+        return Response(
+            content=buffer.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=reconciliation_history_{datetime.now().strftime('%Y%m%d')}.pdf"}
+        )
+    
+    else:  # Excel
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Reconciliation History"
+        
+        # Header style
+        header_fill = PatternFill(start_color="1e3a5f", end_color="1e3a5f", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        thin_border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Headers
+        headers = ["Date", "Type", "Account ID", "Matched", "Flagged", "Status", "Remarks", "Created By", "Created At"]
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = thin_border
+        
+        # Data
+        for row_num, item in enumerate(history, 2):
+            data = [
+                item.get("date", ""),
+                item.get("account_type", "").title(),
+                item.get("account_id", ""),
+                item.get("matched_count", 0),
+                item.get("flagged_count", 0),
+                item.get("status", "").title(),
+                item.get("remarks", ""),
+                item.get("created_by_name", ""),
+                item.get("created_at", "")[:19]
+            ]
+            for col, value in enumerate(data, 1):
+                cell = ws.cell(row=row_num, column=col, value=value)
+                cell.border = thin_border
+                cell.alignment = Alignment(horizontal='center' if col in [4, 5] else 'left')
+        
+        # Auto-width columns
+        for col in ws.columns:
+            max_length = max(len(str(cell.value or "")) for cell in col)
+            ws.column_dimensions[col[0].column_letter].width = min(max_length + 2, 30)
+        
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        
+        return Response(
+            content=buffer.getvalue(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=reconciliation_history_{datetime.now().strftime('%Y%m%d')}.xlsx"}
+        )
 
 
 # Get Flagged Items
