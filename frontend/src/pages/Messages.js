@@ -35,6 +35,15 @@ export default function Messages() {
   const [newChatDialog, setNewChatDialog] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState('');
   const messagesEndRef = useRef(null);
+  
+  // Admin view state
+  const [viewMode, setViewMode] = useState('my'); // 'my' or 'all'
+  const [allConversations, setAllConversations] = useState([]);
+  const [selectedAllConversation, setSelectedAllConversation] = useState(null);
+  const [allMessages, setAllMessages] = useState([]);
+  const [loadingAll, setLoadingAll] = useState(false);
+
+  const isAdmin = user?.role === 'admin';
 
   // Fetch all users
   const fetchUsers = useCallback(async () => {
@@ -79,6 +88,39 @@ export default function Messages() {
     }
   }, [getAuthHeaders]);
 
+  // Admin: Fetch all conversations in the system
+  const fetchAllConversations = useCallback(async () => {
+    if (!isAdmin) return;
+    setLoadingAll(true);
+    try {
+      const response = await fetch(`${API_URL}/api/messages/admin/all-conversations`, {
+        headers: getAuthHeaders()
+      });
+      if (response.ok) {
+        setAllConversations(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching all conversations:', error);
+    } finally {
+      setLoadingAll(false);
+    }
+  }, [getAuthHeaders, isAdmin]);
+
+  // Admin: Fetch messages between two users
+  const fetchConversationMessages = useCallback(async (user1Id, user2Id) => {
+    if (!isAdmin) return;
+    try {
+      const response = await fetch(`${API_URL}/api/messages/admin/conversation/${user1Id}/${user2Id}`, {
+        headers: getAuthHeaders()
+      });
+      if (response.ok) {
+        setAllMessages(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching conversation messages:', error);
+    }
+  }, [getAuthHeaders, isAdmin]);
+
   useEffect(() => {
     const init = async () => {
       setLoading(true);
@@ -87,6 +129,20 @@ export default function Messages() {
     };
     init();
   }, [fetchUsers, fetchConversations]);
+
+  // Fetch all conversations when admin switches to 'all' view
+  useEffect(() => {
+    if (viewMode === 'all' && isAdmin) {
+      fetchAllConversations();
+    }
+  }, [viewMode, isAdmin, fetchAllConversations]);
+
+  // Fetch messages when admin selects a conversation
+  useEffect(() => {
+    if (selectedAllConversation && isAdmin) {
+      fetchConversationMessages(selectedAllConversation.user1_id, selectedAllConversation.user2_id);
+    }
+  }, [selectedAllConversation, isAdmin, fetchConversationMessages]);
 
   useEffect(() => {
     if (selectedConversation) {
@@ -182,6 +238,17 @@ export default function Messages() {
     }
   };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const getInitials = (name) => {
     if (!name) return '?';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
@@ -190,6 +257,11 @@ export default function Messages() {
   const filteredConversations = conversations.filter(c =>
     c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredAllConversations = allConversations.filter(c =>
+    c.user1_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.user2_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -208,30 +280,212 @@ export default function Messages() {
           <h1 className="text-2xl font-bold text-slate-800">Messages</h1>
           <p className="text-slate-500 mt-1">Internal messaging system</p>
         </div>
-        <Button onClick={() => setNewChatDialog(true)} data-testid="new-chat-btn">
-          <Plus className="w-4 h-4 mr-2" /> New Message
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Admin View Toggle */}
+          {isAdmin && (
+            <div className="flex items-center bg-slate-100 rounded-lg p-1">
+              <Button
+                variant={viewMode === 'my' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('my')}
+                className="rounded-md"
+                data-testid="view-my-messages"
+              >
+                <User className="w-4 h-4 mr-1" /> My Messages
+              </Button>
+              <Button
+                variant={viewMode === 'all' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('all')}
+                className="rounded-md"
+                data-testid="view-all-messages"
+              >
+                <Users className="w-4 h-4 mr-1" /> All Communications
+              </Button>
+            </div>
+          )}
+          <Button onClick={() => setNewChatDialog(true)} data-testid="new-chat-btn">
+            <Plus className="w-4 h-4 mr-2" /> New Message
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
-        {/* Conversations List */}
-        <Card className="md:col-span-1 flex flex-col">
-          <CardHeader className="pb-2 border-b">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                placeholder="Search conversations..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </CardHeader>
-          <CardContent className="flex-1 p-0 overflow-hidden">
-            <ScrollArea className="h-[500px]">
-              {filteredConversations.length === 0 ? (
-                <div className="text-center py-12 text-slate-400">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
+      {/* Admin: All Communications View */}
+      {isAdmin && viewMode === 'all' ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+          {/* All Conversations List */}
+          <Card className="md:col-span-1 flex flex-col">
+            <CardHeader className="pb-2 border-b">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Users className="w-4 h-4" /> All User Conversations
+              </CardTitle>
+              <div className="relative mt-2">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  placeholder="Search users..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 p-0 overflow-hidden">
+              <ScrollArea className="h-[500px]">
+                {loadingAll ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                  </div>
+                ) : filteredAllConversations.length === 0 ? (
+                  <div className="text-center py-12 text-slate-400">
+                    <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>No conversations found</p>
+                  </div>
+                ) : (
+                  filteredAllConversations.map((conv, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => setSelectedAllConversation(conv)}
+                      className={`p-4 border-b cursor-pointer hover:bg-slate-50 transition-colors ${
+                        selectedAllConversation?.user1_id === conv.user1_id && 
+                        selectedAllConversation?.user2_id === conv.user2_id
+                          ? 'bg-blue-50 border-l-4 border-l-blue-500'
+                          : ''
+                      }`}
+                      data-testid={`all-conv-${idx}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex -space-x-2">
+                          <Avatar className="w-8 h-8 border-2 border-white">
+                            <AvatarFallback className="bg-blue-100 text-blue-700 text-xs">
+                              {getInitials(conv.user1_name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <Avatar className="w-8 h-8 border-2 border-white">
+                            <AvatarFallback className="bg-purple-100 text-purple-700 text-xs">
+                              {getInitials(conv.user2_name)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-slate-800 truncate">
+                              {conv.user1_name} & {conv.user2_name}
+                            </p>
+                            <span className="text-xs text-slate-400">
+                              {conv.message_count} msgs
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 truncate">
+                            Last: {formatDate(conv.last_message_at)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+
+          {/* Message Thread */}
+          <Card className="md:col-span-2 flex flex-col">
+            <CardHeader className="border-b py-3">
+              {selectedAllConversation ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex -space-x-2">
+                    <Avatar className="w-10 h-10 border-2 border-white">
+                      <AvatarFallback className="bg-blue-100 text-blue-700">
+                        {getInitials(selectedAllConversation.user1_name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <Avatar className="w-10 h-10 border-2 border-white">
+                      <AvatarFallback className="bg-purple-100 text-purple-700">
+                        {getInitials(selectedAllConversation.user2_name)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">
+                      {selectedAllConversation.user1_name} & {selectedAllConversation.user2_name}
+                    </CardTitle>
+                    <p className="text-xs text-slate-500">
+                      Viewing conversation between users
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <CardTitle className="text-slate-400">Select a conversation</CardTitle>
+              )}
+            </CardHeader>
+            <CardContent className="flex-1 p-0 overflow-hidden">
+              {selectedAllConversation ? (
+                <ScrollArea className="h-[450px] p-4">
+                  <div className="space-y-4">
+                    {allMessages.map((msg, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex ${msg.sender_id === selectedAllConversation.user1_id ? 'justify-start' : 'justify-end'}`}
+                      >
+                        <div className={`max-w-[70%] ${
+                          msg.sender_id === selectedAllConversation.user1_id 
+                            ? 'bg-slate-100' 
+                            : 'bg-purple-100'
+                        } rounded-lg px-4 py-2`}>
+                          <p className="text-xs font-medium text-slate-600 mb-1">
+                            {msg.sender_name}
+                          </p>
+                          <p className="text-sm text-slate-800">{msg.content}</p>
+                          <div className="flex items-center justify-end gap-1 mt-1">
+                            <span className="text-xs text-slate-400">
+                              {formatDate(msg.created_at)}
+                            </span>
+                            {msg.read && <CheckCheck className="w-3 h-3 text-blue-500" />}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <div className="flex items-center justify-center h-full text-slate-400">
+                  <div className="text-center">
+                    <Users className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                    <p>Select a conversation to view messages</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+            {/* Admin view is read-only - no send button */}
+            {selectedAllConversation && (
+              <div className="p-3 border-t bg-slate-50">
+                <p className="text-xs text-slate-500 text-center">
+                  Admin view - Read only access to all communications
+                </p>
+              </div>
+            )}
+          </Card>
+        </div>
+      ) : (
+        /* Regular User View */
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+          {/* Conversations List */}
+          <Card className="md:col-span-1 flex flex-col">
+            <CardHeader className="pb-2 border-b">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  placeholder="Search conversations..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 p-0 overflow-hidden">
+              <ScrollArea className="h-[500px]">
+                {filteredConversations.length === 0 ? (
+                  <div className="text-center py-12 text-slate-400">
+                    <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
                   <p>No conversations yet</p>
                   <p className="text-sm">Start a new message</p>
                 </div>
@@ -365,6 +619,7 @@ export default function Messages() {
           )}
         </Card>
       </div>
+      )}
 
       {/* New Chat Dialog */}
       <Dialog open={newChatDialog} onOpenChange={setNewChatDialog}>

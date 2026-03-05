@@ -10658,6 +10658,94 @@ async def mark_message_read(
     return {"message": "Message marked as read"}
 
 
+# Admin: View all conversations in the system
+@api_router.get("/messages/admin/all-conversations")
+async def get_all_conversations_admin(user: dict = Depends(get_current_user)):
+    """Get all conversations in the system (admin only)"""
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Aggregate all unique conversation pairs
+    pipeline = [
+        {
+            "$group": {
+                "_id": {
+                    "pair": {
+                        "$cond": [
+                            {"$lt": ["$sender_id", "$recipient_id"]},
+                            ["$sender_id", "$recipient_id"],
+                            ["$recipient_id", "$sender_id"]
+                        ]
+                    }
+                },
+                "message_count": {"$sum": 1},
+                "last_message_at": {"$max": "$created_at"},
+                "first_message_at": {"$min": "$created_at"}
+            }
+        },
+        {"$sort": {"last_message_at": -1}}
+    ]
+    
+    conversations = await db.user_messages.aggregate(pipeline).to_list(100)
+    
+    # Get user details for each conversation
+    result = []
+    for conv in conversations:
+        pair = conv["_id"]["pair"]
+        if len(pair) != 2:
+            continue
+            
+        user1_id, user2_id = pair
+        
+        # Fetch user names
+        user1 = await db.users.find_one({"user_id": user1_id}, {"_id": 0, "name": 1, "email": 1})
+        user2 = await db.users.find_one({"user_id": user2_id}, {"_id": 0, "name": 1, "email": 1})
+        
+        result.append({
+            "user1_id": user1_id,
+            "user1_name": user1.get("name") if user1 else "Unknown",
+            "user1_email": user1.get("email") if user1 else "",
+            "user2_id": user2_id,
+            "user2_name": user2.get("name") if user2 else "Unknown",
+            "user2_email": user2.get("email") if user2 else "",
+            "message_count": conv["message_count"],
+            "last_message_at": conv["last_message_at"],
+            "first_message_at": conv["first_message_at"]
+        })
+    
+    return result
+
+
+@api_router.get("/messages/admin/conversation/{user1_id}/{user2_id}")
+async def get_conversation_messages_admin(
+    user1_id: str,
+    user2_id: str,
+    user: dict = Depends(get_current_user)
+):
+    """Get all messages between two users (admin only)"""
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Fetch messages between the two users
+    messages = await db.user_messages.find({
+        "$or": [
+            {"sender_id": user1_id, "recipient_id": user2_id},
+            {"sender_id": user2_id, "recipient_id": user1_id}
+        ]
+    }, {"_id": 0}).sort("created_at", 1).to_list(500)
+    
+    # Add sender names
+    user_cache = {}
+    for msg in messages:
+        sender_id = msg.get("sender_id")
+        if sender_id not in user_cache:
+            sender = await db.users.find_one({"user_id": sender_id}, {"_id": 0, "name": 1})
+            user_cache[sender_id] = sender.get("name") if sender else "Unknown"
+        msg["sender_name"] = user_cache[sender_id]
+    
+    return messages
+
+
 # ============== ENHANCED RECONCILIATION FEATURES ==============
 
 # Daily Reconciliation Dashboard
