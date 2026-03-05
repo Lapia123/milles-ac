@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { usePermissions } from '../context/usePermissions';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Badge } from './ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,8 +48,55 @@ export default function Layout() {
   const { canView, loading: permissionsLoading } = usePermissions();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationCounts, setNotificationCounts] = useState({
+    approvals: 0,
+    messages: 0
+  });
 
   const isDark = theme === 'dark';
+  const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+  // Fetch notification counts
+  const fetchNotificationCounts = useCallback(async () => {
+    if (!user || user.role === 'vendor') return;
+    
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    
+    const headers = { 'Authorization': `Bearer ${token}` };
+    
+    try {
+      // Fetch pending transactions count (for Approvals)
+      const txResponse = await fetch(`${API_URL}/api/transactions?status=pending&limit=500`, { headers });
+      if (txResponse.ok) {
+        const txData = await txResponse.json();
+        const pendingCount = Array.isArray(txData) ? txData.filter(t => t.status === 'pending').length : 0;
+        setNotificationCounts(prev => ({
+          ...prev,
+          approvals: pendingCount
+        }));
+      }
+
+      // Fetch unread messages count
+      const msgResponse = await fetch(`${API_URL}/api/messages/unread-count`, { headers });
+      if (msgResponse.ok) {
+        const msgData = await msgResponse.json();
+        setNotificationCounts(prev => ({
+          ...prev,
+          messages: msgData.count || 0
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching notification counts:', error);
+    }
+  }, [user, API_URL]);
+
+  // Fetch counts on mount and periodically
+  useEffect(() => {
+    fetchNotificationCounts();
+    const interval = setInterval(fetchNotificationCounts, 30000); // Every 30 seconds
+    return () => clearInterval(interval);
+  }, [fetchNotificationCounts]);
 
   const handleLogout = async () => {
     await logout();
@@ -98,27 +146,47 @@ export default function Layout() {
   // Select nav items based on role
   const navItems = isExchanger ? vendorNavItems : filteredNavItems;
 
-  const NavItem = ({ to, icon: Icon, label }) => (
-    <NavLink
-      to={to}
-      onClick={() => setSidebarOpen(false)}
-      className={({ isActive }) =>
-        `flex items-center gap-3 px-4 py-3 text-sm font-medium uppercase tracking-wider transition-all duration-200 ${
-          isActive
-            ? isDark 
-              ? 'bg-[#66FCF1]/10 text-[#66FCF1] border-l-2 border-[#66FCF1]'
-              : 'bg-blue-50 text-blue-600 border-l-2 border-blue-600'
-            : isDark
-              ? 'text-[#C5C6C7] hover:text-white hover:bg-white/5 border-l-2 border-transparent'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border-l-2 border-transparent'
-        }`
-      }
-      data-testid={`nav-${label.toLowerCase().replace(' ', '-')}`}
-    >
-      <Icon className="w-5 h-5" />
-      <span>{label}</span>
-    </NavLink>
-  );
+  // Get badge count for a nav item
+  const getBadgeCount = (label) => {
+    if (label === 'Approvals') return notificationCounts.approvals;
+    if (label === 'Messages') return notificationCounts.messages;
+    return 0;
+  };
+
+  const NavItem = ({ to, icon: Icon, label }) => {
+    const badgeCount = getBadgeCount(label);
+    
+    return (
+      <NavLink
+        to={to}
+        onClick={() => setSidebarOpen(false)}
+        className={({ isActive }) =>
+          `flex items-center gap-3 px-4 py-3 text-sm font-medium uppercase tracking-wider transition-all duration-200 ${
+            isActive
+              ? isDark 
+                ? 'bg-[#66FCF1]/10 text-[#66FCF1] border-l-2 border-[#66FCF1]'
+                : 'bg-blue-50 text-blue-600 border-l-2 border-blue-600'
+              : isDark
+                ? 'text-[#C5C6C7] hover:text-white hover:bg-white/5 border-l-2 border-transparent'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border-l-2 border-transparent'
+          }`
+        }
+        data-testid={`nav-${label.toLowerCase().replace(' ', '-')}`}
+      >
+        <Icon className="w-5 h-5" />
+        <span className="flex-1">{label}</span>
+        {badgeCount > 0 && (
+          <Badge 
+            variant="destructive" 
+            className="ml-auto h-5 min-w-[20px] flex items-center justify-center text-xs font-bold px-1.5 rounded-full"
+            data-testid={`badge-${label.toLowerCase().replace(' ', '-')}`}
+          >
+            {badgeCount > 99 ? '99+' : badgeCount}
+          </Badge>
+        )}
+      </NavLink>
+    );
+  };
 
   return (
     <div className={`min-h-screen flex theme-transition ${isDark ? 'bg-[#0B0C10]' : 'bg-[#F8FAFC]'}`}>

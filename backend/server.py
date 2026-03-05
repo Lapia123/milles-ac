@@ -10396,6 +10396,20 @@ async def get_calendar_reconciliation_history(
 
 # ============== INTERNAL MESSAGING SYSTEM ==============
 
+@api_router.get("/messages/unread-count")
+async def get_unread_messages_count(user: dict = Depends(get_current_user)):
+    """Get total count of unread messages for the current user"""
+    user_id = user["user_id"]
+    
+    # Count unread messages where user is the recipient
+    unread_count = await db.user_messages.count_documents({
+        "recipient_id": user_id,
+        "read": {"$ne": True}
+    })
+    
+    return {"count": unread_count}
+
+
 @api_router.get("/messages/conversations")
 async def get_conversations(user: dict = Depends(get_current_user)):
     """Get all conversations for the current user"""
