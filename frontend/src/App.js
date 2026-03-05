@@ -18,6 +18,7 @@ import IncomeExpenses from "./pages/IncomeExpenses";
 import Loans from "./pages/Loans";
 import Debts from "./pages/Debts";
 import Reconciliation from "./pages/Reconciliation";
+import Messages from "./pages/Messages";
 import AuditCompliance from "./pages/AuditCompliance";
 import LogsManagement from "./pages/Logs";
 import Layout from "./components/Layout";
@@ -107,6 +108,7 @@ function AppRouter() {
         <Route path="vendor-portal" element={<VendorDashboard />} />
         <Route path="reports" element={<Reports />} />
         <Route path="reconciliation" element={<Reconciliation />} />
+        <Route path="messages" element={<Messages />} />
         <Route path="settings" element={<Settings />} />
         <Route 
           path="roles" 

@@ -10382,13 +10382,117 @@ async def get_calendar_reconciliation_history(
 
 # ============== INTERNAL MESSAGING SYSTEM ==============
 
+@api_router.get("/messages/conversations")
+async def get_conversations(user: dict = Depends(get_current_user)):
+    """Get all conversations for the current user"""
+    user_id = user["user_id"]
+    
+    # Get all messages where user is sender or recipient
+    messages = await db.user_messages.find({
+        "$or": [{"sender_id": user_id}, {"recipient_id": user_id}]
+    }, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Group by conversation partner
+    conversations = {}
+    for msg in messages:
+        partner_id = msg["recipient_id"] if msg["sender_id"] == user_id else msg["sender_id"]
+        if partner_id not in conversations:
+            # Get partner info
+            partner = await db.users.find_one({"user_id": partner_id}, {"_id": 0, "user_id": 1, "name": 1, "email": 1, "role": 1})
+            if partner:
+                conversations[partner_id] = {
+                    "user_id": partner_id,
+                    "name": partner.get("name", "Unknown"),
+                    "email": partner.get("email", ""),
+                    "role": partner.get("role", "user"),
+                    "last_message": msg.get("content", "")[:50],
+                    "last_message_at": msg.get("created_at"),
+                    "unread_count": 0
+                }
+        
+        # Count unread messages
+        if msg["recipient_id"] == user_id and not msg.get("read"):
+            if partner_id in conversations:
+                conversations[partner_id]["unread_count"] += 1
+    
+    return list(conversations.values())
+
+
+@api_router.get("/messages/conversation/{recipient_id}")
+async def get_conversation_messages(
+    recipient_id: str,
+    limit: int = 100,
+    user: dict = Depends(get_current_user)
+):
+    """Get messages between current user and recipient"""
+    user_id = user["user_id"]
+    
+    messages = await db.user_messages.find({
+        "$or": [
+            {"sender_id": user_id, "recipient_id": recipient_id},
+            {"sender_id": recipient_id, "recipient_id": user_id}
+        ]
+    }, {"_id": 0}).sort("created_at", 1).to_list(limit)
+    
+    return messages
+
+
+@api_router.post("/messages/send")
+async def send_user_message(
+    request: Request,
+    data: dict = Body(...),
+    user: dict = Depends(get_current_user)
+):
+    """Send a message to another user"""
+    now = datetime.now(timezone.utc)
+    
+    recipient_id = data.get("recipient_id")
+    if not recipient_id:
+        raise HTTPException(status_code=400, detail="Recipient ID is required")
+    
+    # Verify recipient exists
+    recipient = await db.users.find_one({"user_id": recipient_id})
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Recipient not found")
+    
+    message_id = f"msg_{uuid.uuid4().hex[:12]}"
+    
+    message_doc = {
+        "message_id": message_id,
+        "sender_id": user["user_id"],
+        "sender_name": user["name"],
+        "recipient_id": recipient_id,
+        "recipient_name": recipient.get("name", "Unknown"),
+        "content": data.get("content", ""),
+        "read": False,
+        "created_at": now.isoformat()
+    }
+    
+    await db.user_messages.insert_one(message_doc)
+    
+    return {"message": "Message sent", "message_id": message_id}
+
+
+@api_router.put("/messages/mark-read/{recipient_id}")
+async def mark_conversation_read(
+    recipient_id: str,
+    user: dict = Depends(get_current_user)
+):
+    """Mark all messages from a sender as read"""
+    await db.user_messages.update_many(
+        {"sender_id": recipient_id, "recipient_id": user["user_id"], "read": False},
+        {"$set": {"read": True}}
+    )
+    return {"message": "Messages marked as read"}
+
+
 @api_router.get("/messages")
 async def get_messages(
     limit: int = 100,
     context_type: Optional[str] = None,
     user: dict = Depends(get_current_user)
 ):
-    """Get internal messages"""
+    """Get internal messages (legacy endpoint)"""
     query = {}
     if context_type:
         query["context.type"] = context_type
@@ -10403,7 +10507,7 @@ async def send_message(
     data: dict = Body(...),
     user: dict = Depends(get_current_user)
 ):
-    """Send an internal message"""
+    """Send an internal message (legacy endpoint)"""
     now = datetime.now(timezone.utc)
     
     message_id = f"msg_{uuid.uuid4().hex[:12]}"

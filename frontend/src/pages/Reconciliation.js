@@ -25,7 +25,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   CalendarDays, Building2, CreditCard, Store, Upload, FileSpreadsheet,
   CheckCircle2, AlertTriangle, Clock, History, Link2, Flag, Check, X,
-  MessageSquare, Send, ChevronLeft, Loader2, FileText, Download, Eye,
+  ChevronLeft, Loader2, FileText, Download, Eye,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -72,12 +72,6 @@ export default function Reconciliation() {
   
   // Daily summary
   const [dailySummary, setDailySummary] = useState(null);
-  
-  // Messaging
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [messageDialog, setMessageDialog] = useState(false);
-  const [allMessages, setAllMessages] = useState([]);
 
   // Fetch dates with transactions
   const fetchDatesWithTransactions = useCallback(async () => {
@@ -167,28 +161,14 @@ export default function Reconciliation() {
     }
   }, [getAuthHeaders]);
 
-  // Fetch messages
-  const fetchMessages = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/messages?limit=100`, {
-        headers: getAuthHeaders()
-      });
-      if (response.ok) {
-        setAllMessages(await response.json());
-      }
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-    }
-  }, [getAuthHeaders]);
-
   useEffect(() => {
     const init = async () => {
       setLoading(true);
-      await Promise.all([fetchDatesWithTransactions(), fetchAccounts(), fetchReconHistory(), fetchMessages()]);
+      await Promise.all([fetchDatesWithTransactions(), fetchAccounts(), fetchReconHistory()]);
       setLoading(false);
     };
     init();
-  }, [fetchDatesWithTransactions, fetchAccounts, fetchReconHistory, fetchMessages]);
+  }, [fetchDatesWithTransactions, fetchAccounts, fetchReconHistory]);
 
   useEffect(() => {
     if (selectedAccount) {
@@ -334,35 +314,6 @@ export default function Reconciliation() {
     }
   };
 
-  // Send message
-  const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
-
-    try {
-      const response = await fetch(`${API_URL}/api/messages`, {
-        method: 'POST',
-        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: newMessage,
-          context: selectedDate ? {
-            type: 'reconciliation',
-            date: selectedDate.toISOString().split('T')[0],
-            account_type: selectedType,
-            account_id: selectedAccount
-          } : null
-        })
-      });
-
-      if (response.ok) {
-        setNewMessage('');
-        fetchMessages();
-        toast.success('Message sent');
-      }
-    } catch (error) {
-      toast.error('Failed to send message');
-    }
-  };
-
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('en-US', { 
@@ -414,14 +365,9 @@ export default function Reconciliation() {
           <h1 className="text-2xl font-bold text-slate-800">Reconciliation</h1>
           <p className="text-slate-500 mt-1">Match and reconcile transactions</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setMessageDialog(true)} data-testid="messages-btn">
-            <MessageSquare className="w-4 h-4 mr-2" /> Messages
-          </Button>
-          <Button variant="outline" onClick={() => setActiveTab('history')} data-testid="history-btn">
-            <History className="w-4 h-4 mr-2" /> History
-          </Button>
-        </div>
+        <Button variant="outline" onClick={() => setActiveTab('history')} data-testid="history-btn">
+          <History className="w-4 h-4 mr-2" /> History
+        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -1016,51 +962,6 @@ export default function Reconciliation() {
               )}
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Messages Dialog */}
-      <Dialog open={messageDialog} onOpenChange={setMessageDialog}>
-        <DialogContent className="max-w-xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5" /> Internal Messages
-            </DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-3">
-              {allMessages.length === 0 ? (
-                <div className="text-center py-12 text-slate-400">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No messages yet</p>
-                </div>
-              ) : allMessages.map(msg => (
-                <div key={msg.message_id} className={`p-3 rounded-lg ${msg.sender_id === user?.user_id ? 'bg-blue-50 ml-8' : 'bg-slate-100 mr-8'}`}>
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="font-medium text-sm">{msg.sender_name}</span>
-                    <span className="text-xs text-slate-400">{formatDate(msg.created_at)}</span>
-                  </div>
-                  <p className="text-sm">{msg.content}</p>
-                  {msg.context && (
-                    <div className="mt-2 text-xs text-slate-500 bg-white/50 p-1 rounded">
-                      Re: {msg.context.type} - {msg.context.date}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-          <div className="flex gap-2 pt-2 border-t">
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message..."
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            />
-            <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
-              <Send className="w-4 h-4" />
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
     </div>

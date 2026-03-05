@@ -38,6 +38,7 @@ import {
   Shield,
   ArrowLeft,
   AlertTriangle,
+  MessageSquare,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -80,6 +81,7 @@ export default function Layout() {
     { to: '/psp', icon: CreditCard, label: 'PSP', module: 'psp' },
     { to: '/vendors', icon: Store, label: 'Exchangers', module: 'exchangers' },
     { to: '/reconciliation', icon: ArrowUpDown, label: 'Reconciliation', module: 'reconciliation' },
+    { to: '/messages', icon: MessageSquare, label: 'Messages', module: null },
     { to: '/audit', icon: ShieldCheck, label: 'Audit', module: 'audit' },
     { to: '/logs', icon: ScrollText, label: 'Logs', module: 'logs' },
     { to: '/reports', icon: BarChart3, label: 'Reports', module: 'reports' },
