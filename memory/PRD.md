@@ -12,6 +12,24 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 
 ### Date: Mar 5, 2026
 
+**Treasury Currency Conversion Fix (COMPLETE):**
+- **Request**: Fix incorrect currency conversion in treasury for withdrawals - should use manual exchange rate instead of live FX rates
+- **Affected Transactions**: REFD182CF5D (AED), REF810528D6 (INR)
+- **Root Cause**: When approving withdrawals, the system was converting USD back to treasury currency using live FX rates instead of using the original base_amount from the transaction
+- **Fix**: Modified `approve_transaction` in `backend/server.py`:
+  - Added priority check: if `base_currency` matches source account currency, use `base_amount` directly
+  - Updated treasury transaction record to use manual exchange_rate and original amounts
+- **Result**: 
+  - AED withdrawal: 5000 AED at rate 0.27 → Treasury deducts exactly 5000 AED (not live rate conversion)
+  - INR withdrawal: 8400 INR at rate 0.012 → Treasury deducts exactly 8400 INR (not live rate conversion)
+- **Verified**: Curl tests confirmed correct deductions
+
+**UI Bug Fixes - Dropdowns Investigation (NO BUG FOUND):**
+- **Report**: User reported dropdowns not working on Income & Expenses, Transactions, and Exchangers pages
+- **Investigation**: Tested all three pages via screenshots
+- **Result**: All dropdowns are functioning correctly - Currency dropdown, Transaction type dropdown, Account selection all work
+- **Status**: Marked as resolved (user may have experienced temporary issue or it was already fixed)
+
 **UI Bug Fixes - Messages & Reconciliation Pages (COMPLETE):**
 - **Request**: Fix non-working dropdowns on Messages and Reconciliation pages
 - **Root Cause 1 (Messages)**: `getAuthHeaders` function was missing from AuthContext.js export

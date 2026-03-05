@@ -5754,10 +5754,18 @@ async def approve_transaction(
             tx_currency = tx.get("currency", "USD")
             withdrawal_amount = tx["amount"]
             
-            # Convert if currencies are different
-            if tx_currency == "USD" and source_currency != "USD":
-                # Convert from USD to source account currency
-                withdrawal_amount = convert_from_usd(tx["amount"], source_currency)
+            # PRIORITY: Use manual base_amount if source currency matches base_currency
+            # This ensures the treasury uses the same amount the user entered (e.g., 10,000 AED)
+            if tx.get("base_currency") == source_currency and tx.get("base_amount"):
+                # Use the original base_amount from the transaction (manual entry)
+                withdrawal_amount = tx["base_amount"]
+            # Convert if currencies are different and no matching base_amount
+            elif tx_currency == "USD" and source_currency != "USD":
+                # Convert from USD to source account currency using manual exchange rate if available
+                if tx.get("exchange_rate") and tx.get("base_amount") and tx.get("base_currency") == source_currency:
+                    withdrawal_amount = tx["base_amount"]
+                else:
+                    withdrawal_amount = convert_from_usd(tx["amount"], source_currency)
             elif tx_currency != "USD" and source_currency == "USD":
                 # Convert from transaction currency to USD
                 withdrawal_amount = convert_to_usd(tx["amount"], tx_currency)
@@ -5782,15 +5790,21 @@ async def approve_transaction(
             
             # Record treasury transaction
             treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+            # Determine original amount/currency - use base_amount if available (manual entry)
+            original_amt = tx.get("base_amount") if tx.get("base_amount") else tx["amount"]
+            original_curr = tx.get("base_currency") if tx.get("base_currency") else tx_currency
+            # Use manual exchange rate if provided, otherwise calculate
+            manual_rate = tx.get("exchange_rate") if tx.get("exchange_rate") else (withdrawal_amount / tx["amount"] if tx["amount"] > 0 else 1)
+            
             treasury_tx_doc = {
                 "treasury_transaction_id": treasury_tx_id,
                 "account_id": source_account_id,
                 "transaction_type": "withdrawal",
                 "amount": -withdrawal_amount,
                 "currency": source_currency,
-                "original_amount": tx["amount"],
-                "original_currency": tx_currency,
-                "exchange_rate": withdrawal_amount / tx["amount"] if tx["amount"] > 0 else 1,
+                "original_amount": original_amt,
+                "original_currency": original_curr,
+                "exchange_rate": manual_rate,
                 "reference": f"Withdrawal: {tx.get('client_name', 'Client')} - {tx.get('reference', '')}",
                 "transaction_id": transaction_id,
                 "client_id": tx.get("client_id"),
