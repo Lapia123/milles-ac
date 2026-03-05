@@ -10063,7 +10063,9 @@ async def get_reconciliation_summary(user: dict = Depends(require_permission(Mod
 
 @api_router.get("/reconciliation/dates-with-transactions")
 async def get_dates_with_transactions(user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.VIEW))):
-    """Get all dates that have transactions for calendar display"""
+    """Get all dates that have transactions for calendar display.
+    Returns status breakdown by type (treasury, psp, exchanger) for each date.
+    """
     from datetime import datetime, timezone, timedelta
     
     # Get dates with transactions in the last 90 days
@@ -10078,25 +10080,47 @@ async def get_dates_with_transactions(user: dict = Depends(require_permission(Mo
     
     tx_dates = await db.transactions.aggregate(tx_dates_pipeline).to_list(100)
     
-    # Get reconciliation status for each date
+    # Get reconciliation records with account_type
     recon_records = await db.reconciliations.find(
         {"date": {"$gte": ninety_days_ago[:10]}},
-        {"_id": 0, "date": 1, "status": 1}
+        {"_id": 0, "date": 1, "status": 1, "account_type": 1}
     ).to_list(1000)
     
+    # Build status map with type breakdown
     status_map = {}
     for rec in recon_records:
         date = rec.get("date")
-        if date:
-            # If any are flagged, show flagged; else if any pending, show pending; else completed
-            current = status_map.get(date)
-            new_status = rec.get("status", "pending")
-            if current == "flagged" or new_status == "flagged":
-                status_map[date] = "flagged"
-            elif current == "pending" or new_status == "pending":
-                status_map[date] = "pending"
-            elif current is None:
-                status_map[date] = new_status
+        if not date:
+            continue
+            
+        if date not in status_map:
+            status_map[date] = {
+                "byType": {},
+                "overall": None
+            }
+        
+        account_type = rec.get("account_type", "").lower()
+        rec_status = rec.get("status", "pending")
+        
+        # Set status for this type
+        if account_type in ["treasury", "psp", "exchanger"]:
+            # If already exists, keep the worst status (flagged > pending > completed)
+            existing = status_map[date]["byType"].get(account_type)
+            if existing == "flagged" or rec_status == "flagged":
+                status_map[date]["byType"][account_type] = "flagged"
+            elif existing == "pending" or rec_status == "pending":
+                status_map[date]["byType"][account_type] = "pending"
+            else:
+                status_map[date]["byType"][account_type] = "completed"
+        
+        # Determine overall status (worst case: flagged > pending > completed)
+        current_overall = status_map[date]["overall"]
+        if rec_status == "flagged" or current_overall == "flagged":
+            status_map[date]["overall"] = "flagged"
+        elif rec_status == "pending" or current_overall == "pending":
+            status_map[date]["overall"] = "pending"
+        elif rec_status == "completed" and current_overall is None:
+            status_map[date]["overall"] = "completed"
     
     dates = [d["_id"] for d in tx_dates if d["_id"]]
     
@@ -10393,6 +10417,71 @@ async def get_calendar_reconciliation_history(
     """Get reconciliation history for calendar view"""
     records = await db.reconciliations.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
     return records
+
+
+@api_router.get("/reconciliation/calendar-status")
+async def get_calendar_status(
+    month: str = None,  # Format: YYYY-MM
+    user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.VIEW))
+):
+    """Get reconciliation status by date and type for calendar view.
+    Returns status breakdown by type (treasury, psp, exchanger) for each date.
+    """
+    from datetime import datetime, timedelta
+    from calendar import monthrange
+    
+    # Default to current month if not specified
+    if month:
+        year, month_num = map(int, month.split('-'))
+    else:
+        now = datetime.now()
+        year, month_num = now.year, now.month
+    
+    # Get date range for the month
+    _, last_day = monthrange(year, month_num)
+    start_date = f"{year}-{month_num:02d}-01"
+    end_date = f"{year}-{month_num:02d}-{last_day:02d}"
+    
+    # Query reconciliations for this month
+    reconciliations = await db.reconciliations.find({
+        "date": {"$gte": start_date, "$lte": end_date}
+    }, {"_id": 0}).to_list(1000)
+    
+    # Build status by date and type
+    status_by_date = {}
+    
+    for recon in reconciliations:
+        date = recon.get("date")
+        account_type = recon.get("account_type", "").lower()
+        recon_status = recon.get("status", "pending")
+        
+        if not date:
+            continue
+        
+        if date not in status_by_date:
+            status_by_date[date] = {
+                "byType": {},
+                "overall": None
+            }
+        
+        # Set status for this type
+        if account_type in ["treasury", "psp", "exchanger"]:
+            status_by_date[date]["byType"][account_type] = recon_status
+        
+        # Determine overall status (worst case: flagged > pending > completed)
+        current_overall = status_by_date[date]["overall"]
+        if recon_status == "flagged" or current_overall == "flagged":
+            status_by_date[date]["overall"] = "flagged"
+        elif recon_status == "pending" or current_overall == "pending":
+            status_by_date[date]["overall"] = "pending"
+        elif recon_status == "completed":
+            if current_overall is None:
+                status_by_date[date]["overall"] = "completed"
+    
+    return {
+        "month": f"{year}-{month_num:02d}",
+        "status": status_by_date
+    }
 
 
 # ============== INTERNAL MESSAGING SYSTEM ==============
