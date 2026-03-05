@@ -11563,7 +11563,6 @@ async def generate_daily_report_html():
                     </div>
                 </div>
                 
-                {await generate_reconciliation_section_html()}
             </div>
             
             <div class="footer">
