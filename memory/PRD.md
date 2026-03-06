@@ -27,6 +27,16 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - **Files Modified**: `backend/server.py`, `frontend/src/pages/VendorDashboard.js`, `frontend/src/pages/Vendors.js`
 - **Verified**: Testing agent iteration 35 - 100% backend/frontend pass
 
+**Reports Page Crash Fix (COMPLETE):**
+- **Issue**: Reports page crashed with `allTransactions.map is not a function` because `/api/transactions` returns paginated `{items: [...]}` not an array
+- **Fix**: Extracted `.items` from paginated responses for both transactions and income-expenses. Removed broken `/api/treasury/transactions` call (non-existent endpoint). Added `page_size=500` to get full dataset.
+- **Files Modified**: `frontend/src/pages/Reports.js`
+
+**Vendor Settlements 403 Fix (COMPLETE):**
+- **Issue**: VendorDashboard.js called `/api/vendors/{id}/settlements` which requires admin EXCHANGERS.VIEW permission, causing 403 for vendor users
+- **Fix**: Created new `/api/vendor/settlements` endpoint using `require_vendor` auth. Updated VendorDashboard.js to use it.
+- **Files Modified**: `backend/server.py`, `frontend/src/pages/VendorDashboard.js`
+
 ### Date: Mar 6, 2026
 
 **Loan Transaction Commission Calculation Fix (COMPLETE):**

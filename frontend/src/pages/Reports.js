@@ -248,12 +248,11 @@ export default function Reports() {
         dealingPnL: `${API_URL}/api/dealing-pnl?limit=30`,
         dealingPnLSummary: `${API_URL}/api/dealing-pnl/summary?days=30`,
         // Detailed data endpoints
-        allTransactions: `${API_URL}/api/transactions${queryStr ? `?${queryStr}` : ''}`,
+        allTransactions: `${API_URL}/api/transactions?page_size=500${queryStr ? `&${queryStr}` : ''}`,
         allIE: `${API_URL}/api/income-expenses?limit=500`,
-        allTreasuryTx: `${API_URL}/api/treasury/transactions?limit=500`,
       };
 
-      const [txRes, vendorRes, commRes, clientRes, treasuryRes, pspRes, financialRes, outstandingRes, debtsRes, chartRes, loansRes, loansDataRes, dealingRes, dealingSummaryRes, allTxRes, allIERes, allTreasuryTxRes] = await Promise.all([
+      const [txRes, vendorRes, commRes, clientRes, treasuryRes, pspRes, financialRes, outstandingRes, debtsRes, chartRes, loansRes, loansDataRes, dealingRes, dealingSummaryRes, allTxRes, allIERes] = await Promise.all([
         fetch(endpoints.transactions, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.vendors, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.commissions, { headers: getAuthHeaders(), credentials: 'include' }),
@@ -270,7 +269,6 @@ export default function Reports() {
         fetch(endpoints.dealingPnLSummary, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.allTransactions, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(endpoints.allIE, { headers: getAuthHeaders(), credentials: 'include' }),
-        fetch(endpoints.allTreasuryTx, { headers: getAuthHeaders(), credentials: 'include' }),
       ]);
 
       if (txRes.ok) setTransactionReport(await txRes.json());
@@ -288,11 +286,13 @@ export default function Reports() {
       if (dealingRes.ok) setDealingPnLReport(await dealingRes.json());
       if (dealingSummaryRes.ok) setDealingPnLSummary(await dealingSummaryRes.json());
       // Detailed data
-      if (allTxRes.ok) setAllTransactions(await allTxRes.json());
-      if (allIERes.ok) setAllIncomeExpenses(await allIERes.json());
-      if (allTreasuryTxRes.ok) {
-        const txData = await allTreasuryTxRes.json();
-        setAllTreasuryTransactions(Array.isArray(txData) ? txData : txData.transactions || []);
+      if (allTxRes.ok) {
+        const txData = await allTxRes.json();
+        setAllTransactions(Array.isArray(txData) ? txData : txData.items || []);
+      }
+      if (allIERes.ok) {
+        const ieData = await allIERes.json();
+        setAllIncomeExpenses(Array.isArray(ieData) ? ieData : ieData.items || []);
       }
     } catch (error) {
       console.error('Error fetching reports:', error);

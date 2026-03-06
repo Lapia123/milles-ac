@@ -4523,6 +4523,17 @@ async def get_my_vendor_info(user: dict = Depends(require_vendor)):
     return vendor
 
 
+@api_router.get("/vendor/settlements")
+async def get_vendor_my_settlements(user: dict = Depends(require_vendor)):
+    """Get settlements for the logged-in vendor"""
+    vendor = await db.vendors.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    settlements = await db.vendor_settlements.find({"vendor_id": vendor["vendor_id"]}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return settlements
+
+
+
 # Vendor: Get all assigned transactions with filters
 @api_router.get("/vendor/transactions")
 async def get_vendor_all_transactions(

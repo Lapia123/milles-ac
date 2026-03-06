@@ -146,7 +146,7 @@ export default function ExchangerDashboard() {
   const fetchSettlements = async () => {
     if (!vendorInfo) return;
     try {
-      const response = await fetch(`${API_URL}/api/vendors/${vendorInfo.vendor_id}/settlements`, {
+      const response = await fetch(`${API_URL}/api/vendor/settlements`, {
         headers: getAuthHeaders(),
         credentials: 'include'
       });
