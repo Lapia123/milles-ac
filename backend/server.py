@@ -3782,16 +3782,16 @@ async def get_vendors(
     search: Optional[str] = None,
     user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.VIEW))
 ):
-    # Build query
-    query = {}
-    if search:
-        query["vendor_name"] = {"$regex": search, "$options": "i"}
-    
-    # Check cache for list
+    # Check cache first
     cache_key = get_cache_key("vendors:list", page=page, page_size=page_size, search=search)
     cached = get_cached(cache_key)
     if cached:
         return cached
+    
+    # Build query
+    query = {}
+    if search:
+        query["vendor_name"] = {"$regex": search, "$options": "i"}
     
     # Get paginated vendors
     skip = (page - 1) * page_size
