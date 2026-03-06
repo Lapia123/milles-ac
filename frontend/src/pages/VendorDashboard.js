@@ -1175,15 +1175,10 @@ export default function ExchangerDashboard() {
                             <TableCell className="font-mono font-medium text-red-500">{!isIncome ? displayAmount?.toLocaleString() : '-'}</TableCell>
                             <TableCell><Badge className="bg-green-500/20 text-green-400">{displayCurrency}</Badge></TableCell>
                             <TableCell className="font-mono text-yellow-600 text-xs">
-                              {entry.vendor_commission_base_amount ? (
+                              {entry.vendor_commission_amount ? (
                                 <>
-                                  {entry.vendor_commission_base_amount?.toLocaleString()} {entry.vendor_commission_base_currency || entry.base_currency || entry.currency}
-                                  {entry.vendor_commission_amount && (
-                                    <span className="text-slate-400 block text-[10px]">(${entry.vendor_commission_amount?.toLocaleString()} USD)</span>
-                                  )}
+                                  {entry.vendor_commission_amount?.toLocaleString()} {entry.currency || 'USD'}
                                 </>
-                              ) : entry.vendor_commission_amount ? (
-                                <>${entry.vendor_commission_amount?.toLocaleString()}</>
                               ) : '-'}
                             </TableCell>
                             <TableCell className="text-slate-400 text-xs">-</TableCell>
@@ -1223,15 +1218,10 @@ export default function ExchangerDashboard() {
                             <TableCell className="font-mono font-medium text-red-500">{isDisbursement ? tx.amount?.toLocaleString() : '-'}</TableCell>
                             <TableCell><Badge className="bg-green-500/20 text-green-400">{tx.currency}</Badge></TableCell>
                             <TableCell className="font-mono text-yellow-600 text-xs">
-                              {tx.vendor_commission_base_amount ? (
+                              {tx.vendor_commission_amount ? (
                                 <>
-                                  {tx.vendor_commission_base_amount?.toLocaleString()} {tx.vendor_commission_base_currency || tx.currency}
-                                  {tx.vendor_commission_amount && (
-                                    <span className="text-slate-400 block text-[10px]">(${tx.vendor_commission_amount?.toLocaleString()} USD)</span>
-                                  )}
+                                  {tx.vendor_commission_amount?.toLocaleString()} {tx.currency || 'USD'}
                                 </>
-                              ) : tx.vendor_commission_amount ? (
-                                <>${tx.vendor_commission_amount?.toLocaleString()}</>
                               ) : '-'}
                             </TableCell>
                             <TableCell className="text-slate-600 text-xs max-w-[150px] truncate">{tx.bank_details || '-'}</TableCell>
