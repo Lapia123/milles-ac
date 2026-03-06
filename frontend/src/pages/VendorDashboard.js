@@ -1142,6 +1142,7 @@ export default function ExchangerDashboard() {
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-green-500">IN Amount</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-red-500">OUT Amount</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Currency</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-yellow-600">Commission</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Bank Details</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
@@ -1172,6 +1173,16 @@ export default function ExchangerDashboard() {
                             <TableCell className="font-mono font-medium text-green-500">{isIncome ? displayAmount?.toLocaleString() : '-'}</TableCell>
                             <TableCell className="font-mono font-medium text-red-500">{!isIncome ? displayAmount?.toLocaleString() : '-'}</TableCell>
                             <TableCell><Badge className="bg-green-500/20 text-green-400">{displayCurrency}</Badge></TableCell>
+                            <TableCell className="font-mono text-yellow-600 text-xs">
+                              {entry.vendor_commission_amount ? (
+                                <>
+                                  ${entry.vendor_commission_amount?.toLocaleString()}
+                                  {entry.vendor_commission_base_amount && entry.currency !== 'USD' && (
+                                    <span className="text-slate-400 block text-[10px]">({entry.vendor_commission_base_amount?.toLocaleString()} {entry.currency})</span>
+                                  )}
+                                </>
+                              ) : '-'}
+                            </TableCell>
                             <TableCell className="text-slate-400 text-xs">-</TableCell>
                             <TableCell>
                               {isPending ? <Badge className="bg-yellow-100 text-yellow-700 text-xs">PENDING</Badge> :
@@ -1208,6 +1219,16 @@ export default function ExchangerDashboard() {
                             <TableCell className="font-mono font-medium text-green-500">{!isDisbursement ? tx.amount?.toLocaleString() : '-'}</TableCell>
                             <TableCell className="font-mono font-medium text-red-500">{isDisbursement ? tx.amount?.toLocaleString() : '-'}</TableCell>
                             <TableCell><Badge className="bg-green-500/20 text-green-400">{tx.currency}</Badge></TableCell>
+                            <TableCell className="font-mono text-yellow-600 text-xs">
+                              {tx.vendor_commission_amount ? (
+                                <>
+                                  ${tx.vendor_commission_amount?.toLocaleString()}
+                                  {tx.vendor_commission_base_amount && tx.currency !== 'USD' && (
+                                    <span className="text-slate-400 block text-[10px]">({tx.vendor_commission_base_amount?.toLocaleString()} {tx.currency})</span>
+                                  )}
+                                </>
+                              ) : '-'}
+                            </TableCell>
                             <TableCell className="text-slate-600 text-xs max-w-[150px] truncate">{tx.bank_details || '-'}</TableCell>
                             <TableCell>
                               <Badge className={tx.status === 'pending_vendor' ? 'bg-yellow-100 text-yellow-700' : tx.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}>
