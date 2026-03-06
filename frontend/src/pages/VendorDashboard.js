@@ -497,7 +497,7 @@ export default function ExchangerDashboard() {
       });
       if (response.ok) {
         const data = await response.json();
-        toast.success(`Entry approved! Commission: ${data.vendor_commission_rate?.toFixed(2)}% = $${data.vendor_commission_amount?.toFixed(2)}`);
+        toast.success(`Entry approved! Commission: ${data.vendor_commission_rate?.toFixed(2)}% = ${data.vendor_commission_amount?.toFixed(2)} ${data.currency || 'USD'}`);
         fetchIeEntries();
         setIeActionDialog({ open: false, entry: null, type: '' });
         resetIeActionState();
@@ -1034,10 +1034,7 @@ export default function ExchangerDashboard() {
                       <TableCell>
                         {tx.vendor_commission_amount ? (
                           <div className="font-mono text-yellow-400">
-                            <span>${tx.vendor_commission_amount?.toLocaleString()}</span>
-                            {tx.vendor_commission_base_currency && tx.vendor_commission_base_currency !== 'USD' && tx.vendor_commission_base_amount && (
-                              <span className="text-slate-500 text-xs block">({tx.vendor_commission_base_amount?.toLocaleString()} {tx.vendor_commission_base_currency})</span>
-                            )}
+                            <span>{tx.vendor_commission_amount?.toLocaleString()} {tx.currency || 'USD'}</span>
                           </div>
                         ) : (
                           <span className="text-slate-500 text-xs">-</span>
