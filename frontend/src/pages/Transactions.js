@@ -100,6 +100,13 @@ export default function Transactions() {
   const [clientBankAccounts, setClientBankAccounts] = useState([]);
   const [selectedBankAccount, setSelectedBankAccount] = useState('new');
   const [clientSearchOpen, setClientSearchOpen] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pageSize, setPageSize] = useState(25);
+  
   const [formData, setFormData] = useState({
     client_id: '',
     transaction_type: 'deposit',
@@ -138,15 +145,36 @@ export default function Transactions() {
     };
   };
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (page = currentPage) => {
     try {
-      let url = `${API_URL}/api/transactions?limit=500`;
-      if (typeFilter && typeFilter !== 'all') url += `&transaction_type=${typeFilter}`;
-      if (statusFilter && statusFilter !== 'all') url += `&status=${statusFilter}`;
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('page_size', pageSize.toString());
+      
+      if (typeFilter && typeFilter !== 'all') params.append('transaction_type', typeFilter);
+      if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
+      if (searchTerm) params.append('search', searchTerm);
+      if (dateFrom) params.append('date_from', dateFrom);
+      if (dateTo) params.append('date_to', dateTo);
 
-      const response = await fetch(url, { headers: getAuthHeaders(), credentials: 'include' });
+      const response = await fetch(`${API_URL}/api/transactions?${params.toString()}`, { 
+        headers: getAuthHeaders(), 
+        credentials: 'include' 
+      });
+      
       if (response.ok) {
-        setTransactions(await response.json());
+        const data = await response.json();
+        // Handle both paginated and array responses
+        if (Array.isArray(data)) {
+          setTransactions(data);
+          setTotalItems(data.length);
+          setTotalPages(1);
+        } else {
+          setTransactions(data.items || []);
+          setTotalItems(data.total || 0);
+          setTotalPages(data.total_pages || 1);
+        }
       }
     } catch (error) {
       console.error('Error fetching transactions:', error);

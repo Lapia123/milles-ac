@@ -194,23 +194,29 @@ export default function Exchangers() {
 
   const fetchVendorIeEntries = async (vendorId) => {
     try {
-      const response = await fetch(`${API_URL}/api/income-expenses?vendor_id=${vendorId}`, { headers: getAuthHeaders(), credentials: 'include' });
+      const response = await fetch(`${API_URL}/api/income-expenses?vendor_id=${vendorId}&page_size=100`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setVendorIeEntries(await response.json());
+        const data = await response.json();
+        // Handle paginated response
+        setVendorIeEntries(Array.isArray(data) ? data : (data.items || []));
       }
     } catch (error) {
       console.error('Error fetching vendor I&E entries:', error);
+      setVendorIeEntries([]);
     }
   };
 
   const fetchVendorLoanTransactions = async (vendorId) => {
     try {
-      const response = await fetch(`${API_URL}/api/loans/transactions?vendor_id=${vendorId}`, { headers: getAuthHeaders(), credentials: 'include' });
+      const response = await fetch(`${API_URL}/api/loans/transactions?vendor_id=${vendorId}&page_size=100`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setVendorLoanTxs(await response.json());
+        const data = await response.json();
+        // Handle paginated response
+        setVendorLoanTxs(Array.isArray(data) ? data : (data.items || data.transactions || []));
       }
     } catch (error) {
       console.error('Error fetching vendor loan transactions:', error);
+      setVendorLoanTxs([]);
     }
   };
 

@@ -5319,21 +5319,19 @@ async def get_transactions(
     client_id: Optional[str] = None,
     transaction_type: Optional[str] = None,
     status: Optional[str] = None,
+    search: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     page: int = 1,
-    page_size: int = 50,
+    page_size: int = 25,
     limit: int = 100
 ):
+    """Get transactions with pagination and filtering"""
     # Use page_size if provided, otherwise fall back to limit for backwards compatibility
     actual_limit = min(page_size, limit, 100)  # Cap at 100 for performance
     skip = (page - 1) * actual_limit
     
-    # Try cache first
-    cache_key = get_cache_key("transactions:list", page=page, page_size=actual_limit, 
-                              client_id=client_id, transaction_type=transaction_type, status=status)
-    cached = get_cached(cache_key)
-    if cached:
-        return cached
-    
+    # Build query
     query = {}
     if client_id:
         query["client_id"] = client_id
@@ -5341,6 +5339,31 @@ async def get_transactions(
         query["transaction_type"] = transaction_type
     if status:
         query["status"] = status
+    if date_from:
+        query["created_at"] = {"$gte": date_from}
+    if date_to:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = date_to + "T23:59:59"
+        else:
+            query["created_at"] = {"$lte": date_to + "T23:59:59"}
+    if search:
+        query["$or"] = [
+            {"reference": {"$regex": search, "$options": "i"}},
+            {"client_name": {"$regex": search, "$options": "i"}},
+            {"transaction_id": {"$regex": search, "$options": "i"}}
+        ]
+    
+    # Try cache first
+    cache_key = get_cache_key("transactions:list", page=page, page_size=actual_limit, 
+                              client_id=client_id, transaction_type=transaction_type, status=status,
+                              search=search, date_from=date_from, date_to=date_to)
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+    
+    # Get total count for pagination
+    total = await db.transactions.count_documents(query)
+    total_pages = (total + actual_limit - 1) // actual_limit
     
     transactions = await db.transactions.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(actual_limit).to_list(actual_limit)
     
@@ -5354,10 +5377,18 @@ async def get_transactions(
     for tx in transactions:
         tx["client_email"] = clients_map.get(tx.get("client_id"), "")
     
-    # Cache the result
-    set_cached(cache_key, transactions, CACHE_TTL.get('transactions', 30))
+    result = {
+        "items": transactions,
+        "total": total,
+        "page": page,
+        "page_size": actual_limit,
+        "total_pages": total_pages
+    }
     
-    return transactions
+    # Cache the result
+    set_cached(cache_key, result, CACHE_TTL.get('transactions', 30))
+    
+    return result
 
 @api_router.get("/transactions/pending")
 async def get_pending_transactions(user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.VIEW))):
