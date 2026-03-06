@@ -10,6 +10,29 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - PSP Management, Exchangers/Vendors, Income & Expenses, Loans, Debts
 - Reconciliation Phase 1, Audit & Compliance, Logs, Reports, Settings
 
+### Date: Mar 6, 2026
+
+**Exchanger Portal Commission Column (COMPLETE):**
+- **Request**: Add commissions column to Exchanger Portal "Other Transactions" table
+- **Implementation**:
+  - Added "Commission" column header (yellow styled) to VendorDashboard.js
+  - Commission cell displays `vendor_commission_amount` in USD
+  - Shows base currency amount when currency is not USD
+- **Files Modified**:
+  - `frontend/src/pages/VendorDashboard.js` - Lines 1145-1147 (header), 1176-1185 (I&E data), 1223-1227 (Loan data)
+- **Verified**: Testing agent confirmed implementation ✅
+
+**Transactions Page Pagination UI (COMPLETE):**
+- **Request**: Add pagination controls to Transactions page for better performance
+- **Implementation**:
+  - Added Pagination component imports
+  - Pagination controls show when totalPages > 1
+  - Shows "Showing X of Y transactions" counter
+- **Backend**: Already supported pagination (items, total, page, page_size, total_pages)
+- **Files Modified**:
+  - `frontend/src/pages/Transactions.js` - Lines 39-45 (imports), 112-116 (state), 1564-1627 (UI)
+- **Verified**: Testing agent confirmed implementation ✅
+
 ### Date: Mar 5, 2026
 
 **Reconciliation History Filters & Export (COMPLETE):**
