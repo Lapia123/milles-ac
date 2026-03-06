@@ -1362,6 +1362,7 @@ export default function Reconciliation() {
                             variant="ghost" 
                             size="sm"
                             onClick={() => setHistoryDialog({ open: true, item })}
+                            data-testid={`view-history-${item.recon_id}`}
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -1417,27 +1418,67 @@ export default function Reconciliation() {
       <Dialog open={historyDialog.open} onOpenChange={(open) => setHistoryDialog({ ...historyDialog, open })}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Reconciliation Details</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5" /> Reconciliation Details
+            </DialogTitle>
           </DialogHeader>
           {historyDialog.item && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><strong>Date:</strong> {formatDate(historyDialog.item.date)}</div>
-                <div><strong>Type:</strong> {historyDialog.item.account_type}</div>
-                <div><strong>Account:</strong> {getAccountName(historyDialog.item.account_type, historyDialog.item.account_id)}</div>
-                <div><strong>Status:</strong> {historyDialog.item.status}</div>
-                <div><strong>Matched:</strong> {historyDialog.item.matched_count || 0}</div>
-                <div><strong>Flagged:</strong> {historyDialog.item.flagged_count || 0}</div>
-                <div className="col-span-2"><strong>By:</strong> {historyDialog.item.created_by_name} on {formatDate(historyDialog.item.created_at)}</div>
+                <div className="p-3 bg-slate-50 rounded">
+                  <span className="text-slate-500 text-xs">Date</span>
+                  <p className="font-medium">{formatDate(historyDialog.item.date)}</p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded">
+                  <span className="text-slate-500 text-xs">Type</span>
+                  <p className="font-medium capitalize">{historyDialog.item.account_type}</p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded">
+                  <span className="text-slate-500 text-xs">Account</span>
+                  <p className="font-medium">{getAccountName(historyDialog.item.account_type, historyDialog.item.account_id)}</p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded">
+                  <span className="text-slate-500 text-xs">Status</span>
+                  <Badge className={
+                    historyDialog.item.status === 'completed' ? 'bg-green-100 text-green-700' :
+                    historyDialog.item.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-red-100 text-red-700'
+                  }>
+                    {historyDialog.item.status}
+                  </Badge>
+                </div>
+                <div className="p-3 bg-green-50 rounded">
+                  <span className="text-green-600 text-xs">Matched Entries</span>
+                  <p className="font-medium text-green-700 text-lg">{historyDialog.item.matched_count || 0}</p>
+                </div>
+                <div className="p-3 bg-red-50 rounded">
+                  <span className="text-red-600 text-xs">Flagged Entries</span>
+                  <p className="font-medium text-red-700 text-lg">{historyDialog.item.flagged_count || 0}</p>
+                </div>
               </div>
+              
+              <div className="border-t pt-4">
+                <div className="text-sm text-slate-500">
+                  <span className="font-medium">Created by:</span> {historyDialog.item.created_by_name}
+                </div>
+                <div className="text-sm text-slate-500">
+                  <span className="font-medium">Created at:</span> {formatDate(historyDialog.item.created_at)}
+                </div>
+              </div>
+              
               {historyDialog.item.remarks && (
-                <div>
-                  <strong>Remarks:</strong>
-                  <p className="mt-1 text-sm bg-slate-50 p-3 rounded">{historyDialog.item.remarks}</p>
+                <div className="border-t pt-4">
+                  <span className="text-sm font-medium text-slate-600">Remarks:</span>
+                  <p className="mt-2 text-sm bg-slate-50 p-3 rounded">{historyDialog.item.remarks}</p>
                 </div>
               )}
             </div>
           )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHistoryDialog({ open: false, item: null })}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
