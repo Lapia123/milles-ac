@@ -7903,6 +7903,22 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
         # Disbursing from vendor - no I&E entry needed (loan tracking is separate from I&E)
         pass
     
+    # Calculate commission for vendor disbursement (OUT = withdrawal type)
+    vendor_commission_rate = 0.0
+    vendor_commission_amount = 0.0
+    vendor_commission_base_amount = 0.0
+    vendor_commission_base_currency = None
+    
+    if disburse_vendor:
+        # Use withdrawal commission rate for disbursement (OUT)
+        vendor_commission_rate = disburse_vendor.get("withdrawal_commission_cash", disburse_vendor.get("withdrawal_commission", 0))
+        if vendor_commission_rate > 0:
+            # Calculate commission in base currency
+            vendor_commission_base_amount = round(loan_data.amount * vendor_commission_rate / 100, 2)
+            vendor_commission_base_currency = loan_data.currency
+            # Convert to USD
+            vendor_commission_amount = round(convert_to_usd(vendor_commission_base_amount, loan_data.currency), 2)
+    
     # Record loan transaction - set pending_vendor status if disbursing from Exchanger
     tx_status = "pending_vendor" if loan_data.disburse_from_vendor_id else "completed"
     await db.loan_transactions.insert_one({
@@ -7918,6 +7934,10 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
         "borrower_name": loan_data.borrower_name,
         "status": tx_status,
         "description": f"Loan disbursement to {loan_data.borrower_name}",
+        "vendor_commission_rate": vendor_commission_rate if vendor_commission_rate > 0 else None,
+        "vendor_commission_amount": vendor_commission_amount if vendor_commission_amount > 0 else None,
+        "vendor_commission_base_amount": vendor_commission_base_amount if vendor_commission_base_amount > 0 else None,
+        "vendor_commission_base_currency": vendor_commission_base_currency,
         "created_at": now.isoformat(),
         "created_by": user["user_id"],
         "created_by_name": user["name"]
@@ -8093,6 +8113,22 @@ async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanR
         # Crediting to vendor - no I&E entry needed (loan tracking is separate from I&E)
         pass
     
+    # Calculate commission for vendor repayment (IN = deposit type)
+    vendor_commission_rate = 0.0
+    vendor_commission_amount = 0.0
+    vendor_commission_base_amount = 0.0
+    vendor_commission_base_currency = None
+    
+    if credit_vendor:
+        # Use deposit commission rate for repayment (IN)
+        vendor_commission_rate = credit_vendor.get("deposit_commission_cash", credit_vendor.get("deposit_commission", 0))
+        if vendor_commission_rate > 0:
+            # Calculate commission in base currency
+            vendor_commission_base_amount = round(repayment.amount * vendor_commission_rate / 100, 2)
+            vendor_commission_base_currency = repayment.currency
+            # Convert to USD
+            vendor_commission_amount = round(convert_to_usd(vendor_commission_base_amount, repayment.currency), 2)
+    
     # Record loan transaction - set pending_vendor status if crediting to Exchanger
     tx_status = "pending_vendor" if repayment.credit_to_vendor_id else "completed"
     await db.loan_transactions.insert_one({
@@ -8107,6 +8143,10 @@ async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanR
         "borrower_name": loan.get("borrower_name"),
         "status": tx_status,
         "description": f"Repayment from {loan['borrower_name']}",
+        "vendor_commission_rate": vendor_commission_rate if vendor_commission_rate > 0 else None,
+        "vendor_commission_amount": vendor_commission_amount if vendor_commission_amount > 0 else None,
+        "vendor_commission_base_amount": vendor_commission_base_amount if vendor_commission_base_amount > 0 else None,
+        "vendor_commission_base_currency": vendor_commission_base_currency,
         "created_at": now.isoformat(),
         "created_by": user["user_id"],
         "created_by_name": user["name"]

@@ -12,6 +12,21 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 
 ### Date: Mar 6, 2026
 
+**Loan Transaction Commission Calculation Fix (COMPLETE):**
+- **Request**: Fix commission not calculating for loan transactions (e.g., 5223FD22EF79)
+- **Root Cause**: Loan transactions were created without calculating vendor commission
+- **Fix Implemented**:
+  - Added commission calculation to loan disbursement (uses vendor's withdrawal commission rate)
+  - Added commission calculation to loan repayment (uses vendor's deposit commission rate)
+  - Updated existing loan transactions with missing commission data
+- **Transaction 5223FD22EF79 Updated**:
+  - Amount: 10,000 INR
+  - Commission Rate: 4.0%
+  - Commission (USD): $4.36
+  - Commission (Base): 400.0 INR
+- **Files Modified**: `backend/server.py` (loan creation and repayment endpoints)
+- **Verified**: Database updated, API returns correct commission data ✅
+
 **Exchanger Portal Commission Column (COMPLETE):**
 - **Request**: Add commissions column to Exchanger Portal "Other Transactions" table
 - **Implementation**:
