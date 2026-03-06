@@ -4752,10 +4752,7 @@ async def vendor_approve_transaction(request: Request, transaction_id: str, user
         else:
             commission_rate = vendor.get("withdrawal_commission", 0) / 100
     
-    # Calculate commission on the USD amount
-    commission_amount_usd = round(tx["amount"] * commission_rate, 2)
-    
-    # Calculate commission in base currency (original currency)
+    # Calculate commission in BASE/PAYMENT currency (original currency)
     base_amount = tx.get("base_amount") or tx["amount"]
     base_currency = tx.get("base_currency") or tx.get("currency", "USD")
     commission_amount_base = round(base_amount * commission_rate, 2)
@@ -4766,7 +4763,7 @@ async def vendor_approve_transaction(request: Request, transaction_id: str, user
         "processed_by_name": user["name"],
         "processed_at": now.isoformat(),
         "vendor_commission_rate": commission_rate * 100,  # Store as percentage
-        "vendor_commission_amount": commission_amount_usd,  # USD amount
+        "vendor_commission_amount": commission_amount_base,  # Payment currency amount (same as base)
         "vendor_commission_base_amount": commission_amount_base,  # Base currency amount
         "vendor_commission_base_currency": base_currency  # Base currency code
     }
@@ -5635,9 +5632,12 @@ async def create_transaction(
             else:
                 vendor_commission_rate = vendor_info.get("withdrawal_commission", 0)
         if vendor_commission_rate > 0:
-            vendor_commission_amount = round(usd_amount * vendor_commission_rate / 100, 2)
+            # Calculate commission in PAYMENT CURRENCY (base_amount), not USD
             v_base = base_amount if (base_currency and base_currency != "USD" and base_amount) else usd_amount
+            v_currency = base_currency if (base_currency and base_currency != "USD") else "USD"
             vendor_commission_base_amount = round(v_base * vendor_commission_rate / 100, 2)
+            # Store the same amount in vendor_commission_amount (payment currency amount)
+            vendor_commission_amount = vendor_commission_base_amount
 
     tx_doc = {
         "transaction_id": tx_id,
