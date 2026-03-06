@@ -3918,6 +3918,8 @@ async def get_vendors(
             ensure_currency(currency)
             
             amount = ltx.get("amount", 0)
+            commission_base = ltx.get("vendor_commission_base_amount", 0)
+            commission_amount = ltx.get("vendor_commission_amount", 0)
             
             if loan_entry["type"] == "in":  # Repayment TO vendor
                 currency_breakdown[currency]["deposits_base"] += amount
@@ -3925,6 +3927,10 @@ async def get_vendors(
             else:  # Disbursement FROM vendor
                 currency_breakdown[currency]["withdrawals_base"] += amount
                 currency_breakdown[currency]["withdrawals_usd"] += amount
+            
+            # Add loan commission
+            currency_breakdown[currency]["commission_base"] += commission_base
+            currency_breakdown[currency]["commission_usd"] += commission_amount
         
         # Build settlement by currency for list view
         settlement_by_currency = []
@@ -4062,7 +4068,10 @@ async def get_vendor(vendor_id: str, user: dict = Depends(require_permission(Mod
             },
             "loan_out_count": {
                 "$sum": {"$cond": [{"$eq": ["$source_vendor_id", vendor_id]}, 1, 0]}
-            }
+            },
+            # Loan commission (in transaction currency)
+            "loan_commission_amount": {"$sum": {"$ifNull": ["$vendor_commission_amount", 0]}},
+            "loan_commission_base": {"$sum": {"$ifNull": ["$vendor_commission_base_amount", 0]}}
         }}
     ]
     loan_tx_by_currency = await db.loan_transactions.aggregate(loan_tx_pipeline).to_list(100)
@@ -4154,6 +4163,9 @@ async def get_vendor(vendor_id: str, user: dict = Depends(require_permission(Mod
         currency_data[curr]["withdrawal_amount"] += loan_item["loan_out_amount"]
         currency_data[curr]["withdrawal_usd"] += loan_item["loan_out_amount"]  # Assuming USD for loans
         currency_data[curr]["withdrawal_count"] += loan_item["loan_out_count"]
+        # Add loan commission to total commission
+        currency_data[curr]["commission_usd"] += loan_item.get("loan_commission_amount", 0)
+        currency_data[curr]["commission_base"] += loan_item.get("loan_commission_base", 0)
     
     vendor["settlement_by_currency"] = [
         {
@@ -4394,7 +4406,10 @@ async def get_my_vendor_info(user: dict = Depends(require_vendor)):
             },
             "loan_out_count": {
                 "$sum": {"$cond": [{"$eq": ["$source_vendor_id", vendor["vendor_id"]]}, 1, 0]}
-            }
+            },
+            # Loan commission (in transaction currency)
+            "loan_commission_amount": {"$sum": {"$ifNull": ["$vendor_commission_amount", 0]}},
+            "loan_commission_base": {"$sum": {"$ifNull": ["$vendor_commission_base_amount", 0]}}
         }}
     ]
     loan_tx_by_currency = await db.loan_transactions.aggregate(loan_tx_pipeline).to_list(100)
@@ -4485,6 +4500,9 @@ async def get_my_vendor_info(user: dict = Depends(require_vendor)):
         currency_data[curr]["withdrawal_amount"] += loan_item["loan_out_amount"]
         currency_data[curr]["withdrawal_usd"] += loan_item["loan_out_amount"]
         currency_data[curr]["withdrawal_count"] += loan_item["loan_out_count"]
+        # Add loan commission to total commission
+        currency_data[curr]["commission_usd"] += loan_item.get("loan_commission_amount", 0)
+        currency_data[curr]["commission_base"] += loan_item.get("loan_commission_base", 0)
     
     vendor["settlement_by_currency"] = [
         {
@@ -7926,7 +7944,8 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
     
     if disburse_vendor:
         # Use withdrawal commission rate for disbursement (OUT)
-        vendor_commission_rate = disburse_vendor.get("withdrawal_commission_cash", disburse_vendor.get("withdrawal_commission", 0))
+        # Default to bank transfer commission rate
+        vendor_commission_rate = disburse_vendor.get("withdrawal_commission", 0)
         if vendor_commission_rate > 0:
             # Calculate commission in payment currency (loan_data.currency)
             vendor_commission_amount = round(loan_data.amount * vendor_commission_rate / 100, 2)
@@ -8135,7 +8154,8 @@ async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanR
     
     if credit_vendor:
         # Use deposit commission rate for repayment (IN)
-        vendor_commission_rate = credit_vendor.get("deposit_commission_cash", credit_vendor.get("deposit_commission", 0))
+        # Default to bank transfer commission rate
+        vendor_commission_rate = credit_vendor.get("deposit_commission", 0)
         if vendor_commission_rate > 0:
             # Calculate commission in payment currency (repayment.currency)
             vendor_commission_amount = round(repayment.amount * vendor_commission_rate / 100, 2)
