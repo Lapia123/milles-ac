@@ -4756,6 +4756,8 @@ async def vendor_approve_transaction(request: Request, transaction_id: str, user
     base_amount = tx.get("base_amount") or tx["amount"]
     base_currency = tx.get("base_currency") or tx.get("currency", "USD")
     commission_amount_base = round(base_amount * commission_rate, 2)
+    # Calculate USD commission separately
+    commission_amount_usd = round(tx["amount"] * commission_rate, 2)
     
     updates = {
         "status": TransactionStatus.APPROVED,
@@ -4763,8 +4765,8 @@ async def vendor_approve_transaction(request: Request, transaction_id: str, user
         "processed_by_name": user["name"],
         "processed_at": now.isoformat(),
         "vendor_commission_rate": commission_rate * 100,  # Store as percentage
-        "vendor_commission_amount": commission_amount_base,  # Payment currency amount (same as base)
-        "vendor_commission_base_amount": commission_amount_base,  # Base currency amount
+        "vendor_commission_amount": commission_amount_usd,  # USD commission amount
+        "vendor_commission_base_amount": commission_amount_base,  # Base currency commission amount
         "vendor_commission_base_currency": base_currency  # Base currency code
     }
     
@@ -5632,12 +5634,11 @@ async def create_transaction(
             else:
                 vendor_commission_rate = vendor_info.get("withdrawal_commission", 0)
         if vendor_commission_rate > 0:
-            # Calculate commission in PAYMENT CURRENCY (base_amount), not USD
+            # Calculate commission in BASE currency (base_amount), not USD
             v_base = base_amount if (base_currency and base_currency != "USD" and base_amount) else usd_amount
-            v_currency = base_currency if (base_currency and base_currency != "USD") else "USD"
             vendor_commission_base_amount = round(v_base * vendor_commission_rate / 100, 2)
-            # Store the same amount in vendor_commission_amount (payment currency amount)
-            vendor_commission_amount = vendor_commission_base_amount
+            # USD commission (separate)
+            vendor_commission_amount = round(usd_amount * vendor_commission_rate / 100, 2)
 
     tx_doc = {
         "transaction_id": tx_id,
@@ -6788,9 +6789,10 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, request: Reques
             # If base_amount exists, use it (actual INR amount), otherwise use amount
             actual_tx_amount = entry_data.base_amount if entry_data.base_amount else entry_data.amount
             actual_tx_currency = entry_data.base_currency if entry_data.base_currency else entry_data.currency
-            ie_commission_amount = round(actual_tx_amount * ie_commission_rate / 100, 2)
-            ie_commission_base_amount = ie_commission_amount
+            ie_commission_base_amount = round(actual_tx_amount * ie_commission_rate / 100, 2)
             ie_commission_base_currency = actual_tx_currency
+            # USD commission (separate from base currency commission)
+            ie_commission_amount = round(amount_usd * ie_commission_rate / 100, 2)
 
     entry_doc = {
         "entry_id": entry_id,
@@ -7152,9 +7154,11 @@ async def vendor_approve_ie(request: Request, entry_id: str, user: dict = Depend
             commission_rate = vendor.get("withdrawal_commission", 0) / 100
     
     amount = entry.get("amount", 0)
+    base_amount = entry.get("base_amount") or amount
+    base_currency = entry.get("base_currency") or entry.get("currency", "USD")
     amount_usd = entry.get("amount_usd") or convert_to_usd(amount, entry.get("currency", "USD"))
     commission_amount_usd = round(amount_usd * commission_rate, 2)
-    commission_amount_base = round(amount * commission_rate, 2)
+    commission_amount_base = round(base_amount * commission_rate, 2)
     
     # Update entry status with commission details
     await db.income_expenses.update_one(
@@ -7166,7 +7170,7 @@ async def vendor_approve_ie(request: Request, entry_id: str, user: dict = Depend
             "vendor_commission_rate": commission_rate * 100,
             "vendor_commission_amount": commission_amount_usd,
             "vendor_commission_base_amount": commission_amount_base,
-            "vendor_commission_base_currency": entry.get("currency", "USD"),
+            "vendor_commission_base_currency": base_currency,
             "amount_usd": amount_usd,
         }}
     )
