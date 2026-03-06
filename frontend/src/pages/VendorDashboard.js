@@ -1174,7 +1174,7 @@ export default function ExchangerDashboard() {
                             <TableCell className="font-mono text-yellow-600 text-xs">
                               {entry.vendor_commission_amount ? (
                                 <>
-                                  {entry.vendor_commission_amount?.toLocaleString()} {entry.currency || 'USD'}
+                                  {entry.vendor_commission_amount?.toLocaleString()} {entry.vendor_commission_base_currency || entry.base_currency || entry.currency}
                                 </>
                               ) : '-'}
                             </TableCell>
@@ -1217,7 +1217,7 @@ export default function ExchangerDashboard() {
                             <TableCell className="font-mono text-yellow-600 text-xs">
                               {tx.vendor_commission_amount ? (
                                 <>
-                                  {tx.vendor_commission_amount?.toLocaleString()} {tx.currency || 'USD'}
+                                  {tx.vendor_commission_amount?.toLocaleString()} {tx.vendor_commission_base_currency || tx.currency}
                                 </>
                               ) : '-'}
                             </TableCell>

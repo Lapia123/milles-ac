@@ -1220,7 +1220,7 @@ export default function Exchangers() {
                                 <TableCell>
                                   {entry.vendor_commission_amount ? (
                                     <span className="font-mono text-xs text-yellow-600">
-                                      {entry.vendor_commission_amount?.toLocaleString()} {entry.currency || 'USD'}
+                                      {entry.vendor_commission_amount?.toLocaleString()} {entry.vendor_commission_base_currency || entry.base_currency || entry.currency}
                                     </span>
                                   ) : <span className="text-slate-400 text-xs">-</span>}
                                 </TableCell>

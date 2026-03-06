@@ -6766,11 +6766,13 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, request: Reques
             else:
                 ie_commission_rate = vendor_info.get("withdrawal_commission", 0)
         if ie_commission_rate > 0:
-            # Commission calculated on PAYMENT currency amount (not base, not USD)
-            ie_commission_amount = round(entry_data.amount * ie_commission_rate / 100, 2)
-            # Store commission in payment currency
+            # Commission calculated on BASE currency amount (the actual transaction currency)
+            # If base_amount exists, use it (actual INR amount), otherwise use amount
+            actual_tx_amount = entry_data.base_amount if entry_data.base_amount else entry_data.amount
+            actual_tx_currency = entry_data.base_currency if entry_data.base_currency else entry_data.currency
+            ie_commission_amount = round(actual_tx_amount * ie_commission_rate / 100, 2)
             ie_commission_base_amount = ie_commission_amount
-            ie_commission_base_currency = entry_data.currency
+            ie_commission_base_currency = actual_tx_currency
 
     entry_doc = {
         "entry_id": entry_id,
@@ -6806,7 +6808,7 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, request: Reques
         "vendor_commission_rate": ie_commission_rate if ie_commission_rate > 0 else None,
         "vendor_commission_amount": ie_commission_amount if ie_commission_amount > 0 else None,
         "vendor_commission_base_amount": ie_commission_base_amount if ie_commission_base_amount > 0 else None,
-        "vendor_commission_base_currency": entry_data.currency if ie_commission_base_amount > 0 else None,
+        "vendor_commission_base_currency": ie_commission_base_currency if ie_commission_base_amount > 0 else None,
         "status": status,
         "converted_to_loan": False,
         "loan_id": None,
