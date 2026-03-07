@@ -167,7 +167,8 @@ export default function LPAccounts() {
     try {
       const response = await fetch(`${API_URL}/api/lp/${lpId}/transactions`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setLPTransactions(await response.json());
+        const data = await response.json();
+        setLPTransactions(Array.isArray(data) ? data : data.items || []);
       }
     } catch (error) {
       console.error('Error fetching LP transactions:', error);

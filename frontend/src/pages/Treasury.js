@@ -173,7 +173,8 @@ export default function Treasury() {
       
       const response = await fetch(url, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setHistoryData(await response.json());
+        const data = await response.json();
+        setHistoryData(Array.isArray(data) ? data : data.items || []);
       }
     } catch (error) {
       console.error('Error fetching history:', error);

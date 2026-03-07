@@ -185,7 +185,8 @@ export default function Loans() {
       
       const response = await fetch(url, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setLoans(await response.json());
+        const data = await response.json();
+        setLoans(Array.isArray(data) ? data : data.items || []);
       }
     } catch (error) {
       console.error('Error fetching loans:', error);
@@ -246,7 +247,8 @@ export default function Loans() {
       if (loanId) url += `&loan_id=${loanId}`;
       const response = await fetch(url, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setLoanTransactions(await response.json());
+        const data = await response.json();
+        setLoanTransactions(Array.isArray(data) ? data : data.items || []);
       }
     } catch (error) {
       console.error('Error fetching transactions:', error);
