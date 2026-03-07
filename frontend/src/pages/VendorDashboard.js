@@ -93,6 +93,19 @@ export default function ExchangerDashboard() {
   const [loanTxCaptchaAnswer, setLoanTxCaptchaAnswer] = useState('');
   const [loanTxRejectionReason, setLoanTxRejectionReason] = useState('');
 
+  // Other Transactions filter state
+  const [otSearchQuery, setOtSearchQuery] = useState('');
+  const [otStatusFilter, setOtStatusFilter] = useState('all');
+  const [otSourceFilter, setOtSourceFilter] = useState('all');
+  const [otDateFrom, setOtDateFrom] = useState('');
+  const [otDateTo, setOtDateTo] = useState('');
+
+  // Settlement History filter state
+  const [stSearchQuery, setStSearchQuery] = useState('');
+  const [stStatusFilter, setStStatusFilter] = useState('all');
+  const [stDateFrom, setStDateFrom] = useState('');
+  const [stDateTo, setStDateTo] = useState('');
+
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
     return {
@@ -656,6 +669,147 @@ export default function ExchangerDashboard() {
     setTxSearchQuery('');
   };
 
+  // Other Transactions filtered data
+  const filteredOtherTransactions = [...ieEntries, ...loanTransactions.map(tx => ({...tx, _isLoan: true}))].filter(item => {
+    const q = otSearchQuery.toLowerCase();
+    if (otStatusFilter !== 'all') {
+      const status = item.status === 'pending_vendor' ? 'pending' : item.status;
+      if (status !== otStatusFilter) return false;
+    }
+    if (otSourceFilter === 'ie' && item._isLoan) return false;
+    if (otSourceFilter === 'loan' && !item._isLoan) return false;
+    if (otDateFrom) {
+      const itemDate = (item.date || item.created_at || '').slice(0, 10);
+      if (itemDate < otDateFrom) return false;
+    }
+    if (otDateTo) {
+      const itemDate = (item.date || item.created_at || '').slice(0, 10);
+      if (itemDate > otDateTo) return false;
+    }
+    if (q) {
+      return (
+        (item.entry_id || item.transaction_id || '').toLowerCase().includes(q) ||
+        (item.category || item.borrower_name || '').toLowerCase().includes(q) ||
+        (item.base_currency || item.currency || '').toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
+  // Settlement History filtered data
+  const filteredSettlements = settlements.filter(s => {
+    if (stStatusFilter !== 'all' && s.status !== stStatusFilter) return false;
+    if (stDateFrom) {
+      const sDate = (s.settled_at || s.created_at || '').slice(0, 10);
+      if (sDate < stDateFrom) return false;
+    }
+    if (stDateTo) {
+      const sDate = (s.settled_at || s.created_at || '').slice(0, 10);
+      if (sDate > stDateTo) return false;
+    }
+    if (stSearchQuery) {
+      const q = stSearchQuery.toLowerCase();
+      return (
+        (s.settlement_id || '').toLowerCase().includes(q) ||
+        (s.settlement_type || '').toLowerCase().includes(q) ||
+        (s.source_currency || '').toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
+  // Export Other Transactions
+  const exportOtherTransactions = (format) => {
+    const items = filteredOtherTransactions.map(item => {
+      const isLoan = item._isLoan;
+      const isIncome = !isLoan && item.entry_type === 'income';
+      const isDisbursement = isLoan && item.transaction_type === 'disbursement';
+      return {
+        reference: (item.entry_id || item.transaction_id || '').slice(-12).toUpperCase(),
+        source: isLoan ? 'Loan' : 'I&E',
+        type: isLoan ? (isDisbursement ? 'OUT' : 'IN') : (isIncome ? 'IN' : 'OUT'),
+        category: item.category?.replace('_', ' ') || item.borrower_name || '-',
+        amount: item.base_amount || item.amount || 0,
+        currency: item.base_currency || item.currency || 'USD',
+        commission: item.vendor_commission_base_amount || 0,
+        status: item.status === 'pending_vendor' ? 'Pending' : item.status,
+        date: (item.date || item.created_at || '').slice(0, 10),
+      };
+    });
+    if (format === 'csv') {
+      const headers = 'Reference,Source,Type,Category,Amount,Currency,Commission,Status,Date';
+      const rows = items.map(r => `${r.reference},${r.source},${r.type},"${r.category}",${r.amount},${r.currency},${r.commission},${r.status},${r.date}`);
+      const csv = [headers, ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'other_transactions.csv'; a.click();
+      URL.revokeObjectURL(url);
+      toast.success('CSV exported');
+    } else {
+      // PDF - print-friendly HTML
+      const win = window.open('', '_blank');
+      win.document.write(`<html><head><title>Other Transactions</title><style>
+        body { font-family: Arial, sans-serif; padding: 30px; color: #333; }
+        h1 { font-size: 18px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th { background: #0B3D91; color: #fff; padding: 8px; text-align: left; text-transform: uppercase; font-size: 10px; }
+        td { padding: 6px 8px; border-bottom: 1px solid #eee; }
+        tr:nth-child(even) td { background: #f8f8f8; }
+      </style></head><body><h1>Other Transactions - ${vendorInfo?.vendor_name || 'Exchanger'}</h1>
+      <table><tr><th>Ref</th><th>Source</th><th>Type</th><th>Category</th><th>Amount</th><th>Currency</th><th>Commission</th><th>Status</th><th>Date</th></tr>`);
+      items.forEach(r => {
+        win.document.write(`<tr><td>${r.reference}</td><td>${r.source}</td><td>${r.type}</td><td>${r.category}</td><td>${r.amount.toLocaleString()}</td><td>${r.currency}</td><td>${r.commission.toLocaleString()}</td><td>${r.status}</td><td>${r.date}</td></tr>`);
+      });
+      win.document.write('</table></body></html>');
+      win.document.close();
+      win.print();
+    }
+  };
+
+  // Export Settlements
+  const exportSettlements = (format) => {
+    const items = filteredSettlements.map(s => ({
+      id: s.settlement_id,
+      type: s.settlement_type || '-',
+      gross: s.gross_amount || 0,
+      commission: s.commission_amount || 0,
+      charges: s.charges_amount || 0,
+      net: s.settlement_amount || 0,
+      currency: s.source_currency || s.destination_currency || 'USD',
+      status: s.status,
+      date: (s.settled_at || s.created_at || '').slice(0, 10),
+    }));
+    if (format === 'csv') {
+      const headers = 'Settlement ID,Type,Gross,Commission,Charges,Net Settled,Currency,Status,Date';
+      const rows = items.map(r => `${r.id},${r.type},${r.gross},${r.commission},${r.charges},${r.net},${r.currency},${r.status},${r.date}`);
+      const csv = [headers, ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'settlements.csv'; a.click();
+      URL.revokeObjectURL(url);
+      toast.success('CSV exported');
+    } else {
+      const win = window.open('', '_blank');
+      win.document.write(`<html><head><title>Settlement History</title><style>
+        body { font-family: Arial, sans-serif; padding: 30px; color: #333; }
+        h1 { font-size: 18px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th { background: #0B3D91; color: #fff; padding: 8px; text-align: left; text-transform: uppercase; font-size: 10px; }
+        td { padding: 6px 8px; border-bottom: 1px solid #eee; }
+        tr:nth-child(even) td { background: #f8f8f8; }
+      </style></head><body><h1>Settlement History - ${vendorInfo?.vendor_name || 'Exchanger'}</h1>
+      <table><tr><th>ID</th><th>Type</th><th>Gross</th><th>Commission</th><th>Charges</th><th>Net</th><th>Currency</th><th>Status</th><th>Date</th></tr>`);
+      items.forEach(r => {
+        win.document.write(`<tr><td>${r.id}</td><td>${r.type}</td><td>${r.gross.toLocaleString()}</td><td>${r.commission.toLocaleString()}</td><td>${r.charges.toLocaleString()}</td><td>${r.net.toLocaleString()}</td><td>${r.currency}</td><td>${r.status}</td><td>${r.date}</td></tr>`);
+      });
+      win.document.write('</table></body></html>');
+      win.document.close();
+      win.print();
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -850,92 +1004,6 @@ export default function ExchangerDashboard() {
 
         {/* Transactions Tab */}
         <TabsContent value="transactions" className="mt-4">
-      {/* Filters Bar */}
-      <Card className="bg-white border-slate-200 mb-4">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap items-end gap-3">
-            {/* Search */}
-            <div className="flex-1 min-w-[180px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Search</label>
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Ref, client, currency..."
-                  value={txSearchQuery}
-                  onChange={e => setTxSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-800"
-                  data-testid="tx-search-input"
-                />
-              </div>
-            </div>
-            {/* Status */}
-            <div className="min-w-[130px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Status</label>
-              <select
-                value={txStatusFilter}
-                onChange={e => setTxStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-1 focus:ring-blue-500 bg-white text-slate-800"
-                data-testid="tx-status-filter"
-              >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
-            {/* Type */}
-            <div className="min-w-[130px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Type</label>
-              <select
-                value={txTypeFilter}
-                onChange={e => setTxTypeFilter(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-1 focus:ring-blue-500 bg-white text-slate-800"
-                data-testid="tx-type-filter"
-              >
-                <option value="all">All Types</option>
-                <option value="deposit">Deposit</option>
-                <option value="withdrawal">Withdrawal</option>
-              </select>
-            </div>
-            {/* Date From */}
-            <div className="min-w-[140px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">From</label>
-              <input
-                type="date"
-                value={txDateFrom}
-                onChange={e => setTxDateFrom(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-1 focus:ring-blue-500 bg-white text-slate-800"
-                data-testid="tx-date-from"
-              />
-            </div>
-            {/* Date To */}
-            <div className="min-w-[140px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">To</label>
-              <input
-                type="date"
-                value={txDateTo}
-                onChange={e => setTxDateTo(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-1 focus:ring-blue-500 bg-white text-slate-800"
-                data-testid="tx-date-to"
-              />
-            </div>
-            {/* Clear Filters */}
-            {(txStatusFilter !== 'all' || txTypeFilter !== 'all' || txDateFrom || txDateTo || txSearchQuery) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-                className="text-slate-500 hover:text-red-500 text-xs"
-                data-testid="tx-clear-filters"
-              >
-                <XCircle className="w-3.5 h-3.5 mr-1" /> Clear
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Transactions Table */}
       <Card className="bg-white border-slate-200">
@@ -1110,23 +1178,80 @@ export default function ExchangerDashboard() {
 
         {/* Other Transactions Tab - Merged Income/Expenses and Loan Transactions */}
         <TabsContent value="other-transactions" className="mt-4">
+          {/* Filters */}
+          <div className="flex flex-wrap items-end gap-3 mb-4">
+            <div className="flex-1 min-w-[160px]">
+              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Search</label>
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input type="text" placeholder="Ref, category, currency..." value={otSearchQuery} onChange={e => setOtSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="ot-search-input" />
+              </div>
+            </div>
+            <div className="min-w-[110px]">
+              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Status</label>
+              <select value={otStatusFilter} onChange={e => setOtStatusFilter(e.target.value)}
+                className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="ot-status-filter">
+                <option value="all">All</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            <div className="min-w-[100px]">
+              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Source</label>
+              <select value={otSourceFilter} onChange={e => setOtSourceFilter(e.target.value)}
+                className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="ot-source-filter">
+                <option value="all">All</option>
+                <option value="ie">I&E</option>
+                <option value="loan">Loan</option>
+              </select>
+            </div>
+            <div className="min-w-[120px]">
+              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">From</label>
+              <input type="date" value={otDateFrom} onChange={e => setOtDateFrom(e.target.value)}
+                className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="ot-date-from" />
+            </div>
+            <div className="min-w-[120px]">
+              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">To</label>
+              <input type="date" value={otDateTo} onChange={e => setOtDateTo(e.target.value)}
+                className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="ot-date-to" />
+            </div>
+            {(otSearchQuery || otStatusFilter !== 'all' || otSourceFilter !== 'all' || otDateFrom || otDateTo) && (
+              <Button variant="ghost" size="sm" onClick={() => { setOtSearchQuery(''); setOtStatusFilter('all'); setOtSourceFilter('all'); setOtDateFrom(''); setOtDateTo(''); }}
+                className="text-slate-500 hover:text-red-500 text-xs"><XCircle className="w-3.5 h-3.5 mr-1" /> Clear</Button>
+            )}
+          </div>
           <Card className="bg-white border-slate-200" data-testid="vendor-other-transactions">
-            <CardHeader>
+            <CardHeader className="py-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-xl text-slate-800 uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
-                  <Wallet className="w-5 h-5 text-purple-600" />
-                  Other Transactions
-                </CardTitle>
-                <Badge className={`${(pendingIeCount + pendingLoanTxCount) > 0 ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-500'}`}>
-                  {pendingIeCount + pendingLoanTxCount} pending
-                </Badge>
+                <div>
+                  <CardTitle className="text-xl text-slate-800 uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+                    <Wallet className="w-5 h-5 text-purple-600" />
+                    Other Transactions
+                  </CardTitle>
+                  <p className="text-xs text-slate-400 mt-1">{filteredOtherTransactions.length} entries</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className={`${(pendingIeCount + pendingLoanTxCount) > 0 ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-500'}`}>
+                    {pendingIeCount + pendingLoanTxCount} pending
+                  </Badge>
+                  <Button variant="outline" size="sm" onClick={() => exportOtherTransactions('csv')} disabled={filteredOtherTransactions.length === 0}
+                    className="text-green-600 border-green-200 hover:bg-green-50 text-xs" data-testid="ot-export-xlsx">
+                    <Download className="w-3.5 h-3.5 mr-1" /> Excel
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => exportOtherTransactions('pdf')} disabled={filteredOtherTransactions.length === 0}
+                    className="text-red-600 border-red-200 hover:bg-red-50 text-xs" data-testid="ot-export-pdf">
+                    <FileText className="w-3.5 h-3.5 mr-1" /> PDF
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              {(ieEntries.length === 0 && loanTransactions.length === 0) ? (
+              {filteredOtherTransactions.length === 0 ? (
                 <div className="text-center py-10 text-slate-500">
                   <Receipt className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm">No other transactions assigned to you</p>
+                  <p className="text-sm">No other transactions found</p>
                 </div>
               ) : (
                 <ScrollArea className="h-[500px]">
@@ -1148,96 +1273,87 @@ export default function ExchangerDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {/* Income/Expense Entries */}
-                      {ieEntries.map((entry) => {
-                        const isIncome = entry.entry_type === 'income';
-                        // Use base_currency/base_amount (payment currency) if available, otherwise fall back to amount/currency
-                        const displayCurrency = entry.base_currency || entry.currency || 'USD';
-                        const displayAmount = entry.base_amount || entry.amount;
-                        const isPending = entry.status === 'pending_vendor';
-                        return (
-                          <TableRow key={entry.entry_id} className={`border-slate-200 hover:bg-slate-100 ${isPending ? 'bg-amber-50' : ''}`}>
-                            <TableCell>
-                              <span className="font-mono text-slate-800">{entry.entry_id?.slice(-10)?.toUpperCase()}</span>
-                            </TableCell>
-                            <TableCell><Badge className="bg-amber-100 text-amber-700 text-xs">I&E</Badge></TableCell>
-                            <TableCell>
-                              <span className={`flex items-center gap-1 font-bold ${isIncome ? 'text-green-500' : 'text-red-500'}`}>
-                                {isIncome ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
-                                <span>{isIncome ? 'IN' : 'OUT'}</span>
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-slate-800 text-sm capitalize">{entry.category?.replace('_', ' ') || '-'}</TableCell>
-                            <TableCell className="font-mono font-medium text-green-500">{isIncome ? displayAmount?.toLocaleString() : '-'}</TableCell>
-                            <TableCell className="font-mono font-medium text-red-500">{!isIncome ? displayAmount?.toLocaleString() : '-'}</TableCell>
-                            <TableCell><Badge className="bg-green-500/20 text-green-400">{displayCurrency}</Badge></TableCell>
-                            <TableCell className="font-mono text-yellow-600 text-xs">
-                              {entry.vendor_commission_base_amount ? (
-                                <>
-                                  {entry.vendor_commission_base_amount?.toLocaleString()} {entry.vendor_commission_base_currency || entry.base_currency || entry.currency}
-                                </>
-                              ) : '-'}
-                            </TableCell>
-                            <TableCell className="text-slate-400 text-xs">-</TableCell>
-                            <TableCell>
-                              {isPending ? <Badge className="bg-yellow-100 text-yellow-700 text-xs">PENDING</Badge> :
-                               entry.status === 'approved' || entry.status === 'completed' ? <Badge className="bg-green-100 text-green-700 text-xs">APPROVED</Badge> :
-                               <Badge className="bg-slate-100 text-slate-600 text-xs">{entry.status}</Badge>}
-                            </TableCell>
-                            <TableCell className="text-slate-500 text-xs">{formatDate(entry.date || entry.created_at)}</TableCell>
-                            <TableCell className="text-right">
-                              {isPending && (
-                                <div className="flex gap-1 justify-end">
-                                  <Button variant="ghost" size="sm" onClick={() => openIeAction(entry, 'approve')} className="text-green-600 hover:bg-green-100 h-7 px-2" title="Approve"><CheckCircle className="w-4 h-4" /></Button>
-                                  <Button variant="ghost" size="sm" onClick={() => openIeAction(entry, 'reject')} className="text-red-600 hover:bg-red-100 h-7 px-2" title="Reject"><XCircle className="w-4 h-4" /></Button>
-                                </div>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                      {/* Loan Transactions */}
-                      {loanTransactions.map((tx) => {
-                        const isDisbursement = tx.transaction_type === 'disbursement';
-                        const isPending = tx.status === 'pending_vendor';
-                        return (
-                          <TableRow key={tx.transaction_id} className={`border-slate-200 hover:bg-slate-100 ${isPending ? 'bg-purple-50' : ''}`}>
-                            <TableCell className="font-mono text-slate-800 text-sm">{tx.transaction_id?.slice(-12).toUpperCase()}</TableCell>
-                            <TableCell><Badge className="bg-purple-100 text-purple-700 text-xs">Loan</Badge></TableCell>
-                            <TableCell>
-                              <span className={`flex items-center gap-1 font-bold ${isDisbursement ? 'text-red-500' : 'text-green-500'}`}>
-                                {isDisbursement ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                                <span>{isDisbursement ? 'OUT' : 'IN'}</span>
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-slate-800 text-sm">{tx.borrower_name || '-'}</TableCell>
-                            <TableCell className="font-mono font-medium text-green-500">{!isDisbursement ? tx.amount?.toLocaleString() : '-'}</TableCell>
-                            <TableCell className="font-mono font-medium text-red-500">{isDisbursement ? tx.amount?.toLocaleString() : '-'}</TableCell>
-                            <TableCell><Badge className="bg-green-500/20 text-green-400">{tx.currency}</Badge></TableCell>
-                            <TableCell className="font-mono text-yellow-600 text-xs">
-                              {tx.vendor_commission_base_amount ? (
-                                <>
-                                  {tx.vendor_commission_base_amount?.toLocaleString()} {tx.vendor_commission_base_currency || tx.currency}
-                                </>
-                              ) : '-'}
-                            </TableCell>
-                            <TableCell className="text-slate-600 text-xs max-w-[150px] truncate">{tx.bank_details || '-'}</TableCell>
-                            <TableCell>
-                              <Badge className={tx.status === 'pending_vendor' ? 'bg-yellow-100 text-yellow-700' : tx.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}>
-                                {tx.status === 'pending_vendor' ? 'PENDING' : tx.status?.toUpperCase()}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-slate-500 text-xs">{formatDate(tx.created_at)}</TableCell>
-                            <TableCell className="text-right">
-                              {isPending && (
-                                <div className="flex gap-1 justify-end">
-                                  <Button variant="ghost" size="sm" onClick={() => handleLoanTxAction(tx, 'approve')} className="text-green-600 hover:bg-green-100 h-7 px-2" title="Approve"><CheckCircle className="w-4 h-4" /></Button>
-                                  <Button variant="ghost" size="sm" onClick={() => handleLoanTxAction(tx, 'reject')} className="text-red-600 hover:bg-red-100 h-7 px-2" title="Reject"><XCircle className="w-4 h-4" /></Button>
-                                </div>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
+                      {filteredOtherTransactions.map((item) => {
+                        const isLoan = item._isLoan;
+                        if (isLoan) {
+                          const tx = item;
+                          const isDisbursement = tx.transaction_type === 'disbursement';
+                          const isPending = tx.status === 'pending_vendor';
+                          return (
+                            <TableRow key={tx.transaction_id} className={`border-slate-200 hover:bg-slate-100 ${isPending ? 'bg-purple-50' : ''}`}>
+                              <TableCell className="font-mono text-slate-800 text-sm">{tx.transaction_id?.slice(-12).toUpperCase()}</TableCell>
+                              <TableCell><Badge className="bg-purple-100 text-purple-700 text-xs">Loan</Badge></TableCell>
+                              <TableCell>
+                                <span className={`flex items-center gap-1 font-bold ${isDisbursement ? 'text-red-500' : 'text-green-500'}`}>
+                                  {isDisbursement ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                                  <span>{isDisbursement ? 'OUT' : 'IN'}</span>
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-slate-800 text-sm">{tx.borrower_name || '-'}</TableCell>
+                              <TableCell className="font-mono font-medium text-green-500">{!isDisbursement ? tx.amount?.toLocaleString() : '-'}</TableCell>
+                              <TableCell className="font-mono font-medium text-red-500">{isDisbursement ? tx.amount?.toLocaleString() : '-'}</TableCell>
+                              <TableCell><Badge className="bg-green-500/20 text-green-400">{tx.currency}</Badge></TableCell>
+                              <TableCell className="font-mono text-yellow-600 text-xs">
+                                {tx.vendor_commission_base_amount ? (<>{tx.vendor_commission_base_amount?.toLocaleString()} {tx.vendor_commission_base_currency || tx.currency}</>) : '-'}
+                              </TableCell>
+                              <TableCell className="text-slate-600 text-xs max-w-[150px] truncate">{tx.bank_details || '-'}</TableCell>
+                              <TableCell>
+                                <Badge className={tx.status === 'pending_vendor' ? 'bg-yellow-100 text-yellow-700' : tx.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}>
+                                  {tx.status === 'pending_vendor' ? 'PENDING' : tx.status?.toUpperCase()}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-slate-500 text-xs">{formatDate(tx.created_at)}</TableCell>
+                              <TableCell className="text-right">
+                                {isPending && (
+                                  <div className="flex gap-1 justify-end">
+                                    <Button variant="ghost" size="sm" onClick={() => handleLoanTxAction(tx, 'approve')} className="text-green-600 hover:bg-green-100 h-7 px-2" title="Approve"><CheckCircle className="w-4 h-4" /></Button>
+                                    <Button variant="ghost" size="sm" onClick={() => handleLoanTxAction(tx, 'reject')} className="text-red-600 hover:bg-red-100 h-7 px-2" title="Reject"><XCircle className="w-4 h-4" /></Button>
+                                  </div>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        } else {
+                          const entry = item;
+                          const isIncome = entry.entry_type === 'income';
+                          const displayCurrency = entry.base_currency || entry.currency || 'USD';
+                          const displayAmount = entry.base_amount || entry.amount;
+                          const isPending = entry.status === 'pending_vendor';
+                          return (
+                            <TableRow key={entry.entry_id} className={`border-slate-200 hover:bg-slate-100 ${isPending ? 'bg-amber-50' : ''}`}>
+                              <TableCell><span className="font-mono text-slate-800">{entry.entry_id?.slice(-10)?.toUpperCase()}</span></TableCell>
+                              <TableCell><Badge className="bg-amber-100 text-amber-700 text-xs">I&E</Badge></TableCell>
+                              <TableCell>
+                                <span className={`flex items-center gap-1 font-bold ${isIncome ? 'text-green-500' : 'text-red-500'}`}>
+                                  {isIncome ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                                  <span>{isIncome ? 'IN' : 'OUT'}</span>
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-slate-800 text-sm capitalize">{entry.category?.replace('_', ' ') || '-'}</TableCell>
+                              <TableCell className="font-mono font-medium text-green-500">{isIncome ? displayAmount?.toLocaleString() : '-'}</TableCell>
+                              <TableCell className="font-mono font-medium text-red-500">{!isIncome ? displayAmount?.toLocaleString() : '-'}</TableCell>
+                              <TableCell><Badge className="bg-green-500/20 text-green-400">{displayCurrency}</Badge></TableCell>
+                              <TableCell className="font-mono text-yellow-600 text-xs">
+                                {entry.vendor_commission_base_amount ? (<>{entry.vendor_commission_base_amount?.toLocaleString()} {entry.vendor_commission_base_currency || entry.base_currency || entry.currency}</>) : '-'}
+                              </TableCell>
+                              <TableCell className="text-slate-400 text-xs">-</TableCell>
+                              <TableCell>
+                                {isPending ? <Badge className="bg-yellow-100 text-yellow-700 text-xs">PENDING</Badge> :
+                                 entry.status === 'approved' || entry.status === 'completed' ? <Badge className="bg-green-100 text-green-700 text-xs">APPROVED</Badge> :
+                                 <Badge className="bg-slate-100 text-slate-600 text-xs">{entry.status}</Badge>}
+                              </TableCell>
+                              <TableCell className="text-slate-500 text-xs">{formatDate(entry.date || entry.created_at)}</TableCell>
+                              <TableCell className="text-right">
+                                {isPending && (
+                                  <div className="flex gap-1 justify-end">
+                                    <Button variant="ghost" size="sm" onClick={() => openIeAction(entry, 'approve')} className="text-green-600 hover:bg-green-100 h-7 px-2" title="Approve"><CheckCircle className="w-4 h-4" /></Button>
+                                    <Button variant="ghost" size="sm" onClick={() => openIeAction(entry, 'reject')} className="text-red-600 hover:bg-red-100 h-7 px-2" title="Reject"><XCircle className="w-4 h-4" /></Button>
+                                  </div>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        }
                       })}
                     </TableBody>
                   </Table>
@@ -1249,22 +1365,70 @@ export default function ExchangerDashboard() {
 
         {/* Settlements Tab */}
         <TabsContent value="settlements" className="mt-4">
+      {/* Filters */}
+      <div className="flex flex-wrap items-end gap-3 mb-4">
+        <div className="flex-1 min-w-[160px]">
+          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Search</label>
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input type="text" placeholder="ID, type, currency..." value={stSearchQuery} onChange={e => setStSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="st-search-input" />
+          </div>
+        </div>
+        <div className="min-w-[110px]">
+          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Status</label>
+          <select value={stStatusFilter} onChange={e => setStStatusFilter(e.target.value)}
+            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="st-status-filter">
+            <option value="all">All</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div className="min-w-[120px]">
+          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">From</label>
+          <input type="date" value={stDateFrom} onChange={e => setStDateFrom(e.target.value)}
+            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="st-date-from" />
+        </div>
+        <div className="min-w-[120px]">
+          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">To</label>
+          <input type="date" value={stDateTo} onChange={e => setStDateTo(e.target.value)}
+            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="st-date-to" />
+        </div>
+        {(stSearchQuery || stStatusFilter !== 'all' || stDateFrom || stDateTo) && (
+          <Button variant="ghost" size="sm" onClick={() => { setStSearchQuery(''); setStStatusFilter('all'); setStDateFrom(''); setStDateTo(''); }}
+            className="text-slate-500 hover:text-red-500 text-xs"><XCircle className="w-3.5 h-3.5 mr-1" /> Clear</Button>
+        )}
+      </div>
       {/* Settlement History */}
       <Card className="bg-white border-slate-200" data-testid="vendor-settlement-history">
-        <CardHeader>
+        <CardHeader className="py-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-xl text-slate-800 uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
-              <Receipt className="w-5 h-5 text-blue-600" />
-              Settlement History
-            </CardTitle>
-            <Badge className="bg-blue-100 text-blue-600 border-[#66FCF1]/20">{settlements.length} settlements</Badge>
+            <div>
+              <CardTitle className="text-xl text-slate-800 uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+                <Receipt className="w-5 h-5 text-blue-600" />
+                Settlement History
+              </CardTitle>
+              <p className="text-xs text-slate-400 mt-1">{filteredSettlements.length} settlements</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge className="bg-blue-100 text-blue-600 border-[#66FCF1]/20">{settlements.length} total</Badge>
+              <Button variant="outline" size="sm" onClick={() => exportSettlements('csv')} disabled={filteredSettlements.length === 0}
+                className="text-green-600 border-green-200 hover:bg-green-50 text-xs" data-testid="st-export-xlsx">
+                <Download className="w-3.5 h-3.5 mr-1" /> Excel
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => exportSettlements('pdf')} disabled={filteredSettlements.length === 0}
+                className="text-red-600 border-red-200 hover:bg-red-50 text-xs" data-testid="st-export-pdf">
+                <FileText className="w-3.5 h-3.5 mr-1" /> PDF
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {settlements.length === 0 ? (
+          {filteredSettlements.length === 0 ? (
             <div className="text-center py-10 text-slate-500">
               <Receipt className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p className="text-sm">No settlements yet</p>
+              <p className="text-sm">No settlements found</p>
             </div>
           ) : (
             <ScrollArea className="h-[400px]">
@@ -1282,7 +1446,7 @@ export default function ExchangerDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {settlements.map((s) => (
+                  {filteredSettlements.map((s) => (
                     <TableRow key={s.settlement_id} className="border-slate-200 hover:bg-slate-100">
                       <TableCell className="font-mono text-slate-800 text-xs">{s.settlement_id}</TableCell>
                       <TableCell>

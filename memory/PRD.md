@@ -12,6 +12,13 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 
 ### Date: Mar 7, 2026
 
+**Exchanger Portal UI Enhancements (COMPLETE):**
+- Removed white filter bar from Transactions tab (was jarring in dark mode)
+- Added filter bar (Search, Status, Source, Date range) + Export (Excel/CSV, PDF) to Other Transactions tab
+- Added filter bar (Search, Status, Date range) + Export (Excel/CSV, PDF) to Settlement History tab
+- Filters support I&E/Loan source filtering, status, date range, and text search
+- Files Modified: `frontend/src/pages/VendorDashboard.js`
+
 **Commission Base Currency Bug Fix (COMPLETE):**
 - **Issue**: `vendor_commission_base_amount` and `vendor_commission_base_currency` were storing USD values instead of the actual base/payment currency (e.g., INR). For an I&E expense of 10 USD (base: 1000 INR, 2% rate), commission was stored as 0.2 USD instead of 20.0 INR.
 - **Root Cause**: Four endpoints were incorrectly calculating commission on USD amount instead of base_amount:
