@@ -282,7 +282,10 @@ export default function Reports() {
       if (debtsRes.ok) setDebtsData(await debtsRes.json());
       if (chartRes.ok) setChartData(await chartRes.json());
       if (loansRes.ok) setLoansReport(await loansRes.json());
-      if (loansDataRes.ok) setLoansData(await loansDataRes.json());
+      if (loansDataRes.ok) {
+        const ld = await loansDataRes.json();
+        setLoansData(Array.isArray(ld) ? ld : ld.items || []);
+      }
       if (dealingRes.ok) setDealingPnLReport(await dealingRes.json());
       if (dealingSummaryRes.ok) setDealingPnLSummary(await dealingSummaryRes.json());
       // Detailed data
