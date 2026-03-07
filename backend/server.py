@@ -12575,6 +12575,67 @@ async def generate_daily_report_html():
                     </table>""" if lp_rows else ""}
                 </div>
         '''
+    else:
+        dealing_pnl_html = '''
+                <div class="section">
+                    <div class="section-title">📈 Today's Dealing P&L</div>
+                    <p style="color: #C5C6C7; text-align: center; padding: 15px;">No dealing P&L record for today</p>
+                </div>
+        '''
+    
+    # ===== Reconciliation Summary =====
+    today_recon_batches = await db.reconciliation_batches.find({
+        "created_at": {"$gte": today_start.isoformat()}
+    }, {"_id": 0}).to_list(100)
+    
+    total_recon_batches = len(today_recon_batches)
+    total_recon_matched = sum(b.get("matched", 0) for b in today_recon_batches)
+    total_recon_unmatched = sum(b.get("unmatched", 0) for b in today_recon_batches)
+    total_recon_discrepancies = sum(b.get("discrepancies", 0) for b in today_recon_batches)
+    
+    # Also get recent reconciliation history entries
+    today_recon_history = await db.reconciliations.find({
+        "created_at": {"$gte": today_start.isoformat()}
+    }, {"_id": 0}).to_list(100)
+    recon_history_matched = sum(r.get("matched_count", 0) for r in today_recon_history)
+    recon_history_flagged = sum(r.get("flagged_count", 0) for r in today_recon_history)
+    
+    daily_recon_html = ""
+    recon_section_html = f'''
+                <div class="section">
+                    <div class="section-title">🔄 Reconciliation</div>
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">Statements Processed</div>
+                            <div class="stat-value cyan">{total_recon_batches}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Entries Matched</div>
+                            <div class="stat-value green">{total_recon_matched + recon_history_matched}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Unmatched</div>
+                            <div class="stat-value red">{total_recon_unmatched}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Flagged / Discrepancies</div>
+                            <div class="stat-value yellow">{recon_history_flagged + total_recon_discrepancies}</div>
+                        </div>
+                    </div>'''
+    
+    if total_recon_batches > 0:
+        recon_rows = ""
+        for b in today_recon_batches[:10]:
+            status_color = "#4ade80" if b.get("status") == "completed" else "#fbbf24"
+            recon_rows += f"<tr><td>{b.get('account_name', '-')}</td><td>{b.get('filename', '-')}</td><td>{b.get('total_rows', 0)}</td><td style='color:#4ade80'>{b.get('matched', 0)}</td><td style='color:#f87171'>{b.get('unmatched', 0)}</td><td style='color:{status_color}'>{b.get('status', '-').upper()}</td></tr>"
+        recon_section_html += f"""
+                    <table>
+                        <tr><th>Account</th><th>File</th><th>Rows</th><th>Matched</th><th>Unmatched</th><th>Status</th></tr>
+                        {recon_rows}
+                    </table>"""
+    
+    recon_section_html += "\n                </div>"
+    daily_recon_html = recon_section_html
     
     # Generate HTML
     html = f"""
@@ -12775,6 +12836,8 @@ async def generate_daily_report_html():
                         </div>
                     </div>
                 </div>
+                
+                {daily_recon_html}
                 
             </div>
             
@@ -13031,14 +13094,61 @@ async def generate_monthly_report_html(year: int = None, month: int = None):
     # --- Dealing P&L ---
     dealing_records = await db.dealing_pnl.find({
         "date": {"$gte": month_start, "$lte": month_end}
-    }, {"_id": 0}).sort("date", -1).to_list(31)
+    }, {"_id": 0}).sort("date", 1).to_list(31)
     
-    total_dealing_pnl = 0
-    if dealing_records:
-        for dr in dealing_records:
-            mt5_booked = dr.get("mt5_booked_pnl", 0)
-            total_dealing_pnl += mt5_booked
+    total_mt5_booked = 0
+    total_lp_booked = 0
+    total_broker_pnl = 0
+    dealing_day_rows = ""
+    prev_mt5_floating = 0
+    prev_lp_floating = {}
     
+    for dr in dealing_records:
+        mt5_booked = dr.get("mt5_booked_pnl", 0)
+        mt5_floating = dr.get("mt5_floating_pnl", 0)
+        mt5_float_change = mt5_floating - prev_mt5_floating
+        broker_mt5_pnl = -mt5_booked - mt5_float_change
+        
+        day_lp_booked = 0
+        day_lp_pnl = 0
+        for lp in dr.get("lp_entries", []):
+            lp_booked = lp.get("booked_pnl", 0)
+            lp_float = lp.get("floating_pnl", 0)
+            prev_f = prev_lp_floating.get(lp.get("lp_id"), 0)
+            day_lp_booked += lp_booked
+            day_lp_pnl += lp_booked + (lp_float - prev_f)
+            prev_lp_floating[lp.get("lp_id")] = lp_float
+        
+        day_total = broker_mt5_pnl + day_lp_pnl
+        total_mt5_booked += mt5_booked
+        total_lp_booked += day_lp_booked
+        total_broker_pnl += day_total
+        prev_mt5_floating = mt5_floating
+        
+        pnl_color = "#4ade80" if day_total >= 0 else "#f87171"
+        dealing_day_rows += f"<tr><td>{dr.get('date', '-')}</td><td>${mt5_booked:+,.0f}</td><td>${broker_mt5_pnl:+,.0f}</td><td>${day_lp_pnl:+,.0f}</td><td style='color:{pnl_color}'>${day_total:+,.0f}</td></tr>"
+    
+    # --- Reconciliation Summary ---
+    month_recon_batches = await db.reconciliation_batches.find({
+        "created_at": {"$gte": month_start_iso, "$lte": month_end_iso}
+    }, {"_id": 0}).to_list(500)
+    
+    month_recon_history = await db.reconciliations.find({
+        "created_at": {"$gte": month_start_iso, "$lte": month_end_iso}
+    }, {"_id": 0}).to_list(500)
+    
+    recon_total_batches = len(month_recon_batches)
+    recon_total_matched = sum(b.get("matched", 0) for b in month_recon_batches) + sum(r.get("matched_count", 0) for r in month_recon_history)
+    recon_total_unmatched = sum(b.get("unmatched", 0) for b in month_recon_batches)
+    recon_total_flagged = sum(b.get("discrepancies", 0) for b in month_recon_batches) + sum(r.get("flagged_count", 0) for r in month_recon_history)
+    recon_total_rows = sum(b.get("total_rows", 0) for b in month_recon_batches)
+    
+    # Pre-build dealing P&L table
+    if dealing_day_rows:
+        dealing_table_html = f'<table><tr><th>Date</th><th>MT5 Booked</th><th>Broker MT5</th><th>LP P&L</th><th>Total</th></tr>{dealing_day_rows}</table>'
+    else:
+        dealing_table_html = '<p style="color:#C5C6C7; text-align:center; padding:10px;">No dealing P&L records this month</p>'
+
     # Generate HTML
     html = f"""
     <!DOCTYPE html>
@@ -13194,6 +13304,50 @@ async def generate_monthly_report_html(year: int = None, month: int = None):
                         <div class="stat-box">
                             <div class="stat-label">Payables</div>
                             <div class="stat-value red">${total_payables:,.0f}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dealing P&L -->
+                <div class="section">
+                    <div class="section-title">Dealing P&L</div>
+                    <div class="stat-grid-3">
+                        <div class="stat-box">
+                            <div class="stat-label">MT5 Client Booked</div>
+                            <div class="stat-value">${total_mt5_booked:+,.0f}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">LP Booked</div>
+                            <div class="stat-value">${total_lp_booked:+,.0f}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Broker Net P&L</div>
+                            <div class="stat-value {'green' if total_broker_pnl >= 0 else 'red'}" style="font-size:28px">${total_broker_pnl:+,.0f}</div>
+                        </div>
+                    </div>
+                    <p style="color:#C5C6C7; font-size:11px; margin:10px 0 5px;">Records: {len(dealing_records)} trading days</p>
+                    {dealing_table_html}
+                </div>
+
+                <!-- Reconciliation -->
+                <div class="section">
+                    <div class="section-title">Reconciliation</div>
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">Statements Processed</div>
+                            <div class="stat-value cyan">{recon_total_batches}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Total Rows Parsed</div>
+                            <div class="stat-value">{recon_total_rows}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Entries Matched</div>
+                            <div class="stat-value green">{recon_total_matched}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Flagged / Discrepancies</div>
+                            <div class="stat-value {'red' if recon_total_flagged > 0 else 'yellow'}">{recon_total_flagged}</div>
                         </div>
                     </div>
                 </div>
