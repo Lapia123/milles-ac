@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import {
   MessageSquare, Send, Users, User, Search, Plus, Check, CheckCheck,
-  Loader2, Clock,
+  Loader2, Clock, Paperclip, X, FileText, Image as ImageIcon, FileSpreadsheet, File,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -32,6 +32,8 @@ export default function Messages() {
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [attachment, setAttachment] = useState(null);
+  const fileInputRef = useRef(null);
   const [newChatDialog, setNewChatDialog] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState('');
   const messagesEndRef = useRef(null);
@@ -175,31 +177,70 @@ export default function Messages() {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation) return;
+    if ((!newMessage.trim() && !attachment) || !selectedConversation) return;
 
     setSending(true);
     try {
+      const formData = new FormData();
+      formData.append('recipient_id', selectedConversation.user_id);
+      formData.append('content', newMessage);
+      if (attachment) {
+        formData.append('attachment', attachment);
+      }
+
+      const headers = { ...getAuthHeaders() };
+      delete headers['Content-Type']; // Let browser set multipart boundary
+
       const response = await fetch(`${API_URL}/api/messages/send`, {
         method: 'POST',
-        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipient_id: selectedConversation.user_id,
-          content: newMessage
-        })
+        headers,
+        body: formData
       });
 
       if (response.ok) {
         setNewMessage('');
+        setAttachment(null);
         fetchMessages(selectedConversation.user_id);
         fetchConversations();
       } else {
-        toast.error('Failed to send message');
+        const err = await response.json();
+        toast.error(err.detail || 'Failed to send message');
       }
     } catch (error) {
       toast.error('Failed to send message');
     } finally {
       setSending(false);
     }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File size exceeds 10MB limit');
+      return;
+    }
+    setAttachment(file);
+    e.target.value = '';
+  };
+
+  const getFileIcon = (filename, contentType) => {
+    const ext = (filename || '').split('.').pop().toLowerCase();
+    const type = contentType || '';
+    if (type.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext))
+      return <ImageIcon className="w-4 h-4 text-green-400" />;
+    if (ext === 'pdf' || type === 'application/pdf')
+      return <FileText className="w-4 h-4 text-red-400" />;
+    if (['xlsx', 'xls', 'csv'].includes(ext) || type.includes('spreadsheet'))
+      return <FileSpreadsheet className="w-4 h-4 text-emerald-400" />;
+    return <File className="w-4 h-4 text-slate-400" />;
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const handleStartNewChat = () => {
@@ -573,7 +614,42 @@ export default function Messages() {
                                 : 'bg-slate-100 text-slate-800 rounded-bl-md'
                             }`}
                           >
-                            <p className="text-sm">{msg.content}</p>
+                            {msg.content && <p className="text-sm">{msg.content}</p>}
+                            {msg.attachment && (
+                              <a
+                                href={`${API_URL}/api/messages/attachment/${msg.message_id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  const token = localStorage.getItem('auth_token');
+                                  fetch(`${API_URL}/api/messages/attachment/${msg.message_id}`, {
+                                    headers: { 'Authorization': `Bearer ${token}` }
+                                  }).then(r => r.blob()).then(blob => {
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = msg.attachment.filename;
+                                    a.click();
+                                    URL.revokeObjectURL(url);
+                                  }).catch(() => toast.error('Download failed'));
+                                }}
+                                className={`flex items-center gap-2 mt-1 p-2 rounded-lg cursor-pointer ${
+                                  msg.sender_id === user?.user_id
+                                    ? 'bg-blue-500/30 hover:bg-blue-500/50'
+                                    : 'bg-slate-200 hover:bg-slate-300'
+                                }`}
+                                data-testid={`attachment-${msg.message_id}`}
+                              >
+                                {getFileIcon(msg.attachment.filename, msg.attachment.content_type)}
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-medium truncate">{msg.attachment.filename}</p>
+                                  <p className={`text-xs ${msg.sender_id === user?.user_id ? 'text-blue-200' : 'text-slate-400'}`}>
+                                    {formatFileSize(msg.attachment.size)}
+                                  </p>
+                                </div>
+                              </a>
+                            )}
                             <div className={`flex items-center justify-end gap-1 mt-1 ${
                               msg.sender_id === user?.user_id ? 'text-blue-200' : 'text-slate-400'
                             }`}>
@@ -593,7 +669,37 @@ export default function Messages() {
 
               {/* Message Input */}
               <div className="p-4 border-t">
+                {attachment && (
+                  <div className="flex items-center gap-2 mb-2 p-2 bg-slate-50 rounded-lg">
+                    {getFileIcon(attachment.name, attachment.type)}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-700 truncate">{attachment.name}</p>
+                      <p className="text-xs text-slate-400">{formatFileSize(attachment.size)}</p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setAttachment(null)} className="h-6 w-6 p-0 text-slate-400 hover:text-red-500">
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
                 <div className="flex gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.xlsx,.xls,.csv,.doc,.docx"
+                    onChange={handleFileSelect}
+                    data-testid="file-input"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="shrink-0"
+                    title="Attach file"
+                    data-testid="attach-btn"
+                  >
+                    <Paperclip className="w-4 h-4" />
+                  </Button>
                   <Input
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
@@ -602,7 +708,7 @@ export default function Messages() {
                     className="flex-1"
                     data-testid="message-input"
                   />
-                  <Button onClick={handleSendMessage} disabled={!newMessage.trim() || sending} data-testid="send-btn">
+                  <Button onClick={handleSendMessage} disabled={(!newMessage.trim() && !attachment) || sending} data-testid="send-btn">
                     {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   </Button>
                 </div>

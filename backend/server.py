@@ -10821,13 +10821,14 @@ async def get_conversation_messages(
 @api_router.post("/messages/send")
 async def send_user_message(
     request: Request,
-    data: dict = Body(...),
+    recipient_id: str = Form(...),
+    content: str = Form(""),
+    attachment: Optional[UploadFile] = File(None),
     user: dict = Depends(get_current_user)
 ):
-    """Send a message to another user"""
+    """Send a message to another user, optionally with a file attachment"""
     now = datetime.now(timezone.utc)
     
-    recipient_id = data.get("recipient_id")
     if not recipient_id:
         raise HTTPException(status_code=400, detail="Recipient ID is required")
     
@@ -10836,7 +10837,22 @@ async def send_user_message(
     if not recipient:
         raise HTTPException(status_code=404, detail="Recipient not found")
     
+    if not content.strip() and not attachment:
+        raise HTTPException(status_code=400, detail="Message content or attachment is required")
+    
     message_id = f"msg_{uuid.uuid4().hex[:12]}"
+    
+    attachment_data = None
+    if attachment and attachment.filename:
+        file_content = await attachment.read()
+        if len(file_content) > 10 * 1024 * 1024:  # 10MB limit
+            raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
+        attachment_data = {
+            "filename": attachment.filename,
+            "content_type": attachment.content_type or "application/octet-stream",
+            "size": len(file_content),
+            "data": base64.b64encode(file_content).decode('utf-8')
+        }
     
     message_doc = {
         "message_id": message_id,
@@ -10844,14 +10860,57 @@ async def send_user_message(
         "sender_name": user["name"],
         "recipient_id": recipient_id,
         "recipient_name": recipient.get("name", "Unknown"),
-        "content": data.get("content", ""),
+        "content": content,
+        "attachment": {
+            "filename": attachment_data["filename"],
+            "content_type": attachment_data["content_type"],
+            "size": attachment_data["size"],
+        } if attachment_data else None,
         "read": False,
         "created_at": now.isoformat()
     }
     
+    # Store attachment data separately to keep message doc lightweight
+    if attachment_data:
+        await db.message_attachments.insert_one({
+            "message_id": message_id,
+            "filename": attachment_data["filename"],
+            "content_type": attachment_data["content_type"],
+            "size": attachment_data["size"],
+            "data": attachment_data["data"],
+            "created_at": now.isoformat()
+        })
+    
     await db.user_messages.insert_one(message_doc)
     
     return {"message": "Message sent", "message_id": message_id}
+
+
+@api_router.get("/messages/attachment/{message_id}")
+async def get_message_attachment(message_id: str, user: dict = Depends(get_current_user)):
+    """Download a message attachment"""
+    # Verify user has access to this message
+    msg = await db.user_messages.find_one({"message_id": message_id}, {"_id": 0})
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+    
+    if msg["sender_id"] != user["user_id"] and msg["recipient_id"] != user["user_id"]:
+        # Allow admin to access any attachment
+        if user.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Access denied")
+    
+    att = await db.message_attachments.find_one({"message_id": message_id}, {"_id": 0})
+    if not att:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    
+    file_data = base64.b64decode(att["data"])
+    
+    from fastapi.responses import Response
+    return Response(
+        content=file_data,
+        media_type=att["content_type"],
+        headers={"Content-Disposition": f'attachment; filename="{att["filename"]}"'}
+    )
 
 
 @api_router.put("/messages/mark-read/{recipient_id}")
