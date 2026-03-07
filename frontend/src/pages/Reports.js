@@ -807,12 +807,18 @@ export default function Reports() {
                       deposits_usd: v.totals?.deposits_usd,
                       withdrawals_usd: v.totals?.withdrawals_usd,
                       commission_usd: v.totals?.commission_usd,
+                      other_in_usd: v.totals?.other_in_usd,
+                      other_out_usd: v.totals?.other_out_usd,
+                      other_commission_usd: v.totals?.other_commission_usd,
                       net_settlement_usd: v.totals?.net_settlement_usd
                     })), 'vendor_settlements', [
                       { key: 'vendor_name', label: 'Exchanger' },
                       { key: 'deposits_usd', label: 'Deposits (USD)' },
                       { key: 'withdrawals_usd', label: 'Withdrawals (USD)' },
-                      { key: 'commission_usd', label: 'Commission (USD)' },
+                      { key: 'commission_usd', label: 'Tx Commission (USD)' },
+                      { key: 'other_in_usd', label: 'Other In (USD)' },
+                      { key: 'other_out_usd', label: 'Other Out (USD)' },
+                      { key: 'other_commission_usd', label: 'Other Commission (USD)' },
                       { key: 'net_settlement_usd', label: 'Net Settlement (USD)' }
                     ])}
                   >
@@ -828,7 +834,10 @@ export default function Reports() {
                           <TableHead className="text-[#94A3B8] text-xs">Exchanger</TableHead>
                           <TableHead className="text-[#94A3B8] text-xs text-right">Deposits</TableHead>
                           <TableHead className="text-[#94A3B8] text-xs text-right">Withdrawals</TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">Commission</TableHead>
+                          <TableHead className="text-[#94A3B8] text-xs text-right">Tx Comm.</TableHead>
+                          <TableHead className="text-[#94A3B8] text-xs text-right">Other In</TableHead>
+                          <TableHead className="text-[#94A3B8] text-xs text-right">Other Out</TableHead>
+                          <TableHead className="text-[#94A3B8] text-xs text-right">Other Comm.</TableHead>
                           <TableHead className="text-[#94A3B8] text-xs text-right">Net Settlement</TableHead>
                           <TableHead className="text-[#94A3B8] text-xs">Currencies</TableHead>
                         </TableRow>
@@ -845,6 +854,9 @@ export default function Reports() {
                             <TableCell className="text-emerald-400 font-mono text-right">${(vendor.totals?.deposits_usd || 0).toLocaleString()}</TableCell>
                             <TableCell className="text-red-400 font-mono text-right">${(vendor.totals?.withdrawals_usd || 0).toLocaleString()}</TableCell>
                             <TableCell className="text-amber-400 font-mono text-right">${(vendor.totals?.commission_usd || 0).toLocaleString()}</TableCell>
+                            <TableCell className="text-emerald-300 font-mono text-right">${(vendor.totals?.other_in_usd || 0).toLocaleString()}</TableCell>
+                            <TableCell className="text-red-300 font-mono text-right">${(vendor.totals?.other_out_usd || 0).toLocaleString()}</TableCell>
+                            <TableCell className="text-amber-300 font-mono text-right">${(vendor.totals?.other_commission_usd || 0).toLocaleString()}</TableCell>
                             <TableCell className={`font-mono text-right font-bold ${(vendor.totals?.net_settlement_usd || 0) >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
                               ${(vendor.totals?.net_settlement_usd || 0).toLocaleString()}
                             </TableCell>
@@ -870,6 +882,15 @@ export default function Reports() {
                             <TableCell className="text-amber-400 font-mono text-right font-bold">
                               ${vendorReport.vendors.reduce((sum, v) => sum + (v.totals?.commission_usd || 0), 0).toLocaleString()}
                             </TableCell>
+                            <TableCell className="text-emerald-300 font-mono text-right font-bold">
+                              ${vendorReport.vendors.reduce((sum, v) => sum + (v.totals?.other_in_usd || 0), 0).toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-red-300 font-mono text-right font-bold">
+                              ${vendorReport.vendors.reduce((sum, v) => sum + (v.totals?.other_out_usd || 0), 0).toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-amber-300 font-mono text-right font-bold">
+                              ${vendorReport.vendors.reduce((sum, v) => sum + (v.totals?.other_commission_usd || 0), 0).toLocaleString()}
+                            </TableCell>
                             <TableCell className="text-blue-400 font-mono text-right font-bold">
                               ${vendorReport.vendors.reduce((sum, v) => sum + (v.totals?.net_settlement_usd || 0), 0).toLocaleString()}
                             </TableCell>
@@ -877,7 +898,7 @@ export default function Reports() {
                           </TableRow>
                         )}
                         {(!vendorReport.vendors || vendorReport.vendors.length === 0) && (
-                          <TableRow><TableCell colSpan={6} className="text-center text-[#94A3B8] py-8">No vendor data</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={9} className="text-center text-[#94A3B8] py-8">No vendor data</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>

@@ -9208,12 +9208,156 @@ async def get_vendor_summary_report(
             curr_data["net_settlement_usd"] = (curr_data["deposits_usd"] - curr_data["withdrawals_usd"]) - curr_data["commission_usd"]
         data["totals"]["net_settlement_usd"] = (data["totals"]["deposits_usd"] - data["totals"]["withdrawals_usd"]) - data["totals"]["commission_usd"]
     
+    # --- Add Income/Expense entries ---
+    ie_query = {
+        "vendor_id": {"$exists": True, "$ne": None},
+        "status": {"$in": ["approved", "completed"]},
+        "converted_to_loan": {"$ne": True}
+    }
+    if start_date:
+        ie_query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in ie_query:
+            ie_query["created_at"]["$lte"] = end_date
+        else:
+            ie_query["created_at"] = {"$lte": end_date}
+    if vendor_id:
+        ie_query["vendor_id"] = vendor_id
+
+    ie_pipeline = [
+        {"$match": ie_query},
+        {"$group": {
+            "_id": {
+                "vendor_id": "$vendor_id",
+                "entry_type": "$entry_type",
+            },
+            "total_usd": {"$sum": {"$ifNull": ["$amount_usd", "$amount"]}},
+            "total_commission_usd": {"$sum": {"$ifNull": ["$vendor_commission_amount", 0]}},
+            "total_commission_base": {"$sum": {"$ifNull": ["$vendor_commission_base_amount", 0]}},
+            "count": {"$sum": 1}
+        }}
+    ]
+    ie_results = await db.income_expenses.aggregate(ie_pipeline).to_list(1000)
+
+    for r in ie_results:
+        vid = r["_id"]["vendor_id"]
+        if vid not in vendor_reports:
+            vendor_info = vendor_map.get(vid, {})
+            vendor_reports[vid] = {
+                "vendor_id": vid,
+                "vendor_name": vendor_info.get("vendor_name", "Unknown"),
+                "deposit_commission_rate": vendor_info.get("deposit_commission", 0),
+                "withdrawal_commission_rate": vendor_info.get("withdrawal_commission", 0),
+                "currencies": {},
+                "totals": {
+                    "deposits_usd": 0, "withdrawals_usd": 0,
+                    "commission_usd": 0, "net_settlement_usd": 0,
+                    "deposit_count": 0, "withdrawal_count": 0,
+                    "ie_in_usd": 0, "ie_out_usd": 0, "ie_commission_usd": 0,
+                    "loan_in_usd": 0, "loan_out_usd": 0, "loan_commission_usd": 0,
+                }
+            }
+        totals = vendor_reports[vid]["totals"]
+        # Ensure ie/loan keys exist
+        for k in ["ie_in_usd", "ie_out_usd", "ie_commission_usd", "loan_in_usd", "loan_out_usd", "loan_commission_usd"]:
+            if k not in totals:
+                totals[k] = 0
+
+        entry_type = r["_id"]["entry_type"]
+        if entry_type == "income":
+            totals["ie_in_usd"] += r["total_usd"]
+        else:
+            totals["ie_out_usd"] += r["total_usd"]
+        totals["ie_commission_usd"] += r["total_commission_usd"]
+
+    # --- Add Loan transactions ---
+    loan_query = {
+        "status": {"$in": ["approved", "completed"]}
+    }
+    if start_date:
+        loan_query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in loan_query:
+            loan_query["created_at"]["$lte"] = end_date
+        else:
+            loan_query["created_at"] = {"$lte": end_date}
+
+    loan_txs = await db.loan_transactions.find(loan_query, {"_id": 0}).to_list(5000)
+    for ltx in loan_txs:
+        # Disbursement FROM vendor = vendor pays out (OUT for vendor)
+        # Repayment TO vendor = vendor receives (IN for vendor)
+        vid = None
+        is_in = False
+        if ltx.get("credit_to_vendor_id"):
+            vid = ltx["credit_to_vendor_id"]
+            is_in = True  # repayment to vendor
+        elif ltx.get("source_vendor_id"):
+            vid = ltx["source_vendor_id"]
+            is_in = False  # disbursement from vendor
+
+        if not vid:
+            continue
+        if vendor_id and vid != vendor_id:
+            continue
+
+        if vid not in vendor_reports:
+            vendor_info = vendor_map.get(vid, {})
+            vendor_reports[vid] = {
+                "vendor_id": vid,
+                "vendor_name": vendor_info.get("vendor_name", "Unknown"),
+                "deposit_commission_rate": vendor_info.get("deposit_commission", 0),
+                "withdrawal_commission_rate": vendor_info.get("withdrawal_commission", 0),
+                "currencies": {},
+                "totals": {
+                    "deposits_usd": 0, "withdrawals_usd": 0,
+                    "commission_usd": 0, "net_settlement_usd": 0,
+                    "deposit_count": 0, "withdrawal_count": 0,
+                    "ie_in_usd": 0, "ie_out_usd": 0, "ie_commission_usd": 0,
+                    "loan_in_usd": 0, "loan_out_usd": 0, "loan_commission_usd": 0,
+                }
+            }
+        totals = vendor_reports[vid]["totals"]
+        for k in ["ie_in_usd", "ie_out_usd", "ie_commission_usd", "loan_in_usd", "loan_out_usd", "loan_commission_usd"]:
+            if k not in totals:
+                totals[k] = 0
+
+        amount_usd = ltx.get("amount", 0)  # loan amounts are in their currency
+        comm_usd = ltx.get("vendor_commission_amount", 0) or 0
+        if is_in:
+            totals["loan_in_usd"] += amount_usd
+        else:
+            totals["loan_out_usd"] += amount_usd
+        totals["loan_commission_usd"] += comm_usd
+
+    # Recalculate net settlement including I&E and Loans
+    for vid, data in vendor_reports.items():
+        totals = data["totals"]
+        for k in ["ie_in_usd", "ie_out_usd", "ie_commission_usd", "loan_in_usd", "loan_out_usd", "loan_commission_usd"]:
+            if k not in totals:
+                totals[k] = 0
+        other_in = totals["ie_in_usd"] + totals["loan_in_usd"]
+        other_out = totals["ie_out_usd"] + totals["loan_out_usd"]
+        other_comm = totals["ie_commission_usd"] + totals["loan_commission_usd"]
+        totals["other_in_usd"] = other_in
+        totals["other_out_usd"] = other_out
+        totals["other_commission_usd"] = other_comm
+        # Net = (Deposits + Other In) - (Withdrawals + Other Out) - (Commission + Other Commission)
+        totals["net_settlement_usd"] = (
+            (totals["deposits_usd"] + other_in)
+            - (totals["withdrawals_usd"] + other_out)
+            - (totals["commission_usd"] + other_comm)
+        )
+    
     # Grand totals
     grand_totals = {
         "total_deposits_usd": sum(v["totals"]["deposits_usd"] for v in vendor_reports.values()),
         "total_withdrawals_usd": sum(v["totals"]["withdrawals_usd"] for v in vendor_reports.values()),
         "total_commission_usd": sum(v["totals"]["commission_usd"] for v in vendor_reports.values()),
+        "total_other_in_usd": sum(v["totals"].get("other_in_usd", 0) for v in vendor_reports.values()),
+        "total_other_out_usd": sum(v["totals"].get("other_out_usd", 0) for v in vendor_reports.values()),
+        "total_other_commission_usd": sum(v["totals"].get("other_commission_usd", 0) for v in vendor_reports.values()),
         "total_net_settlement_usd": sum(v["totals"]["net_settlement_usd"] for v in vendor_reports.values()),
+        "total_exchangers": len(vendor_reports),
         "total_vendors": len(vendor_reports)
     }
     
