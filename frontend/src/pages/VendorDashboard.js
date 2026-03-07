@@ -1005,6 +1005,53 @@ export default function ExchangerDashboard() {
         {/* Transactions Tab */}
         <TabsContent value="transactions" className="mt-4">
 
+      {/* Filters Bar */}
+      <div className="flex flex-wrap items-end gap-3 mb-4">
+        <div className="flex-1 min-w-[160px]">
+          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Search</label>
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input type="text" placeholder="Ref, client, currency..." value={txSearchQuery} onChange={e => setTxSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="tx-search-input" />
+          </div>
+        </div>
+        <div className="min-w-[110px]">
+          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Status</label>
+          <select value={txStatusFilter} onChange={e => setTxStatusFilter(e.target.value)}
+            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="tx-status-filter">
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+        <div className="min-w-[110px]">
+          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Type</label>
+          <select value={txTypeFilter} onChange={e => setTxTypeFilter(e.target.value)}
+            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="tx-type-filter">
+            <option value="all">All Types</option>
+            <option value="deposit">Deposit</option>
+            <option value="withdrawal">Withdrawal</option>
+          </select>
+        </div>
+        <div className="min-w-[120px]">
+          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">From</label>
+          <input type="date" value={txDateFrom} onChange={e => setTxDateFrom(e.target.value)}
+            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="tx-date-from" />
+        </div>
+        <div className="min-w-[120px]">
+          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">To</label>
+          <input type="date" value={txDateTo} onChange={e => setTxDateTo(e.target.value)}
+            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="tx-date-to" />
+        </div>
+        {(txStatusFilter !== 'all' || txTypeFilter !== 'all' || txDateFrom || txDateTo || txSearchQuery) && (
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="text-slate-500 hover:text-red-500 text-xs" data-testid="tx-clear-filters">
+            <XCircle className="w-3.5 h-3.5 mr-1" /> Clear
+          </Button>
+        )}
+      </div>
+
       {/* Transactions Table */}
       <Card className="bg-white border-slate-200">
         <CardHeader className="flex flex-row items-center justify-between">
