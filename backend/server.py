@@ -12029,6 +12029,7 @@ class EmailSettingsUpdate(BaseModel):
     director_emails: Optional[List[str]] = None
     report_enabled: Optional[bool] = None
     report_time: Optional[str] = None  # Format: "HH:MM"
+    monthly_report_enabled: Optional[bool] = None
 
 @api_router.get("/settings/email")
 async def get_email_settings(user: dict = Depends(require_permission(Modules.SETTINGS, Actions.VIEW))):
@@ -12043,7 +12044,8 @@ async def get_email_settings(user: dict = Depends(require_permission(Modules.SET
             "smtp_password_set": False,
             "director_emails": [],
             "report_enabled": False,
-            "report_time": "03:00"
+            "report_time": "03:00",
+            "monthly_report_enabled": False
         }
     return {
         "smtp_host": settings.get("smtp_host", "smtp.gmail.com"),
@@ -12053,7 +12055,8 @@ async def get_email_settings(user: dict = Depends(require_permission(Modules.SET
         "smtp_password_set": bool(settings.get("smtp_password")),
         "director_emails": settings.get("director_emails", []),
         "report_enabled": settings.get("report_enabled", False),
-        "report_time": settings.get("report_time", "03:00")
+        "report_time": settings.get("report_time", "03:00"),
+        "monthly_report_enabled": settings.get("monthly_report_enabled", False)
     }
 
 @api_router.put("/settings/email")
@@ -12082,6 +12085,8 @@ async def update_email_settings(request: Request, settings: EmailSettingsUpdate,
         updates["report_enabled"] = settings.report_enabled
     if settings.report_time is not None:
         updates["report_time"] = settings.report_time
+    if settings.monthly_report_enabled is not None:
+        updates["monthly_report_enabled"] = settings.monthly_report_enabled
     
     if existing:
         await db.app_settings.update_one(
@@ -12900,6 +12905,418 @@ async def reschedule_daily_report():
     )
     
     logger.info(f"Daily report scheduled for {report_time}")
+    
+    # Schedule monthly report (last day of month at same time)
+    if settings.get("monthly_report_enabled"):
+        scheduler.add_job(
+            send_monthly_report,
+            CronTrigger(day="last", hour=hour, minute=minute),
+            id="monthly_report",
+            replace_existing=True
+        )
+        logger.info("Monthly report scheduled for last day of each month")
+    else:
+        try:
+            scheduler.remove_job("monthly_report")
+        except:
+            pass
+
+
+# ============== MONTHLY REPORT SYSTEM ==============
+
+async def generate_monthly_report_html(year: int = None, month: int = None):
+    """Generate comprehensive monthly summary report HTML"""
+    now = datetime.now(timezone.utc)
+    
+    if not year or not month:
+        # Default to previous month
+        first_of_current = now.replace(day=1)
+        last_month_end = first_of_current - timedelta(days=1)
+        year = last_month_end.year
+        month = last_month_end.month
+    
+    import calendar
+    _, last_day = calendar.monthrange(year, month)
+    month_start = f"{year}-{month:02d}-01"
+    month_end = f"{year}-{month:02d}-{last_day:02d}"
+    month_start_iso = f"{month_start}T00:00:00"
+    month_end_iso = f"{month_end}T23:59:59"
+    month_name = calendar.month_name[month]
+    
+    # --- Transactions ---
+    month_txs = await db.transactions.find({
+        "created_at": {"$gte": month_start_iso, "$lte": month_end_iso}
+    }, {"_id": 0}).to_list(50000)
+    
+    approved_txs = [t for t in month_txs if t.get("status") in ["approved", "completed"]]
+    total_deposits = sum(t.get("amount", 0) for t in approved_txs if t.get("transaction_type") == "deposit")
+    total_withdrawals = sum(t.get("amount", 0) for t in approved_txs if t.get("transaction_type") == "withdrawal")
+    total_tx_count = len(month_txs)
+    approved_count = len(approved_txs)
+    rejected_count = len([t for t in month_txs if t.get("status") == "rejected"])
+    pending_count = len([t for t in month_txs if t.get("status") == "pending"])
+    
+    # --- Treasury Balances (end of month snapshot) ---
+    treasury_accounts = await db.treasury_accounts.find({}, {"_id": 0}).to_list(100)
+    total_treasury = sum(convert_to_usd(a.get("balance", 0), a.get("currency", "USD")) for a in treasury_accounts)
+    treasury_rows = ""
+    for acc in sorted(treasury_accounts, key=lambda x: -abs(x.get("balance", 0))):
+        bal = acc.get("balance", 0)
+        curr = acc.get("currency", "USD")
+        usd_val = convert_to_usd(bal, curr)
+        treasury_rows += f"<tr><td>{acc.get('account_name', '-')}</td><td>{acc.get('bank_name', '-')}</td><td>{curr}</td><td style='text-align:right'>{bal:,.2f}</td><td style='text-align:right'>${usd_val:,.2f}</td></tr>"
+    
+    # --- Income & Expenses ---
+    month_ie = await db.income_expenses.find({
+        "created_at": {"$gte": month_start_iso, "$lte": month_end_iso},
+        "status": {"$in": ["approved", "completed"]}
+    }, {"_id": 0}).to_list(10000)
+    
+    ie_income = sum(e.get("amount_usd", e.get("amount", 0)) for e in month_ie if e.get("entry_type") == "income")
+    ie_expense = sum(e.get("amount_usd", e.get("amount", 0)) for e in month_ie if e.get("entry_type") == "expense")
+    ie_net = ie_income - ie_expense
+    
+    # --- Loans ---
+    month_loan_txs = await db.loan_transactions.find({
+        "created_at": {"$gte": month_start_iso, "$lte": month_end_iso}
+    }, {"_id": 0}).to_list(10000)
+    
+    total_disbursed = sum(lt.get("amount", 0) for lt in month_loan_txs if lt.get("transaction_type") == "disbursement")
+    total_repaid = sum(lt.get("amount", 0) for lt in month_loan_txs if lt.get("transaction_type") == "repayment")
+    
+    active_loans = await db.loans.find({"status": {"$in": ["active", "partially_paid"]}}, {"_id": 0}).to_list(1000)
+    total_outstanding_loans = sum(l.get("amount", 0) - l.get("total_repaid", 0) for l in active_loans)
+    
+    # --- Vendor/Exchanger Summary ---
+    vendors = await db.vendors.find({"status": "active"}, {"_id": 0}).to_list(100)
+    vendor_commission_total = sum(t.get("vendor_commission_amount", 0) or 0 for t in approved_txs if t.get("vendor_id"))
+    ie_commission_total = sum(e.get("vendor_commission_amount", 0) or 0 for e in month_ie if e.get("vendor_id"))
+    
+    vendor_rows = ""
+    for v in vendors:
+        vid = v.get("vendor_id")
+        v_txs = [t for t in approved_txs if t.get("vendor_id") == vid]
+        v_deps = sum(t.get("amount", 0) for t in v_txs if t.get("transaction_type") == "deposit")
+        v_wds = sum(t.get("amount", 0) for t in v_txs if t.get("transaction_type") == "withdrawal")
+        v_comm = sum(t.get("vendor_commission_amount", 0) or 0 for t in v_txs)
+        v_ie = [e for e in month_ie if e.get("vendor_id") == vid]
+        v_ie_in = sum(e.get("amount_usd", e.get("amount", 0)) for e in v_ie if e.get("entry_type") == "income")
+        v_ie_out = sum(e.get("amount_usd", e.get("amount", 0)) for e in v_ie if e.get("entry_type") == "expense")
+        v_ie_comm = sum(e.get("vendor_commission_amount", 0) or 0 for e in v_ie)
+        v_net = (v_deps + v_ie_in) - (v_wds + v_ie_out) - (v_comm + v_ie_comm)
+        net_color = "green" if v_net >= 0 else "red"
+        vendor_rows += f"<tr><td>{v.get('vendor_name', '-')}</td><td>${v_deps:,.0f}</td><td>${v_wds:,.0f}</td><td>${v_comm:,.2f}</td><td>${v_ie_in:,.0f}</td><td>${v_ie_out:,.0f}</td><td class='{net_color}'>${v_net:+,.0f}</td></tr>"
+    
+    # --- PSP Summary ---
+    psps = await db.psps.find({"status": "active"}, {"_id": 0}).to_list(100)
+    psp_rows = ""
+    for p in psps:
+        pid = p.get("psp_id")
+        p_txs = [t for t in approved_txs if t.get("psp_id") == pid]
+        p_vol = sum(t.get("amount", 0) for t in p_txs)
+        p_comm = sum(t.get("psp_commission_amount", 0) or 0 for t in p_txs)
+        psp_rows += f"<tr><td>{p.get('psp_name', '-')}</td><td>{len(p_txs)}</td><td>${p_vol:,.0f}</td><td>${p_comm:,.2f}</td><td>${p.get('pending_settlement', 0):,.0f}</td></tr>"
+    
+    # --- Outstanding Accounts ---
+    debts = await db.debts.find({"status": {"$ne": "fully_paid"}}, {"_id": 0}).to_list(1000)
+    total_receivables = sum(d.get("amount", 0) - d.get("paid_amount", 0) for d in debts if d.get("debt_type") == "receivable")
+    total_payables = sum(d.get("amount", 0) - d.get("paid_amount", 0) for d in debts if d.get("debt_type") == "payable")
+    
+    # --- Settlements ---
+    month_settlements = await db.vendor_settlements.find({
+        "created_at": {"$gte": month_start_iso, "$lte": month_end_iso}
+    }, {"_id": 0}).to_list(1000)
+    total_settled = sum(s.get("settlement_amount", s.get("amount", 0)) for s in month_settlements)
+    
+    # --- Dealing P&L ---
+    dealing_records = await db.dealing_pnl.find({
+        "date": {"$gte": month_start, "$lte": month_end}
+    }, {"_id": 0}).sort("date", -1).to_list(31)
+    
+    total_dealing_pnl = 0
+    if dealing_records:
+        for dr in dealing_records:
+            mt5_booked = dr.get("mt5_booked_pnl", 0)
+            total_dealing_pnl += mt5_booked
+    
+    # Generate HTML
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body {{ font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }}
+            .container {{ max-width: 750px; margin: 0 auto; background-color: #0B0C10; color: white; }}
+            .header {{ background: linear-gradient(135deg, #1F2833 0%, #0B0C10 100%); padding: 30px; text-align: center; border-bottom: 3px solid #66FCF1; }}
+            .header h1 {{ color: #66FCF1; margin: 0; font-size: 28px; letter-spacing: 2px; }}
+            .header p {{ color: #C5C6C7; margin: 10px 0 0; font-size: 14px; }}
+            .content {{ padding: 30px; }}
+            .section {{ background-color: #1F2833; border-radius: 8px; padding: 20px; margin-bottom: 20px; }}
+            .section-title {{ color: #66FCF1; font-size: 16px; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #66FCF1; padding-bottom: 10px; }}
+            .stat-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }}
+            .stat-grid-3 {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }}
+            .stat-box {{ background-color: #0B0C10; border-radius: 6px; padding: 15px; }}
+            .stat-label {{ color: #C5C6C7; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }}
+            .stat-value {{ color: white; font-size: 24px; font-weight: bold; margin-top: 5px; }}
+            .stat-value.green {{ color: #4ade80; }}
+            .stat-value.red {{ color: #f87171; }}
+            .stat-value.cyan {{ color: #66FCF1; }}
+            .stat-value.yellow {{ color: #fbbf24; }}
+            table {{ width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12px; }}
+            th {{ background-color: #0B3D91; color: white; padding: 8px; text-align: left; font-size: 10px; text-transform: uppercase; }}
+            td {{ padding: 6px 8px; border-bottom: 1px solid #333; color: #C5C6C7; }}
+            td.green {{ color: #4ade80; }}
+            td.red {{ color: #f87171; }}
+            .footer {{ background-color: #1F2833; padding: 20px; text-align: center; border-top: 1px solid #333; }}
+            .footer p {{ color: #C5C6C7; font-size: 12px; margin: 0; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>MILES CAPITALS</h1>
+                <p>Monthly Report - {month_name} {year}</p>
+                <p style="font-size:12px; color:#66FCF1;">{month_start} to {month_end}</p>
+            </div>
+            <div class="content">
+                <!-- Transaction Summary -->
+                <div class="section">
+                    <div class="section-title">Transaction Summary</div>
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">Total Deposits</div>
+                            <div class="stat-value green">${total_deposits:,.0f}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Total Withdrawals</div>
+                            <div class="stat-value red">${total_withdrawals:,.0f}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Net Flow</div>
+                            <div class="stat-value {'green' if total_deposits - total_withdrawals >= 0 else 'red'}">${total_deposits - total_withdrawals:+,.0f}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Total Transactions</div>
+                            <div class="stat-value cyan">{total_tx_count}</div>
+                        </div>
+                    </div>
+                    <div class="stat-grid" style="margin-top:15px">
+                        <div class="stat-box">
+                            <div class="stat-label">Approved</div>
+                            <div class="stat-value green">{approved_count}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Rejected / Pending</div>
+                            <div class="stat-value yellow">{rejected_count} / {pending_count}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Treasury Balances -->
+                <div class="section">
+                    <div class="section-title">Treasury Balances</div>
+                    <div class="stat-box" style="text-align:center; margin-bottom:15px;">
+                        <div class="stat-label">Total Treasury (USD Equiv.)</div>
+                        <div class="stat-value cyan" style="font-size:32px">${total_treasury:,.0f}</div>
+                    </div>
+                    <table>
+                        <tr><th>Account</th><th>Bank</th><th>Currency</th><th style='text-align:right'>Balance</th><th style='text-align:right'>USD Equiv.</th></tr>
+                        {treasury_rows}
+                    </table>
+                </div>
+
+                <!-- Income & Expenses -->
+                <div class="section">
+                    <div class="section-title">Income & Expenses</div>
+                    <div class="stat-grid-3">
+                        <div class="stat-box">
+                            <div class="stat-label">Income</div>
+                            <div class="stat-value green">${ie_income:,.0f}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Expenses</div>
+                            <div class="stat-value red">${ie_expense:,.0f}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Net</div>
+                            <div class="stat-value {'green' if ie_net >= 0 else 'red'}">${ie_net:+,.0f}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loans -->
+                <div class="section">
+                    <div class="section-title">Loans</div>
+                    <div class="stat-grid-3">
+                        <div class="stat-box">
+                            <div class="stat-label">Disbursed</div>
+                            <div class="stat-value red">${total_disbursed:,.0f}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Repaid</div>
+                            <div class="stat-value green">${total_repaid:,.0f}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Outstanding</div>
+                            <div class="stat-value yellow">${total_outstanding_loans:,.0f}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Exchanger Summary -->
+                <div class="section">
+                    <div class="section-title">Exchanger Summary</div>
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">Tx Commission</div>
+                            <div class="stat-value yellow">${vendor_commission_total:,.2f}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Settled This Month</div>
+                            <div class="stat-value cyan">${total_settled:,.0f}</div>
+                        </div>
+                    </div>
+                    {'<table><tr><th>Exchanger</th><th>Deposits</th><th>Withdrawals</th><th>Tx Comm</th><th>I&E In</th><th>I&E Out</th><th>Net</th></tr>' + vendor_rows + '</table>' if vendor_rows else '<p style="color:#C5C6C7; text-align:center; padding:10px;">No exchanger activity</p>'}
+                </div>
+
+                <!-- PSP Summary -->
+                {'<div class="section"><div class="section-title">PSP Summary</div><table><tr><th>PSP</th><th>Txns</th><th>Volume</th><th>Commission</th><th>Pending</th></tr>' + psp_rows + '</table></div>' if psp_rows else ''}
+
+                <!-- Outstanding Accounts -->
+                <div class="section">
+                    <div class="section-title">Outstanding Accounts</div>
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">Receivables</div>
+                            <div class="stat-value green">${total_receivables:,.0f}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Payables</div>
+                            <div class="stat-value red">${total_payables:,.0f}</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="footer">
+                <p>Miles Capitals - Monthly Report | Generated {now.strftime('%Y-%m-%d %H:%M UTC')}</p>
+                <p style="margin-top:5px; font-size:10px; color:#666;">This is an automated report. Please contact admin for any discrepancies.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return html
+
+
+async def send_monthly_report():
+    """Send monthly report to all directors on the last day of the month"""
+    try:
+        settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
+        
+        if not settings or not settings.get("monthly_report_enabled"):
+            logger.info("Monthly report is disabled or not configured")
+            return
+        
+        if not settings.get("smtp_email") or not settings.get("smtp_password"):
+            logger.warning("SMTP settings not configured - skipping monthly report")
+            return
+        
+        if not settings.get("director_emails"):
+            logger.warning("No director emails configured - skipping monthly report")
+            return
+        
+        now = datetime.now(timezone.utc)
+        html_content = await generate_monthly_report_html(now.year, now.month)
+        
+        import calendar
+        month_name = calendar.month_name[now.month]
+        
+        await send_email(
+            to_emails=settings["director_emails"],
+            subject=f"Miles Capitals - Monthly Report ({month_name} {now.year})",
+            html_content=html_content,
+            smtp_host=settings.get("smtp_host", "smtp.gmail.com"),
+            smtp_port=settings.get("smtp_port", 587),
+            smtp_email=settings["smtp_email"],
+            smtp_password=settings["smtp_password"],
+            smtp_from_email=settings.get("smtp_from_email", settings["smtp_email"])
+        )
+        
+        await db.email_logs.insert_one({
+            "log_id": f"email_{uuid.uuid4().hex[:12]}",
+            "type": "monthly_report",
+            "recipients": settings["director_emails"],
+            "status": "sent",
+            "month": f"{now.year}-{now.month:02d}",
+            "sent_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        logger.info(f"Monthly report sent for {month_name} {now.year}")
+        
+    except Exception as e:
+        logger.error(f"Failed to send monthly report: {e}")
+        await db.email_logs.insert_one({
+            "log_id": f"email_{uuid.uuid4().hex[:12]}",
+            "type": "monthly_report",
+            "status": "failed",
+            "error": str(e),
+            "attempted_at": datetime.now(timezone.utc).isoformat()
+        })
+
+
+@api_router.get("/reports/monthly/preview")
+async def preview_monthly_report(
+    year: Optional[int] = None, month: Optional[int] = None,
+    user: dict = Depends(require_permission(Modules.REPORTS, Actions.VIEW))
+):
+    """Preview monthly report HTML"""
+    try:
+        html_content = await generate_monthly_report_html(year, month)
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(content=html_content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")
+
+
+@api_router.post("/reports/monthly/send-now")
+async def send_monthly_report_now(
+    year: Optional[int] = None, month: Optional[int] = None,
+    user: dict = Depends(require_permission(Modules.REPORTS, Actions.EXPORT))
+):
+    """Manually trigger monthly report send"""
+    settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
+    
+    if not settings or not settings.get("smtp_email") or not settings.get("smtp_password"):
+        raise HTTPException(status_code=400, detail="SMTP settings not configured")
+    
+    if not settings.get("director_emails"):
+        raise HTTPException(status_code=400, detail="No director emails configured")
+    
+    try:
+        now = datetime.now(timezone.utc)
+        y = year or now.year
+        m = month or now.month
+        html_content = await generate_monthly_report_html(y, m)
+        
+        import calendar
+        month_name = calendar.month_name[m]
+        
+        await send_email(
+            to_emails=settings["director_emails"],
+            subject=f"Miles Capitals - Monthly Report ({month_name} {y})",
+            html_content=html_content,
+            smtp_host=settings.get("smtp_host", "smtp.gmail.com"),
+            smtp_port=settings.get("smtp_port", 587),
+            smtp_email=settings["smtp_email"],
+            smtp_password=settings["smtp_password"],
+            smtp_from_email=settings.get("smtp_from_email", settings["smtp_email"])
+        )
+        
+        return {"message": f"Monthly report for {month_name} {y} sent to {len(settings['director_emails'])} directors"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send report: {str(e)}")
 
 # ============== AUDIT & COMPLIANCE MODULE ==============
 
