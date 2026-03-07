@@ -4418,7 +4418,8 @@ async def get_my_vendor_info(user: dict = Depends(require_vendor)):
                 {"source_vendor_id": vendor["vendor_id"]},
                 {"credit_to_vendor_id": vendor["vendor_id"]}
             ],
-            "status": "completed"
+            "status": "completed",
+            "settled": {"$ne": True}
         }},
         {"$group": {
             "_id": "$currency",
