@@ -3843,7 +3843,8 @@ async def get_vendors(
             {"source_vendor_id": {"$in": vendor_ids}},
             {"credit_to_vendor_id": {"$in": vendor_ids}}
         ],
-        "status": "completed"
+        "status": "completed",
+        "settled": {"$ne": True}
     }, {"_id": 0}).to_list(10000)
     
     # Group transactions and IE entries by vendor_id
