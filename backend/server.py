@@ -5102,10 +5102,12 @@ async def get_vendor_settlements(vendor_id: str, user: dict = Depends(require_pe
 
 @api_router.get("/settlements/{settlement_id}/statement")
 async def get_settlement_statement(settlement_id: str, user: dict = Depends(require_permission(Modules.EXCHANGERS, Actions.VIEW))):
-    """Get full settlement statement with underlying transactions."""
+    """Get full settlement statement with underlying transactions, I&E entries, and loan transactions."""
     settlement = await db.vendor_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
     if not settlement:
         raise HTTPException(status_code=404, detail="Settlement not found")
+    
+    # Fetch regular transactions
     tx_ids = settlement.get("transaction_ids", [])
     transactions = []
     if tx_ids:
@@ -5115,10 +5117,36 @@ async def get_settlement_statement(settlement_id: str, user: dict = Depends(requ
              "base_amount": 1, "base_currency": 1, "client_name": 1, "reference": 1,
              "created_at": 1, "status": 1}
         ).to_list(1000)
+    
+    # Fetch I&E entries
+    ie_ids = settlement.get("ie_entry_ids", [])
+    ie_entries = []
+    if ie_ids:
+        ie_entries = await db.income_expenses.find(
+            {"entry_id": {"$in": ie_ids}},
+            {"_id": 0, "entry_id": 1, "entry_type": 1, "amount": 1, "currency": 1,
+             "base_amount": 1, "base_currency": 1, "category": 1, "description": 1,
+             "vendor_commission_base_amount": 1, "created_at": 1, "date": 1}
+        ).to_list(1000)
+    
+    # Fetch Loan transactions
+    loan_ids = settlement.get("loan_tx_ids", [])
+    loan_entries = []
+    if loan_ids:
+        loan_txs = await db.loan_transactions.find(
+            {"transaction_id": {"$in": loan_ids}},
+            {"_id": 0, "transaction_id": 1, "transaction_type": 1, "amount": 1, "currency": 1,
+             "borrower_name": 1, "vendor_commission_base_amount": 1, "created_at": 1,
+             "source_vendor_id": 1, "credit_to_vendor_id": 1}
+        ).to_list(1000)
+        loan_entries = loan_txs
+    
     vendor = await db.vendors.find_one({"vendor_id": settlement.get("vendor_id")}, {"_id": 0, "vendor_name": 1, "contact_person": 1, "email": 1, "phone": 1})
     return {
         "settlement": settlement,
         "transactions": transactions,
+        "ie_entries": ie_entries,
+        "loan_entries": loan_entries,
         "vendor": vendor or {},
     }
 
