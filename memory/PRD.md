@@ -96,8 +96,8 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 ## Prioritized Backlog
 
 ### P1 - High Priority
-- [ ] Database Performance Optimization (MongoDB Atlas slow, Redis caching partially helps)
-- [ ] Reconciliation System Phase 2 & 3 (PSP, Client, Exchanger matching)
+- [ ] Add pagination across all pages (Exchanger Portal + Admin side)
+- [ ] Reconciliation System Phase 2 & 3 (PSP, Client, Exchanger)
 - [ ] Extend frontend permission gates to hide CRUD buttons per page
 
 ### P2 - Medium Priority

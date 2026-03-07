@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -93,6 +93,20 @@ export default function ExchangerDashboard() {
   const [loanTxCaptchaAnswer, setLoanTxCaptchaAnswer] = useState('');
   const [loanTxRejectionReason, setLoanTxRejectionReason] = useState('');
 
+  // Pagination state
+  const [txPage, setTxPage] = useState(1);
+  const [txTotalPages, setTxTotalPages] = useState(1);
+  const [txTotal, setTxTotal] = useState(0);
+  const [iePage, setIePage] = useState(1);
+  const [ieTotalPages, setIeTotalPages] = useState(1);
+  const [ieTotal, setIeTotal] = useState(0);
+  const [loanTxPage, setLoanTxPage] = useState(1);
+  const [loanTxTotalPages, setLoanTxTotalPages] = useState(1);
+  const [loanTxTotal, setLoanTxTotal] = useState(0);
+  const [stPage, setStPage] = useState(1);
+  const [stTotalPages, setStTotalPages] = useState(1);
+  const [stTotal, setStTotal] = useState(0);
+
   // Other Transactions filter state
   const [otSearchQuery, setOtSearchQuery] = useState('');
   const [otStatusFilter, setOtStatusFilter] = useState('all');
@@ -136,63 +150,81 @@ export default function ExchangerDashboard() {
     }
   };
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (pg) => {
     try {
+      const p = pg || txPage;
       const params = new URLSearchParams();
       if (txStatusFilter && txStatusFilter !== 'all') params.append('status', txStatusFilter);
       if (txTypeFilter && txTypeFilter !== 'all') params.append('transaction_type', txTypeFilter);
       if (txDateFrom) params.append('date_from', txDateFrom);
       if (txDateTo) params.append('date_to', txDateTo);
-      const qs = params.toString() ? `?${params.toString()}` : '';
+      params.append('page', p);
+      params.append('page_size', 20);
+      const qs = `?${params.toString()}`;
       const response = await fetch(`${API_URL}/api/vendor/transactions${qs}`, { 
         headers: getAuthHeaders(), 
         credentials: 'include' 
       });
       if (response.ok) {
-        setTransactions(await response.json());
+        const data = await response.json();
+        setTransactions(data.items || data);
+        setTxTotalPages(data.total_pages || 1);
+        setTxTotal(data.total || 0);
       }
     } catch (error) {
       console.error('Error fetching transactions:', error);
     }
   };
 
-  const fetchSettlements = async () => {
+  const fetchSettlements = async (pg) => {
     if (!vendorInfo) return;
     try {
-      const response = await fetch(`${API_URL}/api/vendor/settlements`, {
+      const p = pg || stPage;
+      const response = await fetch(`${API_URL}/api/vendor/settlements?page=${p}&page_size=20`, {
         headers: getAuthHeaders(),
         credentials: 'include'
       });
       if (response.ok) {
-        setSettlements(await response.json());
+        const data = await response.json();
+        setSettlements(data.items || data);
+        setStTotalPages(data.total_pages || 1);
+        setStTotal(data.total || 0);
       }
     } catch (error) {
       console.error('Error fetching settlements:', error);
     }
   };
 
-  const fetchIeEntries = async () => {
+  const fetchIeEntries = async (pg) => {
     try {
-      const response = await fetch(`${API_URL}/api/vendor/income-expenses`, {
+      const p = pg || iePage;
+      const response = await fetch(`${API_URL}/api/vendor/income-expenses?page=${p}&page_size=20`, {
         headers: getAuthHeaders(),
         credentials: 'include'
       });
       if (response.ok) {
-        setIeEntries(await response.json());
+        const data = await response.json();
+        setIeEntries(data.items || data);
+        setIeTotalPages(data.total_pages || 1);
+        setIeTotal(data.total || 0);
       }
     } catch (error) {
       console.error('Error fetching IE entries:', error);
     }
   };
 
-  const fetchLoanTransactions = async () => {
+  const fetchLoanTransactions = async (pg) => {
     try {
-      const response = await fetch(`${API_URL}/api/vendor/loan-transactions`, {
+      const p = pg || loanTxPage;
+      const response = await fetch(`${API_URL}/api/vendor/loan-transactions?page=${p}&page_size=20`, {
         headers: getAuthHeaders(),
         credentials: 'include'
       });
       if (response.ok) {
-        setLoanTransactions(await response.json());
+        const data = await response.json();
+        setLoanTransactions(data.items || data);
+        setLoanTxTotalPages(data.total_pages || 1);
+        setLoanTxTotal(data.total || 0);
       }
     } catch (error) {
       console.error('Error fetching loan transactions:', error);
@@ -1220,6 +1252,19 @@ export default function ExchangerDashboard() {
             </Table>
           </ScrollArea>
         </CardContent>
+        {txTotalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
+            <span className="text-xs text-slate-400">Showing page {txPage} of {txTotalPages} ({txTotal} total)</span>
+            <div className="flex gap-1">
+              <Button variant="outline" size="sm" disabled={txPage <= 1} onClick={() => { setTxPage(txPage - 1); fetchTransactions(txPage - 1); }} className="h-7 px-2 text-xs">Prev</Button>
+              {Array.from({ length: Math.min(txTotalPages, 5) }, (_, i) => {
+                const p = txTotalPages <= 5 ? i + 1 : Math.max(1, Math.min(txPage - 2, txTotalPages - 4)) + i;
+                return <Button key={p} variant={p === txPage ? "default" : "outline"} size="sm" onClick={() => { setTxPage(p); fetchTransactions(p); }} className="h-7 w-7 px-0 text-xs">{p}</Button>;
+              })}
+              <Button variant="outline" size="sm" disabled={txPage >= txTotalPages} onClick={() => { setTxPage(txPage + 1); fetchTransactions(txPage + 1); }} className="h-7 px-2 text-xs">Next</Button>
+            </div>
+          </div>
+        )}
       </Card>
         </TabsContent>
 
