@@ -113,6 +113,7 @@ export default function Layout() {
   // Exchanger-specific navigation
   const vendorNavItems = [
     { to: '/vendor-portal', icon: Store, label: 'My Portal' },
+    { to: '/messages', icon: MessageSquare, label: 'Messages' },
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
 
