@@ -64,6 +64,8 @@ import {
   TrendingUp,
   Percent,
   LogIn,
+  Calendar,
+  Eye,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -96,12 +98,14 @@ export default function Settings() {
     director_emails: [],
     report_enabled: false,
     report_time: '03:00',
+    monthly_report_enabled: false,
   });
   const [emailLoading, setEmailLoading] = useState(true);
   const [newDirectorEmail, setNewDirectorEmail] = useState('');
   const [emailLogs, setEmailLogs] = useState([]);
   const [sendingTest, setSendingTest] = useState(false);
   const [sendingReport, setSendingReport] = useState(false);
+  const [sendingMonthlyReport, setSendingMonthlyReport] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
 
   const getAuthHeaders = () => {
@@ -154,6 +158,7 @@ export default function Settings() {
           director_emails: data.director_emails || [],
           report_enabled: data.report_enabled || false,
           report_time: data.report_time || '03:00',
+          monthly_report_enabled: data.monthly_report_enabled || false,
         });
       }
     } catch (error) {
@@ -291,6 +296,7 @@ export default function Settings() {
         director_emails: emailSettings.director_emails,
         report_enabled: emailSettings.report_enabled,
         report_time: emailSettings.report_time,
+        monthly_report_enabled: emailSettings.monthly_report_enabled,
       };
       
       // Only send password if it's been changed
@@ -363,6 +369,30 @@ export default function Settings() {
       toast.error('Failed to send report');
     } finally {
       setSendingReport(false);
+    }
+  };
+
+  const handleSendMonthlyReportNow = async () => {
+    setSendingMonthlyReport(true);
+    try {
+      const response = await fetch(`${API_URL}/api/reports/monthly/send-now`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message || 'Monthly report sent!');
+        fetchEmailLogs();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to send monthly report');
+      }
+    } catch (error) {
+      toast.error('Failed to send monthly report');
+    } finally {
+      setSendingMonthlyReport(false);
     }
   };
   
@@ -924,6 +954,71 @@ export default function Settings() {
                         <FileText className="w-4 h-4 mr-2" />
                       )}
                       Send Now
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Monthly Reports Card */}
+              <Card className="bg-white border-slate-200">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-purple-400" />
+                    Monthly Reports
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-sm border border-slate-200">
+                    <div>
+                      <Label className="text-white">Enable Monthly Reports</Label>
+                      <p className="text-xs text-[#C5C6C7]">Auto-send on the last day of each month</p>
+                    </div>
+                    <Switch
+                      checked={emailSettings.monthly_report_enabled}
+                      onCheckedChange={async (checked) => {
+                        setEmailSettings(prev => ({ ...prev, monthly_report_enabled: checked }));
+                        try {
+                          const response = await fetch(`${API_URL}/api/settings/email`, {
+                            method: 'PUT',
+                            headers: getAuthHeaders(),
+                            credentials: 'include',
+                            body: JSON.stringify({ monthly_report_enabled: checked }),
+                          });
+                          if (response.ok) {
+                            toast.success(checked ? 'Monthly reports enabled' : 'Monthly reports disabled');
+                          }
+                        } catch (error) {
+                          toast.error('Failed to update setting');
+                          setEmailSettings(prev => ({ ...prev, monthly_report_enabled: !checked }));
+                        }
+                      }}
+                      data-testid="monthly-report-enabled-switch"
+                    />
+                  </div>
+                  <p className="text-xs text-[#C5C6C7]">Includes: Transaction Summary, Treasury Balances, I&E, Loans, Exchanger Settlements, PSP Summary, Outstanding Accounts</p>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleSendMonthlyReportNow}
+                      disabled={sendingMonthlyReport || emailSettings.director_emails.length === 0}
+                      variant="outline"
+                      className="flex-1 border-purple-400/30 text-purple-400 hover:bg-purple-400/10"
+                      data-testid="send-monthly-report-btn"
+                    >
+                      {sendingMonthlyReport ? (
+                        <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin mr-2" />
+                      ) : (
+                        <FileText className="w-4 h-4 mr-2" />
+                      )}
+                      Send Monthly Report Now
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="border-slate-400/30 text-slate-400 hover:bg-slate-400/10"
+                      onClick={() => window.open(`${API_URL}/api/reports/monthly/preview`, '_blank')}
+                      data-testid="preview-monthly-report-btn"
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Preview
                     </Button>
                   </div>
                 </CardContent>
