@@ -1327,7 +1327,7 @@ export default function ExchangerDashboard() {
                           const isDisbursement = tx.transaction_type === 'disbursement';
                           const isPending = tx.status === 'pending_vendor';
                           return (
-                            <TableRow key={tx.transaction_id} className={`border-slate-200 hover:bg-slate-100 ${isPending ? 'bg-purple-50' : ''}`}>
+                            <TableRow key={tx.transaction_id} className={`border-slate-200 hover:bg-slate-100 ${isPending ? 'bg-purple-500/10' : ''}`}>
                               <TableCell className="font-mono text-slate-800 text-sm">{tx.transaction_id?.slice(-12).toUpperCase()}</TableCell>
                               <TableCell><Badge className="bg-purple-100 text-purple-700 text-xs">Loan</Badge></TableCell>
                               <TableCell>
@@ -1367,7 +1367,7 @@ export default function ExchangerDashboard() {
                           const displayAmount = entry.base_amount || entry.amount;
                           const isPending = entry.status === 'pending_vendor';
                           return (
-                            <TableRow key={entry.entry_id} className={`border-slate-200 hover:bg-slate-100 ${isPending ? 'bg-amber-50' : ''}`}>
+                            <TableRow key={entry.entry_id} className={`border-slate-200 hover:bg-slate-100 ${isPending ? 'bg-amber-500/10' : ''}`}>
                               <TableCell><span className="font-mono text-slate-800">{entry.entry_id?.slice(-10)?.toUpperCase()}</span></TableCell>
                               <TableCell><Badge className="bg-amber-100 text-amber-700 text-xs">I&E</Badge></TableCell>
                               <TableCell>
