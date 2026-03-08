@@ -126,6 +126,7 @@ class Modules:
     USERS = "users"
     ROLES = "roles"
     MESSAGES = "messages"
+    APPROVALS = "approvals"
 
 # Standard actions
 class Actions:
@@ -142,7 +143,8 @@ ALL_MODULES = [
     Modules.LP_MANAGEMENT, Modules.INCOME_EXPENSES, Modules.LOANS, Modules.DEBTS,
     Modules.PSP, Modules.EXCHANGERS, Modules.RECONCILIATION, Modules.AUDIT,
     Modules.LOGS, Modules.REPORTS, Modules.SETTINGS, Modules.USERS, Modules.ROLES,
-    Modules.MESSAGES
+    Modules.MESSAGES,
+    Modules.APPROVALS
 ]
 
 # All actions list
@@ -167,7 +169,8 @@ MODULE_DISPLAY_NAMES = {
     Modules.SETTINGS: "Settings",
     Modules.USERS: "Users",
     Modules.ROLES: "Roles & Permissions",
-    Modules.MESSAGES: "Messages"
+    Modules.MESSAGES: "Messages",
+    Modules.APPROVALS: "Pending Approvals"
 }
 
 class RoleCreate(BaseModel):
