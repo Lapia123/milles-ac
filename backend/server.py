@@ -10957,6 +10957,15 @@ async def get_calendar_status(
 
 # ============== INTERNAL MESSAGING SYSTEM ==============
 
+
+@api_router.get("/messages/users")
+async def get_users_for_messaging(user: dict = Depends(get_current_user)):
+    """Get all users for message recipient selection (lightweight, no admin permission needed)"""
+    users = await db.users.find({}, {"_id": 0, "user_id": 1, "name": 1, "email": 1, "role": 1}).to_list(500)
+    # Filter out current user
+    return [u for u in users if u.get("user_id") != user["user_id"]]
+
+
 @api_router.get("/messages/unread-count")
 async def get_unread_messages_count(user: dict = Depends(get_current_user)):
     """Get total count of unread messages for the current user"""
