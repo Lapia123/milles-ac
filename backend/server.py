@@ -10490,6 +10490,138 @@ async def get_reconciliation_daily_summary(
     }
 
 
+@api_router.get("/reconciliation/pending")
+async def get_pending_reconciliation(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    account_type: Optional[str] = None,
+    user: dict = Depends(require_permission(Modules.RECONCILIATION, Actions.VIEW))
+):
+    """Get all dates/accounts with pending (unreconciled) transactions"""
+    from collections import defaultdict
+    
+    days_back = 180
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()[:10]
+    start = date_from or cutoff
+    end = date_to or datetime.now(timezone.utc).isoformat()[:10]
+    start_iso = f"{start}T00:00:00"
+    end_iso = f"{end}T23:59:59"
+    
+    # Get all reconciliation records to know what's been reconciled
+    recon_records = await db.reconciliations.find(
+        {"date": {"$gte": start, "$lte": end}},
+        {"_id": 0, "date": 1, "account_type": 1, "account_id": 1, "status": 1, "matched_count": 1, "flagged_count": 1}
+    ).to_list(5000)
+    reconciled_keys = set()
+    for r in recon_records:
+        if r.get("status") == "completed":
+            reconciled_keys.add(f"{r.get('date')}_{r.get('account_type')}_{r.get('account_id')}")
+    
+    pending_items = []
+    
+    # --- Treasury transactions ---
+    if not account_type or account_type == "treasury":
+        treasury_accounts = await db.treasury_accounts.find({}, {"_id": 0, "account_id": 1, "account_name": 1, "currency": 1}).to_list(100)
+        acc_map = {a["account_id"]: a for a in treasury_accounts}
+        
+        tx_pipeline = [
+            {"$match": {"created_at": {"$gte": start_iso, "$lte": end_iso}}},
+            {"$project": {"date": {"$substr": ["$created_at", 0, 10]}, "account_id": 1, "amount": 1}},
+            {"$group": {"_id": {"date": "$date", "account_id": "$account_id"}, "count": {"$sum": 1}, "total_amount": {"$sum": {"$abs": "$amount"}}}}
+        ]
+        treasury_txs = await db.treasury_transactions.aggregate(tx_pipeline).to_list(5000)
+        
+        for item in treasury_txs:
+            dt = item["_id"]["date"]
+            aid = item["_id"]["account_id"]
+            key = f"{dt}_treasury_{aid}"
+            if key not in reconciled_keys:
+                acc = acc_map.get(aid, {})
+                pending_items.append({
+                    "date": dt,
+                    "account_type": "treasury",
+                    "account_id": aid,
+                    "account_name": acc.get("account_name", "Unknown"),
+                    "currency": acc.get("currency", "USD"),
+                    "pending_count": item["count"],
+                    "total_amount": round(item["total_amount"], 2),
+                    "status": "pending"
+                })
+    
+    # --- PSP transactions ---
+    if not account_type or account_type == "psp":
+        psps = await db.psps.find({}, {"_id": 0, "psp_id": 1, "psp_name": 1}).to_list(100)
+        psp_map = {p["psp_id"]: p for p in psps}
+        
+        psp_pipeline = [
+            {"$match": {"psp_id": {"$exists": True, "$ne": None}, "created_at": {"$gte": start_iso, "$lte": end_iso}, "status": {"$in": ["approved", "completed", "pending"]}}},
+            {"$project": {"date": {"$substr": ["$created_at", 0, 10]}, "psp_id": 1, "amount": 1}},
+            {"$group": {"_id": {"date": "$date", "psp_id": "$psp_id"}, "count": {"$sum": 1}, "total_amount": {"$sum": "$amount"}}}
+        ]
+        psp_txs = await db.transactions.aggregate(psp_pipeline).to_list(5000)
+        
+        for item in psp_txs:
+            dt = item["_id"]["date"]
+            pid = item["_id"]["psp_id"]
+            key = f"{dt}_psp_{pid}"
+            if key not in reconciled_keys:
+                psp = psp_map.get(pid, {})
+                pending_items.append({
+                    "date": dt,
+                    "account_type": "psp",
+                    "account_id": pid,
+                    "account_name": psp.get("psp_name", "Unknown"),
+                    "currency": "USD",
+                    "pending_count": item["count"],
+                    "total_amount": round(item["total_amount"], 2),
+                    "status": "pending"
+                })
+    
+    # --- Exchanger transactions ---
+    if not account_type or account_type == "exchanger":
+        vendors = await db.vendors.find({}, {"_id": 0, "vendor_id": 1, "vendor_name": 1}).to_list(100)
+        vendor_map = {v["vendor_id"]: v for v in vendors}
+        
+        vendor_pipeline = [
+            {"$match": {"vendor_id": {"$exists": True, "$ne": None}, "created_at": {"$gte": start_iso, "$lte": end_iso}, "status": {"$in": ["approved", "completed", "pending"]}}},
+            {"$project": {"date": {"$substr": ["$created_at", 0, 10]}, "vendor_id": 1, "amount": 1}},
+            {"$group": {"_id": {"date": "$date", "vendor_id": "$vendor_id"}, "count": {"$sum": 1}, "total_amount": {"$sum": "$amount"}}}
+        ]
+        vendor_txs = await db.transactions.aggregate(vendor_pipeline).to_list(5000)
+        
+        for item in vendor_txs:
+            dt = item["_id"]["date"]
+            vid = item["_id"]["vendor_id"]
+            key = f"{dt}_exchanger_{vid}"
+            if key not in reconciled_keys:
+                v = vendor_map.get(vid, {})
+                pending_items.append({
+                    "date": dt,
+                    "account_type": "exchanger",
+                    "account_id": vid,
+                    "account_name": v.get("vendor_name", "Unknown"),
+                    "currency": "USD",
+                    "pending_count": item["count"],
+                    "total_amount": round(item["total_amount"], 2),
+                    "status": "pending"
+                })
+    
+    # Sort by date descending
+    pending_items.sort(key=lambda x: x["date"], reverse=True)
+    
+    # Summary
+    total_pending = sum(p["pending_count"] for p in pending_items)
+    unique_dates = len(set(p["date"] for p in pending_items))
+    
+    return {
+        "items": pending_items,
+        "total_pending_transactions": total_pending,
+        "unique_dates": unique_dates,
+        "total_items": len(pending_items)
+    }
+
+
+
 @api_router.get("/reconciliation/account-history")
 async def get_account_history_for_reconciliation(
     type: str,
