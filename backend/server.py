@@ -1630,9 +1630,21 @@ async def delete_client_bank_account(request: Request, client_id: str, bank_acco
 @api_router.get("/treasury")
 async def get_treasury_accounts(user: dict = Depends(require_permission(Modules.TREASURY, Actions.VIEW))):
     accounts = await db.treasury_accounts.find({}, {"_id": 0}).to_list(1000)
-    # Add USD equivalent for each account
+    
+    # Get manual FX rates from settings
+    fx_settings = await db.app_settings.find_one({"setting_type": "manual_fx_rates"}, {"_id": 0})
+    manual_rates = fx_settings.get("rates", {}) if fx_settings else {}
+    
     for acc in accounts:
-        acc["balance_usd"] = convert_to_usd(acc.get("balance", 0), acc.get("currency", "USD"))
+        currency = acc.get("currency", "USD")
+        balance = acc.get("balance", 0)
+        if currency == "USD":
+            acc["balance_usd"] = balance
+        elif currency in manual_rates and manual_rates[currency] > 0:
+            acc["balance_usd"] = round(balance * manual_rates[currency], 2)
+        else:
+            acc["balance_usd"] = None  # No conversion available
+    
     return accounts
 
 @api_router.get("/treasury/{account_id}")
@@ -1752,9 +1764,7 @@ async def get_treasury_history(
                 # If the transaction has base_amount in the same currency as the account, use it
                 if tx.get("base_currency") == account_currency and tx.get("base_amount"):
                     display_amount = tx.get("base_amount")
-                else:
-                    # Convert USD amount to account currency
-                    display_amount = convert_from_usd(tx.get("amount", 0), account_currency)
+                # Otherwise keep USD amount (no live FX conversion)
             
             treasury_txs.append({
                 "treasury_transaction_id": tx.get("transaction_id"),
@@ -6163,9 +6173,18 @@ async def get_dashboard_stats(user: dict = Depends(require_permission(Modules.DA
     total_treasury = await db.treasury_accounts.count_documents({})
     active_treasury = await db.treasury_accounts.count_documents({"status": TreasuryAccountStatus.ACTIVE})
     
-    # Get total treasury balance in USD (converting all currencies)
+    # Get total treasury balance using manual FX rates
     all_accounts = await db.treasury_accounts.find({"status": TreasuryAccountStatus.ACTIVE}, {"_id": 0}).to_list(1000)
-    total_balance_usd = sum(convert_to_usd(acc.get("balance", 0), acc.get("currency", "USD")) for acc in all_accounts)
+    fx_settings = await db.app_settings.find_one({"setting_type": "manual_fx_rates"}, {"_id": 0})
+    manual_rates = fx_settings.get("rates", {}) if fx_settings else {}
+    total_balance_usd = 0
+    for acc in all_accounts:
+        currency = acc.get("currency", "USD")
+        balance = acc.get("balance", 0)
+        if currency == "USD":
+            total_balance_usd += balance
+        elif currency in manual_rates and manual_rates[currency] > 0:
+            total_balance_usd += balance * manual_rates[currency]
     
     # Get transaction stats
     total_transactions = await db.transactions.count_documents({})
@@ -13963,6 +13982,43 @@ async def refresh_fx_rates(user: dict = Depends(require_permission(Modules.SETTI
         "fetched_at": _fx_cache.get("fetched_at", "").isoformat() if _fx_cache.get("fetched_at") else None,
         "sample_rates": {k: rates.get(k) for k in ["USD", "EUR", "GBP", "AED", "INR"] if k in rates},
     }
+
+@api_router.get("/settings/manual-fx-rates")
+async def get_manual_fx_rates(user: dict = Depends(require_permission(Modules.SETTINGS, Actions.VIEW))):
+    """Get manual FX rates (1 unit of currency = X USD)"""
+    settings = await db.app_settings.find_one({"setting_type": "manual_fx_rates"}, {"_id": 0})
+    return {
+        "rates": settings.get("rates", {}) if settings else {},
+        "updated_at": settings.get("updated_at") if settings else None,
+        "updated_by_name": settings.get("updated_by_name") if settings else None,
+    }
+
+@api_router.put("/settings/manual-fx-rates")
+async def update_manual_fx_rates(
+    request: Request,
+    data: dict = Body(...),
+    user: dict = Depends(require_permission(Modules.SETTINGS, Actions.EDIT))
+):
+    """Update manual FX rates. Body: {rates: {INR: 0.012, AED: 0.272, ...}}"""
+    rates = data.get("rates", {})
+    now = datetime.now(timezone.utc)
+    
+    await db.app_settings.update_one(
+        {"setting_type": "manual_fx_rates"},
+        {"$set": {
+            "setting_type": "manual_fx_rates",
+            "rates": rates,
+            "updated_at": now.isoformat(),
+            "updated_by": user["user_id"],
+            "updated_by_name": user["name"]
+        }},
+        upsert=True
+    )
+    
+    await log_activity(request, user, "edit", "settings", "Updated manual FX rates")
+    return {"message": "Manual FX rates updated", "rates": rates}
+
+
 
 @api_router.get("/fx-rates/convert")
 async def convert_currency_endpoint(

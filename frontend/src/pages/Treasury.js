@@ -444,7 +444,7 @@ export default function Treasury() {
     });
   };
 
-  const totalBalanceUSD = accounts.reduce((sum, acc) => sum + (acc.balance_usd || acc.balance || 0), 0);
+  const totalBalanceUSD = accounts.reduce((sum, acc) => sum + (acc.balance_usd || 0), 0);
 
   return (
     <div className="space-y-6 animate-fade-in" data-testid="treasury-page">
@@ -721,7 +721,7 @@ export default function Treasury() {
             <div>
               <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total Treasury Balance (USD Equivalent)</p>
               <p className="text-4xl font-bold font-mono text-slate-800">${totalBalanceUSD.toLocaleString()}</p>
-              <p className="text-xs text-slate-500 mt-1">Converted from all currencies to USD</p>
+              <p className="text-xs text-slate-500 mt-1">Based on manual FX rates (Settings)</p>
             </div>
             <div className="p-4 bg-blue-100 rounded-sm">
               <DollarSign className="w-8 h-8 text-blue-600" />
@@ -792,7 +792,9 @@ export default function Treasury() {
                   {account.currency !== 'USD' && (
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500 text-sm">USD Equivalent</span>
-                      <span className="text-lg font-mono text-blue-600">${(account.balance_usd || 0).toLocaleString()}</span>
+                      <span className="text-lg font-mono text-blue-600">
+                        {account.balance_usd != null ? `$${account.balance_usd.toLocaleString()}` : <span className="text-xs text-slate-400">Rate not set</span>}
+                      </span>
                     </div>
                   )}
                   <div className="flex items-center justify-between">
