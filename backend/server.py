@@ -5590,6 +5590,19 @@ async def settle_vendor_balance(
     
     await log_activity(request, user, "create", "exchangers", "Created vendor settlement")
 
+    # Send settlement approval notification email (fire and forget)
+    import asyncio
+    asyncio.create_task(send_approval_notification("settlement", {
+        "settlement_id": settlement_id,
+        "vendor_name": vendor["vendor_name"],
+        "gross_amount": gross_amount,
+        "currency": settlement_request.source_currency,
+        "net_amount": settlement_amount,
+        "dest_currency": settlement_request.destination_currency,
+        "tx_count": len(pending_txs) + len(pending_ie) + len(pending_loans),
+        "created_by": user["name"]
+    }))
+
     return await db.vendor_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
 
 # Get all pending settlements (for approval page)
@@ -6132,6 +6145,19 @@ async def create_transaction(
     
     result = await db.transactions.find_one({"transaction_id": tx_id}, {"_id": 0})
     await log_activity(request, user, "create", "transactions", "Created transaction")
+
+    # Send approval notification email (fire and forget)
+    import asyncio
+    asyncio.create_task(send_approval_notification("transaction", {
+        "reference": result.get("reference", tx_id),
+        "type": transaction_type,
+        "client": result.get("client_name", "Unknown"),
+        "amount": usd_amount,
+        "base_amount": base_amount,
+        "base_currency": base_currency,
+        "destination": result.get("vendor_name") or result.get("destination_account_name") or result.get("psp_name") or destination_type,
+        "created_by": user["name"]
+    }))
 
     return result
 
@@ -12474,6 +12500,86 @@ async def set_user_permission_overrides(
     await log_activity(request, user, "edit", "users", "Updated user permissions")
 
     return {"message": "Permission overrides updated successfully"}
+
+
+# ============== APPROVAL EMAIL NOTIFICATIONS ==============
+
+async def send_approval_notification(notification_type: str, details: dict):
+    """Send email notification for pending approvals to users with approve permission"""
+    try:
+        # Get SMTP config
+        smtp_settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
+        smtp_host = (smtp_settings or {}).get("smtp_host") or os.environ.get("SMTP_HOST", "smtp.gmail.com")
+        smtp_port = (smtp_settings or {}).get("smtp_port") or int(os.environ.get("SMTP_PORT", "587"))
+        smtp_email = (smtp_settings or {}).get("smtp_email") or os.environ.get("SMTP_USER", "")
+        smtp_password = (smtp_settings or {}).get("smtp_password") or os.environ.get("SMTP_PASSWORD", "")
+        smtp_from = (smtp_settings or {}).get("smtp_from_email") or os.environ.get("SMTP_FROM_EMAIL", smtp_email)
+        
+        if not smtp_email or not smtp_password:
+            return
+        
+        # Get users with approvals permission
+        roles_with_approve = await db.roles.find({"permissions.approvals": {"$exists": True}}, {"_id": 0, "role_id": 1, "name": 1}).to_list(20)
+        role_ids = [r.get("role_id") or r.get("name") for r in roles_with_approve]
+        
+        approvers = await db.users.find(
+            {"$or": [{"role": {"$in": role_ids}}, {"role_id": {"$in": role_ids}}], "is_active": {"$ne": False}},
+            {"_id": 0, "email": 1, "name": 1}
+        ).to_list(50)
+        
+        if not approvers:
+            return
+        
+        to_emails = [u["email"] for u in approvers if u.get("email")]
+        if not to_emails:
+            return
+        
+        if notification_type == "transaction":
+            subject = f"Miles Capitals - New Transaction Pending Approval"
+            html = f"""<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:30px;background:#0B0C10;color:white;border-radius:8px;">
+                <h2 style="color:#66FCF1;text-align:center;margin:0 0 20px;">MILES CAPITALS</h2>
+                <div style="background:#1F2833;padding:20px;border-radius:8px;margin:15px 0;">
+                    <h3 style="color:#fbbf24;margin:0 0 15px;">New Transaction Pending Approval</h3>
+                    <table style="width:100%;font-size:13px;color:#C5C6C7;">
+                        <tr><td style="padding:4px 0;color:#888;">Reference</td><td style="padding:4px 0;font-family:monospace;">{details.get('reference', '-')}</td></tr>
+                        <tr><td style="padding:4px 0;color:#888;">Type</td><td style="padding:4px 0;text-transform:capitalize;color:{'#4ade80' if details.get('type') == 'deposit' else '#f87171'}">{details.get('type', '-')}</td></tr>
+                        <tr><td style="padding:4px 0;color:#888;">Client</td><td style="padding:4px 0;">{details.get('client', '-')}</td></tr>
+                        <tr><td style="padding:4px 0;color:#888;">Amount</td><td style="padding:4px 0;font-weight:bold;font-size:16px;">${details.get('amount', 0):,.2f} USD</td></tr>
+                        {f'<tr><td style="padding:4px 0;color:#888;">Base Amount</td><td style="padding:4px 0;">{details.get("base_amount", 0):,.2f} {details.get("base_currency", "")}</td></tr>' if details.get('base_currency') and details.get('base_currency') != 'USD' else ''}
+                        <tr><td style="padding:4px 0;color:#888;">Destination</td><td style="padding:4px 0;">{details.get('destination', '-')}</td></tr>
+                        <tr><td style="padding:4px 0;color:#888;">Created By</td><td style="padding:4px 0;">{details.get('created_by', '-')}</td></tr>
+                    </table>
+                </div>
+                <p style="color:#C5C6C7;text-align:center;font-size:12px;">Please review and approve/reject this transaction in the Back Office.</p></div>"""
+        
+        elif notification_type == "settlement":
+            html = f"""<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:30px;background:#0B0C10;color:white;border-radius:8px;">
+                <h2 style="color:#66FCF1;text-align:center;margin:0 0 20px;">MILES CAPITALS</h2>
+                <div style="background:#1F2833;padding:20px;border-radius:8px;margin:15px 0;">
+                    <h3 style="color:#fbbf24;margin:0 0 15px;">New Settlement Pending Approval</h3>
+                    <table style="width:100%;font-size:13px;color:#C5C6C7;">
+                        <tr><td style="padding:4px 0;color:#888;">Settlement ID</td><td style="padding:4px 0;font-family:monospace;">{details.get('settlement_id', '-')}</td></tr>
+                        <tr><td style="padding:4px 0;color:#888;">Exchanger</td><td style="padding:4px 0;">{details.get('vendor_name', '-')}</td></tr>
+                        <tr><td style="padding:4px 0;color:#888;">Gross Amount</td><td style="padding:4px 0;font-weight:bold;">{details.get('gross_amount', 0):,.2f} {details.get('currency', 'USD')}</td></tr>
+                        <tr><td style="padding:4px 0;color:#888;">Net Settlement</td><td style="padding:4px 0;font-weight:bold;font-size:16px;color:#66FCF1;">{details.get('net_amount', 0):,.2f} {details.get('dest_currency', 'USD')}</td></tr>
+                        <tr><td style="padding:4px 0;color:#888;">Transactions</td><td style="padding:4px 0;">{details.get('tx_count', 0)} entries</td></tr>
+                        <tr><td style="padding:4px 0;color:#888;">Created By</td><td style="padding:4px 0;">{details.get('created_by', '-')}</td></tr>
+                    </table>
+                </div>
+                <p style="color:#C5C6C7;text-align:center;font-size:12px;">Please review and approve/reject this settlement in the Back Office.</p></div>"""
+            subject = f"Miles Capitals - Settlement Pending Approval ({details.get('vendor_name', '')})"
+        else:
+            return
+        
+        await send_email(
+            to_emails=to_emails, subject=subject, html_content=html,
+            smtp_host=smtp_host, smtp_port=smtp_port,
+            smtp_email=smtp_email, smtp_password=smtp_password, smtp_from_email=smtp_from
+        )
+        logger.info(f"Approval notification sent to {len(to_emails)} approvers for {notification_type}")
+    except Exception as e:
+        logger.error(f"Failed to send approval notification: {e}")
+
 
 # ============== EMAIL SETTINGS & DAILY REPORTS ==============
 
