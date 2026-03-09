@@ -6190,27 +6190,28 @@ async def create_transaction(
     result = await db.transactions.find_one({"transaction_id": tx_id}, {"_id": 0})
     await log_activity(request, user, "create", "transactions", "Created transaction")
 
-    # Send approval notification email (fire and forget)
+    # Send notifications (fire and forget)
     import asyncio
-    asyncio.create_task(send_approval_notification("transaction", {
-        "reference": result.get("reference", tx_id),
-        "type": transaction_type,
-        "client": result.get("client_name", "Unknown"),
-        "amount": usd_amount,
-        "base_amount": base_amount,
-        "base_currency": base_currency,
-        "destination": result.get("vendor_name") or result.get("destination_account_name") or result.get("psp_name") or destination_type,
-        "created_by": user["name"]
-    }))
-
-    # Notify exchanger if assigned
     if destination_type == "vendor" and vendor_id:
+        # Vendor transaction → only notify the exchanger, NOT approvers
         amt_display = f"{base_amount:,.2f} {base_currency}" if base_currency and base_currency != "USD" and base_amount else f"${usd_amount:,.2f} USD"
         asyncio.create_task(send_exchanger_notification("transaction", vendor_id, {
             "reference": result.get("reference", tx_id),
             "type": transaction_type,
             "client": result.get("client_name", "Unknown"),
             "amount_display": amt_display,
+        }))
+    else:
+        # Non-vendor transaction → notify approvers
+        asyncio.create_task(send_approval_notification("transaction", {
+            "reference": result.get("reference", tx_id),
+            "type": transaction_type,
+            "client": result.get("client_name", "Unknown"),
+            "amount": usd_amount,
+            "base_amount": base_amount,
+            "base_currency": base_currency,
+            "destination": result.get("destination_account_name") or result.get("psp_name") or destination_type,
+            "created_by": user["name"]
         }))
 
     return result
