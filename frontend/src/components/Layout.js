@@ -67,10 +67,10 @@ export default function Layout() {
     
     try {
       // Fetch pending transactions count (for Approvals)
-      const txResponse = await fetch(`${API_URL}/api/transactions?status=pending&limit=500`, { headers });
+      const txResponse = await fetch(`${API_URL}/api/transactions?status=pending&page_size=1`, { headers });
       if (txResponse.ok) {
         const txData = await txResponse.json();
-        const pendingCount = Array.isArray(txData) ? txData.filter(t => t.status === 'pending').length : 0;
+        const pendingCount = txData.total || (Array.isArray(txData) ? txData.length : 0);
         setNotificationCounts(prev => ({
           ...prev,
           approvals: pendingCount
