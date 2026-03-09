@@ -192,11 +192,14 @@ export default function Settings() {
   };
 
   useEffect(() => {
-    fetchUsers();
-    fetchRoles();
-    fetchEmailSettings();
-    fetchEmailLogs();
-    fetchManualFxRates();
+    const isAdmin = user?.role === 'admin';
+    if (isAdmin) {
+      fetchUsers();
+      fetchRoles();
+      fetchEmailSettings();
+      fetchEmailLogs();
+      fetchManualFxRates();
+    }
     fetchSecuritySettings();
   }, []);
 
