@@ -1278,6 +1278,41 @@ async def verify_otp(request: Request, data: dict = Body(...)):
         "user": {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "role": user.get("role", "viewer")}}
 
 
+@api_router.post("/auth/change-password")
+async def change_password(request: Request, data: dict = Body(...), user: dict = Depends(get_current_user)):
+    """Change own password"""
+    current_password = data.get("current_password")
+    new_password = data.get("new_password")
+    if not current_password or not new_password:
+        raise HTTPException(status_code=400, detail="Current and new passwords are required")
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
+    
+    user_doc = await db.users.find_one({"user_id": user["user_id"]})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if not verify_password(current_password, user_doc.get("password_hash", "")):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+    
+    new_hash = hash_password(new_password)
+    await db.users.update_one({"user_id": user["user_id"]}, {"$set": {"password_hash": new_hash, "updated_at": datetime.now(timezone.utc).isoformat()}})
+    
+    await log_activity(request, user, "edit", "users", "Changed own password")
+    return {"message": "Password changed successfully"}
+
+
+@api_router.get("/auth/security-status")
+async def get_user_security_status(user: dict = Depends(get_current_user)):
+    """Get 2FA status for any logged-in user (no admin needed)"""
+    settings = await db.app_settings.find_one({"setting_type": "security"}, {"_id": 0})
+    return {
+        "twofa_enabled": settings.get("twofa_enabled", False) if settings else False,
+        "session_timeout_hours": settings.get("session_timeout_hours", 2) if settings else 2,
+    }
+
+
+
 @api_router.get("/settings/security")
 async def get_security_settings(user: dict = Depends(require_permission(Modules.SETTINGS, Actions.VIEW))):
     """Get 2FA and session settings"""

@@ -66,6 +66,7 @@ import {
   LogIn,
   Calendar,
   Eye,
+  Lock,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -201,7 +202,9 @@ export default function Settings() {
 
   const fetchSecuritySettings = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/settings/security`, { headers: getAuthHeaders() });
+      // Use admin endpoint if admin, otherwise use public security-status
+      const endpoint = user?.role === 'admin' ? '/api/settings/security' : '/api/auth/security-status';
+      const response = await fetch(`${API_URL}${endpoint}`, { headers: getAuthHeaders() });
       if (response.ok) {
         const data = await response.json();
         setTwofaEnabled(data.twofa_enabled || false);
@@ -1255,12 +1258,113 @@ export default function Settings() {
           </TabsContent>
         </Tabs>
       ) : (
-        <Card className="bg-white border-slate-200">
-          <CardContent className="p-8 text-center">
-            <Shield className="w-12 h-12 text-[#C5C6C7] mx-auto mb-4" />
-            <p className="text-[#C5C6C7]">Admin access required to manage settings</p>
-          </CardContent>
-        </Card>
+        /* Non-Admin Settings: Password Change + Security Info */
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Change Password */}
+          <Card className="bg-white border-slate-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                <Lock className="w-5 h-5 text-[#66FCF1]" />
+                Change Password
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Current Password</Label>
+                <Input
+                  type="password"
+                  id="current-password"
+                  placeholder="Enter current password"
+                  className="bg-slate-50 border-slate-200 text-white"
+                  data-testid="current-password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">New Password</Label>
+                <Input
+                  type="password"
+                  id="new-password"
+                  placeholder="Enter new password (min 6 chars)"
+                  className="bg-slate-50 border-slate-200 text-white"
+                  data-testid="new-password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Confirm New Password</Label>
+                <Input
+                  type="password"
+                  id="confirm-password"
+                  placeholder="Confirm new password"
+                  className="bg-slate-50 border-slate-200 text-white"
+                  data-testid="confirm-password"
+                />
+              </div>
+              <Button
+                className="w-full bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase"
+                data-testid="change-password-btn"
+                onClick={async () => {
+                  const curPw = document.getElementById('current-password').value;
+                  const newPw = document.getElementById('new-password').value;
+                  const confirmPw = document.getElementById('confirm-password').value;
+                  if (!curPw || !newPw) { toast.error('Please fill all fields'); return; }
+                  if (newPw !== confirmPw) { toast.error('New passwords do not match'); return; }
+                  if (newPw.length < 6) { toast.error('Password must be at least 6 characters'); return; }
+                  try {
+                    const response = await fetch(`${API_URL}/api/auth/change-password`, {
+                      method: 'POST', headers: getAuthHeaders(),
+                      body: JSON.stringify({ current_password: curPw, new_password: newPw }),
+                    });
+                    if (response.ok) {
+                      toast.success('Password changed successfully');
+                      document.getElementById('current-password').value = '';
+                      document.getElementById('new-password').value = '';
+                      document.getElementById('confirm-password').value = '';
+                    } else {
+                      const err = await response.json();
+                      toast.error(err.detail || 'Failed to change password');
+                    }
+                  } catch { toast.error('Failed to change password'); }
+                }}
+              >
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                Update Password
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Security Info */}
+          <Card className="bg-white border-slate-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                <Shield className="w-5 h-5 text-[#66FCF1]" />
+                Security
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white font-medium">2FA (Email OTP)</p>
+                    <p className="text-xs text-[#C5C6C7]">Email verification on every login</p>
+                  </div>
+                  <Badge className={twofaEnabled ? 'bg-green-500/20 text-green-400' : 'bg-slate-500/20 text-slate-400'}>
+                    {twofaEnabled ? 'ENABLED' : 'DISABLED'}
+                  </Badge>
+                </div>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white font-medium">Session Timeout</p>
+                    <p className="text-xs text-[#C5C6C7]">Auto-logout after inactivity</p>
+                  </div>
+                  <Badge className="bg-blue-500/20 text-blue-400">{sessionTimeout} hours</Badge>
+                </div>
+              </div>
+              <p className="text-xs text-[#C5C6C7]">Security settings are managed by your system administrator.</p>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );
