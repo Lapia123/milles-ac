@@ -119,6 +119,7 @@ export default function Settings() {
   // Security Settings State
   const [twofaEnabled, setTwofaEnabled] = useState(false);
   const [sessionTimeout, setSessionTimeout] = useState(2);
+  const [approvalNotifications, setApprovalNotifications] = useState(true);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -205,13 +206,18 @@ export default function Settings() {
 
   const fetchSecuritySettings = async () => {
     try {
-      // Use admin endpoint if admin, otherwise use public security-status
       const endpoint = user?.role === 'admin' ? '/api/settings/security' : '/api/auth/security-status';
       const response = await fetch(`${API_URL}${endpoint}`, { headers: getAuthHeaders() });
       if (response.ok) {
         const data = await response.json();
         setTwofaEnabled(data.twofa_enabled || false);
         setSessionTimeout(data.session_timeout_hours || 2);
+      }
+      // Fetch notification preferences for all users
+      const prefRes = await fetch(`${API_URL}/api/auth/notification-preferences`, { headers: getAuthHeaders() });
+      if (prefRes.ok) {
+        const prefData = await prefRes.json();
+        setApprovalNotifications(prefData.approval_notifications !== false);
       }
     } catch (error) {
       console.error('Error fetching security settings:', error);
@@ -1142,6 +1148,28 @@ export default function Settings() {
                       </select>
                     </div>
                   </div>
+                  <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-white">My Approval Notifications</Label>
+                        <p className="text-xs text-[#C5C6C7]">Receive email when transactions need approval</p>
+                      </div>
+                      <Switch
+                        checked={approvalNotifications}
+                        onCheckedChange={async (checked) => {
+                          setApprovalNotifications(checked);
+                          try {
+                            await fetch(`${API_URL}/api/auth/notification-preferences`, {
+                              method: 'PUT', headers: getAuthHeaders(),
+                              body: JSON.stringify({ approval_notifications: checked }),
+                            });
+                            toast.success(checked ? 'Notifications enabled' : 'Notifications disabled');
+                          } catch { toast.error('Failed to update'); setApprovalNotifications(!checked); }
+                        }}
+                        data-testid="admin-approval-notif-toggle"
+                      />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
               
@@ -1365,6 +1393,28 @@ export default function Settings() {
                 </div>
               </div>
               <p className="text-xs text-[#C5C6C7]">Security settings are managed by your system administrator.</p>
+              <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white font-medium">Approval Notifications</p>
+                    <p className="text-xs text-[#C5C6C7]">Receive email when transactions need approval</p>
+                  </div>
+                  <Switch
+                    checked={approvalNotifications}
+                    onCheckedChange={async (checked) => {
+                      setApprovalNotifications(checked);
+                      try {
+                        await fetch(`${API_URL}/api/auth/notification-preferences`, {
+                          method: 'PUT', headers: getAuthHeaders(),
+                          body: JSON.stringify({ approval_notifications: checked }),
+                        });
+                        toast.success(checked ? 'Approval notifications enabled' : 'Approval notifications disabled');
+                      } catch { toast.error('Failed to update'); setApprovalNotifications(!checked); }
+                    }}
+                    data-testid="approval-notif-toggle"
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

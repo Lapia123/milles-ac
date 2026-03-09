@@ -1312,6 +1312,31 @@ async def get_user_security_status(user: dict = Depends(get_current_user)):
     }
 
 
+@api_router.get("/auth/notification-preferences")
+async def get_notification_preferences(user: dict = Depends(get_current_user)):
+    """Get current user's notification preferences"""
+    prefs = await db.user_preferences.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    return {
+        "approval_notifications": prefs.get("approval_notifications", True) if prefs else True,
+    }
+
+@api_router.put("/auth/notification-preferences")
+async def update_notification_preferences(data: dict = Body(...), user: dict = Depends(get_current_user)):
+    """Update current user's notification preferences"""
+    now = datetime.now(timezone.utc)
+    updates = {"user_id": user["user_id"], "updated_at": now.isoformat()}
+    if "approval_notifications" in data:
+        updates["approval_notifications"] = bool(data["approval_notifications"])
+    
+    await db.user_preferences.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": updates},
+        upsert=True
+    )
+    return {"message": "Preferences updated"}
+
+
+
 @api_router.post("/auth/forgot-password")
 async def forgot_password(data: dict = Body(...)):
     """Send password reset OTP to user's email"""
@@ -12535,13 +12560,21 @@ async def send_approval_notification(notification_type: str, details: dict):
         
         approvers = await db.users.find(
             {"$or": [{"role": {"$in": role_ids}}, {"role_id": {"$in": role_ids}}], "is_active": {"$ne": False}},
-            {"_id": 0, "email": 1, "name": 1}
+            {"_id": 0, "user_id": 1, "email": 1, "name": 1}
         ).to_list(50)
         
         if not approvers:
             return
         
-        to_emails = [u["email"] for u in approvers if u.get("email")]
+        # Filter by notification preference (default: ON)
+        approver_ids = [u["user_id"] for u in approvers]
+        prefs = await db.user_preferences.find(
+            {"user_id": {"$in": approver_ids}, "approval_notifications": False},
+            {"_id": 0, "user_id": 1}
+        ).to_list(50)
+        opted_out = set(p["user_id"] for p in prefs)
+        
+        to_emails = [u["email"] for u in approvers if u.get("email") and u["user_id"] not in opted_out]
         if not to_emails:
             return
         
