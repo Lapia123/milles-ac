@@ -72,6 +72,29 @@ export const AuthProvider = ({ children }) => {
       throw new Error(data.detail || 'Login failed');
     }
 
+    // Check if 2FA is required
+    if (data.requires_2fa) {
+      return { requires_2fa: true, email, message: data.message, user: data.user };
+    }
+
+    localStorage.setItem('auth_token', data.access_token);
+    setUser(data.user);
+    return data.user;
+  };
+
+  const verifyOtp = async (email, otpCode) => {
+    const response = await fetch(`${API_URL}/api/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, otp_code: otpCode }),
+      credentials: 'include'
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || 'Verification failed');
+    }
+
     localStorage.setItem('auth_token', data.access_token);
     setUser(data.user);
     return data.user;
@@ -119,6 +142,28 @@ export const AuthProvider = ({ children }) => {
     setAdminName('');
     setUser(null);
   };
+
+
+  // Auto-logout: check JWT expiry every minute
+  useEffect(() => {
+    const checkTokenExpiry = () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const expiresAt = payload.exp * 1000;
+        const now = Date.now();
+        if (now >= expiresAt) {
+          localStorage.removeItem('auth_token');
+          setUser(null);
+          window.location.href = '/login';
+        }
+      } catch (e) { /* invalid token */ }
+    };
+    const interval = setInterval(checkTokenExpiry, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
 
   const startImpersonation = useCallback(async (targetUserId) => {
     const token = localStorage.getItem('auth_token');
@@ -212,6 +257,7 @@ export const AuthProvider = ({ children }) => {
       user,
       loading,
       login,
+      verifyOtp,
       loginWithGoogle,
       processGoogleSession,
       logout,

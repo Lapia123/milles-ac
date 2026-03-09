@@ -48,7 +48,7 @@ db = client[os.environ['DB_NAME']]
 # JWT Configuration
 JWT_SECRET = os.environ['JWT_SECRET']
 JWT_ALGORITHM = "HS256"
-JWT_EXPIRATION_HOURS = 24
+JWT_EXPIRATION_HOURS = 2
 
 # Create the main app
 app = FastAPI(title="FX Broker Back-Office API")
@@ -1121,7 +1121,7 @@ async def register(user_data: UserCreate):
         }
     )
 
-@api_router.post("/auth/login", response_model=TokenResponse)
+@api_router.post("/auth/login")
 async def login(credentials: UserLogin, request: Request):
     user = await db.users.find_one({"email": credentials.email}, {"_id": 0})
     ip_address = request.client.host if request.client else None
@@ -1160,6 +1160,51 @@ async def login(credentials: UserLogin, request: Request):
     if not user.get("is_active", True):
         raise HTTPException(status_code=403, detail="Account is disabled")
     
+    # Check if 2FA is enabled
+    security_settings = await db.app_settings.find_one({"setting_type": "security"}, {"_id": 0})
+    twofa_enabled = security_settings.get("twofa_enabled", False) if security_settings else False
+    
+    if twofa_enabled:
+        import random
+        otp_code = str(random.randint(100000, 999999))
+        now_otp = datetime.now(timezone.utc)
+        await db.otp_codes.delete_many({"user_id": user["user_id"]})
+        await db.otp_codes.insert_one({
+            "user_id": user["user_id"], "email": user["email"],
+            "code": otp_code, "attempts": 0,
+            "created_at": now_otp.isoformat(),
+            "expires_at": (now_otp + timedelta(minutes=5)).isoformat()
+        })
+        smtp_settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
+        # Fallback to .env SMTP if DB settings not configured
+        smtp_host = (smtp_settings or {}).get("smtp_host") or os.environ.get("SMTP_HOST", "smtp.gmail.com")
+        smtp_port = (smtp_settings or {}).get("smtp_port") or int(os.environ.get("SMTP_PORT", "587"))
+        smtp_email = (smtp_settings or {}).get("smtp_email") or os.environ.get("SMTP_USER", "")
+        smtp_password = (smtp_settings or {}).get("smtp_password") or os.environ.get("SMTP_PASSWORD", "")
+        smtp_from = (smtp_settings or {}).get("smtp_from_email") or os.environ.get("SMTP_FROM_EMAIL", smtp_email)
+        
+        if smtp_email and smtp_password:
+            try:
+                otp_html = f"""<div style="font-family:Arial,sans-serif;max-width:400px;margin:0 auto;padding:30px;background:#0B0C10;color:white;border-radius:8px;">
+                    <h2 style="color:#66FCF1;text-align:center;margin:0 0 20px;">MILES CAPITALS</h2>
+                    <p style="color:#C5C6C7;text-align:center;">Your login verification code:</p>
+                    <div style="background:#1F2833;padding:20px;border-radius:8px;text-align:center;margin:20px 0;">
+                        <span style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#66FCF1;">{otp_code}</span>
+                    </div>
+                    <p style="color:#C5C6C7;text-align:center;font-size:12px;">This code expires in 5 minutes. Do not share it.</p></div>"""
+                await send_email(
+                    to_emails=[user["email"]], subject="Miles Capitals - Login Verification Code",
+                    html_content=otp_html, smtp_host=smtp_host,
+                    smtp_port=smtp_port, smtp_email=smtp_email,
+                    smtp_password=smtp_password,
+                    smtp_from_email=smtp_from
+                )
+                return {"access_token": "", "token_type": "bearer", "requires_2fa": True,
+                    "message": f"Verification code sent to {user['email']}",
+                    "user": {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "role": user.get("role", "viewer")}}
+            except Exception as e:
+                logger.error(f"Failed to send OTP email: {e}")
+    
     token = create_jwt_token(user["user_id"], user["email"], user["role"])
     
     # Log successful login
@@ -1186,6 +1231,76 @@ async def login(credentials: UserLogin, request: Request):
             "role": user["role"]
         }
     )
+
+
+@api_router.post("/auth/verify-otp")
+async def verify_otp(request: Request, data: dict = Body(...)):
+    """Verify 2FA OTP and issue JWT token"""
+    email = data.get("email")
+    otp_code = data.get("otp_code")
+    if not email or not otp_code:
+        raise HTTPException(status_code=400, detail="Email and OTP code are required")
+    
+    user = await db.users.find_one({"email": email}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    otp_record = await db.otp_codes.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not otp_record:
+        raise HTTPException(status_code=401, detail="No verification code found. Please login again.")
+    
+    expires_at = datetime.fromisoformat(otp_record["expires_at"].replace("Z", "+00:00"))
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > expires_at:
+        await db.otp_codes.delete_many({"user_id": user["user_id"]})
+        raise HTTPException(status_code=401, detail="Verification code expired. Please login again.")
+    
+    if otp_record.get("attempts", 0) >= 3:
+        await db.otp_codes.delete_many({"user_id": user["user_id"]})
+        raise HTTPException(status_code=401, detail="Too many attempts. Please login again.")
+    
+    if otp_record["code"] != otp_code:
+        await db.otp_codes.update_one({"user_id": user["user_id"]}, {"$inc": {"attempts": 1}})
+        remaining = 3 - otp_record.get("attempts", 0) - 1
+        raise HTTPException(status_code=401, detail=f"Invalid code. {remaining} attempts remaining.")
+    
+    await db.otp_codes.delete_many({"user_id": user["user_id"]})
+    token = create_jwt_token(user["user_id"], user["email"], user["role"])
+    
+    ip_address = request.client.host if request.client else None
+    await create_log(log_type="auth", action="login", module="authentication",
+        user_id=user["user_id"], user_email=user["email"], user_name=user["name"],
+        user_role=user["role"], description="User logged in with 2FA verification",
+        ip_address=ip_address, user_agent=request.headers.get("user-agent", ""), status="success")
+    
+    return {"access_token": token, "token_type": "bearer",
+        "user": {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "role": user.get("role", "viewer")}}
+
+
+@api_router.get("/settings/security")
+async def get_security_settings(user: dict = Depends(require_permission(Modules.SETTINGS, Actions.VIEW))):
+    """Get 2FA and session settings"""
+    settings = await db.app_settings.find_one({"setting_type": "security"}, {"_id": 0})
+    return {
+        "twofa_enabled": settings.get("twofa_enabled", False) if settings else False,
+        "session_timeout_hours": settings.get("session_timeout_hours", 2) if settings else 2,
+    }
+
+@api_router.put("/settings/security")
+async def update_security_settings(request: Request, data: dict = Body(...), user: dict = Depends(require_permission(Modules.SETTINGS, Actions.EDIT))):
+    """Update 2FA and session settings"""
+    now = datetime.now(timezone.utc)
+    updates = {"setting_type": "security", "updated_at": now.isoformat(), "updated_by": user["user_id"]}
+    if "twofa_enabled" in data:
+        updates["twofa_enabled"] = bool(data["twofa_enabled"])
+    if "session_timeout_hours" in data:
+        updates["session_timeout_hours"] = int(data["session_timeout_hours"])
+    
+    await db.app_settings.update_one({"setting_type": "security"}, {"$set": updates}, upsert=True)
+    await log_activity(request, user, "edit", "settings", "Updated security settings")
+    return {"message": "Security settings updated"}
+
 
 @api_router.post("/auth/session")
 async def process_session(request: Request, response: Response):

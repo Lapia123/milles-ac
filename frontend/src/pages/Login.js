@@ -11,23 +11,51 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const [otpStep, setOtpStep] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpEmail, setOtpEmail] = useState('');
+  const [otpMessage, setOtpMessage] = useState('');
+  const { login, verifyOtp } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const userData = await login(email, password);
+      const result = await login(email, password);
+      if (result?.requires_2fa) {
+        setOtpStep(true);
+        setOtpEmail(email);
+        setOtpMessage(result.message || 'Verification code sent to your email');
+        toast.success(result.message || 'Check your email for the verification code');
+      } else {
+        toast.success('Login successful');
+        if (result?.role === 'vendor') {
+          navigate('/exchanger-portal');
+        } else {
+          navigate('/dashboard');
+        }
+      }
+    } catch (error) {
+      toast.error(error.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOtpSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const userData = await verifyOtp(otpEmail, otpCode);
       toast.success('Login successful');
-      // Redirect based on role
       if (userData?.role === 'vendor') {
         navigate('/exchanger-portal');
       } else {
         navigate('/dashboard');
       }
     } catch (error) {
-      toast.error(error.message || 'Login failed');
+      toast.error(error.message || 'Verification failed');
     } finally {
       setIsLoading(false);
     }
@@ -71,65 +99,115 @@ export default function Login() {
           </div>
 
           <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm">
-            <h2 className="text-3xl font-bold uppercase tracking-tight text-slate-800 mb-2" style={{ fontFamily: 'Barlow Condensed' }}>
-              Sign In
-            </h2>
-            <p className="text-slate-500 mb-8">
-              Access your back-office dashboard
-            </p>
+            {!otpStep ? (
+              <>
+                <h2 className="text-3xl font-bold uppercase tracking-tight text-slate-800 mb-2" style={{ fontFamily: 'Barlow Condensed' }}>
+                  Sign In
+                </h2>
+                <p className="text-slate-500 mb-8">
+                  Access your back-office dashboard
+                </p>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-600 text-xs uppercase tracking-wider">
-                  Email Address
-                </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="admin@fxbroker.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500 font-mono"
-                    data-testid="login-email-input"
-                    required
-                  />
-                </div>
-              </div>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-slate-600 text-xs uppercase tracking-wider">
+                      Email Address
+                    </Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="admin@fxbroker.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500 font-mono"
+                        data-testid="login-email-input"
+                        required
+                      />
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-600 text-xs uppercase tracking-wider">
-                  Password
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500"
-                    data-testid="login-password-input"
-                    required
-                  />
-                </div>
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-slate-600 text-xs uppercase tracking-wider">
+                      Password
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500"
+                        data-testid="login-password-input"
+                        required
+                      />
+                    </div>
+                  </div>
 
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-blue-600 text-white hover:bg-blue-700 font-bold uppercase tracking-wider rounded-lg shadow-sm"
-                data-testid="login-submit-btn"
-              >
-                {isLoading ? 'Signing in...' : 'Sign In'}
-              </Button>
-            </form>
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full bg-blue-600 text-white hover:bg-blue-700 font-bold uppercase tracking-wider rounded-lg shadow-sm"
+                    data-testid="login-submit-btn"
+                  >
+                    {isLoading ? 'Signing in...' : 'Sign In'}
+                  </Button>
+                </form>
+              </>
+            ) : (
+              <>
+                <h2 className="text-3xl font-bold uppercase tracking-tight text-slate-800 mb-2" style={{ fontFamily: 'Barlow Condensed' }}>
+                  Verify Identity
+                </h2>
+                <p className="text-slate-500 mb-2">
+                  {otpMessage}
+                </p>
+                <p className="text-xs text-slate-400 mb-6">
+                  Code expires in 5 minutes. 3 attempts max.
+                </p>
 
-            <p className="mt-6 text-center text-xs text-slate-500">
-              Demo credentials: admin@fxbroker.com / password
-            </p>
+                <form onSubmit={handleOtpSubmit} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="otp" className="text-slate-600 text-xs uppercase tracking-wider">
+                      Verification Code
+                    </Label>
+                    <Input
+                      id="otp"
+                      type="text"
+                      placeholder="Enter 6-digit code"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      className="text-center text-2xl tracking-[0.5em] font-mono bg-slate-50 border-slate-200 text-slate-800"
+                      data-testid="otp-input"
+                      maxLength={6}
+                      autoFocus
+                      required
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={isLoading || otpCode.length !== 6}
+                    className="w-full bg-blue-600 text-white hover:bg-blue-700 font-bold uppercase tracking-wider rounded-lg shadow-sm"
+                    data-testid="otp-submit-btn"
+                  >
+                    {isLoading ? 'Verifying...' : 'Verify & Sign In'}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full text-slate-500"
+                    onClick={() => { setOtpStep(false); setOtpCode(''); }}
+                  >
+                    Back to Login
+                  </Button>
+                </form>
+              </>
+            )}
           </div>
         </div>
       </div>
