@@ -1312,6 +1312,99 @@ async def get_user_security_status(user: dict = Depends(get_current_user)):
     }
 
 
+@api_router.post("/auth/forgot-password")
+async def forgot_password(data: dict = Body(...)):
+    """Send password reset OTP to user's email"""
+    email = data.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+    
+    user = await db.users.find_one({"email": email}, {"_id": 0})
+    if not user:
+        # Don't reveal if user exists
+        return {"message": "If an account exists with this email, a reset code has been sent."}
+    
+    import random
+    otp_code = str(random.randint(100000, 999999))
+    now = datetime.now(timezone.utc)
+    
+    await db.password_resets.delete_many({"email": email})
+    await db.password_resets.insert_one({
+        "email": email, "user_id": user["user_id"],
+        "code": otp_code, "attempts": 0,
+        "created_at": now.isoformat(),
+        "expires_at": (now + timedelta(minutes=10)).isoformat()
+    })
+    
+    # Send reset email
+    smtp_settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
+    smtp_host = (smtp_settings or {}).get("smtp_host") or os.environ.get("SMTP_HOST", "smtp.gmail.com")
+    smtp_port = (smtp_settings or {}).get("smtp_port") or int(os.environ.get("SMTP_PORT", "587"))
+    smtp_email = (smtp_settings or {}).get("smtp_email") or os.environ.get("SMTP_USER", "")
+    smtp_password = (smtp_settings or {}).get("smtp_password") or os.environ.get("SMTP_PASSWORD", "")
+    smtp_from = (smtp_settings or {}).get("smtp_from_email") or os.environ.get("SMTP_FROM_EMAIL", smtp_email)
+    
+    if smtp_email and smtp_password:
+        try:
+            reset_html = f"""<div style="font-family:Arial,sans-serif;max-width:400px;margin:0 auto;padding:30px;background:#0B0C10;color:white;border-radius:8px;">
+                <h2 style="color:#66FCF1;text-align:center;margin:0 0 20px;">MILES CAPITALS</h2>
+                <p style="color:#C5C6C7;text-align:center;">Password Reset Code</p>
+                <div style="background:#1F2833;padding:20px;border-radius:8px;text-align:center;margin:20px 0;">
+                    <span style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#66FCF1;">{otp_code}</span>
+                </div>
+                <p style="color:#C5C6C7;text-align:center;font-size:12px;">This code expires in 10 minutes. If you didn't request this, ignore this email.</p></div>"""
+            await send_email(
+                to_emails=[email], subject="Miles Capitals - Password Reset Code",
+                html_content=reset_html, smtp_host=smtp_host, smtp_port=smtp_port,
+                smtp_email=smtp_email, smtp_password=smtp_password, smtp_from_email=smtp_from
+            )
+        except Exception as e:
+            logger.error(f"Failed to send reset email: {e}")
+    
+    return {"message": "If an account exists with this email, a reset code has been sent."}
+
+
+@api_router.post("/auth/reset-password")
+async def reset_password(data: dict = Body(...)):
+    """Verify reset OTP and set new password"""
+    email = data.get("email")
+    otp_code = data.get("otp_code")
+    new_password = data.get("new_password")
+    
+    if not email or not otp_code or not new_password:
+        raise HTTPException(status_code=400, detail="Email, code, and new password are required")
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    reset_record = await db.password_resets.find_one({"email": email}, {"_id": 0})
+    if not reset_record:
+        raise HTTPException(status_code=401, detail="No reset code found. Please request again.")
+    
+    expires_at = datetime.fromisoformat(reset_record["expires_at"].replace("Z", "+00:00"))
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > expires_at:
+        await db.password_resets.delete_many({"email": email})
+        raise HTTPException(status_code=401, detail="Reset code expired. Please request again.")
+    
+    if reset_record.get("attempts", 0) >= 5:
+        await db.password_resets.delete_many({"email": email})
+        raise HTTPException(status_code=401, detail="Too many attempts. Please request again.")
+    
+    if reset_record["code"] != otp_code:
+        await db.password_resets.update_one({"email": email}, {"$inc": {"attempts": 1}})
+        remaining = 5 - reset_record.get("attempts", 0) - 1
+        raise HTTPException(status_code=401, detail=f"Invalid code. {remaining} attempts remaining.")
+    
+    # Reset password
+    new_hash = hash_password(new_password)
+    await db.users.update_one({"user_id": reset_record["user_id"]}, {"$set": {"password_hash": new_hash, "updated_at": datetime.now(timezone.utc).isoformat()}})
+    await db.password_resets.delete_many({"email": email})
+    
+    return {"message": "Password reset successfully. You can now login."}
+
+
+
 
 @api_router.get("/settings/security")
 async def get_security_settings(user: dict = Depends(require_permission(Modules.SETTINGS, Actions.VIEW))):
