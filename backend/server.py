@@ -5880,6 +5880,7 @@ async def create_transaction(
     transaction_mode: Optional[str] = Form("bank"),
     collecting_person_name: Optional[str] = Form(None),
     collecting_person_number: Optional[str] = Form(None),
+    crm_reference: Optional[str] = Form(None),
     proof_image: Optional[UploadFile] = File(None),
     user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.CREATE))
 ):
@@ -5893,6 +5894,15 @@ async def create_transaction(
             raise HTTPException(
                 status_code=400, 
                 detail=f"Duplicate transaction: Reference '{reference}' already exists (Transaction ID: {existing_by_ref['transaction_id']})"
+            )
+    
+    # Check CRM reference uniqueness
+    if crm_reference and crm_reference.strip():
+        existing_crm = await db.transactions.find_one({"crm_reference": crm_reference.strip()}, {"_id": 0})
+        if existing_crm:
+            raise HTTPException(
+                status_code=400,
+                detail=f"CRM Reference '{crm_reference}' already exists (Transaction ID: {existing_crm['transaction_id']})"
             )
     
     # Check 2: Same client, type, amount within 5 minutes (prevents accidental double-submit)
@@ -6107,6 +6117,7 @@ async def create_transaction(
         "status": TransactionStatus.PENDING,
         "description": description,
         "reference": reference or f"REF{uuid.uuid4().hex[:8].upper()}",
+        "crm_reference": crm_reference.strip() if crm_reference else None,
         "proof_image": proof_image_data,
         "created_by": user["user_id"],
         "created_by_name": user["name"],

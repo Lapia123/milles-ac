@@ -345,6 +345,9 @@ export default function Transactions() {
       if (formData.reference) {
         formDataToSend.append('reference', formData.reference);
       }
+      if (formData.crm_reference) {
+        formDataToSend.append('crm_reference', formData.crm_reference);
+      }
       // Transaction mode and collecting person
       formDataToSend.append('transaction_mode', formData.transaction_mode || 'bank');
       if (formData.transaction_mode === 'cash') {
@@ -438,7 +441,8 @@ export default function Transactions() {
   const filteredTransactions = transactions.filter(tx => {
     const clientName = (tx.client_name || getClientName(tx.client_id)).toLowerCase();
     const ref = (tx.reference || '').toLowerCase();
-    const matchesSearch = clientName.includes(searchTerm.toLowerCase()) || ref.includes(searchTerm.toLowerCase());
+    const crmRef = (tx.crm_reference || '').toLowerCase();
+    const matchesSearch = clientName.includes(searchTerm.toLowerCase()) || ref.includes(searchTerm.toLowerCase()) || crmRef.includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === 'all' || tx.transaction_type === typeFilter;
     const matchesStatus = statusFilter === 'all' || tx.status === statusFilter;
     const matchesDestination = destinationFilter === 'all' || tx.destination_type === destinationFilter;
@@ -1307,6 +1311,17 @@ export default function Transactions() {
                   data-testid="tx-reference"
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">CRM Reference (Optional, Unique)</Label>
+                <Input
+                  value={formData.crm_reference || ''}
+                  onChange={(e) => setFormData({ ...formData, crm_reference: e.target.value })}
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                  placeholder="Enter CRM reference number"
+                  data-testid="tx-crm-reference"
+                />
+              </div>
               
               <div className="space-y-2">
                 <Label className="text-slate-500 text-xs uppercase tracking-wider">Description</Label>
@@ -1469,6 +1484,7 @@ export default function Transactions() {
               <TableHeader>
                 <TableRow className="border-slate-200 hover:bg-transparent">
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">CRM Ref</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Client</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Email</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
@@ -1482,13 +1498,13 @@ export default function Transactions() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8">
+                    <TableCell colSpan={10} className="text-center py-8">
                       <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : filteredTransactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-slate-500">
+                    <TableCell colSpan={10} className="text-center py-8 text-slate-500">
                       No transactions found
                     </TableCell>
                   </TableRow>
@@ -1515,6 +1531,7 @@ export default function Transactions() {
                           )}
                         </div>
                       </TableCell>
+                      <TableCell className="font-mono text-xs text-purple-600">{tx.crm_reference || '-'}</TableCell>
                       <TableCell className="text-slate-800">{tx.client_name || getClientName(tx.client_id)}</TableCell>
                       <TableCell className="text-slate-600 text-sm">{tx.client_email || '-'}</TableCell>
                       <TableCell>{getTypeBadge(tx.transaction_type)}</TableCell>
