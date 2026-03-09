@@ -656,12 +656,18 @@ export default function AccountantDashboard() {
               filteredTransactions.map((tx) => (
                 <Card key={tx.transaction_id} className="bg-white border-slate-200">
                   <CardContent className="p-4">
-                    <div className="grid grid-cols-[140px_120px_90px_120px_150px_140px_auto] items-center gap-3">
-                      {/* Reference */}
+                    <div className="grid grid-cols-[140px_80px_120px_90px_120px_150px_140px_auto] items-center gap-3">
+                      {/* Reference + CRM Ref */}
                       <div className="min-w-0">
                         <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Reference</p>
                         <p className="text-white font-mono text-xs truncate" title={tx.reference}>{tx.reference}</p>
+                        {tx.crm_reference && <p className="text-purple-400 font-mono text-[10px] truncate" title={tx.crm_reference}>CRM: {tx.crm_reference}</p>}
                         {tx.proof_image && <ImageIcon className="w-3 h-3 text-[#66FCF1] mt-0.5" />}
+                      </div>
+                      {/* Description */}
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Desc</p>
+                        <p className="text-white text-[11px] truncate" title={tx.description || '-'}>{tx.description || '-'}</p>
                       </div>
                       {/* Client */}
                       <div className="min-w-0">
@@ -885,6 +891,9 @@ export default function AccountantDashboard() {
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reference</p>
                   <p className="text-white font-mono text-lg">{viewTransaction.reference}</p>
+                  {viewTransaction.crm_reference && (
+                    <p className="text-purple-400 font-mono text-sm mt-1">CRM: {viewTransaction.crm_reference}</p>
+                  )}
                 </div>
                 <Badge className="status-pending text-xs uppercase">Pending</Badge>
               </div>
@@ -1266,6 +1275,12 @@ export default function AccountantDashboard() {
               <div className="p-4 bg-slate-50 rounded-sm">
                 <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Transaction</p>
                 <p className="text-white font-mono">{showApprovalDialog.reference}</p>
+                {showApprovalDialog.crm_reference && (
+                  <p className="text-purple-400 font-mono text-xs mt-1">CRM: {showApprovalDialog.crm_reference}</p>
+                )}
+                {showApprovalDialog.description && (
+                  <p className="text-[#C5C6C7] text-xs mt-1">{showApprovalDialog.description}</p>
+                )}
                 <div className="mt-2 flex items-center justify-between">
                   <span className="text-[#C5C6C7]">Amount:</span>
                   <span className={`font-mono text-lg font-bold ${showApprovalDialog.transaction_type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
