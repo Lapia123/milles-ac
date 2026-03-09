@@ -5628,6 +5628,14 @@ async def settle_vendor_balance(
         "created_by": user["name"]
     }))
 
+    # Notify the exchanger about settlement
+    asyncio.create_task(send_exchanger_notification("settlement", vendor_id, {
+        "settlement_id": settlement_id,
+        "gross_display": f"{gross_amount:,.2f} {settlement_request.source_currency}",
+        "net_display": f"{settlement_amount:,.2f} {settlement_request.destination_currency}",
+        "tx_count": len(pending_txs) + len(pending_ie) + len(pending_loans),
+    }))
+
     return await db.vendor_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
 
 # Get all pending settlements (for approval page)
@@ -6194,6 +6202,16 @@ async def create_transaction(
         "destination": result.get("vendor_name") or result.get("destination_account_name") or result.get("psp_name") or destination_type,
         "created_by": user["name"]
     }))
+
+    # Notify exchanger if assigned
+    if destination_type == "vendor" and vendor_id:
+        amt_display = f"{base_amount:,.2f} {base_currency}" if base_currency and base_currency != "USD" and base_amount else f"${usd_amount:,.2f} USD"
+        asyncio.create_task(send_exchanger_notification("transaction", vendor_id, {
+            "reference": result.get("reference", tx_id),
+            "type": transaction_type,
+            "client": result.get("client_name", "Unknown"),
+            "amount_display": amt_display,
+        }))
 
     return result
 
@@ -7400,6 +7418,16 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, request: Reques
     # Log activity
     await log_activity(request, user, "create", "income_expenses", f"Created {entry_data.entry_type}: {entry_data.description or entry_data.category}", reference_id=entry_id)
     
+    # Notify exchanger if assigned
+    if vendor_info and entry_data.vendor_id:
+        import asyncio
+        amt_display = f"{entry_data.base_amount:,.2f} {entry_data.base_currency}" if entry_data.base_currency and entry_data.base_amount else f"{entry_data.amount:,.2f} {entry_data.currency}"
+        asyncio.create_task(send_exchanger_notification("ie", entry_data.vendor_id, {
+            "entry_type": entry_data.entry_type,
+            "category": (entry_data.category or "").replace("_", " "),
+            "amount_display": amt_display,
+        }))
+    
     return entry_doc
 
 @api_router.put("/income-expenses/{entry_id}")
@@ -8472,6 +8500,15 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
     # Log activity
     await log_activity(request, user, "create", "loans", f"Created loan to {loan_data.borrower_name}: {loan_data.amount} {loan_data.currency}", reference_id=loan_id)
     
+    # Notify exchanger if disbursing from vendor
+    if loan_data.disburse_from_vendor_id:
+        import asyncio
+        asyncio.create_task(send_exchanger_notification("loan", loan_data.disburse_from_vendor_id, {
+            "loan_type": "disbursement",
+            "borrower": loan_data.borrower_name,
+            "amount_display": f"{loan_data.amount:,.2f} {loan_data.currency}",
+        }))
+    
     return loan_doc
 
 @api_router.put("/loans/{loan_id}")
@@ -8679,6 +8716,15 @@ async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanR
     repayment_doc["new_outstanding"] = max(0, outstanding)
     repayment_doc["loan_status"] = new_status
     await log_activity(request, user, "create", "loans", "Recorded loan repayment")
+
+    # Notify exchanger if crediting to vendor
+    if repayment.credit_to_vendor_id:
+        import asyncio
+        asyncio.create_task(send_exchanger_notification("loan", repayment.credit_to_vendor_id, {
+            "loan_type": "repayment",
+            "borrower": loan.get("borrower_name", "-"),
+            "amount_display": f"{repayment.amount:,.2f} {repayment.currency}",
+        }))
 
     return repayment_doc
 
@@ -12623,6 +12669,90 @@ async def send_approval_notification(notification_type: str, details: dict):
         logger.info(f"Approval notification sent to {len(to_emails)} approvers for {notification_type}")
     except Exception as e:
         logger.error(f"Failed to send approval notification: {e}")
+
+
+
+async def send_exchanger_notification(notification_type: str, vendor_id: str, details: dict):
+    """Send email notification to a specific exchanger"""
+    try:
+        vendor = await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0, "user_id": 1, "vendor_name": 1})
+        if not vendor or not vendor.get("user_id"):
+            return
+        
+        user_doc = await db.users.find_one({"user_id": vendor["user_id"]}, {"_id": 0, "email": 1, "user_id": 1})
+        if not user_doc or not user_doc.get("email"):
+            return
+        
+        # Check notification preference
+        prefs = await db.user_preferences.find_one({"user_id": user_doc["user_id"]}, {"_id": 0})
+        if prefs and prefs.get("approval_notifications") is False:
+            return
+        
+        smtp_settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
+        smtp_host = (smtp_settings or {}).get("smtp_host") or os.environ.get("SMTP_HOST", "smtp.gmail.com")
+        smtp_port = (smtp_settings or {}).get("smtp_port") or int(os.environ.get("SMTP_PORT", "587"))
+        smtp_email = (smtp_settings or {}).get("smtp_email") or os.environ.get("SMTP_USER", "")
+        smtp_password = (smtp_settings or {}).get("smtp_password") or os.environ.get("SMTP_PASSWORD", "")
+        smtp_from = (smtp_settings or {}).get("smtp_from_email") or os.environ.get("SMTP_FROM_EMAIL", smtp_email)
+        
+        if not smtp_email or not smtp_password:
+            return
+        
+        vendor_name = vendor.get("vendor_name", "Exchanger")
+        
+        if notification_type == "transaction":
+            subject = f"Miles Capitals - New Transaction Assigned"
+            title = "New Transaction Assigned to You"
+            color = "#4ade80" if details.get("type") == "deposit" else "#f87171"
+            rows = f"""<tr><td style="padding:4px 0;color:#888;">Reference</td><td style="padding:4px 0;font-family:monospace;">{details.get('reference', '-')}</td></tr>
+                <tr><td style="padding:4px 0;color:#888;">Type</td><td style="padding:4px 0;color:{color};text-transform:capitalize;">{details.get('type', '-')}</td></tr>
+                <tr><td style="padding:4px 0;color:#888;">Client</td><td style="padding:4px 0;">{details.get('client', '-')}</td></tr>
+                <tr><td style="padding:4px 0;color:#888;">Amount</td><td style="padding:4px 0;font-weight:bold;font-size:16px;">{details.get('amount_display', '-')}</td></tr>"""
+        elif notification_type == "ie":
+            subject = f"Miles Capitals - New I&E Entry Assigned"
+            title = "New Income/Expense Entry Assigned"
+            is_income = details.get("entry_type") == "income"
+            color = "#4ade80" if is_income else "#f87171"
+            rows = f"""<tr><td style="padding:4px 0;color:#888;">Type</td><td style="padding:4px 0;color:{color};">{'Income (IN)' if is_income else 'Expense (OUT)'}</td></tr>
+                <tr><td style="padding:4px 0;color:#888;">Category</td><td style="padding:4px 0;">{details.get('category', '-')}</td></tr>
+                <tr><td style="padding:4px 0;color:#888;">Amount</td><td style="padding:4px 0;font-weight:bold;font-size:16px;">{details.get('amount_display', '-')}</td></tr>"""
+        elif notification_type == "loan":
+            subject = f"Miles Capitals - Loan Transaction Assigned"
+            title = "New Loan Transaction Assigned"
+            is_in = details.get("loan_type") == "repayment"
+            color = "#4ade80" if is_in else "#f87171"
+            rows = f"""<tr><td style="padding:4px 0;color:#888;">Type</td><td style="padding:4px 0;color:{color};">{'Loan Repayment (IN)' if is_in else 'Loan Disbursement (OUT)'}</td></tr>
+                <tr><td style="padding:4px 0;color:#888;">Borrower</td><td style="padding:4px 0;">{details.get('borrower', '-')}</td></tr>
+                <tr><td style="padding:4px 0;color:#888;">Amount</td><td style="padding:4px 0;font-weight:bold;font-size:16px;">{details.get('amount_display', '-')}</td></tr>"""
+        elif notification_type == "settlement":
+            subject = f"Miles Capitals - Settlement Initiated"
+            title = "Settlement Initiated for Your Account"
+            rows = f"""<tr><td style="padding:4px 0;color:#888;">Settlement ID</td><td style="padding:4px 0;font-family:monospace;">{details.get('settlement_id', '-')}</td></tr>
+                <tr><td style="padding:4px 0;color:#888;">Gross Amount</td><td style="padding:4px 0;font-weight:bold;">{details.get('gross_display', '-')}</td></tr>
+                <tr><td style="padding:4px 0;color:#888;">Net Settlement</td><td style="padding:4px 0;font-weight:bold;font-size:16px;color:#66FCF1;">{details.get('net_display', '-')}</td></tr>
+                <tr><td style="padding:4px 0;color:#888;">Entries</td><td style="padding:4px 0;">{details.get('tx_count', 0)}</td></tr>"""
+        else:
+            return
+        
+        html = f"""<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:30px;background:#0B0C10;color:white;border-radius:8px;">
+            <h2 style="color:#66FCF1;text-align:center;margin:0 0 20px;">MILES CAPITALS</h2>
+            <div style="background:#1F2833;padding:20px;border-radius:8px;margin:15px 0;">
+                <h3 style="color:#fbbf24;margin:0 0 15px;">{title}</h3>
+                <table style="width:100%;font-size:13px;color:#C5C6C7;">{rows}
+                    <tr><td style="padding:4px 0;color:#888;">Exchanger</td><td style="padding:4px 0;">{vendor_name}</td></tr>
+                </table>
+            </div>
+            <p style="color:#C5C6C7;text-align:center;font-size:12px;">Please review in your Exchanger Portal.</p></div>"""
+        
+        await send_email(
+            to_emails=[user_doc["email"]], subject=subject, html_content=html,
+            smtp_host=smtp_host, smtp_port=smtp_port,
+            smtp_email=smtp_email, smtp_password=smtp_password, smtp_from_email=smtp_from
+        )
+        logger.info(f"Exchanger notification sent to {vendor_name} for {notification_type}")
+    except Exception as e:
+        logger.error(f"Failed to send exchanger notification: {e}")
+
 
 
 # ============== EMAIL SETTINGS & DAILY REPORTS ==============
