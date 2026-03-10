@@ -35,7 +35,15 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - Files Modified: `backend/server.py`, `frontend/src/pages/Transactions.js`, `frontend/src/pages/TransactionRequests.js`
 - Verified: Testing agent iteration 37 - 100% backend/frontend pass
 
-**Treasury Balance Bug Fix - Withdrawal to Treasury (COMPLETE):**
+**Transaction Requests Filters & Export (COMPLETE):**
+- Added Search filter (client name, reference, CRM reference, description)
+- Added Date Range filters (From/To date pickers)
+- Added Export dropdown with Excel (XLS) and PDF options
+- Backend updated with search ($regex) and date_from/date_to query parameters
+- PDF export opens print-friendly page with summary (deposits/withdrawals/pending/processed counts)
+- Excel export generates HTML-based XLS with all request data columns
+- Clear filters button appears when any filter is active
+- Files Modified: `frontend/src/pages/TransactionRequests.js`, `backend/server.py`
 - BUG: When a withdrawal had destination_type "treasury", approving it did NOT deduct from the treasury account balance
 - ROOT CAUSE: The approve_transaction endpoint only handled withdrawals to bank/usdt destinations, skipping treasury destination entirely
 - FIX: Added an `elif destination_type == "treasury"` branch in the approval logic that deducts from the destination treasury account, with proper currency conversion and treasury transaction recording

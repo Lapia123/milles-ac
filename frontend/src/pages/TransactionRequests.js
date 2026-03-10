@@ -12,8 +12,14 @@ import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import {
   Plus, FileText, Clock, CheckCircle, ArrowDownRight, ArrowUpRight,
-  Trash2, Send, Loader2, ChevronDown, ChevronUp, Save, X,
+  Trash2, Send, Loader2, ChevronDown, ChevronUp, Save, X, Download, FileSpreadsheet, Search,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const currencies = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY', 'USDT'];
@@ -325,6 +331,9 @@ export default function TransactionRequests() {
   const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   // Create dialog
   const [createOpen, setCreateOpen] = useState(false);
@@ -356,6 +365,9 @@ export default function TransactionRequests() {
       const params = new URLSearchParams({ page: p, page_size: 20 });
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (typeFilter !== 'all') params.append('transaction_type', typeFilter);
+      if (searchQuery) params.append('search', searchQuery);
+      if (dateFrom) params.append('date_from', dateFrom);
+      if (dateTo) params.append('date_to', dateTo);
       const res = await fetch(`${API_URL}/api/transaction-requests?${params}`, { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
@@ -365,7 +377,7 @@ export default function TransactionRequests() {
       }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [page, statusFilter, typeFilter, authHeaders]);
+  }, [page, statusFilter, typeFilter, searchQuery, dateFrom, dateTo, authHeaders]);
 
   useEffect(() => { fetchRequests(); }, [fetchRequests]);
 
@@ -468,6 +480,76 @@ export default function TransactionRequests() {
     setForm({ ...form, exchange_rate: val, amount: usd });
   };
 
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-';
+
+  const downloadExcel = () => {
+    if (!requests.length) { toast.error('No data to export'); return; }
+    const headers = ['Date', 'Type', 'Client', 'Amount (USD)', 'Base Amount', 'Base Currency', 'Rate', 'Status', 'Destination', 'CRM Ref', 'Reference', 'Created By', 'Description'];
+    const rows = requests.map(r => [
+      formatDate(r.created_at), r.transaction_type, r.client_name, r.amount,
+      r.base_amount || '', r.base_currency || '', r.exchange_rate || '',
+      r.status, r.destination_type, r.crm_reference || '', r.reference || '',
+      r.created_by_name || '', r.description || '',
+    ]);
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+      <head><meta charset="UTF-8"></head><body>
+      <table border="1"><thead><tr>${headers.map(h => `<th style="background:#1F2833;color:#fff;font-weight:bold;">${h}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(row => `<tr>${row.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `tx_requests_${new Date().toISOString().split('T')[0]}.xls`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    toast.success('Excel report downloaded');
+  };
+
+  const downloadPDF = () => {
+    if (!requests.length) { toast.error('No data to export'); return; }
+    const headers = ['Date', 'Type', 'Client', 'Amount (USD)', 'Base', 'Status', 'Destination', 'CRM Ref', 'Created By'];
+    const rows = requests.map(r => [
+      formatDate(r.created_at), r.transaction_type, r.client_name,
+      `$${r.amount?.toLocaleString()}`,
+      r.base_amount && r.base_currency !== 'USD' ? `${r.base_amount?.toLocaleString()} ${r.base_currency}` : '-',
+      r.status, r.destination_type, r.crm_reference || '-', r.created_by_name || '-',
+    ]);
+    const totalDeposits = requests.filter(r => r.transaction_type === 'deposit').reduce((s, r) => s + (r.amount || 0), 0);
+    const totalWithdrawals = requests.filter(r => r.transaction_type === 'withdrawal').reduce((s, r) => s + (r.amount || 0), 0);
+    const pending = requests.filter(r => r.status === 'pending').length;
+    const processed = requests.filter(r => r.status === 'processed').length;
+
+    const w = window.open('', '_blank');
+    w.document.write(`<html><head><title>TX Requests Report - Miles Capitals</title>
+      <style>
+        body{font-family:Arial,sans-serif;padding:20px;}
+        h1{color:#1F2833;border-bottom:2px solid #66FCF1;padding-bottom:10px;}
+        .summary{display:flex;gap:30px;margin:20px 0;padding:15px;background:#f8f9fa;border-radius:8px;}
+        .summary-item label{font-size:12px;color:#666;display:block;}
+        .summary-item span{font-size:18px;font-weight:bold;}
+        .deposits{color:#22c55e;} .withdrawals{color:#ef4444;}
+        table{width:100%;border-collapse:collapse;margin-top:20px;}
+        th{background:#1F2833;color:white;padding:10px;text-align:left;font-size:12px;}
+        td{padding:8px 10px;border-bottom:1px solid #eee;font-size:12px;}
+        tr:hover{background:#f5f5f5;}
+        .footer{margin-top:30px;font-size:11px;color:#999;text-align:center;}
+        @media print{.no-print{display:none;}}
+      </style></head><body>
+      <h1>Transaction Requests Report</h1>
+      <p>Generated: ${new Date().toLocaleString()} | Total Records: ${requests.length}</p>
+      <div class="summary">
+        <div class="summary-item"><label>Total Deposits</label><span class="deposits">$${totalDeposits.toLocaleString()}</span></div>
+        <div class="summary-item"><label>Total Withdrawals</label><span class="withdrawals">$${totalWithdrawals.toLocaleString()}</span></div>
+        <div class="summary-item"><label>Pending</label><span>${pending}</span></div>
+        <div class="summary-item"><label>Processed</label><span>${processed}</span></div>
+      </div>
+      <table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(row => `<tr>${row.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>
+      <div class="footer">Miles Capitals - Transaction Requests Report</div>
+      <script>window.print();</script></body></html>`);
+    w.document.close();
+    toast.success('PDF report opened for printing');
+  };
+
   return (
     <div className="space-y-6 animate-fade-in" data-testid="tx-requests-page">
       <div className="flex items-center justify-between">
@@ -475,9 +557,26 @@ export default function TransactionRequests() {
           <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>Transaction Requests</h1>
           <p className="text-slate-500">Create and manage transaction requests</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="bg-blue-600 text-white hover:bg-blue-700" data-testid="create-request-btn">
-          <Plus className="w-4 h-4 mr-2" /> New Request
-        </Button>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="border-slate-200 text-slate-600" data-testid="export-btn">
+                <Download className="w-4 h-4 mr-2" /> Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-white border-slate-200">
+              <DropdownMenuItem onClick={downloadExcel} className="cursor-pointer hover:bg-slate-100" data-testid="export-excel">
+                <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" /> Download Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={downloadPDF} className="cursor-pointer hover:bg-slate-100" data-testid="export-pdf">
+                <FileText className="w-4 h-4 mr-2 text-red-600" /> Download PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button onClick={() => setCreateOpen(true)} className="bg-blue-600 text-white hover:bg-blue-700" data-testid="create-request-btn">
+            <Plus className="w-4 h-4 mr-2" /> New Request
+          </Button>
+        </div>
       </div>
 
       {/* Summary */}
@@ -497,21 +596,50 @@ export default function TransactionRequests() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 items-end">
-        <div className="min-w-[120px]">
+      <div className="flex flex-wrap gap-3 items-end">
+        <div className="flex-1 min-w-[180px]">
+          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Search</label>
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-2.5 top-2 text-slate-400" />
+            <Input
+              value={searchQuery}
+              onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
+              placeholder="Client, reference, CRM ref..."
+              className="pl-8 h-8 text-sm border-slate-200"
+              data-testid="filter-search"
+            />
+          </div>
+        </div>
+        <div className="min-w-[110px]">
           <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Status</label>
           <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="filter-status">
+            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800 h-8" data-testid="filter-status">
             <option value="all">All</option><option value="pending">Pending</option><option value="processed">Processed</option>
           </select>
         </div>
-        <div className="min-w-[120px]">
+        <div className="min-w-[110px]">
           <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Type</label>
           <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setPage(1); }}
-            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="filter-type">
+            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800 h-8" data-testid="filter-type">
             <option value="all">All</option><option value="deposit">Deposit</option><option value="withdrawal">Withdrawal</option>
           </select>
         </div>
+        <div className="min-w-[130px]">
+          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">From</label>
+          <Input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }}
+            className="h-8 text-sm border-slate-200" data-testid="filter-date-from" />
+        </div>
+        <div className="min-w-[130px]">
+          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">To</label>
+          <Input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }}
+            className="h-8 text-sm border-slate-200" data-testid="filter-date-to" />
+        </div>
+        {(searchQuery || statusFilter !== 'all' || typeFilter !== 'all' || dateFrom || dateTo) && (
+          <Button variant="ghost" size="sm" onClick={() => { setSearchQuery(''); setStatusFilter('all'); setTypeFilter('all'); setDateFrom(''); setDateTo(''); setPage(1); }}
+            className="text-slate-400 hover:text-slate-600 h-8 px-2" data-testid="clear-filters">
+            <X className="w-4 h-4 mr-1" /> Clear
+          </Button>
+        )}
       </div>
 
       {/* Request Cards List */}

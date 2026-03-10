@@ -6628,6 +6628,9 @@ async def reject_transaction(request: Request, transaction_id: str, reason: str 
 async def get_transaction_requests(
     status: Optional[str] = None,
     transaction_type: Optional[str] = None,
+    search: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
     user: dict = Depends(require_permission(Modules.TRANSACTION_REQUESTS, Actions.VIEW))
@@ -6637,6 +6640,20 @@ async def get_transaction_requests(
         query["status"] = status
     if transaction_type and transaction_type != "all":
         query["transaction_type"] = transaction_type
+    if search:
+        query["$or"] = [
+            {"client_name": {"$regex": search, "$options": "i"}},
+            {"reference": {"$regex": search, "$options": "i"}},
+            {"crm_reference": {"$regex": search, "$options": "i"}},
+            {"description": {"$regex": search, "$options": "i"}},
+        ]
+    if date_from or date_to:
+        date_q = {}
+        if date_from:
+            date_q["$gte"] = date_from + "T00:00:00"
+        if date_to:
+            date_q["$lte"] = date_to + "T23:59:59"
+        query["created_at"] = date_q
     return await paginate_query(db.transaction_requests, query, page, page_size)
 
 @api_router.get("/transaction-requests/{request_id}")
