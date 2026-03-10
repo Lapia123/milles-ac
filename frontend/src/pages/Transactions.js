@@ -66,6 +66,7 @@ import {
   Download,
   FileSpreadsheet,
   FileText,
+  Edit,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -103,6 +104,9 @@ export default function Transactions() {
   const [dateTo, setDateTo] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [viewTransaction, setViewTransaction] = useState(null);
+  const [editTransaction, setEditTransaction] = useState(null);
+  const [editForm, setEditForm] = useState({ destination_type: '', vendor_id: '', destination_account_id: '', description: '', crm_reference: '' });
+  const [editSaving, setEditSaving] = useState(false);
   const [proofImage, setProofImage] = useState(null);
   const [proofPreview, setProofPreview] = useState(null);
   const [clientBankAccounts, setClientBankAccounts] = useState([]);
@@ -436,6 +440,38 @@ export default function Transactions() {
   const getClientName = (clientId) => {
     const client = clients.find(c => c.client_id === clientId);
     return client ? `${client.first_name} ${client.last_name}` : clientId;
+  };
+
+  const openEdit = (tx) => {
+    setEditForm({
+      destination_type: tx.destination_type || '',
+      vendor_id: tx.vendor_id || '',
+      destination_account_id: tx.destination_account_id || '',
+      description: tx.description || '',
+      crm_reference: tx.crm_reference || '',
+    });
+    setEditTransaction(tx);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editTransaction) return;
+    setEditSaving(true);
+    try {
+      const response = await fetch(`${API_URL}/api/transactions/${editTransaction.transaction_id}/assign`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(editForm),
+      });
+      if (response.ok) {
+        toast.success('Transaction updated');
+        setEditTransaction(null);
+        fetchTransactions();
+      } else {
+        const err = await response.json();
+        toast.error(err.detail || 'Failed');
+      }
+    } catch { toast.error('Failed'); }
+    finally { setEditSaving(false); }
   };
 
   const filteredTransactions = transactions.filter(tx => {
@@ -1559,15 +1595,16 @@ export default function Transactions() {
                       </TableCell>
                       <TableCell>{getStatusBadge(tx.status)}</TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => setViewTransaction(tx)}
-                          className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" 
-                          data-testid={`tx-view-${tx.transaction_id}`}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
+                        <div className="flex gap-1 justify-end">
+                          <Button variant="ghost" size="sm" onClick={() => setViewTransaction(tx)} className="text-slate-500 hover:text-slate-800 hover:bg-slate-100 h-7 w-7 p-0" data-testid={`tx-view-${tx.transaction_id}`}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          {tx.status === 'pending' && (
+                            <Button variant="ghost" size="sm" onClick={() => openEdit(tx)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 h-7 w-7 p-0" data-testid={`tx-edit-${tx.transaction_id}`}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -1793,6 +1830,93 @@ export default function Transactions() {
                   <p className="text-slate-800 text-sm">{formatDate(viewTransaction.processed_at)} by {viewTransaction.processed_by_name}</p>
                 </div>
               )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit/Assign Dialog */}
+      <Dialog open={!!editTransaction} onOpenChange={() => setEditTransaction(null)}>
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold uppercase" style={{ fontFamily: 'Barlow Condensed' }}>
+              Edit Transaction
+            </DialogTitle>
+          </DialogHeader>
+          {editTransaction && (
+            <div className="space-y-4">
+              {/* Read-only info */}
+              <div className="p-3 bg-slate-50 rounded border space-y-1 text-sm">
+                <div className="flex justify-between"><span className="text-slate-500">Reference</span><span className="font-mono">{editTransaction.reference}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Type</span><Badge className={editTransaction.transaction_type === 'deposit' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}>{editTransaction.transaction_type}</Badge></div>
+                <div className="flex justify-between"><span className="text-slate-500">Client</span><span>{editTransaction.client_name}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Amount</span><span className="font-mono font-bold">${editTransaction.amount?.toLocaleString()}</span></div>
+                {editTransaction.base_amount && editTransaction.base_currency !== 'USD' && (
+                  <div className="flex justify-between"><span className="text-slate-500">Base Amount</span><span className="font-mono">{editTransaction.base_amount?.toLocaleString()} {editTransaction.base_currency}</span></div>
+                )}
+              </div>
+
+              {/* Destination Type */}
+              <div>
+                <Label className="text-xs text-slate-500 uppercase">Destination Type</Label>
+                <Select value={editForm.destination_type} onValueChange={v => setEditForm({ ...editForm, destination_type: v, vendor_id: v !== 'vendor' ? '' : editForm.vendor_id })}>
+                  <SelectTrigger className="bg-slate-50"><SelectValue placeholder="Select destination" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vendor">Exchanger</SelectItem>
+                    <SelectItem value="bank">Bank</SelectItem>
+                    <SelectItem value="treasury">Treasury</SelectItem>
+                    <SelectItem value="psp">PSP</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Exchanger Selection */}
+              {editForm.destination_type === 'vendor' && (
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase">Select Exchanger *</Label>
+                  <Select value={editForm.vendor_id} onValueChange={v => setEditForm({ ...editForm, vendor_id: v })}>
+                    <SelectTrigger className="bg-slate-50"><SelectValue placeholder="Select exchanger" /></SelectTrigger>
+                    <SelectContent>
+                      {vendors.filter(v => v.status === 'active').map(v => (
+                        <SelectItem key={v.vendor_id} value={v.vendor_id}>
+                          {v.vendor_name} (WD: {v.withdrawal_commission || 0}%)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Treasury Selection */}
+              {editForm.destination_type === 'treasury' && (
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase">Treasury Account</Label>
+                  <Select value={editForm.destination_account_id} onValueChange={v => setEditForm({ ...editForm, destination_account_id: v })}>
+                    <SelectTrigger className="bg-slate-50"><SelectValue placeholder="Select account" /></SelectTrigger>
+                    <SelectContent>
+                      {treasuryAccounts.map(a => (
+                        <SelectItem key={a.account_id} value={a.account_id}>{a.account_name} ({a.currency})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* CRM Reference */}
+              <div>
+                <Label className="text-xs text-slate-500 uppercase">CRM Reference</Label>
+                <Input value={editForm.crm_reference} onChange={e => setEditForm({ ...editForm, crm_reference: e.target.value })} className="bg-slate-50 font-mono" placeholder="CRM reference" />
+              </div>
+
+              {/* Description */}
+              <div>
+                <Label className="text-xs text-slate-500 uppercase">Description</Label>
+                <Textarea value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} className="bg-slate-50" rows={2} />
+              </div>
+
+              <Button onClick={handleSaveEdit} disabled={editSaving} className="w-full bg-blue-600 text-white hover:bg-blue-700">
+                {editSaving ? 'Saving...' : 'Save Changes'}
+              </Button>
             </div>
           )}
         </DialogContent>

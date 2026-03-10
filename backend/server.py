@@ -6252,6 +6252,78 @@ async def update_transaction(request: Request, transaction_id: str, update_data:
 
     return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
 
+@api_router.put("/transactions/{transaction_id}/assign")
+async def assign_transaction_destination(
+    request: Request,
+    transaction_id: str,
+    data: dict = Body(...),
+    user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.EDIT))
+):
+    """Assign/change destination for a pending transaction (e.g., assign exchanger)"""
+    tx = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    if tx["status"] != TransactionStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Only pending transactions can be edited")
+    
+    updates = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    
+    dest_type = data.get("destination_type")
+    vendor_id = data.get("vendor_id")
+    dest_account_id = data.get("destination_account_id")
+    
+    if dest_type:
+        updates["destination_type"] = dest_type
+    
+    if dest_type == "vendor" and vendor_id:
+        vendor = await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
+        if not vendor:
+            raise HTTPException(status_code=404, detail="Exchanger not found")
+        updates["vendor_id"] = vendor_id
+        updates["vendor_name"] = vendor.get("vendor_name")
+        updates["destination_type"] = "vendor"
+        
+        # Calculate commission
+        base_currency = tx.get("base_currency", "USD")
+        base_amount = tx.get("base_amount") or tx.get("amount", 0)
+        usd_amount = tx.get("amount", 0)
+        comm_rate = vendor.get("withdrawal_commission", 0) if tx["transaction_type"] == "withdrawal" else vendor.get("deposit_commission", 0)
+        if comm_rate > 0:
+            updates["vendor_commission_rate"] = comm_rate
+            updates["vendor_commission_base_amount"] = round(base_amount * comm_rate / 100, 2)
+            updates["vendor_commission_amount"] = round(usd_amount * comm_rate / 100, 2)
+            updates["vendor_commission_base_currency"] = base_currency
+        
+        # Notify exchanger
+        import asyncio
+        amt_display = f"{base_amount:,.2f} {base_currency}" if base_currency != "USD" else f"${usd_amount:,.2f} USD"
+        asyncio.create_task(send_exchanger_notification("transaction", vendor_id, {
+            "reference": tx.get("reference", transaction_id),
+            "type": tx["transaction_type"],
+            "client": tx.get("client_name", "Unknown"),
+            "amount_display": amt_display,
+        }))
+    
+    if dest_account_id:
+        updates["destination_account_id"] = dest_account_id
+        dest_acc = await db.treasury_accounts.find_one({"account_id": dest_account_id}, {"_id": 0})
+        if dest_acc:
+            updates["destination_account_name"] = dest_acc.get("account_name")
+            updates["destination_bank_name"] = dest_acc.get("bank_name")
+    
+    # Allow editing description and reference
+    if data.get("description") is not None:
+        updates["description"] = data["description"]
+    if data.get("crm_reference") is not None:
+        updates["crm_reference"] = data["crm_reference"]
+    
+    await db.transactions.update_one({"transaction_id": transaction_id}, {"$set": updates})
+    await log_activity(request, user, "edit", "transactions", f"Assigned transaction to {updates.get('vendor_name', dest_type)}")
+    
+    return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+
+
+
 @api_router.post("/transactions/{transaction_id}/approve")
 async def approve_transaction(
 

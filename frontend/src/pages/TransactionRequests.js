@@ -338,7 +338,7 @@ export default function TransactionRequests() {
                   <Label className="text-xs text-slate-500 uppercase">Destination Type</Label>
                   <Select value={form.destination_type} onValueChange={v => setForm({ ...form, destination_type: v })}>
                     <SelectTrigger className="bg-slate-50"><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="bank">Bank</SelectItem><SelectItem value="usdt">USDT</SelectItem><SelectItem value="vendor">Exchanger</SelectItem></SelectContent>
+                    <SelectContent><SelectItem value="bank">Bank</SelectItem><SelectItem value="usdt">USDT</SelectItem></SelectContent>
                   </Select>
                 </div>
                 {form.destination_type === 'bank' && (
