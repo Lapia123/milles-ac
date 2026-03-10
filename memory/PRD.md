@@ -10,6 +10,22 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - PSP Management, Exchangers/Vendors, Income & Expenses, Loans, Debts
 - Reconciliation Phase 1, Audit & Compliance, Logs, Reports, Settings
 
+
+### Date: Mar 10, 2026
+
+**Transaction Requests Edit Flow Rebuilt (COMPLETE):**
+- Removed Edit/Assign pencil button and dialog from Transactions page (`Transactions.js`)
+- Rebuilt `TransactionRequests.js` from table-based to card-based layout with expandable editable forms
+- Each pending request renders as an expandable card with full edit form (type, client, amount, currency, destination, bank/USDT details, reference, CRM ref, description)
+- Processed requests show read-only summary when expanded
+- Added manual Payment Currency dropdown (USD, EUR, GBP, AED, SAR, INR, JPY, USDT) to both Create and Edit forms
+- Non-USD currency shows base amount + exchange rate fields with auto-calculation to USD
+- Backend PUT endpoint updated to accept: amount, currency, base_currency, base_amount, exchange_rate, transaction_type, client_id
+- Save Changes, Process, Delete actions per pending card
+- Files Modified: `frontend/src/pages/Transactions.js`, `frontend/src/pages/TransactionRequests.js`, `backend/server.py`
+- Verified: Testing agent iteration 36 - 100% backend/frontend pass
+
+
 ### Date: Mar 7, 2026
 
 **Exchanger Portal UI Enhancements (COMPLETE):**
