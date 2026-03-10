@@ -25,6 +25,16 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - Files Modified: `frontend/src/pages/Transactions.js`, `frontend/src/pages/TransactionRequests.js`, `backend/server.py`
 - Verified: Testing agent iteration 36 - 100% backend/frontend pass
 
+**Deposit Auto-Process & Edit Destination (COMPLETE):**
+- Deposit transaction requests now auto-process immediately when created (skip manual Process step, transaction created automatically)
+- Withdrawal requests remain pending and require manual Process with captcha verification
+- Frontend shows distinct toast: "Deposit auto-processed! Transaction created" for deposits
+- Added Edit Destination button (pencil icon) back to Transactions page for all pending transactions
+- Edit Destination dialog allows changing: destination_type (vendor/bank/treasury/psp/usdt), assign exchanger, select treasury account, CRM reference, description
+- Backend uses existing PUT /api/transactions/{id}/assign endpoint
+- Files Modified: `backend/server.py`, `frontend/src/pages/Transactions.js`, `frontend/src/pages/TransactionRequests.js`
+- Verified: Testing agent iteration 37 - 100% backend/frontend pass
+
 
 ### Date: Mar 7, 2026
 
