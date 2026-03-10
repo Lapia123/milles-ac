@@ -6673,6 +6673,109 @@ async def create_transaction_request(
     await db.transaction_requests.insert_one(doc)
     await log_activity(request, user, "create", "transaction_requests", f"Created {transaction_type} request")
     
+    # Auto-process deposits immediately
+    if transaction_type == "deposit":
+        tx_id = f"tx_{uuid.uuid4().hex[:12]}"
+        vendor_info = None
+        if vendor_id:
+            vendor_info = await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
+        
+        # Calculate vendor commission
+        v_comm_rate = 0.0
+        v_comm_amt = 0.0
+        v_comm_base = 0.0
+        if destination_type == "vendor" and vendor_info:
+            v_comm_rate = vendor_info.get("deposit_commission", 0)
+            if v_comm_rate > 0:
+                v_base = base_amount if (base_currency and base_currency != "USD" and base_amount) else amount
+                v_comm_base = round(v_base * v_comm_rate / 100, 2)
+                v_comm_amt = round(amount * v_comm_rate / 100, 2)
+        
+        tx_doc = {
+            "transaction_id": tx_id,
+            "client_id": client_id,
+            "client_name": doc["client_name"],
+            "transaction_type": "deposit",
+            "amount": amount,
+            "currency": "USD",
+            "base_currency": base_currency,
+            "base_amount": base_amount if base_currency != "USD" else None,
+            "exchange_rate": exchange_rate,
+            "destination_type": destination_type,
+            "destination_account_id": destination_account_id,
+            "vendor_id": vendor_id,
+            "vendor_name": vendor_info["vendor_name"] if vendor_info else None,
+            "psp_id": psp_id,
+            "client_bank_name": client_bank_name,
+            "client_bank_account_name": client_bank_account_name,
+            "client_bank_account_number": client_bank_account_number,
+            "client_bank_swift_iban": client_bank_swift_iban,
+            "client_bank_currency": client_bank_currency,
+            "client_usdt_address": client_usdt_address,
+            "client_usdt_network": client_usdt_network,
+            "vendor_commission_rate": v_comm_rate if v_comm_rate > 0 else None,
+            "vendor_commission_amount": v_comm_amt if v_comm_amt > 0 else None,
+            "vendor_commission_base_amount": v_comm_base if v_comm_base > 0 else None,
+            "vendor_commission_base_currency": base_currency if v_comm_base > 0 else None,
+            "transaction_mode": "bank",
+            "status": TransactionStatus.PENDING,
+            "description": description,
+            "reference": reference or f"REF{uuid.uuid4().hex[:8].upper()}",
+            "crm_reference": crm_reference.strip() if crm_reference else None,
+            "proof_image": proof_data,
+            "created_by": user["user_id"],
+            "created_by_name": user["name"],
+            "processed_by": None,
+            "processed_by_name": None,
+            "rejection_reason": None,
+            "settled": False,
+            "settlement_id": None,
+            "settlement_status": None,
+            "request_id": request_id,
+            "created_at": now.isoformat(),
+            "processed_at": None
+        }
+        await db.transactions.insert_one(tx_doc)
+        
+        # Mark request as processed
+        await db.transaction_requests.update_one(
+            {"request_id": request_id},
+            {"$set": {
+                "status": "processed",
+                "processed_at": now.isoformat(),
+                "processed_by": user["user_id"],
+                "processed_by_name": user["name"],
+                "transaction_id": tx_id
+            }}
+        )
+        
+        # Send notifications
+        import asyncio
+        if destination_type == "vendor" and vendor_id:
+            amt_display = f"{base_amount:,.2f} {base_currency}" if base_currency and base_currency != "USD" and base_amount else f"${amount:,.2f} USD"
+            asyncio.create_task(send_exchanger_notification("transaction", vendor_id, {
+                "reference": tx_doc["reference"],
+                "type": "deposit",
+                "client": doc["client_name"],
+                "amount_display": amt_display,
+            }))
+        else:
+            asyncio.create_task(send_approval_notification("transaction", {
+                "reference": tx_doc["reference"],
+                "type": "deposit",
+                "client": doc["client_name"],
+                "amount": amount,
+                "base_amount": base_amount,
+                "base_currency": base_currency,
+                "destination": vendor_info["vendor_name"] if vendor_info else destination_type,
+                "created_by": user["name"]
+            }))
+        
+        await log_activity(request, user, "approve", "transaction_requests", f"Auto-processed deposit → TX {tx_id}")
+        
+        result = await db.transaction_requests.find_one({"request_id": request_id}, {"_id": 0})
+        return result
+    
     return await db.transaction_requests.find_one({"request_id": request_id}, {"_id": 0})
 
 @api_router.put("/transaction-requests/{request_id}")

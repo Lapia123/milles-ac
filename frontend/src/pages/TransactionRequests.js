@@ -398,7 +398,12 @@ export default function TransactionRequests() {
       delete headers['Content-Type'];
       const res = await fetch(`${API_URL}/api/transaction-requests`, { method: 'POST', headers, body: fd });
       if (res.ok) {
-        toast.success('Request created');
+        const result = await res.json();
+        if (result.status === 'processed') {
+          toast.success(`Deposit auto-processed! Transaction ${result.transaction_id} created`);
+        } else {
+          toast.success('Request created');
+        }
         setCreateOpen(false);
         setForm({ ...defaultForm });
         setProofImage(null);
