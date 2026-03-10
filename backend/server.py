@@ -6688,7 +6688,8 @@ async def update_transaction_request(
     if req["status"] != "pending":
         raise HTTPException(status_code=400, detail="Only pending requests can be edited")
     
-    allowed = ["description", "reference", "crm_reference", "destination_type", "vendor_id",
+    allowed = ["transaction_type", "client_id", "amount", "currency", "base_currency", "base_amount", "exchange_rate",
+               "description", "reference", "crm_reference", "destination_type", "vendor_id",
                "client_bank_name", "client_bank_account_name", "client_bank_account_number",
                "client_bank_swift_iban", "client_bank_currency", "client_usdt_address", "client_usdt_network",
                "destination_account_id", "psp_id"]
@@ -6702,6 +6703,20 @@ async def update_transaction_request(
         if existing:
             raise HTTPException(status_code=400, detail=f"CRM Reference '{updates['crm_reference']}' already exists")
     
+    # Resolve client name if client_id changed
+    if "client_id" in updates:
+        client = await db.clients.find_one({"client_id": updates["client_id"]}, {"_id": 0})
+        if client:
+            updates["client_name"] = f"{client.get('first_name', '')} {client.get('last_name', '')}".strip()
+    
+    # Convert numeric fields
+    for nf in ["amount", "base_amount", "exchange_rate"]:
+        if nf in updates and updates[nf]:
+            try:
+                updates[nf] = float(updates[nf])
+            except (ValueError, TypeError):
+                pass
+
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.transaction_requests.update_one({"request_id": request_id}, {"$set": updates})
     await log_activity(request, user, "edit", "transaction_requests", "Updated request")

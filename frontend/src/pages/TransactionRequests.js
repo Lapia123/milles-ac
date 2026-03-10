@@ -7,19 +7,317 @@ import { Badge } from '../components/ui/badge';
 import { Textarea } from '../components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import {
   Plus, FileText, Clock, CheckCircle, ArrowDownRight, ArrowUpRight,
-  Eye, Edit, Trash2, Send, Loader2, Upload, Image as ImageIcon,
+  Trash2, Send, Loader2, ChevronDown, ChevronUp, Save, X,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+const currencies = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY', 'USDT'];
+
+function EditableRequestCard({ req, clients, treasuryAccounts, psps, vendors, authHeaders, onSaved, onDelete, onProcess }) {
+  const [expanded, setExpanded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const isPending = req.status === 'pending';
+
+  const [form, setForm] = useState({
+    transaction_type: req.transaction_type || 'withdrawal',
+    client_id: req.client_id || '',
+    amount: req.amount?.toString() || '',
+    currency: req.currency || 'USD',
+    base_currency: req.base_currency || 'USD',
+    base_amount: req.base_amount?.toString() || '',
+    exchange_rate: req.exchange_rate?.toString() || '',
+    destination_type: req.destination_type || 'bank',
+    destination_account_id: req.destination_account_id || '',
+    psp_id: req.psp_id || '',
+    vendor_id: req.vendor_id || '',
+    reference: req.reference || '',
+    crm_reference: req.crm_reference || '',
+    description: req.description || '',
+    client_bank_name: req.client_bank_name || '',
+    client_bank_account_name: req.client_bank_account_name || '',
+    client_bank_account_number: req.client_bank_account_number || '',
+    client_bank_swift_iban: req.client_bank_swift_iban || '',
+    client_bank_currency: req.client_bank_currency || '',
+    client_usdt_address: req.client_usdt_address || '',
+    client_usdt_network: req.client_usdt_network || '',
+  });
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const payload = {};
+      Object.entries(form).forEach(([k, v]) => { if (v !== '' && v !== null && v !== undefined) payload[k] = v; });
+      const res = await fetch(`${API_URL}/api/transaction-requests/${req.request_id}`, {
+        method: 'PUT',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        toast.success('Request updated successfully');
+        onSaved();
+      } else {
+        const e = await res.json();
+        toast.error(e.detail || 'Failed to update');
+      }
+    } catch { toast.error('Failed to update'); }
+    finally { setSaving(false); }
+  };
+
+  const handleBaseCurrencyChange = (val) => {
+    if (val === 'USD') {
+      setForm({ ...form, base_currency: val, base_amount: '', exchange_rate: '' });
+    } else {
+      setForm({ ...form, base_currency: val, amount: '' });
+    }
+  };
+
+  const handleBaseAmountChange = (val) => {
+    const rate = parseFloat(form.exchange_rate) || 0;
+    const usd = val && rate ? (parseFloat(val) * rate).toFixed(2) : '';
+    setForm({ ...form, base_amount: val, amount: usd });
+  };
+
+  const handleExchangeRateChange = (val) => {
+    const baseAmt = parseFloat(form.base_amount) || 0;
+    const usd = val && baseAmt ? (baseAmt * parseFloat(val)).toFixed(2) : '';
+    setForm({ ...form, exchange_rate: val, amount: usd });
+  };
+
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+
+  return (
+    <Card
+      className={`border transition-all duration-200 ${isPending ? 'border-yellow-200 bg-white hover:shadow-md' : 'border-green-200 bg-green-50/30'}`}
+      data-testid={`request-card-${req.request_id}`}
+    >
+      {/* Collapsed header - always visible */}
+      <div
+        className="flex items-center justify-between p-4 cursor-pointer select-none"
+        onClick={() => setExpanded(!expanded)}
+        data-testid={`request-toggle-${req.request_id}`}
+      >
+        <div className="flex items-center gap-4 min-w-0">
+          <Badge className={req.transaction_type === 'deposit' ? 'bg-green-100 text-green-700 text-xs shrink-0' : 'bg-red-100 text-red-700 text-xs shrink-0'}>
+            {req.transaction_type === 'deposit' ? <ArrowDownRight className="w-3 h-3 mr-1" /> : <ArrowUpRight className="w-3 h-3 mr-1" />}
+            {req.transaction_type}
+          </Badge>
+          <span className="text-sm font-medium text-slate-800 truncate">{req.client_name}</span>
+          <span className="font-mono text-sm font-bold text-slate-700">${req.amount?.toLocaleString()}</span>
+          {req.base_currency && req.base_currency !== 'USD' && req.base_amount && (
+            <span className="text-xs text-slate-400">{req.base_amount?.toLocaleString()} {req.base_currency}</span>
+          )}
+          {req.crm_reference && <span className="font-mono text-xs text-purple-600">{req.crm_reference}</span>}
+          <Badge className={isPending ? 'bg-yellow-100 text-yellow-700 text-xs' : 'bg-green-100 text-green-700 text-xs'}>
+            {req.status}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs text-slate-400">{formatDate(req.created_at)}</span>
+          {expanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+        </div>
+      </div>
+
+      {/* Expanded form */}
+      {expanded && (
+        <CardContent className="pt-0 pb-4 px-4 border-t border-slate-100">
+          {isPending ? (
+            <div className="space-y-4 mt-4">
+              {/* Row 1: Type & Client */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase font-bold">Type</Label>
+                  <Select value={form.transaction_type} onValueChange={v => setForm({ ...form, transaction_type: v })}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200" data-testid={`edit-type-${req.request_id}`}><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="deposit">Deposit</SelectItem><SelectItem value="withdrawal">Withdrawal</SelectItem></SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase font-bold">Client</Label>
+                  <Select value={form.client_id} onValueChange={v => setForm({ ...form, client_id: v })}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200" data-testid={`edit-client-${req.request_id}`}><SelectValue placeholder="Select client" /></SelectTrigger>
+                    <SelectContent>{clients.map(c => <SelectItem key={c.client_id} value={c.client_id}>{c.first_name} {c.last_name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 2: Payment Currency & Type-specific currency fields */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase font-bold">Payment Currency</Label>
+                  <Select value={form.base_currency} onValueChange={handleBaseCurrencyChange}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200" data-testid={`edit-base-currency-${req.request_id}`}><SelectValue /></SelectTrigger>
+                    <SelectContent>{currencies.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                {form.base_currency === 'USD' ? (
+                  <div>
+                    <Label className="text-xs text-slate-500 uppercase font-bold">Amount (USD) *</Label>
+                    <Input type="number" step="0.01" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} className="bg-slate-50 border-slate-200 font-mono" placeholder="0.00 USD" data-testid={`edit-amount-${req.request_id}`} />
+                  </div>
+                ) : (
+                  <div>
+                    <Label className="text-xs text-slate-500 uppercase font-bold">Amount in {form.base_currency} *</Label>
+                    <Input type="number" step="0.01" value={form.base_amount} onChange={e => handleBaseAmountChange(e.target.value)} className="bg-slate-50 border-slate-200 font-mono" placeholder={`0.00 ${form.base_currency}`} data-testid={`edit-base-amount-${req.request_id}`} />
+                  </div>
+                )}
+              </div>
+
+              {/* Row 2b: Exchange Rate + Auto USD (when non-USD) */}
+              {form.base_currency !== 'USD' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs text-slate-500 uppercase font-bold">Exchange Rate (1 {form.base_currency} = ? USD)</Label>
+                    <Input type="number" step="0.0001" value={form.exchange_rate} onChange={e => handleExchangeRateChange(e.target.value)} className="bg-slate-50 border-slate-200 font-mono" placeholder="0.0000" data-testid={`edit-rate-${req.request_id}`} />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-slate-500 uppercase font-bold">Amount in USD (Auto)</Label>
+                    <Input type="number" value={form.amount} readOnly className="bg-slate-100 border-slate-200 font-mono text-slate-500" placeholder="Auto-calculated" />
+                    {form.base_amount && form.exchange_rate && (
+                      <p className="text-xs text-blue-600 mt-1">{form.base_amount} {form.base_currency} x {form.exchange_rate} = {form.amount} USD</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Row 3: Destination Type */}
+              <div>
+                <Label className="text-xs text-slate-500 uppercase font-bold">Destination Type</Label>
+                {form.transaction_type === 'deposit' ? (
+                  <Select value={form.destination_type} onValueChange={v => setForm({ ...form, destination_type: v, vendor_id: '', psp_id: '', destination_account_id: '' })}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200" data-testid={`edit-dest-${req.request_id}`}><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bank">Bank</SelectItem>
+                      <SelectItem value="psp">PSP</SelectItem>
+                      <SelectItem value="vendor">Exchanger</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Select value={form.destination_type} onValueChange={v => setForm({ ...form, destination_type: v, vendor_id: '', psp_id: '', destination_account_id: '' })}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200" data-testid={`edit-dest-${req.request_id}`}><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bank">Bank</SelectItem>
+                      <SelectItem value="usdt">USDT</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {/* Conditional: PSP selector (deposit only) */}
+              {form.transaction_type === 'deposit' && form.destination_type === 'psp' && (
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase font-bold">PSP</Label>
+                  <Select value={form.psp_id} onValueChange={v => setForm({ ...form, psp_id: v })}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200"><SelectValue placeholder="Select PSP" /></SelectTrigger>
+                    <SelectContent>{psps.map(p => <SelectItem key={p.psp_id} value={p.psp_id}>{p.psp_name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Conditional: Exchanger selector (deposit to vendor) */}
+              {form.transaction_type === 'deposit' && form.destination_type === 'vendor' && (
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase font-bold">Exchanger</Label>
+                  <Select value={form.vendor_id} onValueChange={v => setForm({ ...form, vendor_id: v })}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200"><SelectValue placeholder="Select exchanger" /></SelectTrigger>
+                    <SelectContent>{vendors.map(v => <SelectItem key={v.vendor_id} value={v.vendor_id}>{v.vendor_name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Conditional: Bank details (withdrawal to bank) */}
+              {form.destination_type === 'bank' && (
+                <div className="space-y-2 p-3 bg-slate-50 rounded border border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase font-bold">Bank Details</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input placeholder="Bank Name" value={form.client_bank_name} onChange={e => setForm({ ...form, client_bank_name: e.target.value })} className="bg-white border-slate-200" />
+                    <Input placeholder="Account Holder Name" value={form.client_bank_account_name} onChange={e => setForm({ ...form, client_bank_account_name: e.target.value })} className="bg-white border-slate-200" />
+                    <Input placeholder="Account Number" value={form.client_bank_account_number} onChange={e => setForm({ ...form, client_bank_account_number: e.target.value })} className="bg-white border-slate-200 font-mono" />
+                    <Input placeholder="SWIFT / IBAN" value={form.client_bank_swift_iban} onChange={e => setForm({ ...form, client_bank_swift_iban: e.target.value })} className="bg-white border-slate-200 font-mono" />
+                    <Input placeholder="Currency (e.g. INR)" value={form.client_bank_currency} onChange={e => setForm({ ...form, client_bank_currency: e.target.value })} className="bg-white border-slate-200" />
+                  </div>
+                </div>
+              )}
+
+              {/* Conditional: USDT details (withdrawal to usdt) */}
+              {form.destination_type === 'usdt' && (
+                <div className="space-y-2 p-3 bg-slate-50 rounded border border-slate-200">
+                  <p className="text-xs text-slate-500 uppercase font-bold">USDT Details</p>
+                  <Input placeholder="Wallet Address" value={form.client_usdt_address} onChange={e => setForm({ ...form, client_usdt_address: e.target.value })} className="bg-white border-slate-200 font-mono" />
+                  <Select value={form.client_usdt_network} onValueChange={v => setForm({ ...form, client_usdt_network: v })}>
+                    <SelectTrigger className="bg-white border-slate-200"><SelectValue placeholder="Select Network" /></SelectTrigger>
+                    <SelectContent><SelectItem value="TRC20">TRC20</SelectItem><SelectItem value="ERC20">ERC20</SelectItem><SelectItem value="BEP20">BEP20</SelectItem></SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Row 4: Reference & CRM Ref */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase font-bold">Reference</Label>
+                  <Input value={form.reference} onChange={e => setForm({ ...form, reference: e.target.value })} className="bg-slate-50 border-slate-200 font-mono" placeholder="Optional" />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase font-bold">CRM Reference</Label>
+                  <Input value={form.crm_reference} onChange={e => setForm({ ...form, crm_reference: e.target.value })} className="bg-slate-50 border-slate-200 font-mono" placeholder="Unique" data-testid={`edit-crm-ref-${req.request_id}`} />
+                </div>
+              </div>
+
+              {/* Row 5: Description */}
+              <div>
+                <Label className="text-xs text-slate-500 uppercase font-bold">Description</Label>
+                <Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="bg-slate-50 border-slate-200" rows={2} />
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2 pt-2 border-t border-slate-100">
+                <Button onClick={handleSave} disabled={saving} className="bg-blue-600 text-white hover:bg-blue-700 flex-1" data-testid={`save-request-${req.request_id}`}>
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                  Save Changes
+                </Button>
+                <Button onClick={() => onProcess(req)} variant="outline" className="border-green-300 text-green-700 hover:bg-green-50" data-testid={`process-${req.request_id}`}>
+                  <Send className="w-4 h-4 mr-2" /> Process
+                </Button>
+                <Button onClick={() => onDelete(req.request_id)} variant="outline" className="border-red-300 text-red-500 hover:bg-red-50 px-3" data-testid={`delete-${req.request_id}`}>
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          ) : (
+            /* Read-only for processed requests */
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3 text-sm">
+              {[
+                ['Type', req.transaction_type],
+                ['Client', req.client_name],
+                ['Amount', `$${req.amount?.toLocaleString()}`],
+                req.base_amount && req.base_currency !== 'USD' ? ['Base', `${req.base_amount?.toLocaleString()} ${req.base_currency}`] : null,
+                ['Destination', req.destination_type],
+                req.crm_reference ? ['CRM Ref', req.crm_reference] : null,
+                req.reference ? ['Reference', req.reference] : null,
+                req.description ? ['Description', req.description] : null,
+                ['Created By', req.created_by_name],
+                req.transaction_id ? ['TX ID', req.transaction_id?.slice(-8)] : null,
+                req.processed_at ? ['Processed', new Date(req.processed_at).toLocaleDateString()] : null,
+              ].filter(Boolean).map(([k, v], i) => (
+                <div key={i}>
+                  <span className="text-[10px] text-slate-400 uppercase block">{k}</span>
+                  <span className="text-slate-700 font-medium">{v}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
 
 export default function TransactionRequests() {
-  const { user, getAuthHeaders } = useAuth();
+  const { user } = useAuth();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [totalPages, setTotalPages] = useState(1);
@@ -27,22 +325,20 @@ export default function TransactionRequests() {
   const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
-  
+
   // Create dialog
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ transaction_type: 'withdrawal', client_id: '', amount: '', currency: 'USD', base_currency: 'USD', base_amount: '', exchange_rate: '', destination_type: 'bank', destination_account_id: '', psp_id: '', vendor_id: '', reference: '', crm_reference: '', description: '', client_bank_name: '', client_bank_account_name: '', client_bank_account_number: '', client_bank_swift_iban: '', client_bank_currency: '', client_usdt_address: '', client_usdt_network: '' });
+  const defaultForm = { transaction_type: 'withdrawal', client_id: '', amount: '', currency: 'USD', base_currency: 'USD', base_amount: '', exchange_rate: '', destination_type: 'bank', destination_account_id: '', psp_id: '', vendor_id: '', reference: '', crm_reference: '', description: '', client_bank_name: '', client_bank_account_name: '', client_bank_account_number: '', client_bank_swift_iban: '', client_bank_currency: '', client_usdt_address: '', client_usdt_network: '' };
+  const [form, setForm] = useState({ ...defaultForm });
   const [proofImage, setProofImage] = useState(null);
-  
+
   // Process dialog
   const [processDialog, setProcessDialog] = useState(null);
   const [captcha, setCaptcha] = useState({ a: 0, b: 0 });
   const [captchaAnswer, setCaptchaAnswer] = useState('');
   const [processing, setProcessing] = useState(false);
-  
-  // View dialog
-  const [viewReq, setViewReq] = useState(null);
-  
+
   // Data
   const [clients, setClients] = useState([]);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
@@ -72,7 +368,7 @@ export default function TransactionRequests() {
   }, [page, statusFilter, typeFilter, authHeaders]);
 
   useEffect(() => { fetchRequests(); }, [fetchRequests]);
-  
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -104,7 +400,7 @@ export default function TransactionRequests() {
       if (res.ok) {
         toast.success('Request created');
         setCreateOpen(false);
-        setForm({ transaction_type: 'withdrawal', client_id: '', amount: '', currency: 'USD', base_currency: 'USD', base_amount: '', exchange_rate: '', destination_type: 'bank', destination_account_id: '', psp_id: '', vendor_id: '', reference: '', crm_reference: '', description: '', client_bank_name: '', client_bank_account_name: '', client_bank_account_number: '', client_bank_swift_iban: '', client_bank_currency: '', client_usdt_address: '', client_usdt_network: '' });
+        setForm({ ...defaultForm });
         setProofImage(null);
         fetchRequests();
       } else { const e = await res.json(); toast.error(e.detail || 'Failed'); }
@@ -147,7 +443,25 @@ export default function TransactionRequests() {
     } catch { toast.error('Failed'); }
   };
 
-  const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+  const handleCreateBaseCurrencyChange = (val) => {
+    if (val === 'USD') {
+      setForm({ ...form, base_currency: val, base_amount: '', exchange_rate: '' });
+    } else {
+      setForm({ ...form, base_currency: val, amount: '' });
+    }
+  };
+
+  const handleCreateBaseAmountChange = (val) => {
+    const rate = parseFloat(form.exchange_rate) || 0;
+    const usd = val && rate ? (parseFloat(val) * rate).toFixed(2) : '';
+    setForm({ ...form, base_amount: val, amount: usd });
+  };
+
+  const handleCreateExchangeRateChange = (val) => {
+    const baseAmt = parseFloat(form.base_amount) || 0;
+    const usd = val && baseAmt ? (baseAmt * parseFloat(val)).toFixed(2) : '';
+    setForm({ ...form, exchange_rate: val, amount: usd });
+  };
 
   return (
     <div className="space-y-6 animate-fade-in" data-testid="tx-requests-page">
@@ -182,100 +496,53 @@ export default function TransactionRequests() {
         <div className="min-w-[120px]">
           <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Status</label>
           <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800">
+            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="filter-status">
             <option value="all">All</option><option value="pending">Pending</option><option value="processed">Processed</option>
           </select>
         </div>
         <div className="min-w-[120px]">
           <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Type</label>
           <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setPage(1); }}
-            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800">
+            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800" data-testid="filter-type">
             <option value="all">All</option><option value="deposit">Deposit</option><option value="withdrawal">Withdrawal</option>
           </select>
         </div>
       </div>
 
-      {/* Table */}
-      <Card className="bg-white border-slate-200">
-        <CardContent className="p-0">
-          <ScrollArea className="h-[500px]">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-slate-200">
-                  <TableHead className="text-slate-500 text-xs font-bold uppercase">ID</TableHead>
-                  <TableHead className="text-slate-500 text-xs font-bold uppercase">Type</TableHead>
-                  <TableHead className="text-slate-500 text-xs font-bold uppercase">Client</TableHead>
-                  <TableHead className="text-slate-500 text-xs font-bold uppercase">Amount</TableHead>
-                  <TableHead className="text-slate-500 text-xs font-bold uppercase">CRM Ref</TableHead>
-                  <TableHead className="text-slate-500 text-xs font-bold uppercase">Destination</TableHead>
-                  <TableHead className="text-slate-500 text-xs font-bold uppercase">Status</TableHead>
-                  <TableHead className="text-slate-500 text-xs font-bold uppercase">Created</TableHead>
-                  <TableHead className="text-slate-500 text-xs font-bold uppercase text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow><TableCell colSpan={9} className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></TableCell></TableRow>
-                ) : requests.length === 0 ? (
-                  <TableRow><TableCell colSpan={9} className="text-center py-8 text-slate-400">No requests found</TableCell></TableRow>
-                ) : requests.map(req => (
-                  <TableRow key={req.request_id} className="border-slate-200 hover:bg-slate-50">
-                    <TableCell className="font-mono text-xs text-slate-700">{req.request_id?.slice(-10).toUpperCase()}</TableCell>
-                    <TableCell>
-                      <Badge className={req.transaction_type === 'deposit' ? 'bg-green-100 text-green-700 text-xs' : 'bg-red-100 text-red-700 text-xs'}>
-                        {req.transaction_type === 'deposit' ? <ArrowDownRight className="w-3 h-3 mr-1" /> : <ArrowUpRight className="w-3 h-3 mr-1" />}
-                        {req.transaction_type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-slate-800 text-sm">{req.client_name}</TableCell>
-                    <TableCell className="font-mono text-sm">
-                      <span className={req.transaction_type === 'deposit' ? 'text-green-600' : 'text-red-600'}>
-                        ${req.amount?.toLocaleString()}
-                      </span>
-                      {req.base_currency && req.base_currency !== 'USD' && req.base_amount && (
-                        <span className="text-xs text-slate-400 block">{req.base_amount?.toLocaleString()} {req.base_currency}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-purple-600">{req.crm_reference || '-'}</TableCell>
-                    <TableCell className="text-sm text-slate-600">{req.destination_type}{req.vendor_id ? ` (${vendors.find(v => v.vendor_id === req.vendor_id)?.vendor_name || ''})` : ''}</TableCell>
-                    <TableCell>
-                      <Badge className={req.status === 'pending' ? 'bg-yellow-100 text-yellow-700 text-xs' : 'bg-green-100 text-green-700 text-xs'}>
-                        {req.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-500">{formatDate(req.created_at)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-1 justify-end">
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setViewReq(req)}><Eye className="w-3.5 h-3.5" /></Button>
-                        {req.status === 'pending' && (
-                          <>
-                            <Button variant="ghost" size="sm" className="h-7 px-2 text-green-600 hover:bg-green-50 text-xs" onClick={() => openProcess(req)} data-testid={`process-${req.request_id}`}>
-                              <Send className="w-3.5 h-3.5 mr-1" /> Process
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500" onClick={() => handleDelete(req.request_id)}><Trash2 className="w-3.5 h-3.5" /></Button>
-                          </>
-                        )}
-                        {req.status === 'processed' && req.transaction_id && (
-                          <Badge className="bg-blue-100 text-blue-700 text-[10px]">TX: {req.transaction_id?.slice(-8)}</Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t">
-              <span className="text-xs text-slate-400">Page {page} of {totalPages} ({total} total)</span>
-              <div className="flex gap-1">
-                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => { setPage(page - 1); fetchRequests(page - 1); }} className="h-7 px-2 text-xs">Prev</Button>
-                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => { setPage(page + 1); fetchRequests(page + 1); }} className="h-7 px-2 text-xs">Next</Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Request Cards List */}
+      <div className="space-y-3" data-testid="requests-list">
+        {loading ? (
+          <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>
+        ) : requests.length === 0 ? (
+          <Card className="bg-white border-slate-200"><CardContent className="p-8 text-center text-slate-400">No requests found</CardContent></Card>
+        ) : (
+          requests.map(req => (
+            <EditableRequestCard
+              key={req.request_id}
+              req={req}
+              clients={clients}
+              treasuryAccounts={treasuryAccounts}
+              psps={psps}
+              vendors={vendors}
+              authHeaders={authHeaders}
+              onSaved={() => fetchRequests()}
+              onDelete={handleDelete}
+              onProcess={openProcess}
+            />
+          ))
+        )}
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-1 py-3">
+          <span className="text-xs text-slate-400">Page {page} of {totalPages} ({total} total)</span>
+          <div className="flex gap-1">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => { setPage(page - 1); fetchRequests(page - 1); }} className="h-7 px-3 text-xs">Prev</Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => { setPage(page + 1); fetchRequests(page + 1); }} className="h-7 px-3 text-xs">Next</Button>
+          </div>
+        </div>
+      )}
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -298,11 +565,44 @@ export default function TransactionRequests() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div><Label className="text-xs text-slate-500 uppercase">Amount (USD) *</Label><Input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} className="bg-slate-50" /></div>
-              <div><Label className="text-xs text-slate-500 uppercase">Payment Currency</Label><Input value={form.base_currency} onChange={e => setForm({ ...form, base_currency: e.target.value })} className="bg-slate-50" /></div>
-              <div><Label className="text-xs text-slate-500 uppercase">Base Amount</Label><Input type="number" value={form.base_amount} onChange={e => setForm({ ...form, base_amount: e.target.value })} className="bg-slate-50" /></div>
+
+            {/* Currency Selection */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs text-slate-500 uppercase">Payment Currency</Label>
+                <Select value={form.base_currency} onValueChange={handleCreateBaseCurrencyChange}>
+                  <SelectTrigger className="bg-slate-50" data-testid="create-base-currency"><SelectValue /></SelectTrigger>
+                  <SelectContent>{currencies.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              {form.base_currency === 'USD' ? (
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase">Amount (USD) *</Label>
+                  <Input type="number" step="0.01" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} className="bg-slate-50 font-mono" placeholder="0.00 USD" />
+                </div>
+              ) : (
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase">Amount in {form.base_currency} *</Label>
+                  <Input type="number" step="0.01" value={form.base_amount} onChange={e => handleCreateBaseAmountChange(e.target.value)} className="bg-slate-50 font-mono" placeholder={`0.00 ${form.base_currency}`} />
+                </div>
+              )}
             </div>
+
+            {form.base_currency !== 'USD' && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase">Exchange Rate (1 {form.base_currency} = ? USD)</Label>
+                  <Input type="number" step="0.0001" value={form.exchange_rate} onChange={e => handleCreateExchangeRateChange(e.target.value)} className="bg-slate-50 font-mono" placeholder="0.0000" />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase">Amount in USD (Auto)</Label>
+                  <Input type="number" value={form.amount} readOnly className="bg-slate-100 font-mono text-slate-500" />
+                  {form.base_amount && form.exchange_rate && (
+                    <p className="text-xs text-blue-600 mt-1">{form.base_amount} {form.base_currency} x {form.exchange_rate} = {form.amount} USD</p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {form.transaction_type === 'deposit' && (
               <div>
@@ -323,7 +623,7 @@ export default function TransactionRequests() {
                 </Select>
               </div>
             )}
-            {(form.destination_type === 'vendor' || (form.transaction_type === 'withdrawal' && form.destination_type === 'vendor')) && (
+            {form.transaction_type === 'deposit' && form.destination_type === 'vendor' && (
               <div><Label className="text-xs text-slate-500 uppercase">Exchanger</Label>
                 <Select value={form.vendor_id} onValueChange={v => setForm({ ...form, vendor_id: v })}>
                   <SelectTrigger className="bg-slate-50"><SelectValue placeholder="Select exchanger" /></SelectTrigger>
@@ -400,39 +700,6 @@ export default function TransactionRequests() {
               <Button onClick={handleProcess} disabled={processing || !captchaAnswer} className="w-full bg-green-600 text-white hover:bg-green-700">
                 {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />} Process & Create Transaction
               </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* View Dialog */}
-      <Dialog open={!!viewReq} onOpenChange={() => setViewReq(null)}>
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="text-xl font-bold uppercase" style={{ fontFamily: 'Barlow Condensed' }}>Request Details</DialogTitle></DialogHeader>
-          {viewReq && (
-            <div className="space-y-3 text-sm">
-              {[
-                ['Request ID', viewReq.request_id],
-                ['Type', viewReq.transaction_type],
-                ['Client', viewReq.client_name],
-                ['Amount', `$${viewReq.amount?.toLocaleString()} USD`],
-                viewReq.base_amount && ['Base Amount', `${viewReq.base_amount?.toLocaleString()} ${viewReq.base_currency}`],
-                ['Destination', viewReq.destination_type],
-                viewReq.crm_reference && ['CRM Ref', viewReq.crm_reference],
-                viewReq.reference && ['Reference', viewReq.reference],
-                viewReq.description && ['Description', viewReq.description],
-                ['Status', viewReq.status],
-                ['Created', formatDate(viewReq.created_at)],
-                ['Created By', viewReq.created_by_name],
-                viewReq.processed_at && ['Processed', formatDate(viewReq.processed_at)],
-                viewReq.transaction_id && ['Transaction ID', viewReq.transaction_id],
-              ].filter(Boolean).map(([k, v], i) => (
-                <div key={i} className="flex justify-between border-b border-slate-100 pb-1">
-                  <span className="text-slate-500">{k}</span>
-                  <span className="text-slate-800 font-medium text-right">{v}</span>
-                </div>
-              ))}
-              {viewReq.proof_image && <div className="text-center"><Badge className="bg-blue-100 text-blue-700"><ImageIcon className="w-3 h-3 mr-1" /> Proof Attached</Badge></div>}
             </div>
           )}
         </DialogContent>
