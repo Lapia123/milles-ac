@@ -127,6 +127,7 @@ class Modules:
     ROLES = "roles"
     MESSAGES = "messages"
     APPROVALS = "approvals"
+    TRANSACTION_REQUESTS = "transaction_requests"
 
 # Standard actions
 class Actions:
@@ -144,7 +145,8 @@ ALL_MODULES = [
     Modules.PSP, Modules.EXCHANGERS, Modules.RECONCILIATION, Modules.AUDIT,
     Modules.LOGS, Modules.REPORTS, Modules.SETTINGS, Modules.USERS, Modules.ROLES,
     Modules.MESSAGES,
-    Modules.APPROVALS
+    Modules.APPROVALS,
+    Modules.TRANSACTION_REQUESTS
 ]
 
 # All actions list
@@ -170,7 +172,8 @@ MODULE_DISPLAY_NAMES = {
     Modules.USERS: "Users",
     Modules.ROLES: "Roles & Permissions",
     Modules.MESSAGES: "Messages",
-    Modules.APPROVALS: "Pending Approvals"
+    Modules.APPROVALS: "Pending Approvals",
+    Modules.TRANSACTION_REQUESTS: "Transaction Requests"
 }
 
 class RoleCreate(BaseModel):
@@ -6486,6 +6489,304 @@ async def reject_transaction(request: Request, transaction_id: str, reason: str 
     await log_activity(request, user, "reject", "transactions", "Rejected transaction")
 
     return await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+
+
+# ============== TRANSACTION REQUESTS ==============
+
+@api_router.get("/transaction-requests")
+async def get_transaction_requests(
+    status: Optional[str] = None,
+    transaction_type: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200),
+    user: dict = Depends(require_permission(Modules.TRANSACTION_REQUESTS, Actions.VIEW))
+):
+    query = {}
+    if status and status != "all":
+        query["status"] = status
+    if transaction_type and transaction_type != "all":
+        query["transaction_type"] = transaction_type
+    return await paginate_query(db.transaction_requests, query, page, page_size)
+
+@api_router.get("/transaction-requests/{request_id}")
+async def get_transaction_request(request_id: str, user: dict = Depends(require_permission(Modules.TRANSACTION_REQUESTS, Actions.VIEW))):
+    req = await db.transaction_requests.find_one({"request_id": request_id}, {"_id": 0})
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return req
+
+@api_router.post("/transaction-requests")
+async def create_transaction_request(
+    request: Request,
+    client_id: str = Form(...),
+    transaction_type: str = Form(...),
+    amount: float = Form(...),
+    currency: str = Form("USD"),
+    base_currency: str = Form("USD"),
+    base_amount: Optional[float] = Form(None),
+    exchange_rate: Optional[float] = Form(None),
+    destination_type: str = Form("bank"),
+    destination_account_id: Optional[str] = Form(None),
+    psp_id: Optional[str] = Form(None),
+    vendor_id: Optional[str] = Form(None),
+    reference: Optional[str] = Form(None),
+    crm_reference: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    client_bank_name: Optional[str] = Form(None),
+    client_bank_account_name: Optional[str] = Form(None),
+    client_bank_account_number: Optional[str] = Form(None),
+    client_bank_swift_iban: Optional[str] = Form(None),
+    client_bank_currency: Optional[str] = Form(None),
+    client_usdt_address: Optional[str] = Form(None),
+    client_usdt_network: Optional[str] = Form(None),
+    proof_image: Optional[UploadFile] = File(None),
+    user: dict = Depends(require_permission(Modules.TRANSACTION_REQUESTS, Actions.CREATE))
+):
+    now = datetime.now(timezone.utc)
+    
+    # CRM reference uniqueness
+    if crm_reference and crm_reference.strip():
+        existing = await db.transaction_requests.find_one({"crm_reference": crm_reference.strip()}, {"_id": 0})
+        if existing:
+            raise HTTPException(status_code=400, detail=f"CRM Reference '{crm_reference}' already exists")
+    
+    # Get client info
+    client = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Handle proof image
+    proof_data = None
+    if proof_image and proof_image.filename:
+        content = await proof_image.read()
+        proof_data = base64.b64encode(content).decode('utf-8')
+    
+    request_id = f"txreq_{uuid.uuid4().hex[:12]}"
+    
+    doc = {
+        "request_id": request_id,
+        "transaction_type": transaction_type,
+        "client_id": client_id,
+        "client_name": f"{client.get('first_name', '')} {client.get('last_name', '')}".strip(),
+        "amount": amount,
+        "currency": currency,
+        "base_currency": base_currency,
+        "base_amount": base_amount,
+        "exchange_rate": exchange_rate,
+        "destination_type": destination_type,
+        "destination_account_id": destination_account_id,
+        "psp_id": psp_id,
+        "vendor_id": vendor_id,
+        "reference": reference,
+        "crm_reference": crm_reference.strip() if crm_reference else None,
+        "description": description,
+        "client_bank_name": client_bank_name,
+        "client_bank_account_name": client_bank_account_name,
+        "client_bank_account_number": client_bank_account_number,
+        "client_bank_swift_iban": client_bank_swift_iban,
+        "client_bank_currency": client_bank_currency,
+        "client_usdt_address": client_usdt_address,
+        "client_usdt_network": client_usdt_network,
+        "proof_image": proof_data,
+        "status": "pending",
+        "created_at": now.isoformat(),
+        "created_by": user["user_id"],
+        "created_by_name": user["name"],
+        "processed_at": None,
+        "processed_by": None,
+        "processed_by_name": None,
+        "transaction_id": None,
+    }
+    
+    await db.transaction_requests.insert_one(doc)
+    await log_activity(request, user, "create", "transaction_requests", f"Created {transaction_type} request")
+    
+    return await db.transaction_requests.find_one({"request_id": request_id}, {"_id": 0})
+
+@api_router.put("/transaction-requests/{request_id}")
+async def update_transaction_request(
+    request: Request,
+    request_id: str,
+    data: dict = Body(...),
+    user: dict = Depends(require_permission(Modules.TRANSACTION_REQUESTS, Actions.EDIT))
+):
+    req = await db.transaction_requests.find_one({"request_id": request_id}, {"_id": 0})
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    if req["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Only pending requests can be edited")
+    
+    allowed = ["description", "reference", "crm_reference", "destination_type", "vendor_id",
+               "client_bank_name", "client_bank_account_name", "client_bank_account_number",
+               "client_bank_swift_iban", "client_bank_currency", "client_usdt_address", "client_usdt_network",
+               "destination_account_id", "psp_id"]
+    updates = {k: v for k, v in data.items() if k in allowed}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    # CRM ref uniqueness check
+    if "crm_reference" in updates and updates["crm_reference"]:
+        existing = await db.transaction_requests.find_one({"crm_reference": updates["crm_reference"], "request_id": {"$ne": request_id}}, {"_id": 0})
+        if existing:
+            raise HTTPException(status_code=400, detail=f"CRM Reference '{updates['crm_reference']}' already exists")
+    
+    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.transaction_requests.update_one({"request_id": request_id}, {"$set": updates})
+    await log_activity(request, user, "edit", "transaction_requests", "Updated request")
+    return await db.transaction_requests.find_one({"request_id": request_id}, {"_id": 0})
+
+@api_router.post("/transaction-requests/{request_id}/process")
+async def process_transaction_request(
+    request: Request,
+    request_id: str,
+    data: dict = Body(...),
+    user: dict = Depends(require_permission(Modules.TRANSACTION_REQUESTS, Actions.APPROVE))
+):
+    """Process a pending request — creates a real transaction in the Transactions collection.
+    Only for withdrawals. Requires captcha verification."""
+    req = await db.transaction_requests.find_one({"request_id": request_id}, {"_id": 0})
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    if req["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Only pending requests can be processed")
+    
+    # Verify captcha
+    captcha_answer = data.get("captcha_answer")
+    expected = data.get("captcha_expected")
+    if not captcha_answer or str(captcha_answer) != str(expected):
+        raise HTTPException(status_code=400, detail="Invalid captcha answer")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Create real transaction in the transactions collection
+    tx_id = f"tx_{uuid.uuid4().hex[:12]}"
+    
+    client = await db.clients.find_one({"client_id": req["client_id"]}, {"_id": 0})
+    usd_amount = req["amount"]
+    base_currency = req.get("base_currency", "USD")
+    base_amount = req.get("base_amount")
+    
+    # Get vendor info if exchanger destination
+    vendor_info = None
+    if req.get("vendor_id"):
+        vendor_info = await db.vendors.find_one({"vendor_id": req["vendor_id"]}, {"_id": 0})
+    
+    # Calculate vendor commission
+    vendor_commission_rate = 0.0
+    vendor_commission_amount = 0.0
+    vendor_commission_base_amount = 0.0
+    if req.get("destination_type") == "vendor" and vendor_info:
+        tx_mode = "bank"
+        if req["transaction_type"] == "deposit":
+            vendor_commission_rate = vendor_info.get("deposit_commission", 0)
+        else:
+            vendor_commission_rate = vendor_info.get("withdrawal_commission", 0)
+        if vendor_commission_rate > 0:
+            v_base = base_amount if (base_currency and base_currency != "USD" and base_amount) else usd_amount
+            vendor_commission_base_amount = round(v_base * vendor_commission_rate / 100, 2)
+            vendor_commission_amount = round(usd_amount * vendor_commission_rate / 100, 2)
+    
+    tx_doc = {
+        "transaction_id": tx_id,
+        "client_id": req["client_id"],
+        "client_name": req.get("client_name", "Unknown"),
+        "transaction_type": req["transaction_type"],
+        "amount": usd_amount,
+        "currency": "USD",
+        "base_currency": base_currency,
+        "base_amount": base_amount if base_currency != "USD" else None,
+        "exchange_rate": req.get("exchange_rate"),
+        "destination_type": req.get("destination_type", "bank"),
+        "destination_account_id": req.get("destination_account_id"),
+        "vendor_id": req.get("vendor_id"),
+        "vendor_name": vendor_info["vendor_name"] if vendor_info else None,
+        "psp_id": req.get("psp_id"),
+        "client_bank_name": req.get("client_bank_name"),
+        "client_bank_account_name": req.get("client_bank_account_name"),
+        "client_bank_account_number": req.get("client_bank_account_number"),
+        "client_bank_swift_iban": req.get("client_bank_swift_iban"),
+        "client_bank_currency": req.get("client_bank_currency"),
+        "client_usdt_address": req.get("client_usdt_address"),
+        "client_usdt_network": req.get("client_usdt_network"),
+        "vendor_commission_rate": vendor_commission_rate if vendor_commission_rate > 0 else None,
+        "vendor_commission_amount": vendor_commission_amount if vendor_commission_amount > 0 else None,
+        "vendor_commission_base_amount": vendor_commission_base_amount if vendor_commission_base_amount > 0 else None,
+        "vendor_commission_base_currency": base_currency if vendor_commission_base_amount > 0 else None,
+        "transaction_mode": "bank",
+        "status": TransactionStatus.PENDING,
+        "description": req.get("description"),
+        "reference": req.get("reference") or f"REF{uuid.uuid4().hex[:8].upper()}",
+        "crm_reference": req.get("crm_reference"),
+        "proof_image": req.get("proof_image"),
+        "created_by": req.get("created_by"),
+        "created_by_name": req.get("created_by_name"),
+        "processed_by": None,
+        "processed_by_name": None,
+        "rejection_reason": None,
+        "settled": False,
+        "settlement_id": None,
+        "settlement_status": None,
+        "request_id": request_id,
+        "created_at": now.isoformat(),
+        "processed_at": None
+    }
+    
+    await db.transactions.insert_one(tx_doc)
+    
+    # Update request status
+    await db.transaction_requests.update_one(
+        {"request_id": request_id},
+        {"$set": {
+            "status": "processed",
+            "processed_at": now.isoformat(),
+            "processed_by": user["user_id"],
+            "processed_by_name": user["name"],
+            "transaction_id": tx_id
+        }}
+    )
+    
+    # Send notifications
+    import asyncio
+    if req.get("destination_type") == "vendor" and req.get("vendor_id"):
+        amt_display = f"{base_amount:,.2f} {base_currency}" if base_currency and base_currency != "USD" and base_amount else f"${usd_amount:,.2f} USD"
+        asyncio.create_task(send_exchanger_notification("transaction", req["vendor_id"], {
+            "reference": tx_doc["reference"],
+            "type": req["transaction_type"],
+            "client": req.get("client_name", "Unknown"),
+            "amount_display": amt_display,
+        }))
+    else:
+        asyncio.create_task(send_approval_notification("transaction", {
+            "reference": tx_doc["reference"],
+            "type": req["transaction_type"],
+            "client": req.get("client_name", "Unknown"),
+            "amount": usd_amount,
+            "base_amount": base_amount,
+            "base_currency": base_currency,
+            "destination": vendor_info["vendor_name"] if vendor_info else req.get("destination_type", "-"),
+            "created_by": user["name"]
+        }))
+    
+    await log_activity(request, user, "approve", "transaction_requests", f"Processed request → TX {tx_id}")
+    
+    return {"message": "Request processed", "transaction_id": tx_id, "request_id": request_id}
+
+@api_router.delete("/transaction-requests/{request_id}")
+async def delete_transaction_request(request: Request, request_id: str, user: dict = Depends(require_permission(Modules.TRANSACTION_REQUESTS, Actions.DELETE))):
+    req = await db.transaction_requests.find_one({"request_id": request_id}, {"_id": 0})
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    if req["status"] == "processed":
+        raise HTTPException(status_code=400, detail="Cannot delete processed requests")
+    await db.transaction_requests.delete_one({"request_id": request_id})
+    await log_activity(request, user, "delete", "transaction_requests", "Deleted request")
+    return {"message": "Request deleted"}
+
+@api_router.get("/transaction-requests/pending-count")
+async def get_pending_request_count(user: dict = Depends(get_current_user)):
+    count = await db.transaction_requests.count_documents({"status": "pending"})
+    return {"count": count}
+
 
 # ============== REPORTS/ANALYTICS ROUTES ==============
 

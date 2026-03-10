@@ -14,6 +14,7 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import RolesPermissions from "./pages/RolesPermissions";
 import AccountantDashboard from "./pages/AccountantDashboard";
+import TransactionRequests from "./pages/TransactionRequests";
 import IncomeExpenses from "./pages/IncomeExpenses";
 import Loans from "./pages/Loans";
 import Debts from "./pages/Debts";
@@ -93,6 +94,7 @@ function AppRouter() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="clients" element={<Clients />} />
         <Route path="transactions" element={<Transactions />} />
+        <Route path="transaction-requests" element={<TransactionRequests />} />
         <Route path="treasury" element={<Treasury />} />
         <Route path="lp-accounts" element={
             <ProtectedRoute requiredModule="lp_management">
