@@ -6431,6 +6431,65 @@ async def approve_transaction(
                 "created_by_name": user["name"]
             }
             await db.treasury_transactions.insert_one(treasury_tx_doc)
+        
+        # For withdrawals with treasury destination, deduct from that treasury account
+        elif tx.get("destination_type") == "treasury" and tx.get("destination_account_id"):
+            dest_account = await db.treasury_accounts.find_one({"account_id": tx["destination_account_id"]}, {"_id": 0})
+            if dest_account:
+                dest_currency = dest_account.get("currency", "USD")
+                tx_currency = tx.get("currency", "USD")
+                withdrawal_amount = tx["amount"]
+                
+                if tx.get("base_currency") == dest_currency and tx.get("base_amount"):
+                    withdrawal_amount = tx["base_amount"]
+                elif tx_currency == "USD" and dest_currency != "USD":
+                    if tx.get("exchange_rate") and tx.get("base_amount") and tx.get("base_currency") == dest_currency:
+                        withdrawal_amount = tx["base_amount"]
+                    else:
+                        withdrawal_amount = convert_from_usd(tx["amount"], dest_currency)
+                elif tx_currency != "USD" and dest_currency == "USD":
+                    withdrawal_amount = convert_to_usd(tx["amount"], tx_currency)
+                elif tx_currency != dest_currency:
+                    usd_amount = convert_to_usd(tx["amount"], tx_currency)
+                    withdrawal_amount = convert_from_usd(usd_amount, dest_currency)
+                
+                if dest_account.get("balance", 0) < withdrawal_amount:
+                    raise HTTPException(status_code=400, detail=f"Insufficient balance in treasury account. Required: {withdrawal_amount:,.2f} {dest_currency}, Available: {dest_account.get('balance', 0):,.2f} {dest_currency}")
+                
+                # Deduct from treasury account
+                await db.treasury_accounts.update_one(
+                    {"account_id": tx["destination_account_id"]},
+                    {"$inc": {"balance": -withdrawal_amount}, "$set": {"updated_at": now.isoformat()}}
+                )
+                
+                updates["source_account_id"] = tx["destination_account_id"]
+                updates["source_account_name"] = dest_account.get("account_name")
+                updates["withdrawal_amount_in_source_currency"] = withdrawal_amount
+                updates["source_currency"] = dest_currency
+                
+                # Record treasury transaction
+                treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+                original_amt = tx.get("base_amount") if tx.get("base_amount") else tx["amount"]
+                original_curr = tx.get("base_currency") if tx.get("base_currency") else tx_currency
+                manual_rate = tx.get("exchange_rate") if tx.get("exchange_rate") else (withdrawal_amount / tx["amount"] if tx["amount"] > 0 else 1)
+                
+                treasury_tx_doc = {
+                    "treasury_transaction_id": treasury_tx_id,
+                    "account_id": tx["destination_account_id"],
+                    "transaction_type": "withdrawal",
+                    "amount": -withdrawal_amount,
+                    "currency": dest_currency,
+                    "original_amount": original_amt,
+                    "original_currency": original_curr,
+                    "exchange_rate": manual_rate,
+                    "reference": f"Withdrawal: {tx.get('client_name', 'Client')} - {tx.get('reference', '')}",
+                    "transaction_id": transaction_id,
+                    "client_id": tx.get("client_id"),
+                    "created_at": now.isoformat(),
+                    "created_by": user["user_id"],
+                    "created_by_name": user["name"]
+                }
+                await db.treasury_transactions.insert_one(treasury_tx_doc)
     
     # Update treasury balance for deposits going to treasury
     if tx.get("destination_account_id") and tx["transaction_type"] == TransactionType.DEPOSIT:

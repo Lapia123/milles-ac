@@ -35,6 +35,12 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - Files Modified: `backend/server.py`, `frontend/src/pages/Transactions.js`, `frontend/src/pages/TransactionRequests.js`
 - Verified: Testing agent iteration 37 - 100% backend/frontend pass
 
+**Treasury Balance Bug Fix - Withdrawal to Treasury (COMPLETE):**
+- BUG: When a withdrawal had destination_type "treasury", approving it did NOT deduct from the treasury account balance
+- ROOT CAUSE: The approve_transaction endpoint only handled withdrawals to bank/usdt destinations, skipping treasury destination entirely
+- FIX: Added an `elif destination_type == "treasury"` branch in the approval logic that deducts from the destination treasury account, with proper currency conversion and treasury transaction recording
+- Verified: USDT treasury went from 1000→950 after approving a 50 USDT withdrawal to treasury
+
 
 ### Date: Mar 7, 2026
 
