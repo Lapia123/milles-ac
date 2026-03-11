@@ -13,13 +13,14 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 
 ### Date: Mar 11, 2026
 
-**Client Search Fix in Transaction Requests (COMPLETE):**
-- Fixed critical bug where the client search picker in "New Transaction Request" only searched within first 200 preloaded clients (out of 2600+)
+**Client Search Fix in Transaction Requests & Transactions (COMPLETE):**
+- Fixed critical bug where the client search picker only searched within first 200 preloaded clients (out of 2600+)
 - Replaced cmdk-based client-side filtering with server-side search using debounced API calls to `GET /api/clients?search=...`
+- Fixed on both pages: TransactionRequests (New Request form + Edit form) and Transactions (Create Transaction dialog)
 - Now correctly finds any client by name or email across the entire database
-- Shows loading spinner during search, displays preloaded clients when no search term is entered
-- Files Modified: `frontend/src/pages/TransactionRequests.js`
-- Verified: Screenshot confirmed searching "nafidpv99@gmail.com" returns correct result
+- Shows loading spinner during search, displays preloaded clients when no search term
+- Files Modified: `frontend/src/pages/TransactionRequests.js`, `frontend/src/pages/Transactions.js`
+- Verified: Screenshots confirmed searching "nafidpv99@gmail.com" returns correct result on both pages
 
 ### Date: Mar 10, 2026
 
