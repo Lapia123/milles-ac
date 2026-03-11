@@ -22,7 +22,13 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - Files Modified: `frontend/src/pages/TransactionRequests.js`, `frontend/src/pages/Transactions.js`
 - Verified: Screenshots confirmed searching "nafidpv99@gmail.com" returns correct result on both pages
 
-**Bank/USDT Details Display in Transaction View (COMPLETE):**
+**Treasury Running Balance Column (COMPLETE):**
+- Added "Running Balance" column to Treasury Transaction History table
+- Backend calculates running balance starting from current account balance, working backwards through each transaction
+- Frontend displays the running balance in a new column with proper currency formatting
+- CSV statement export also includes the Running Balance column
+- Files Modified: `backend/server.py` (history endpoint), `frontend/src/pages/Treasury.js` (table + CSV export)
+- Verified: Screenshot + API test confirmed running balance is correct for ENBD account (58,385.33 AED)
 - Fixed bug where bank details and USDT details filled in Transaction Requests were not shown in the Transactions detail view or Pending Approvals view
 - Added "Client Bank Details" section (Bank Name, Account Holder, Account Number, SWIFT/IBAN, Currency) to both:
   - Transactions page: Transaction Details dialog (eye icon)

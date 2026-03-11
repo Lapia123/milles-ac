@@ -2195,8 +2195,15 @@ async def get_treasury_history(
                 "created_by_name": tx.get("processed_by_name")
             })
     
-    # Sort combined list by date
+    # Sort combined list by date (newest first)
     treasury_txs.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    
+    # Calculate running balance (start from current balance, work backwards)
+    current_balance = account.get("balance", 0)
+    running = current_balance
+    for tx in treasury_txs:
+        tx["running_balance"] = round(running, 2)
+        running -= (tx.get("amount", 0))
     
     # Paginate the combined result
     total = len(treasury_txs)

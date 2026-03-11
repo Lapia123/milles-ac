@@ -197,12 +197,13 @@ export default function Treasury() {
     if (!historyAccount || historyData.length === 0) return;
     
     // Generate CSV content
-    const headers = ['Date', 'Type', 'Reference', 'Amount', 'Currency'];
+    const headers = ['Date', 'Type', 'Reference', 'Amount', 'Running Balance', 'Currency'];
     const rows = historyData.map(tx => [
       new Date(tx.created_at).toLocaleDateString(),
       tx.transaction_type || 'N/A',
-      tx.reference || 'N/A',
+      `"${(tx.reference || 'N/A').replace(/"/g, '""')}"`,
       tx.amount?.toLocaleString() || '0',
+      (tx.running_balance ?? 0).toLocaleString(),
       historyAccount.currency || 'USD'
     ]);
     
@@ -1006,6 +1007,7 @@ export default function Treasury() {
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Running Balance</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1023,6 +1025,9 @@ export default function Treasury() {
                             <TableCell className="text-slate-800 text-sm max-w-[200px] truncate">{tx.reference || '-'}</TableCell>
                             <TableCell className={`font-mono text-right ${isIncoming ? 'text-green-400' : 'text-red-400'}`}>
                               {isIncoming ? '+' : ''}{Math.abs(tx.amount || 0).toLocaleString()} {historyAccount.currency}
+                            </TableCell>
+                            <TableCell className="font-mono text-right text-slate-800 font-medium" data-testid={`running-balance-${idx}`}>
+                              {(tx.running_balance ?? 0).toLocaleString()} {historyAccount.currency}
                             </TableCell>
                           </TableRow>
                         );
