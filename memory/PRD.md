@@ -36,6 +36,15 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - Verified: Testing agent iteration 37 - 100% backend/frontend pass
 
 **Transaction Requests Filters & Export (COMPLETE):**
+
+**Clients Page Pagination (COMPLETE):**
+- Added backend pagination to GET /api/clients (page, page_size params)
+- Optimized: Only aggregates transaction summaries for fetched page of clients (not all)
+- Classic pagination UI: page numbers, First/Prev/Next/Last buttons, "Rows per page" selector (10/20/50/100)
+- Shows "X–Y of Z" range indicator
+- Page resets to 1 on filter changes
+- Fixed 5 other pages (Transactions, TransactionRequests, TradingAccounts, Debts, IncomeExpenses) to handle new paginated response format
+- Files Modified: `backend/server.py`, `frontend/src/pages/Clients.js`, + 5 other frontend pages
 - Added Search filter (client name, reference, CRM reference, description)
 - Added Date Range filters (From/To date pickers)
 - Added Export dropdown with Excel (XLS) and PDF options

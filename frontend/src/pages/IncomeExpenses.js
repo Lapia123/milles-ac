@@ -176,8 +176,8 @@ export default function IncomeExpenses() {
   
   const fetchClients = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/clients?limit=500`, { headers: getAuthHeaders() });
-      if (response.ok) setClients(await response.json());
+      const response = await fetch(`${API_URL}/api/clients?page_size=500`, { headers: getAuthHeaders() });
+      if (response.ok) { const d = await response.json(); setClients(d.items || d); }
     } catch {}
   };
 

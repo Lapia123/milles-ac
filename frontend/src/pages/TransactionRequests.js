@@ -385,7 +385,7 @@ export default function TransactionRequests() {
     const fetchData = async () => {
       try {
         const [cRes, tRes, pRes, vRes] = await Promise.all([
-          fetch(`${API_URL}/api/clients`, { headers: authHeaders() }),
+          fetch(`${API_URL}/api/clients?page_size=200`, { headers: authHeaders() }),
           fetch(`${API_URL}/api/treasury`, { headers: authHeaders() }),
           fetch(`${API_URL}/api/psp`, { headers: authHeaders() }),
           fetch(`${API_URL}/api/vendors?page_size=100`, { headers: authHeaders() }),

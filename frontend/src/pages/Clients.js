@@ -69,6 +69,10 @@ export default function Clients() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalClients, setTotalClients] = useState(0);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [viewClient, setViewClient] = useState(null);
@@ -101,17 +105,20 @@ export default function Clients() {
     };
   };
 
-  const fetchClients = async () => {
+  const fetchClients = async (pg) => {
     try {
-      let url = `${API_URL}/api/clients`;
-      const params = new URLSearchParams();
+      const p = pg || currentPage;
+      const params = new URLSearchParams({ page: p, page_size: pageSize });
       if (searchTerm) params.append('search', searchTerm);
       if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
-      if (params.toString()) url += `?${params.toString()}`;
+      const url = `${API_URL}/api/clients?${params}`;
 
       const response = await fetch(url, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setClients(await response.json());
+        const data = await response.json();
+        setClients(data.items || []);
+        setTotalPages(data.total_pages || 1);
+        setTotalClients(data.total || 0);
       }
     } catch (error) {
       console.error('Error fetching clients:', error);
@@ -139,7 +146,7 @@ export default function Clients() {
 
   useEffect(() => {
     fetchClients();
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, statusFilter, currentPage, pageSize]);
 
   // Filter clients based on transaction filters
   const filteredClients = clients.filter(client => {
@@ -480,12 +487,12 @@ export default function Clients() {
               <Input
                 placeholder="Search clients..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                 className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-800/30 focus:border-[#66FCF1]"
                 data-testid="search-clients"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-40 bg-slate-50 border-slate-200 text-slate-800" data-testid="filter-status">
                 <Filter className="w-4 h-4 mr-2 text-slate-500" />
                 <SelectValue placeholder="KYC Status" />
@@ -563,14 +570,14 @@ export default function Clients() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { setMinBalance(''); setMaxBalance(''); setTxTypeFilter('all'); }}
+                onClick={() => { setMinBalance(''); setMaxBalance(''); setTxTypeFilter('all'); setCurrentPage(1); }}
                 className="text-slate-500 hover:text-slate-800"
               >
                 Clear Filters
               </Button>
             )}
             <div className="flex-1 text-right text-sm text-slate-500">
-              Showing {filteredClients.length} of {clients.length} clients
+              Showing {filteredClients.length} of {totalClients} clients
             </div>
           </div>
         </CardContent>
@@ -671,6 +678,89 @@ export default function Clients() {
           </ScrollArea>
         </CardContent>
       </Card>
+
+      {/* Classic Pagination */}
+      <div className="flex items-center justify-between px-2 py-3" data-testid="pagination-container">
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-slate-500">Rows per page:</span>
+          <select
+            value={pageSize}
+            onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+            className="px-2 py-1 text-sm border border-slate-200 rounded-md bg-white text-slate-700"
+            data-testid="page-size-select"
+          >
+            {[10, 20, 50, 100].map(size => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+          <span className="text-sm text-slate-400">
+            {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, totalClients)} of {totalClients}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage(1)}
+            className="h-8 px-2 text-xs border-slate-200"
+            data-testid="page-first"
+          >
+            First
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage(currentPage - 1)}
+            className="h-8 px-3 text-xs border-slate-200"
+            data-testid="page-prev"
+          >
+            Prev
+          </Button>
+          {(() => {
+            const pages = [];
+            let start = Math.max(1, currentPage - 2);
+            let end = Math.min(totalPages, start + 4);
+            if (end - start < 4) start = Math.max(1, end - 4);
+            for (let i = start; i <= end; i++) {
+              pages.push(
+                <Button
+                  key={i}
+                  variant={i === currentPage ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setCurrentPage(i)}
+                  className={`h-8 w-8 text-xs ${i === currentPage ? 'bg-[#1F2833] text-white hover:bg-[#1F2833]' : 'border-slate-200'}`}
+                  data-testid={`page-${i}`}
+                >
+                  {i}
+                </Button>
+              );
+            }
+            return pages;
+          })()}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage(currentPage + 1)}
+            className="h-8 px-3 text-xs border-slate-200"
+            data-testid="page-next"
+          >
+            Next
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage(totalPages)}
+            className="h-8 px-2 text-xs border-slate-200"
+            data-testid="page-last"
+          >
+            Last
+          </Button>
+        </div>
+      </div>
 
       {/* View Client Dialog */}
       <Dialog open={!!viewClient} onOpenChange={() => setViewClient(null)}>

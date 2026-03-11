@@ -112,14 +112,14 @@ export default function Debts() {
       const [debtsRes, summaryRes, clientsRes, vendorsRes, treasuryRes] = await Promise.all([
         fetch(`${API_URL}/api/debts`, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(`${API_URL}/api/debts/summary/overview`, { headers: getAuthHeaders(), credentials: 'include' }),
-        fetch(`${API_URL}/api/clients`, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(`${API_URL}/api/clients?page_size=200`, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(`${API_URL}/api/vendors?page_size=200`, { headers: getAuthHeaders(), credentials: 'include' }),
         fetch(`${API_URL}/api/treasury`, { headers: getAuthHeaders(), credentials: 'include' }),
       ]);
 
       if (debtsRes.ok) setDebts(await debtsRes.json());
       if (summaryRes.ok) setSummary(await summaryRes.json());
-      if (clientsRes.ok) setClients(await clientsRes.json());
+      if (clientsRes.ok) { const d = await clientsRes.json(); setClients(d.items || d); }
       if (vendorsRes.ok) {
         const vendorData = await vendorsRes.json();
         setExchangers(vendorData.items || (Array.isArray(vendorData) ? vendorData : []));
