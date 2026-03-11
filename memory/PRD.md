@@ -23,12 +23,14 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - Verified: Screenshots confirmed searching "nafidpv99@gmail.com" returns correct result on both pages
 
 **Bank/USDT Details Display in Transaction View (COMPLETE):**
-- Fixed bug where bank details and USDT details filled in Transaction Requests were not shown in the Transactions detail view
-- Added "Client Bank Details" section (Bank Name, Account Holder, Account Number, SWIFT/IBAN, Currency) to the Transaction Details dialog
-- Added "USDT Details" section (Wallet Address, Network) to the Transaction Details dialog
-- Updated table Destination column to show bank name or USDT address when no treasury/vendor destination is set
-- Files Modified: `frontend/src/pages/Transactions.js`
-- Verified: Screenshot confirmed REFAA7396AB shows bank details correctly
+- Fixed bug where bank details and USDT details filled in Transaction Requests were not shown in the Transactions detail view or Pending Approvals view
+- Added "Client Bank Details" section (Bank Name, Account Holder, Account Number, SWIFT/IBAN, Currency) to both:
+  - Transactions page: Transaction Details dialog (eye icon)
+  - Approvals page (AccountantDashboard): View Transaction dialog (eye icon)
+- Added "USDT Details" section (Wallet Address, Network) to both dialogs
+- Updated Transactions table Destination column to show bank name or USDT address when no treasury/vendor destination
+- Files Modified: `frontend/src/pages/Transactions.js`, `frontend/src/pages/AccountantDashboard.js`
+- Verified: Screenshots confirmed bank details visible on both Transactions and Approvals pages
 
 ### Date: Mar 10, 2026
 
