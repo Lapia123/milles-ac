@@ -63,6 +63,8 @@ import {
   FileText,
 } from 'lucide-react';
 
+import PaginationControls from '../components/PaginationControls';
+
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const currencies = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY', 'USDT'];
@@ -94,6 +96,10 @@ export default function Loans() {
   const [dashboard, setDashboard] = useState(null);
   const [loanTransactions, setLoanTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [submittingLoan, setSubmittingLoan] = useState(false);
   const [submittingRepayment, setSubmittingRepayment] = useState(false);
   const [mainTab, setMainTab] = useState('dashboard');
@@ -180,13 +186,15 @@ export default function Loans() {
 
   const fetchLoans = useCallback(async () => {
     try {
-      let url = `${API_URL}/api/loans?limit=200`;
+      let url = `${API_URL}/api/loans?page=${currentPage}&page_size=${pageSize}`;
       if (statusFilter) url += `&status=${statusFilter}`;
       
       const response = await fetch(url, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setLoans(Array.isArray(data) ? data : data.items || []);
+        if (data.total_pages) setTotalPages(data.total_pages);
+        if (data.total) setTotalItems(data.total);
       }
     } catch (error) {
       console.error('Error fetching loans:', error);
@@ -194,13 +202,14 @@ export default function Loans() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, currentPage, pageSize]);
 
   const fetchTreasuryAccounts = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/treasury`, { headers: getAuthHeaders(), credentials: 'include' });
+      const response = await fetch(`${API_URL}/api/treasury?page_size=200`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        const accounts = await response.json();
+        const data = await response.json();
+        const accounts = data.items || data;
         setTreasuryAccounts(accounts.filter(a => a.status === 'active'));
       }
     } catch (error) {
@@ -1401,6 +1410,8 @@ export default function Loans() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <PaginationControls currentPage={currentPage} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={setCurrentPage} onPageSizeChange={s => { setPageSize(s); setCurrentPage(1); }} />
 
       {/* Create Loan Dialog */}
       <Dialog open={isLoanDialogOpen} onOpenChange={(open) => { setIsLoanDialogOpen(open); if (!open) resetLoanForm(); }}>

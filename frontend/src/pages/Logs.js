@@ -21,6 +21,7 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { ScrollArea } from '../components/ui/scroll-area';
+import PaginationControls from '../components/PaginationControls';
 import { toast } from 'sonner';
 import {
   Activity,
@@ -54,6 +55,9 @@ export default function Logs() {
   const [stats, setStats] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
   const [total, setTotal] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [totalPages, setTotalPages] = useState(1);
   
   // Filters
   const [filters, setFilters] = useState({
@@ -70,9 +74,10 @@ export default function Logs() {
     return { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
   };
 
-  const fetchLogs = async (type = '') => {
+  const fetchLogs = async (type = '', pg) => {
     setLoading(true);
     try {
+      const p = pg || currentPage;
       const params = new URLSearchParams();
       if (type) params.append('log_type', type);
       if (filters.action) params.append('action', filters.action);
@@ -80,7 +85,8 @@ export default function Logs() {
       if (filters.date_from) params.append('date_from', filters.date_from);
       if (filters.date_to) params.append('date_to', filters.date_to);
       if (filters.search) params.append('search', filters.search);
-      params.append('limit', '200');
+      params.append('page', p);
+      params.append('page_size', pageSize);
       
       const response = await fetch(`${API_URL}/api/logs?${params.toString()}`, {
         headers: getAuthHeaders(),
@@ -89,8 +95,9 @@ export default function Logs() {
       
       if (response.ok) {
         const data = await response.json();
-        setLogs(data.logs || []);
+        setLogs(data.items || data.logs || []);
         setTotal(data.total || 0);
+        setTotalPages(data.total_pages || 1);
       }
     } catch (error) {
       console.error('Error fetching logs:', error);
@@ -487,6 +494,8 @@ export default function Logs() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <PaginationControls currentPage={currentPage} totalPages={totalPages} totalItems={total} pageSize={pageSize} onPageChange={p => { setCurrentPage(p); fetchLogs(activeTab === 'all' ? '' : activeTab, p); }} onPageSizeChange={s => { setPageSize(s); setCurrentPage(1); fetchLogs(activeTab === 'all' ? '' : activeTab, 1); }} />
 
       {/* Most Active Users & Common Actions */}
       {stats && (

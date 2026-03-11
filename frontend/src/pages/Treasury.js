@@ -61,6 +61,8 @@ import {
   Calculator,
 } from 'lucide-react';
 
+import PaginationControls from '../components/PaginationControls';
+
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const accountTypes = [
@@ -79,6 +81,10 @@ export default function Treasury() {
   const { user } = useAuth();
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submittingTransfer, setSubmittingTransfer] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -145,9 +151,12 @@ export default function Treasury() {
 
   const fetchAccounts = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/treasury`, { headers: getAuthHeaders(), credentials: 'include' });
+      const response = await fetch(`${API_URL}/api/treasury?page=${currentPage}&page_size=${pageSize}`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setAccounts(await response.json());
+        const data = await response.json();
+        setAccounts(data.items || data);
+        setTotalPages(data.total_pages || 1);
+        setTotalItems(data.total || 0);
       }
     } catch (error) {
       console.error('Error fetching treasury accounts:', error);
@@ -308,7 +317,7 @@ export default function Treasury() {
 
   useEffect(() => {
     fetchAccounts();
-  }, []);
+  }, [currentPage, pageSize]);
 
   useEffect(() => {
     if (historyAccount) {
@@ -826,6 +835,8 @@ export default function Treasury() {
           ))
         )}
       </div>
+
+      <PaginationControls currentPage={currentPage} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={setCurrentPage} onPageSizeChange={s => { setPageSize(s); setCurrentPage(1); }} />
 
       {/* View Account Dialog */}
       <Dialog open={!!viewAccount} onOpenChange={() => setViewAccount(null)}>

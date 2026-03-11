@@ -442,14 +442,14 @@ export default function Reconciliation() {
   const fetchAccounts = useCallback(async () => {
     try {
       const [treasuryRes, pspRes, exchangerRes] = await Promise.all([
-        fetch(`${API_URL}/api/treasury`, { headers: getAuthHeaders() }),
+        fetch(`${API_URL}/api/treasury?page_size=200`, { headers: getAuthHeaders() }),
         fetch(`${API_URL}/api/psp`, { headers: getAuthHeaders() }),
         fetch(`${API_URL}/api/vendors?page_size=100`, { headers: getAuthHeaders() })
       ]);
       
       if (treasuryRes.ok) {
         const data = await treasuryRes.json();
-        setTreasuryAccounts(Array.isArray(data) ? data : []);
+        setTreasuryAccounts(data.items || (Array.isArray(data) ? data : []));
       } else {
         console.error('Error fetching treasury:', treasuryRes.status);
       }

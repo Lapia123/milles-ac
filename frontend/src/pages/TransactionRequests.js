@@ -16,6 +16,7 @@ import {
   Plus, FileText, Clock, CheckCircle, ArrowDownRight, ArrowUpRight,
   Trash2, Send, Loader2, ChevronDown, ChevronUp, Save, X, Download, FileSpreadsheet, Search, Check, ChevronsUpDown,
 } from 'lucide-react';
+import PaginationControls from '../components/PaginationControls';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -369,6 +370,7 @@ export default function TransactionRequests() {
   const [loading, setLoading] = useState(true);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -403,7 +405,7 @@ export default function TransactionRequests() {
   const fetchRequests = useCallback(async (pg) => {
     try {
       const p = pg || page;
-      const params = new URLSearchParams({ page: p, page_size: 20 });
+      const params = new URLSearchParams({ page: p, page_size: pageSize });
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (typeFilter !== 'all') params.append('transaction_type', typeFilter);
       if (searchQuery) params.append('search', searchQuery);
@@ -427,12 +429,12 @@ export default function TransactionRequests() {
       try {
         const [cRes, tRes, pRes, vRes] = await Promise.all([
           fetch(`${API_URL}/api/clients?page_size=200`, { headers: authHeaders() }),
-          fetch(`${API_URL}/api/treasury`, { headers: authHeaders() }),
+          fetch(`${API_URL}/api/treasury?page_size=200`, { headers: authHeaders() }),
           fetch(`${API_URL}/api/psp`, { headers: authHeaders() }),
           fetch(`${API_URL}/api/vendors?page_size=100`, { headers: authHeaders() }),
         ]);
         if (cRes.ok) { const d = await cRes.json(); setClients(Array.isArray(d) ? d : d.items || []); }
-        if (tRes.ok) setTreasuryAccounts(await tRes.json());
+        if (tRes.ok) { const d = await tRes.json(); setTreasuryAccounts(d.items || d); }
         if (pRes.ok) setPsps(await pRes.json());
         if (vRes.ok) { const d = await vRes.json(); setVendors(d.items || d || []); }
       } catch (e) { console.error(e); }
@@ -707,16 +709,7 @@ export default function TransactionRequests() {
         )}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between px-1 py-3">
-          <span className="text-xs text-slate-400">Page {page} of {totalPages} ({total} total)</span>
-          <div className="flex gap-1">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => { setPage(page - 1); fetchRequests(page - 1); }} className="h-7 px-3 text-xs">Prev</Button>
-            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => { setPage(page + 1); fetchRequests(page + 1); }} className="h-7 px-3 text-xs">Next</Button>
-          </div>
-        </div>
-      )}
+      <PaginationControls currentPage={page} totalPages={totalPages} totalItems={total} pageSize={pageSize} onPageChange={p => { setPage(p); fetchRequests(p); }} onPageSizeChange={s => { setPageSize(s); setPage(1); fetchRequests(1); }} />
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
