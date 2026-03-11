@@ -8,11 +8,13 @@ import { Textarea } from '../components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { ScrollArea } from '../components/ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../components/ui/command';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import {
   Plus, FileText, Clock, CheckCircle, ArrowDownRight, ArrowUpRight,
-  Trash2, Send, Loader2, ChevronDown, ChevronUp, Save, X, Download, FileSpreadsheet, Search,
+  Trash2, Send, Loader2, ChevronDown, ChevronUp, Save, X, Download, FileSpreadsheet, Search, Check, ChevronsUpDown,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -23,6 +25,48 @@ import {
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const currencies = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY', 'USDT'];
+
+function ClientSearchPicker({ clients, value, onChange, testId }) {
+  const [open, setOpen] = useState(false);
+  const selected = clients.find(c => c.client_id === value);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" aria-expanded={open}
+          className="w-full justify-between bg-slate-50 border-slate-200 text-slate-800 font-normal hover:bg-slate-100 h-9"
+          data-testid={testId}
+        >
+          {selected ? `${selected.first_name} ${selected.last_name}` : 'Search client...'}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0 bg-white border-slate-200" align="start">
+        <Command>
+          <CommandInput placeholder="Type to search..." className="h-9" />
+          <CommandList>
+            <CommandEmpty>No client found.</CommandEmpty>
+            <CommandGroup className="max-h-[200px] overflow-auto">
+              {clients.map(c => (
+                <CommandItem
+                  key={c.client_id}
+                  value={`${c.first_name} ${c.last_name} ${c.email || ''}`}
+                  onSelect={() => { onChange(c.client_id); setOpen(false); }}
+                  className="cursor-pointer"
+                >
+                  <Check className={`mr-2 h-4 w-4 ${value === c.client_id ? 'opacity-100' : 'opacity-0'}`} />
+                  <div>
+                    <span className="font-medium">{c.first_name} {c.last_name}</span>
+                    {c.email && <span className="text-xs text-slate-400 ml-2">{c.email}</span>}
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 function EditableRequestCard({ req, clients, treasuryAccounts, psps, vendors, authHeaders, onSaved, onDelete, onProcess }) {
   const [expanded, setExpanded] = useState(false);
@@ -144,10 +188,7 @@ function EditableRequestCard({ req, clients, treasuryAccounts, psps, vendors, au
                 </div>
                 <div>
                   <Label className="text-xs text-slate-500 uppercase font-bold">Client</Label>
-                  <Select value={form.client_id} onValueChange={v => setForm({ ...form, client_id: v })}>
-                    <SelectTrigger className="bg-slate-50 border-slate-200" data-testid={`edit-client-${req.request_id}`}><SelectValue placeholder="Select client" /></SelectTrigger>
-                    <SelectContent>{clients.map(c => <SelectItem key={c.client_id} value={c.client_id}>{c.first_name} {c.last_name}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <ClientSearchPicker clients={clients} value={form.client_id} onChange={v => setForm({ ...form, client_id: v })} testId={`edit-client-${req.request_id}`} />
                 </div>
               </div>
 
@@ -692,10 +733,7 @@ export default function TransactionRequests() {
               </div>
               <div>
                 <Label className="text-xs text-slate-500 uppercase">Client *</Label>
-                <Select value={form.client_id} onValueChange={v => setForm({ ...form, client_id: v })}>
-                  <SelectTrigger className="bg-slate-50"><SelectValue placeholder="Select client" /></SelectTrigger>
-                  <SelectContent>{clients.map(c => <SelectItem key={c.client_id} value={c.client_id}>{c.first_name} {c.last_name}</SelectItem>)}</SelectContent>
-                </Select>
+                <ClientSearchPicker clients={clients} value={form.client_id} onChange={v => setForm({ ...form, client_id: v })} testId="create-client-search" />
               </div>
             </div>
 
