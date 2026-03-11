@@ -53,6 +53,8 @@ import {
   FileSpreadsheet,
   Calendar,
   TrendingDown,
+  Upload,
+  Loader2,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -74,6 +76,7 @@ export default function Clients() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalClients, setTotalClients] = useState(0);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [viewClient, setViewClient] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -126,6 +129,31 @@ export default function Clients() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBulkUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const headers = getAuthHeaders();
+      delete headers['Content-Type'];
+      const res = await fetch(`${API_URL}/api/clients/bulk-upload`, {
+        method: 'POST', headers, body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(`Uploaded: ${data.created} created, ${data.skipped} skipped`);
+        if (data.errors?.length) toast.warning(`${data.errors.length} row errors`);
+        fetchClients();
+      } else {
+        const err = await res.json();
+        toast.error(err.detail || 'Upload failed');
+      }
+    } catch { toast.error('Upload failed'); }
+    finally { setUploading(false); e.target.value = ''; }
   };
 
   const fetchClientDetails = async (clientId) => {
@@ -330,6 +358,21 @@ export default function Clients() {
           <p className="text-slate-500">Manage client accounts and KYC status</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+          <label className="cursor-pointer">
+            <Button
+              variant="outline"
+              className="border-slate-200 text-slate-600"
+              disabled={uploading}
+              asChild
+              data-testid="bulk-upload-btn"
+            >
+              <span>
+                {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                {uploading ? 'Uploading...' : 'Bulk Upload'}
+              </span>
+            </Button>
+            <input type="file" accept=".xlsx,.xls,.csv" onChange={handleBulkUpload} className="hidden" />
+          </label>
           <DialogTrigger asChild>
             <Button
               className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"

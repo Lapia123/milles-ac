@@ -11,6 +11,16 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - Reconciliation Phase 1, Audit & Compliance, Logs, Reports, Settings
 
 
+### Date: Mar 11, 2026
+
+**Client Search Fix in Transaction Requests (COMPLETE):**
+- Fixed critical bug where the client search picker in "New Transaction Request" only searched within first 200 preloaded clients (out of 2600+)
+- Replaced cmdk-based client-side filtering with server-side search using debounced API calls to `GET /api/clients?search=...`
+- Now correctly finds any client by name or email across the entire database
+- Shows loading spinner during search, displays preloaded clients when no search term is entered
+- Files Modified: `frontend/src/pages/TransactionRequests.js`
+- Verified: Screenshot confirmed searching "nafidpv99@gmail.com" returns correct result
+
 ### Date: Mar 10, 2026
 
 **Transaction Requests Edit Flow Rebuilt (COMPLETE):**

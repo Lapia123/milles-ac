@@ -14,7 +14,7 @@ import uuid
 import random
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://miles-accounting.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://pagination-system-1.preview.emergentagent.com')
 
 # Test data from context
 PSP_UNIPAY = "psp_3de482bea719"  # 10% reserve fund, 6.95% commission
