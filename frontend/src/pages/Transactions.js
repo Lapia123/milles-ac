@@ -767,7 +767,7 @@ export default function Transactions() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
-            Transactions
+            Transactions Summary
           </h1>
           <p className="text-slate-500">Transaction ledger and financial operations</p>
         </div>
