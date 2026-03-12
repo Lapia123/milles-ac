@@ -707,8 +707,8 @@ export default function AccountantDashboard() {
                           </div>
                         ) : (
                           <div>
-                            <p className="text-white text-xs truncate">{tx.destination_account_name || tx.vendor_name || 'N/A'}</p>
-                            <p className="text-[10px] text-[#C5C6C7] truncate">{tx.destination_bank_name || ''}</p>
+                            <p className="text-white text-xs truncate">{tx.destination_account_name || tx.vendor_name || tx.psp_name || 'N/A'}</p>
+                            <p className="text-[10px] text-[#C5C6C7] truncate">{tx.destination_bank_name || (tx.psp_name ? 'PSP' : '')}</p>
                           </div>
                         )}
                       </div>

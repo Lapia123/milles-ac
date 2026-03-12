@@ -1662,6 +1662,8 @@ export default function Transactions() {
                       <TableCell className="text-slate-500">
                         {tx.destination_type === 'vendor' && tx.vendor_name ? (
                           <span className="text-orange-500">{tx.vendor_name}<br/><span className="text-xs text-orange-400">Exchanger</span></span>
+                        ) : tx.destination_type === 'psp' && tx.psp_name ? (
+                          <span className="text-purple-500">{tx.psp_name}<br/><span className="text-xs text-purple-400">PSP</span></span>
                         ) : tx.destination_bank_name ? (
                           <span>{tx.destination_account_name}<br/><span className="text-xs">{tx.destination_bank_name}</span></span>
                         ) : tx.destination_account_name ? (
