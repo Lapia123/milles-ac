@@ -327,12 +327,33 @@ export default function Transactions() {
       const response = await fetch(`${API_URL}/api/vendors?page_size=200`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
-        // Handle paginated response format
         setExchangers(data.items || (Array.isArray(data) ? data : []));
       }
     } catch (error) {
       console.error('Error fetching vendors:', error);
     }
+  };
+
+  // Unified form data fetch — only requires Transaction permission
+  const fetchFormDropdowns = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/transactions/form-data`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        setClients(data.clients || []);
+        setTreasuryAccounts(data.treasury_accounts || []);
+        setPsps(data.psps || []);
+        setExchangers(data.vendors || []);
+        return;
+      }
+    } catch (error) {
+      console.error('Error fetching form dropdowns:', error);
+    }
+    // Fallback to individual calls if unified endpoint fails
+    fetchClients();
+    fetchTreasuryAccounts();
+    fetchPsps();
+    fetchExchangers();
   };
 
   const fetchClientBankAccounts = async (clientId) => {
@@ -356,10 +377,7 @@ export default function Transactions() {
 
   useEffect(() => {
     fetchTransactions();
-    fetchClients();
-    fetchTreasuryAccounts();
-    fetchPsps();
-    fetchExchangers();
+    fetchFormDropdowns();
   }, [typeFilter, statusFilter]);
 
   // Auto-refresh: when user returns to tab or every 30s

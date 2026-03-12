@@ -23,6 +23,14 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - Verified: Screenshots confirmed searching "nafidpv99@gmail.com" returns correct result on both pages
 
 **Treasury Running Balance Column (COMPLETE):**
+
+**Transaction Form Dropdown Permissions Fix (COMPLETE):**
+- Fixed bug where PSP/Treasury/Vendor dropdowns were empty for roles without those module permissions (e.g., senior_crm_admin)
+- Root cause: Each dropdown fetched from its own module endpoint requiring separate permissions (PSP.VIEW, TREASURY.VIEW, etc.)
+- Created unified `GET /api/transactions/form-data` endpoint that returns all dropdown data with only Transaction VIEW permission
+- Frontend now uses this single endpoint instead of 4 separate calls, with fallback to individual endpoints
+- Files Modified: `backend/server.py` (new endpoint), `frontend/src/pages/Transactions.js` (unified fetch)
+- Verified: Screenshot confirmed Shafeel (CRM Admin) can see and select PSP "uni (2% commission, T+1)" in Create Transaction form
 - Added "Running Balance" column to Treasury Transaction History table
 - Backend calculates running balance starting from current account balance, working backwards through each transaction
 - Frontend displays the running balance in a new column with proper currency formatting

@@ -2,6 +2,7 @@ from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Respons
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBearer
 from dotenv import load_dotenv
+import asyncio
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
@@ -6041,6 +6042,29 @@ async def get_pending_transactions(user: dict = Depends(require_permission(Modul
         {"_id": 0}
     ).sort("created_at", -1).to_list(1000)
     return transactions
+
+@api_router.get("/transactions/form-data")
+async def get_transaction_form_data(user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.VIEW))):
+    """Return all dropdown data needed for the Create Transaction form.
+    Only requires Transactions permission, so any role that can view/create transactions
+    can also see PSPs, treasury accounts, vendors, and clients in the form dropdowns."""
+    clients_cursor = db.clients.find({}, {"_id": 0, "client_id": 1, "first_name": 1, "last_name": 1, "email": 1}).sort("created_at", -1).limit(200)
+    treasury_cursor = db.treasury_accounts.find({"status": "active"}, {"_id": 0, "account_id": 1, "account_name": 1, "bank_name": 1, "currency": 1, "account_type": 1, "balance": 1}).sort("account_name", 1)
+    psp_cursor = db.psps.find({}, {"_id": 0}).sort("name", 1)
+    vendors_cursor = db.vendors.find({"status": "active"}, {"_id": 0, "vendor_id": 1, "vendor_name": 1, "deposit_commission": 1, "withdrawal_commission": 1}).sort("vendor_name", 1)
+
+    clients, treasury, psps, vendors = await asyncio.gather(
+        clients_cursor.to_list(200),
+        treasury_cursor.to_list(100),
+        psp_cursor.to_list(100),
+        vendors_cursor.to_list(100),
+    )
+    return {
+        "clients": clients,
+        "treasury_accounts": treasury,
+        "psps": psps,
+        "vendors": vendors,
+    }
 
 @api_router.get("/transactions/{transaction_id}")
 async def get_transaction(transaction_id: str, user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.VIEW))):
