@@ -6050,8 +6050,8 @@ async def get_transaction_form_data(user: dict = Depends(require_permission(Modu
     can also see PSPs, treasury accounts, vendors, and clients in the form dropdowns."""
     clients_cursor = db.clients.find({}, {"_id": 0, "client_id": 1, "first_name": 1, "last_name": 1, "email": 1}).sort("created_at", -1).limit(200)
     treasury_cursor = db.treasury_accounts.find({"status": "active"}, {"_id": 0, "account_id": 1, "account_name": 1, "bank_name": 1, "currency": 1, "account_type": 1, "balance": 1}).sort("account_name", 1)
-    psp_cursor = db.psps.find({}, {"_id": 0}).sort("name", 1)
-    vendors_cursor = db.vendors.find({"status": "active"}, {"_id": 0, "vendor_id": 1, "vendor_name": 1, "deposit_commission": 1, "withdrawal_commission": 1}).sort("vendor_name", 1)
+    psp_cursor = db.psps.find({}, {"_id": 0, "status": 1, "psp_id": 1, "psp_name": 1, "commission_rate": 1, "settlement_days": 1}).sort("psp_name", 1)
+    vendors_cursor = db.vendors.find({"status": "active"}, {"_id": 0, "vendor_id": 1, "vendor_name": 1, "deposit_commission": 1, "withdrawal_commission": 1, "status": 1}).sort("vendor_name", 1)
 
     clients, treasury, psps, vendors = await asyncio.gather(
         clients_cursor.to_list(200),
