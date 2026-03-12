@@ -24,7 +24,13 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 
 **Treasury Running Balance Column (COMPLETE):**
 
-**Transaction Form Dropdown Permissions Fix (COMPLETE):**
+**PSP Pending Settlement Payment Currency Column (COMPLETE):**
+- Added "Pay Currency" column to PSP Pending Settlements table
+- Shows payment currency with exchange rate for non-USD transactions
+- Gross, Commission/Deductions, and Net amounts now display in both USD and payment currency (e.g., AED)
+- Payment currency amounts shown in blue below the USD amounts for easy distinction
+- File Modified: `frontend/src/pages/PSPs.js`
+- Verified: Screenshot confirmed AED transaction shows dual-currency amounts (USD + AED)
 - Fixed bug where PSP/Treasury/Vendor dropdowns were empty for roles without those module permissions (e.g., senior_crm_admin)
 - Root cause: Each dropdown fetched from its own module endpoint requiring separate permissions (PSP.VIEW, TREASURY.VIEW, etc.)
 - Created unified `GET /api/transactions/form-data` endpoint that returns all dropdown data with only Transaction VIEW permission
