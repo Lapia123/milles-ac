@@ -82,6 +82,11 @@ export default function PSPs() {
   const [reserveFundLoading, setReserveFundLoading] = useState(false);
   const [globalReserveSummary, setGlobalReserveSummary] = useState(null);
   const [selectedReleaseIds, setSelectedReleaseIds] = useState([]);
+  // Compound settlement state
+  const [selectedSettleTxIds, setSelectedSettleTxIds] = useState([]);
+  const [batchSettleDialogOpen, setBatchSettleDialogOpen] = useState(false);
+  const [batchSettleDestination, setBatchSettleDestination] = useState('');
+  const [batchSettling, setBatchSettling] = useState(false);
   const [formData, setFormData] = useState({
     psp_name: '',
     commission_rate: '',
@@ -456,6 +461,69 @@ export default function PSPs() {
       }
     } catch (error) {
       toast.error('Settlement failed');
+    }
+  };
+
+  // Toggle a single transaction in the batch selection
+  const toggleSettleTx = (txId) => {
+    setSelectedSettleTxIds(prev =>
+      prev.includes(txId) ? prev.filter(id => id !== txId) : [...prev, txId]
+    );
+  };
+
+  // Toggle all transactions in the batch selection
+  const toggleAllSettleTx = () => {
+    if (selectedSettleTxIds.length === pendingTransactions.length) {
+      setSelectedSettleTxIds([]);
+    } else {
+      setSelectedSettleTxIds(pendingTransactions.map(tx => tx.transaction_id));
+    }
+  };
+
+  // Calculate summary for selected transactions
+  const batchSummary = (() => {
+    const selected = pendingTransactions.filter(tx => selectedSettleTxIds.includes(tx.transaction_id));
+    const gross = selected.reduce((s, tx) => s + (tx.amount || 0), 0);
+    const commission = selected.reduce((s, tx) => s + (tx.psp_commission_amount || 0), 0);
+    const reserve = selected.reduce((s, tx) => s + (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0), 0);
+    const extra = selected.reduce((s, tx) => s + (tx.psp_extra_charges || 0), 0);
+    const deductions = commission + reserve + extra;
+    const net = gross - deductions;
+    return { count: selected.length, gross, commission, reserve, extra, deductions, net };
+  })();
+
+  // Handle compound batch settlement
+  const handleBatchSettle = async () => {
+    if (!viewPsp || selectedSettleTxIds.length === 0) return;
+    setBatchSettling(true);
+    try {
+      const destId = batchSettleDestination || viewPsp.settlement_destination_id;
+      const response = await fetch(`${API_URL}/api/psp/${viewPsp.psp_id}/settle-batch`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          transaction_ids: selectedSettleTxIds,
+          destination_account_id: destId || null,
+        }),
+      });
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(`Compound settlement created: ${result.transaction_count} transactions, Net $${result.net_amount?.toLocaleString()}`);
+        setBatchSettleDialogOpen(false);
+        setSelectedSettleTxIds([]);
+        setBatchSettleDestination('');
+        fetchPendingTransactions(viewPsp.psp_id);
+        fetchSettlements(viewPsp.psp_id);
+        fetchPsps();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Batch settlement failed');
+      }
+    } catch (error) {
+      toast.error('Batch settlement failed');
+    } finally {
+      setBatchSettling(false);
     }
   };
 
@@ -900,7 +968,7 @@ export default function PSPs() {
       </div>
 
       {/* View PSP Details Dialog */}
-      <Dialog open={!!viewPsp} onOpenChange={() => { setViewPsp(null); setPendingTransactions([]); setSettlements([]); }}>
+      <Dialog open={!!viewPsp} onOpenChange={() => { setViewPsp(null); setPendingTransactions([]); setSettlements([]); setSelectedSettleTxIds([]); }}>
         <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-4xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-3" style={{ fontFamily: 'Barlow Condensed' }}>
@@ -981,7 +1049,17 @@ export default function PSPs() {
                       <Table>
                         <TableHeader>
                           <TableRow className="border-slate-200 hover:bg-transparent">
+                            <TableHead className="w-10">
+                              <input
+                                type="checkbox"
+                                checked={selectedSettleTxIds.length === pendingTransactions.length && pendingTransactions.length > 0}
+                                onChange={toggleAllSettleTx}
+                                className="rounded border-slate-300 accent-[#66FCF1]"
+                                data-testid="select-all-settle-checkbox"
+                              />
+                            </TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Tx Date</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Pay Currency</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Gross</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Deductions</TableHead>
@@ -1008,12 +1086,24 @@ export default function PSPs() {
                             const baseExtra = hasDiffCurrency ? ((tx.psp_extra_charges || 0) / rate) : null;
                             const baseNet = hasDiffCurrency ? (baseGross - baseComm - baseReserve - baseExtra) : null;
                             return (
-                              <TableRow key={tx.transaction_id} className={`border-slate-200 hover:bg-slate-100 ${overdue ? 'bg-red-500/5' : ''}`}>
+                              <TableRow key={tx.transaction_id} className={`border-slate-200 hover:bg-slate-100 ${overdue ? 'bg-red-500/5' : ''} ${selectedSettleTxIds.includes(tx.transaction_id) ? 'bg-[#66FCF1]/5' : ''}`}>
+                                <TableCell>
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedSettleTxIds.includes(tx.transaction_id)}
+                                    onChange={() => toggleSettleTx(tx.transaction_id)}
+                                    className="rounded border-slate-300 accent-[#66FCF1]"
+                                    data-testid={`select-settle-${tx.transaction_id}`}
+                                  />
+                                </TableCell>
                                 <TableCell>
                                   <div>
                                     <span className="font-mono text-slate-800 text-xs">{tx.reference}</span>
                                     <p className="text-[10px] text-slate-500">{tx.client_name}</p>
                                   </div>
+                                </TableCell>
+                                <TableCell>
+                                  <span className="text-xs text-slate-600">{tx.created_at ? new Date(tx.created_at).toLocaleDateString() : '-'}</span>
                                 </TableCell>
                                 <TableCell className="text-xs text-slate-800 font-medium" data-testid={`pay-currency-${tx.transaction_id}`}>
                                   {hasDiffCurrency ? tx.base_currency : tx.currency || 'USD'}
@@ -1129,6 +1219,38 @@ export default function PSPs() {
                       </Table>
                     )}
                   </ScrollArea>
+
+                  {/* Batch Settlement Action Bar */}
+                  {selectedSettleTxIds.length > 0 && (
+                    <div className="mt-3 p-3 bg-[#0B0C10] border border-[#66FCF1]/30 rounded-sm flex items-center justify-between" data-testid="batch-settle-bar">
+                      <div className="flex items-center gap-4">
+                        <span className="text-[#66FCF1] text-sm font-medium">{batchSummary.count} selected</span>
+                        <div className="flex gap-3 text-xs">
+                          <span className="text-slate-400">Gross: <span className="text-white font-mono">${batchSummary.gross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span></span>
+                          <span className="text-slate-400">Deductions: <span className="text-yellow-400 font-mono">-${batchSummary.deductions.toLocaleString(undefined, {maximumFractionDigits: 2})}</span></span>
+                          <span className="text-slate-400">Net: <span className="text-green-400 font-mono font-bold">${batchSummary.net.toLocaleString(undefined, {maximumFractionDigits: 2})}</span></span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSelectedSettleTxIds([])}
+                          className="text-slate-400 hover:text-white h-7 text-xs"
+                        >
+                          Clear
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => setBatchSettleDialogOpen(true)}
+                          className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#66FCF1]/80 h-7 text-xs font-bold"
+                          data-testid="settle-selected-btn"
+                        >
+                          Settle Selected ({batchSummary.count})
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </TabsContent>
                 
                 {/* Reserve Fund Ledger Tab */}
@@ -1630,6 +1752,93 @@ export default function PSPs() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch/Compound Settlement Confirmation Dialog */}
+      <Dialog open={batchSettleDialogOpen} onOpenChange={setBatchSettleDialogOpen}>
+        <DialogContent className="sm:max-w-lg bg-white border border-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-slate-800 flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-[#66FCF1]" />
+              Compound Settlement
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-slate-500">
+              You are creating <strong className="text-slate-800">1 compound settlement</strong> from <strong className="text-[#66FCF1]">{batchSummary.count} transactions</strong>. 
+              The net amount will be credited to your treasury as a single lump sum entry.
+            </p>
+
+            {/* Summary Breakdown */}
+            <div className="bg-slate-50 border border-slate-200 rounded-sm p-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">Gross Amount ({batchSummary.count} txns)</span>
+                <span className="font-mono text-slate-800 font-bold">${batchSummary.gross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">Commission</span>
+                <span className="font-mono text-yellow-600">-${batchSummary.commission.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">Reserve Fund</span>
+                <span className="font-mono text-red-500">-${batchSummary.reserve.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+              </div>
+              {batchSummary.extra > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Extra Charges</span>
+                  <span className="font-mono text-red-500">-${batchSummary.extra.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                </div>
+              )}
+              <div className="border-t border-slate-300 pt-2 flex justify-between text-sm font-bold">
+                <span className="text-slate-700">Net to Treasury</span>
+                <span className="font-mono text-green-600">${batchSummary.net.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+              </div>
+            </div>
+
+            {/* Destination Treasury Account */}
+            <div className="space-y-1.5">
+              <Label className="text-slate-600 text-xs uppercase tracking-wider">Destination Treasury Account</Label>
+              <Select
+                value={batchSettleDestination || viewPsp?.settlement_destination_id || ''}
+                onValueChange={setBatchSettleDestination}
+              >
+                <SelectTrigger className="border-slate-200 bg-white text-slate-800" data-testid="batch-settle-destination">
+                  <SelectValue placeholder="Use PSP default destination" />
+                </SelectTrigger>
+                <SelectContent>
+                  {treasuryAccounts.map((account) => (
+                    <SelectItem key={account.account_id} value={account.account_id}>
+                      {account.account_name} - {account.bank_name} ({account.currency})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {viewPsp?.settlement_destination_name && !batchSettleDestination && (
+                <p className="text-[10px] text-slate-400">Default: {viewPsp.settlement_destination_name}</p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBatchSettleDialogOpen(false)}
+                className="border-slate-200 text-slate-600"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleBatchSettle}
+                disabled={batchSettling}
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#66FCF1]/80 font-bold"
+                data-testid="confirm-batch-settle-btn"
+              >
+                {batchSettling ? 'Processing...' : `Settle $${batchSummary.net.toLocaleString(undefined, {maximumFractionDigits: 2})}`}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
