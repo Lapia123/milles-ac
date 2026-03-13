@@ -969,7 +969,7 @@ export default function PSPs() {
 
       {/* View PSP Details Dialog */}
       <Dialog open={!!viewPsp} onOpenChange={() => { setViewPsp(null); setPendingTransactions([]); setSettlements([]); setSelectedSettleTxIds([]); }}>
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-4xl max-h-[90vh] overflow-hidden">
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-6xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-3" style={{ fontFamily: 'Barlow Condensed' }}>
               <CreditCard className="w-6 h-6 text-blue-600" />

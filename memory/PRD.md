@@ -26,6 +26,17 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - Files Modified: `backend/server.py` (new BatchSettleRequest model + settle-batch endpoint), `frontend/src/pages/PSPs.js` (checkboxes, Tx Date column, batch action bar, compound settlement dialog)
 - Verified: Testing agent iteration 38 - 100% backend/frontend pass
 
+**PSP Detail Dialog Width Fix (COMPLETE):**
+- Fixed PSP detail dialog being too narrow, cutting off Status and Actions columns on the right side
+- Changed dialog max-width from `max-w-4xl` to `max-w-6xl`
+- File Modified: `frontend/src/pages/PSPs.js`
+
+**PSP Commission Preview - Payment Currency Display (COMPLETE):**
+- Enhanced the PSP commission preview in the Create Transaction form to show amounts in both USD and payment currency
+- When a non-USD payment currency is selected (e.g., AED), the preview now shows: Gross, Commission, and Client Receives in both USD and the payment currency
+- Payment currency amounts shown in blue below the USD amounts for easy distinction
+- File Modified: `frontend/src/pages/Transactions.js`
+
 ### Date: Mar 11, 2026
 
 **Client Search Fix in Transaction Requests & Transactions (COMPLETE):**
