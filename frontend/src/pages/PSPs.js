@@ -1442,6 +1442,7 @@ export default function PSPs() {
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Gross</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Commission</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reserve Fund</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Extra Charges</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Net Received</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
@@ -1454,7 +1455,9 @@ export default function PSPs() {
                             const baseGross = hasDiffCurrency ? settlement.base_gross_amount : null;
                             const baseComm = hasDiffCurrency && baseGross ? ((settlement.commission_amount || 0) / rate) : null;
                             const baseReserve = hasDiffCurrency && baseGross ? ((settlement.reserve_fund_amount || settlement.chargeback_amount || 0) / rate) : null;
-                            const baseNet = hasDiffCurrency && baseGross ? (baseGross - (baseComm || 0) - (baseReserve || 0)) : null;
+                            const extraUsd = (settlement.extra_charges || 0) + (settlement.gateway_fees || 0);
+                            const baseExtra = hasDiffCurrency && baseGross ? (extraUsd / rate) : null;
+                            const baseNet = hasDiffCurrency && baseGross ? (baseGross - (baseComm || 0) - (baseReserve || 0) - (baseExtra || 0)) : null;
                             const isCompound = settlement.settlement_type === 'compound' || (settlement.transaction_count > 1);
                             const isExpanded = expandedSettlement === settlement.settlement_id;
                             return (
@@ -1505,6 +1508,12 @@ export default function PSPs() {
                                 </div>
                               </TableCell>
                               <TableCell>
+                                <div className="font-mono text-orange-400 text-xs">
+                                  {extraUsd > 0 ? `-$${extraUsd.toLocaleString()}` : '-'}
+                                  {hasDiffCurrency && baseExtra != null && baseExtra > 0 && <p className="text-[10px] text-blue-500">-{baseExtra.toLocaleString(undefined, {maximumFractionDigits: 2})} {settlement.payment_currency}</p>}
+                                </div>
+                              </TableCell>
+                              <TableCell>
                                 <div className="font-mono text-green-500 font-bold text-xs">
                                   +${settlement.net_amount?.toLocaleString()}
                                   {hasDiffCurrency && baseNet != null && <p className="text-[10px] text-blue-500 font-normal">{baseNet.toLocaleString(undefined, {maximumFractionDigits: 2})} {settlement.payment_currency}</p>}
@@ -1516,7 +1525,7 @@ export default function PSPs() {
                             {/* Expanded detail: individual transactions in compound settlement */}
                             {isExpanded && (
                               <TableRow className="bg-slate-50/80">
-                                <TableCell colSpan={8} className="p-0">
+                                <TableCell colSpan={9} className="p-0">
                                   <div className="px-6 py-3 border-l-2 border-[#66FCF1] ml-4">
                                     <p className="text-xs text-slate-500 font-bold mb-2 uppercase tracking-wider">Included Transactions ({expandedTxs.length})</p>
                                     {expandedTxs.length === 0 ? (
@@ -1531,6 +1540,7 @@ export default function PSPs() {
                                             <th className="text-right py-1 font-medium">Amount (USD)</th>
                                             <th className="text-right py-1 font-medium">Pay Amount</th>
                                             <th className="text-right py-1 font-medium">Commission</th>
+                                            <th className="text-right py-1 font-medium">Extra Charges</th>
                                             <th className="text-left py-1 font-medium">Date</th>
                                           </tr>
                                         </thead>
@@ -1548,6 +1558,9 @@ export default function PSPs() {
                                               </td>
                                               <td className="py-1.5 text-right font-mono text-yellow-500">
                                                 {tx.psp_commission_amount ? `-$${tx.psp_commission_amount.toLocaleString()}` : '-'}
+                                              </td>
+                                              <td className="py-1.5 text-right font-mono text-orange-400">
+                                                {(tx.psp_extra_charges || tx.psp_gateway_fee) ? `-$${((tx.psp_extra_charges || 0) + (tx.psp_gateway_fee || 0)).toLocaleString()}` : '-'}
                                               </td>
                                               <td className="py-1.5 text-slate-500">{tx.created_at ? new Date(tx.created_at).toLocaleDateString() : '-'}</td>
                                             </tr>
