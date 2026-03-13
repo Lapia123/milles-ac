@@ -24,7 +24,13 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 
 **Treasury Running Balance Column (COMPLETE):**
 
-**PSP Pending Settlement Payment Currency Column (COMPLETE):**
+**Pending Approvals Destination Guard (COMPLETE):**
+- Added visual "No Destination" warning (red triangle + red text) for transactions without a proper destination assigned
+- Red-tinted background on rows missing destinations for easy visual scanning
+- Approve button disabled/grayed out when no destination is set — forces team to reject or hold until backoffice assigns destination
+- Prevents approval of unallocated transactions from TX Requests area
+- File Modified: `frontend/src/pages/AccountantDashboard.js`
+- Verified: Screenshot confirmed red warnings and disabled Approve buttons for 10 transactions without destinations
 - Added "Pay Currency" column to PSP Pending Settlements table
 - Shows payment currency with exchange rate for non-USD transactions
 - Gross, Commission/Deductions, and Net amounts now display in both USD and payment currency (e.g., AED)

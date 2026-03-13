@@ -46,6 +46,7 @@ import {
   Upload,
   CreditCard,
   Filter,
+  AlertTriangle,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -654,8 +655,12 @@ export default function AccountantDashboard() {
                 </CardContent>
               </Card>
             ) : (
-              filteredTransactions.map((tx) => (
-                <Card key={tx.transaction_id} className="bg-white border-slate-200">
+              filteredTransactions.map((tx) => {
+                const hasProperDest = tx.destination_account_name || tx.vendor_name || tx.psp_name ||
+                  (tx.destination_type === 'bank' && tx.client_bank_name) ||
+                  (tx.destination_type === 'usdt' && tx.client_usdt_address);
+                return (
+                <Card key={tx.transaction_id} className={`border-slate-200 ${!hasProperDest ? 'bg-red-500/5 border-red-500/30' : 'bg-white'}`}>
                   <CardContent className="p-4">
                     <div className="grid grid-cols-[140px_80px_120px_90px_120px_150px_140px_auto] items-center gap-3">
                       {/* Reference + CRM Ref */}
@@ -694,23 +699,45 @@ export default function AccountantDashboard() {
                       {/* Destination */}
                       <div className="min-w-0">
                         <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Destination</p>
-                        {tx.destination_type === 'bank' && tx.client_bank_name ? (
-                          <div>
-                            <p className="text-white text-xs font-medium truncate">{tx.client_bank_name}</p>
-                            <p className="text-[10px] text-[#C5C6C7] font-mono truncate">{tx.client_bank_account_number}</p>
-                            <p className="text-[10px] text-[#66FCF1]">{tx.client_bank_currency || 'USD'}</p>
-                          </div>
-                        ) : tx.destination_type === 'usdt' && tx.client_usdt_address ? (
-                          <div>
-                            <p className="text-white text-xs font-mono truncate">{tx.client_usdt_address?.slice(0, 8)}...{tx.client_usdt_address?.slice(-4)}</p>
-                            <Badge className="bg-green-500/20 text-green-400 text-[10px] mt-0.5">{tx.client_usdt_network || 'USDT'}</Badge>
-                          </div>
-                        ) : (
-                          <div>
-                            <p className="text-white text-xs truncate">{tx.destination_account_name || tx.vendor_name || tx.psp_name || 'N/A'}</p>
-                            <p className="text-[10px] text-[#C5C6C7] truncate">{tx.destination_bank_name || (tx.psp_name ? 'PSP' : '')}</p>
-                          </div>
-                        )}
+                        {(() => {
+                          const hasProperDest = tx.destination_account_name || tx.vendor_name || tx.psp_name ||
+                            (tx.destination_type === 'bank' && tx.client_bank_name) ||
+                            (tx.destination_type === 'usdt' && tx.client_usdt_address);
+                          if (tx.destination_type === 'bank' && tx.client_bank_name) {
+                            return (
+                              <div>
+                                <p className="text-white text-xs font-medium truncate">{tx.client_bank_name}</p>
+                                <p className="text-[10px] text-[#C5C6C7] font-mono truncate">{tx.client_bank_account_number}</p>
+                                <p className="text-[10px] text-[#66FCF1]">{tx.client_bank_currency || 'USD'}</p>
+                              </div>
+                            );
+                          }
+                          if (tx.destination_type === 'usdt' && tx.client_usdt_address) {
+                            return (
+                              <div>
+                                <p className="text-white text-xs font-mono truncate">{tx.client_usdt_address?.slice(0, 8)}...{tx.client_usdt_address?.slice(-4)}</p>
+                                <Badge className="bg-green-500/20 text-green-400 text-[10px] mt-0.5">{tx.client_usdt_network || 'USDT'}</Badge>
+                              </div>
+                            );
+                          }
+                          if (hasProperDest) {
+                            return (
+                              <div>
+                                <p className="text-white text-xs truncate">{tx.destination_account_name || tx.vendor_name || tx.psp_name}</p>
+                                <p className="text-[10px] text-[#C5C6C7] truncate">{tx.destination_bank_name || (tx.psp_name ? 'PSP' : tx.vendor_name ? 'Exchanger' : '')}</p>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div data-testid={`no-dest-warning-${tx.transaction_id}`}>
+                              <div className="flex items-center gap-1">
+                                <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                                <p className="text-red-400 text-xs font-semibold">No Destination</p>
+                              </div>
+                              <p className="text-[10px] text-red-400/70 mt-0.5">Assign destination before approval</p>
+                            </div>
+                          );
+                        })()}
                       </div>
                       {/* Created */}
                       <div>
@@ -749,9 +776,10 @@ export default function AccountantDashboard() {
                         <Button
                           size="sm"
                           onClick={() => initiateApprove(tx.transaction_id, false)}
-                          disabled={processingId === tx.transaction_id}
-                          className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3"
+                          disabled={processingId === tx.transaction_id || !hasProperDest}
+                          className={`h-8 text-xs px-3 ${!hasProperDest ? 'bg-slate-500/20 text-slate-500 border border-slate-500/30 cursor-not-allowed' : 'bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30'}`}
                           data-testid={`approve-tx-${tx.transaction_id}`}
+                          title={!hasProperDest ? 'Cannot approve: No destination assigned' : 'Approve transaction'}
                         >
                           <CheckCircle className="w-3.5 h-3.5 mr-1" />
                           Approve
@@ -770,7 +798,8 @@ export default function AccountantDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-              ))
+                );
+              })
             )}
           </div>
         </TabsContent>
