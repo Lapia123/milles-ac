@@ -11,6 +11,24 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - Reconciliation Phase 1, Audit & Compliance, Logs, Reports, Settings
 
 
+**PSP Settlement History - Expandable Compound Detail (COMPLETE):**
+- Added expand/collapse chevron button for compound settlements in Settlement History
+- Clicking expand fetches and shows all included transactions in a detail sub-table
+- Sub-table shows: Reference, Client, Currency, Amount (USD), Pay Amount (local currency), Commission, Date
+- New backend endpoint `GET /api/psp/{psp_id}/settlement/{settlement_id}/transactions` returns transaction details
+- Files Modified: `backend/server.py`, `frontend/src/pages/PSPs.js`
+
+**Batch Settlement Action Bar & Dialog - Payment Currency Display (COMPLETE):**
+- Action bar now shows Gross, Deductions, Net in both USD and payment currency (e.g., "Gross: $4,860 (18,000 AED)")
+- Confirmation dialog shows dual-currency breakdown for all lines + avg FX rate
+- Files Modified: `frontend/src/pages/PSPs.js`
+
+**FX Rate Fix for Compound Settlement (COMPLETE):**
+- When treasury currency matches payment currency, settlement now uses actual transaction exchange rates instead of generic conversion
+- Calculates base_gross from actual base_amounts and derives net in payment currency directly
+- Ensures exact amount matching between PSP bank deposit and treasury credit
+- Files Modified: `backend/server.py`
+
 **PSP Pending Settlements - Approved Only Filter (COMPLETE):**
 - Fixed PSP pending settlements to only show APPROVED transactions (previously showed both pending and approved)
 - Updated both `/api/psp/{psp_id}/pending-transactions` and `/api/psp-summary` endpoints

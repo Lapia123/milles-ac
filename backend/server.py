@@ -3221,6 +3221,21 @@ async def get_psp_settlements(psp_id: str, user: dict = Depends(require_permissi
             stl["payment_currency"] = stl.get("treasury_currency", "USD")
     return settlements
 
+# Get transactions included in a specific settlement
+@api_router.get("/psp/{psp_id}/settlement/{settlement_id}/transactions")
+async def get_settlement_transactions(psp_id: str, settlement_id: str, user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
+    settlement = await db.psp_settlements.find_one({"settlement_id": settlement_id, "psp_id": psp_id}, {"_id": 0})
+    if not settlement:
+        raise HTTPException(status_code=404, detail="Settlement not found")
+    tx_ids = settlement.get("transaction_ids", [])
+    if not tx_ids:
+        return []
+    txs = await db.transactions.find(
+        {"transaction_id": {"$in": tx_ids}},
+        {"_id": 0, "transaction_id": 1, "reference": 1, "client_name": 1, "amount": 1, "base_amount": 1, "base_currency": 1, "exchange_rate": 1, "created_at": 1, "psp_commission_amount": 1, "psp_reserve_fund_amount": 1, "psp_chargeback_amount": 1, "psp_extra_charges": 1, "psp_gateway_fee": 1}
+    ).to_list(len(tx_ids))
+    return txs
+
 @api_router.get("/psp-settlements")
 async def get_all_settlements(
     user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW)),
@@ -3876,7 +3891,19 @@ async def batch_settle_psp_transactions(
         raise HTTPException(status_code=404, detail="Destination treasury account not found")
 
     dest_currency = dest.get("currency", "USD")
-    treasury_amount = convert_currency(net_amount, "USD", dest_currency)
+    
+    # Use actual transaction exchange rates when treasury currency matches payment currency
+    # This ensures the exact amount that PSP sends to bank is credited to treasury
+    base_currencies = set(tx.get("base_currency") for tx in selected_txs if tx.get("base_currency") and tx.get("base_currency") != "USD")
+    if len(base_currencies) == 1 and dest_currency in base_currencies:
+        # Treasury currency matches payment currency — calculate net directly from base amounts
+        base_gross = sum(tx.get("base_amount", 0) for tx in selected_txs if tx.get("base_amount"))
+        rates = [tx.get("exchange_rate") for tx in selected_txs if tx.get("exchange_rate")]
+        avg_rate = sum(rates) / len(rates) if rates else 1
+        base_deductions = total_deductions / avg_rate if avg_rate else 0
+        treasury_amount = base_gross - base_deductions
+    else:
+        treasury_amount = convert_currency(net_amount, "USD", dest_currency)
 
     now = datetime.now(timezone.utc)
     settlement_id = f"stl_{uuid.uuid4().hex[:12]}"

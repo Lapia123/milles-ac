@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -61,6 +61,7 @@ import {
   Wallet,
   Timer,
   Shield,
+  ChevronDown,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -87,6 +88,8 @@ export default function PSPs() {
   const [batchSettleDialogOpen, setBatchSettleDialogOpen] = useState(false);
   const [batchSettleDestination, setBatchSettleDestination] = useState('');
   const [batchSettling, setBatchSettling] = useState(false);
+  const [expandedSettlement, setExpandedSettlement] = useState(null);
+  const [expandedTxs, setExpandedTxs] = useState([]);
   const [formData, setFormData] = useState({
     psp_name: '',
     commission_rate: '',
@@ -489,7 +492,14 @@ export default function PSPs() {
     const extra = selected.reduce((s, tx) => s + (tx.psp_extra_charges || 0), 0);
     const deductions = commission + reserve + extra;
     const net = gross - deductions;
-    return { count: selected.length, gross, commission, reserve, extra, deductions, net };
+    // Payment currency info
+    const currencies = [...new Set(selected.map(tx => tx.base_currency).filter(c => c && c !== 'USD'))];
+    const payCurrency = currencies.length === 1 ? currencies[0] : null;
+    const baseGross = payCurrency ? selected.reduce((s, tx) => s + (tx.base_amount || 0), 0) : null;
+    const avgRate = payCurrency && baseGross ? gross / baseGross : null;
+    const baseDeductions = payCurrency && avgRate ? deductions / avgRate : null;
+    const baseNet = payCurrency && baseGross && baseDeductions != null ? baseGross - baseDeductions : null;
+    return { count: selected.length, gross, commission, reserve, extra, deductions, net, payCurrency, baseGross, baseDeductions, baseNet, avgRate };
   })();
 
   // Handle compound batch settlement
@@ -524,6 +534,29 @@ export default function PSPs() {
       toast.error('Batch settlement failed');
     } finally {
       setBatchSettling(false);
+    }
+  };
+
+  // Toggle expanded settlement detail to show included transactions
+  const toggleSettlementDetail = async (settlement) => {
+    if (expandedSettlement === settlement.settlement_id) {
+      setExpandedSettlement(null);
+      setExpandedTxs([]);
+      return;
+    }
+    setExpandedSettlement(settlement.settlement_id);
+    if (settlement.transaction_ids?.length) {
+      try {
+        const response = await fetch(`${API_URL}/api/psp/${settlement.psp_id}/settlement/${settlement.settlement_id}/transactions`, {
+          headers: getAuthHeaders(),
+          credentials: 'include',
+        });
+        if (response.ok) {
+          setExpandedTxs(await response.json());
+        }
+      } catch (e) {
+        setExpandedTxs([]);
+      }
     }
   };
 
@@ -1226,9 +1259,9 @@ export default function PSPs() {
                       <div className="flex items-center gap-4">
                         <span className="text-[#66FCF1] text-sm font-medium">{batchSummary.count} selected</span>
                         <div className="flex gap-3 text-xs">
-                          <span className="text-slate-400">Gross: <span className="text-white font-mono">${batchSummary.gross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span></span>
-                          <span className="text-slate-400">Deductions: <span className="text-yellow-400 font-mono">-${batchSummary.deductions.toLocaleString(undefined, {maximumFractionDigits: 2})}</span></span>
-                          <span className="text-slate-400">Net: <span className="text-green-400 font-mono font-bold">${batchSummary.net.toLocaleString(undefined, {maximumFractionDigits: 2})}</span></span>
+                          <span className="text-slate-400">Gross: <span className="text-white font-mono">${batchSummary.gross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>{batchSummary.payCurrency && <span className="text-blue-400 ml-1">({batchSummary.baseGross?.toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency})</span>}</span>
+                          <span className="text-slate-400">Deductions: <span className="text-yellow-400 font-mono">-${batchSummary.deductions.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>{batchSummary.payCurrency && <span className="text-yellow-400/70 ml-1">(-{batchSummary.baseDeductions?.toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency})</span>}</span>
+                          <span className="text-slate-400">Net: <span className="text-green-400 font-mono font-bold">${batchSummary.net.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>{batchSummary.payCurrency && <span className="text-green-400/70 ml-1">({batchSummary.baseNet?.toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency})</span>}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1422,17 +1455,31 @@ export default function PSPs() {
                             const baseComm = hasDiffCurrency && baseGross ? ((settlement.commission_amount || 0) / rate) : null;
                             const baseReserve = hasDiffCurrency && baseGross ? ((settlement.reserve_fund_amount || settlement.chargeback_amount || 0) / rate) : null;
                             const baseNet = hasDiffCurrency && baseGross ? (baseGross - (baseComm || 0) - (baseReserve || 0)) : null;
+                            const isCompound = settlement.settlement_type === 'compound' || (settlement.transaction_count > 1);
+                            const isExpanded = expandedSettlement === settlement.settlement_id;
                             return (
-                            <TableRow key={settlement.settlement_id} className="border-slate-200 hover:bg-slate-100" data-testid={`settlement-row-${settlement.settlement_id}`}>
+                            <React.Fragment key={settlement.settlement_id}>
+                            <TableRow className={`border-slate-200 hover:bg-slate-100 ${isExpanded ? 'bg-slate-50' : ''}`} data-testid={`settlement-row-${settlement.settlement_id}`}>
                               <TableCell>
-                                <div>
-                                  <span className="font-mono text-slate-800 text-xs">{settlement.reference || settlement.settlement_id}</span>
-                                  {settlement.transaction_count > 1 && (
-                                    <p className="text-[10px] text-slate-500">{settlement.transaction_count} transactions</p>
+                                <div className="flex items-center gap-2">
+                                  {isCompound && (
+                                    <button
+                                      onClick={() => toggleSettlementDetail(settlement)}
+                                      className="text-slate-400 hover:text-[#66FCF1] transition-colors"
+                                      data-testid={`expand-settlement-${settlement.settlement_id}`}
+                                    >
+                                      <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                    </button>
                                   )}
-                                  {settlement.settlement_type === 'compound' && (
-                                    <Badge className="bg-[#66FCF1]/10 text-[#0B0C10] border-[#66FCF1]/30 text-[9px] mt-0.5">Compound</Badge>
-                                  )}
+                                  <div>
+                                    <span className="font-mono text-slate-800 text-xs">{settlement.reference || settlement.settlement_id}</span>
+                                    {settlement.transaction_count > 1 && (
+                                      <p className="text-[10px] text-slate-500">{settlement.transaction_count} transactions</p>
+                                    )}
+                                    {isCompound && (
+                                      <Badge className="bg-[#66FCF1]/10 text-[#0B0C10] border-[#66FCF1]/30 text-[9px] mt-0.5">Compound</Badge>
+                                    )}
+                                  </div>
                                 </div>
                               </TableCell>
                               <TableCell className="text-xs text-slate-800 font-medium">
@@ -1466,6 +1513,53 @@ export default function PSPs() {
                               <TableCell className="text-slate-500 text-xs">{formatDate(settlement.settled_at || settlement.created_at)}</TableCell>
                               <TableCell>{getStatusBadge(settlement.status)}</TableCell>
                             </TableRow>
+                            {/* Expanded detail: individual transactions in compound settlement */}
+                            {isExpanded && (
+                              <TableRow className="bg-slate-50/80">
+                                <TableCell colSpan={8} className="p-0">
+                                  <div className="px-6 py-3 border-l-2 border-[#66FCF1] ml-4">
+                                    <p className="text-xs text-slate-500 font-bold mb-2 uppercase tracking-wider">Included Transactions ({expandedTxs.length})</p>
+                                    {expandedTxs.length === 0 ? (
+                                      <p className="text-xs text-slate-400">Loading...</p>
+                                    ) : (
+                                      <table className="w-full text-xs">
+                                        <thead>
+                                          <tr className="text-slate-400 border-b border-slate-200">
+                                            <th className="text-left py-1 font-medium">Reference</th>
+                                            <th className="text-left py-1 font-medium">Client</th>
+                                            <th className="text-left py-1 font-medium">Currency</th>
+                                            <th className="text-right py-1 font-medium">Amount (USD)</th>
+                                            <th className="text-right py-1 font-medium">Pay Amount</th>
+                                            <th className="text-right py-1 font-medium">Commission</th>
+                                            <th className="text-left py-1 font-medium">Date</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {expandedTxs.map((tx) => (
+                                            <tr key={tx.transaction_id} className="border-b border-slate-100">
+                                              <td className="py-1.5 font-mono text-slate-700">{tx.reference || tx.transaction_id}</td>
+                                              <td className="py-1.5 text-slate-600">{tx.client_name || '-'}</td>
+                                              <td className="py-1.5 text-slate-600">{tx.base_currency || 'USD'}</td>
+                                              <td className="py-1.5 text-right font-mono text-slate-800">${tx.amount?.toLocaleString()}</td>
+                                              <td className="py-1.5 text-right font-mono text-blue-500">
+                                                {tx.base_amount && tx.base_currency && tx.base_currency !== 'USD'
+                                                  ? `${tx.base_amount.toLocaleString()} ${tx.base_currency}`
+                                                  : '-'}
+                                              </td>
+                                              <td className="py-1.5 text-right font-mono text-yellow-500">
+                                                {tx.psp_commission_amount ? `-$${tx.psp_commission_amount.toLocaleString()}` : '-'}
+                                              </td>
+                                              <td className="py-1.5 text-slate-500">{tx.created_at ? new Date(tx.created_at).toLocaleDateString() : '-'}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                            </React.Fragment>
                             );
                           })}
                         </TableBody>
@@ -1808,26 +1902,46 @@ export default function PSPs() {
             <div className="bg-slate-50 border border-slate-200 rounded-sm p-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">Gross Amount ({batchSummary.count} txns)</span>
-                <span className="font-mono text-slate-800 font-bold">${batchSummary.gross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                <div className="text-right">
+                  <span className="font-mono text-slate-800 font-bold">${batchSummary.gross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                  {batchSummary.payCurrency && <p className="text-[10px] text-blue-500 font-mono">{batchSummary.baseGross?.toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency}</p>}
+                </div>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">Commission</span>
-                <span className="font-mono text-yellow-600">-${batchSummary.commission.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                <div className="text-right">
+                  <span className="font-mono text-yellow-600">-${batchSummary.commission.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                  {batchSummary.payCurrency && batchSummary.avgRate && <p className="text-[10px] text-yellow-500 font-mono">-{(batchSummary.commission / batchSummary.avgRate).toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency}</p>}
+                </div>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">Reserve Fund</span>
-                <span className="font-mono text-red-500">-${batchSummary.reserve.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                <div className="text-right">
+                  <span className="font-mono text-red-500">-${batchSummary.reserve.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                  {batchSummary.payCurrency && batchSummary.avgRate && batchSummary.reserve > 0 && <p className="text-[10px] text-red-400 font-mono">-{(batchSummary.reserve / batchSummary.avgRate).toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency}</p>}
+                </div>
               </div>
               {batchSummary.extra > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">Extra Charges</span>
-                  <span className="font-mono text-red-500">-${batchSummary.extra.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                  <div className="text-right">
+                    <span className="font-mono text-red-500">-${batchSummary.extra.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                    {batchSummary.payCurrency && batchSummary.avgRate && <p className="text-[10px] text-red-400 font-mono">-{(batchSummary.extra / batchSummary.avgRate).toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency}</p>}
+                  </div>
                 </div>
               )}
               <div className="border-t border-slate-300 pt-2 flex justify-between text-sm font-bold">
                 <span className="text-slate-700">Net to Treasury</span>
-                <span className="font-mono text-green-600">${batchSummary.net.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                <div className="text-right">
+                  <span className="font-mono text-green-600">${batchSummary.net.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                  {batchSummary.payCurrency && <p className="text-[10px] text-green-500 font-mono font-bold">{batchSummary.baseNet?.toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency}</p>}
+                </div>
               </div>
+              {batchSummary.payCurrency && batchSummary.avgRate && (
+                <div className="pt-1 text-[10px] text-slate-400 text-right">
+                  Avg. FX Rate: 1 {batchSummary.payCurrency} = {batchSummary.avgRate.toFixed(4)} USD
+                </div>
+              )}
             </div>
 
             {/* Destination Treasury Account */}
