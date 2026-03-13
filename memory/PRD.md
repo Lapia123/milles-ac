@@ -11,6 +11,21 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - Reconciliation Phase 1, Audit & Compliance, Logs, Reports, Settings
 
 
+### Date: Mar 13, 2026
+
+**PSP Compound/Batch Settlement Model (COMPLETE):**
+- Added checkbox column to PSP Pending Settlements table for selecting individual transactions
+- Added "Select All" checkbox in table header to toggle all transactions
+- Added "Tx Date" column showing when each transaction was originally initiated
+- When transactions are selected, a batch action bar appears showing: selected count, total Gross, total Deductions, total Net
+- "Settle Selected" button opens a Compound Settlement confirmation dialog with full breakdown (Gross, Commission, Reserve Fund, Extra Charges, Net to Treasury)
+- Dialog includes Destination Treasury Account selector (defaults to PSP's configured destination)
+- Backend endpoint `POST /api/psp/{psp_id}/settle-batch` creates ONE settlement record from multiple transactions
+- Credits treasury with a single lump sum entry (matching how PSPs actually deposit to bank)
+- All selected transactions marked as settled with the same settlement_id
+- Files Modified: `backend/server.py` (new BatchSettleRequest model + settle-batch endpoint), `frontend/src/pages/PSPs.js` (checkboxes, Tx Date column, batch action bar, compound settlement dialog)
+- Verified: Testing agent iteration 38 - 100% backend/frontend pass
+
 ### Date: Mar 11, 2026
 
 **Client Search Fix in Transaction Requests & Transactions (COMPLETE):**
@@ -199,7 +214,7 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 ## Prioritized Backlog
 
 ### P1 - High Priority
-- [ ] Add pagination across all pages (Exchanger Portal + Admin side)
+- [ ] Audit & fix client search across all pages (scalability)
 - [ ] Reconciliation System Phase 2 & 3 (PSP, Client, Exchanger)
 - [ ] Extend frontend permission gates to hide CRUD buttons per page
 
@@ -209,10 +224,12 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - [ ] Fix Reconciliation page loading instability
 - [ ] Fix session management redirect bug (recurring 3+)
 - [ ] Investigate withdrawal creation to Exchanger error
-- [ ] Apply pagination/caching to other endpoints (loans, clients)
+- [ ] Database performance optimization
 
 ### P3 - Low Priority
-- [ ] Refactor `backend/server.py` into modular routers (CRITICAL for maintainability - settlement logic duplicated across 3 endpoints)
+- [ ] Refactor `backend/server.py` into modular routers (CRITICAL for maintainability)
+- [ ] Refactor duplicated client search into reusable component
+- [ ] Refactor pagination state into `usePagination` hook
 - [ ] Fix React duplicate key warning in IncomeExpenses.js
 
 ---
