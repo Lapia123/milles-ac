@@ -1405,6 +1405,7 @@ export default function PSPs() {
                         <TableHeader>
                           <TableRow className="border-slate-200 hover:bg-transparent">
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Pay Currency</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Gross</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Commission</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reserve Fund</TableHead>
@@ -1414,7 +1415,14 @@ export default function PSPs() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {settlements.map((settlement) => (
+                          {settlements.map((settlement) => {
+                            const hasDiffCurrency = settlement.payment_currency && settlement.payment_currency !== 'USD';
+                            const rate = settlement.avg_exchange_rate || 1;
+                            const baseGross = hasDiffCurrency ? settlement.base_gross_amount : null;
+                            const baseComm = hasDiffCurrency && baseGross ? ((settlement.commission_amount || 0) / rate) : null;
+                            const baseReserve = hasDiffCurrency && baseGross ? ((settlement.reserve_fund_amount || settlement.chargeback_amount || 0) / rate) : null;
+                            const baseNet = hasDiffCurrency && baseGross ? (baseGross - (baseComm || 0) - (baseReserve || 0)) : null;
+                            return (
                             <TableRow key={settlement.settlement_id} className="border-slate-200 hover:bg-slate-100" data-testid={`settlement-row-${settlement.settlement_id}`}>
                               <TableCell>
                                 <div>
@@ -1422,18 +1430,44 @@ export default function PSPs() {
                                   {settlement.transaction_count > 1 && (
                                     <p className="text-[10px] text-slate-500">{settlement.transaction_count} transactions</p>
                                   )}
+                                  {settlement.settlement_type === 'compound' && (
+                                    <Badge className="bg-[#66FCF1]/10 text-[#0B0C10] border-[#66FCF1]/30 text-[9px] mt-0.5">Compound</Badge>
+                                  )}
                                 </div>
                               </TableCell>
-                              <TableCell className="font-mono text-slate-800">${settlement.gross_amount?.toLocaleString()}</TableCell>
-                              <TableCell className="font-mono text-yellow-400">-${(settlement.commission_amount || 0).toLocaleString()}</TableCell>
-                              <TableCell className="font-mono text-red-400">
-                                {settlement.chargeback_amount || settlement.reserve_fund_amount ? `-$${(settlement.reserve_fund_amount || settlement.chargeback_amount).toLocaleString()}` : '-'}
+                              <TableCell className="text-xs text-slate-800 font-medium">
+                                {settlement.payment_currency || 'USD'}
+                                {hasDiffCurrency && rate !== 1 && <p className="text-[10px] text-slate-400">Rate: {rate}</p>}
                               </TableCell>
-                              <TableCell className="font-mono text-green-500 font-bold">+${settlement.net_amount?.toLocaleString()}</TableCell>
+                              <TableCell>
+                                <div className="font-mono text-slate-800 text-xs">
+                                  ${settlement.gross_amount?.toLocaleString()}
+                                  {hasDiffCurrency && baseGross && <p className="text-[10px] text-blue-500">{baseGross.toLocaleString(undefined, {maximumFractionDigits: 2})} {settlement.payment_currency}</p>}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="font-mono text-yellow-400 text-xs">
+                                  -${(settlement.commission_amount || 0).toLocaleString()}
+                                  {hasDiffCurrency && baseComm != null && <p className="text-[10px] text-blue-500">-{baseComm.toLocaleString(undefined, {maximumFractionDigits: 2})} {settlement.payment_currency}</p>}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="font-mono text-red-400 text-xs">
+                                  {settlement.chargeback_amount || settlement.reserve_fund_amount ? `-$${(settlement.reserve_fund_amount || settlement.chargeback_amount).toLocaleString()}` : '-'}
+                                  {hasDiffCurrency && baseReserve != null && baseReserve > 0 && <p className="text-[10px] text-blue-500">-{baseReserve.toLocaleString(undefined, {maximumFractionDigits: 2})} {settlement.payment_currency}</p>}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="font-mono text-green-500 font-bold text-xs">
+                                  +${settlement.net_amount?.toLocaleString()}
+                                  {hasDiffCurrency && baseNet != null && <p className="text-[10px] text-blue-500 font-normal">{baseNet.toLocaleString(undefined, {maximumFractionDigits: 2})} {settlement.payment_currency}</p>}
+                                </div>
+                              </TableCell>
                               <TableCell className="text-slate-500 text-xs">{formatDate(settlement.settled_at || settlement.created_at)}</TableCell>
                               <TableCell>{getStatusBadge(settlement.status)}</TableCell>
                             </TableRow>
-                          ))}
+                            );
+                          })}
                         </TableBody>
                       </Table>
                     )}

@@ -3200,6 +3200,25 @@ async def delete_psp(request: Request, psp_id: str, user: dict = Depends(require
 @api_router.get("/psp/{psp_id}/settlements")
 async def get_psp_settlements(psp_id: str, user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
     settlements = await db.psp_settlements.find({"psp_id": psp_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    # Enrich each settlement with payment currency info from its transactions
+    for stl in settlements:
+        tx_ids = stl.get("transaction_ids", [])
+        if tx_ids:
+            txs = await db.transactions.find(
+                {"transaction_id": {"$in": tx_ids}},
+                {"_id": 0, "base_currency": 1, "exchange_rate": 1, "base_amount": 1}
+            ).to_list(len(tx_ids))
+            currencies = set(tx.get("base_currency") for tx in txs if tx.get("base_currency") and tx.get("base_currency") != "USD")
+            if currencies:
+                stl["payment_currency"] = ", ".join(sorted(currencies))
+                rates = [tx.get("exchange_rate") for tx in txs if tx.get("exchange_rate")]
+                stl["avg_exchange_rate"] = round(sum(rates) / len(rates), 4) if rates else None
+                total_base = sum(tx.get("base_amount", 0) for tx in txs if tx.get("base_amount"))
+                stl["base_gross_amount"] = round(total_base, 2) if total_base else None
+            else:
+                stl["payment_currency"] = "USD"
+        else:
+            stl["payment_currency"] = stl.get("treasury_currency", "USD")
     return settlements
 
 @api_router.get("/psp-settlements")
@@ -3370,11 +3389,11 @@ async def complete_settlement(request: Request, settlement_id: str, user: dict =
 # Get pending PSP transactions (not yet settled)
 @api_router.get("/psp/{psp_id}/pending-transactions")
 async def get_psp_pending_transactions(psp_id: str, user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
-    """Get all pending/approved transactions for a PSP that haven't been settled"""
+    """Get approved transactions for a PSP that haven't been settled"""
     transactions = await db.transactions.find({
         "psp_id": psp_id,
         "destination_type": "psp",
-        "status": {"$in": [TransactionStatus.PENDING, TransactionStatus.APPROVED]},
+        "status": TransactionStatus.APPROVED,
         "settled": {"$ne": True}
     }, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return transactions
@@ -3392,7 +3411,7 @@ async def get_psp_summary(user: dict = Depends(require_permission(Modules.PSP, A
         pending_txs = await db.transactions.find({
             "psp_id": psp["psp_id"],
             "destination_type": "psp",
-            "status": {"$in": [TransactionStatus.PENDING, TransactionStatus.APPROVED]},
+            "status": TransactionStatus.APPROVED,
             "settled": {"$ne": True}
         }, {"_id": 0}).to_list(1000)
         
