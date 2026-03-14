@@ -225,6 +225,7 @@ export default function Transactions() {
     commission_paid_by: 'client',
     description: '',
     reference: '',
+    transaction_date: new Date().toISOString().split('T')[0],
     transaction_mode: 'bank',
     collecting_person_name: '',
     collecting_person_number: '',
@@ -459,6 +460,9 @@ export default function Transactions() {
       }
       if (formData.reference) {
         formDataToSend.append('reference', formData.reference);
+      }
+      if (formData.transaction_date) {
+        formDataToSend.append('transaction_date', formData.transaction_date);
       }
       if (formData.crm_reference) {
         formDataToSend.append('crm_reference', formData.crm_reference);
@@ -1427,6 +1431,17 @@ export default function Transactions() {
                 </>
               )}
               
+              <div className="space-y-2">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Transaction Date</Label>
+                <Input
+                  type="date"
+                  value={formData.transaction_date}
+                  onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                  data-testid="tx-transaction-date"
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label className="text-slate-500 text-xs uppercase tracking-wider">Reference (Optional)</Label>
                 <Input

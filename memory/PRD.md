@@ -11,6 +11,13 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - Reconciliation Phase 1, Audit & Compliance, Logs, Reports, Settings
 
 
+**Transaction Date Field (COMPLETE):**
+- Added "Transaction Date" date picker field to both Create Transaction and Transaction Request forms
+- Defaults to today's date, user can change to any date
+- Backend stores `transaction_date` in both transactions and transaction_requests collections
+- Carried over when transaction requests are auto-processed into transactions
+- Files Modified: `backend/server.py` (both create endpoints), `Transactions.js`, `TransactionRequests.js`
+
 **R2 Cloud Storage Migration (COMPLETE):**
 - Migrated ALL file/image uploads from base64-in-MongoDB to Cloudflare R2 bucket storage
 - Endpoints migrated: vendor proof, accountant proof, transaction creation with proof, transaction request proof, income/expense vendor proof, invoice upload, message attachments

@@ -6329,6 +6329,7 @@ async def create_transaction(
     collecting_person_name: Optional[str] = Form(None),
     collecting_person_number: Optional[str] = Form(None),
     crm_reference: Optional[str] = Form(None),
+    transaction_date: Optional[str] = Form(None),
     proof_image: Optional[UploadFile] = File(None),
     user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.CREATE))
 ):
@@ -6566,6 +6567,7 @@ async def create_transaction(
         "description": description,
         "reference": reference or f"REF{uuid.uuid4().hex[:8].upper()}",
         "crm_reference": crm_reference.strip() if crm_reference else None,
+        "transaction_date": transaction_date or now.strftime("%Y-%m-%d"),
         "proof_image": proof_image_url,
         "created_by": user["user_id"],
         "created_by_name": user["name"],
@@ -7099,6 +7101,7 @@ async def create_transaction_request(
     client_bank_currency: Optional[str] = Form(None),
     client_usdt_address: Optional[str] = Form(None),
     client_usdt_network: Optional[str] = Form(None),
+    transaction_date: Optional[str] = Form(None),
     proof_image: Optional[UploadFile] = File(None),
     user: dict = Depends(require_permission(Modules.TRANSACTION_REQUESTS, Actions.CREATE))
 ):
@@ -7139,6 +7142,7 @@ async def create_transaction_request(
         "vendor_id": vendor_id,
         "reference": reference,
         "crm_reference": crm_reference.strip() if crm_reference else None,
+        "transaction_date": transaction_date or now.strftime("%Y-%m-%d"),
         "description": description,
         "client_bank_name": client_bank_name,
         "client_bank_account_name": client_bank_account_name,
@@ -7210,6 +7214,7 @@ async def create_transaction_request(
             "description": description,
             "reference": reference or f"REF{uuid.uuid4().hex[:8].upper()}",
             "crm_reference": crm_reference.strip() if crm_reference else None,
+            "transaction_date": transaction_date or now.strftime("%Y-%m-%d"),
             "proof_image": proof_url,
             "created_by": user["user_id"],
             "created_by_name": user["name"],

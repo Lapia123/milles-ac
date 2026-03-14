@@ -146,6 +146,7 @@ function EditableRequestCard({ req, clients, treasuryAccounts, psps, vendors, au
     reference: req.reference || '',
     crm_reference: req.crm_reference || '',
     description: req.description || '',
+    transaction_date: req.transaction_date || new Date().toISOString().split('T')[0],
     client_bank_name: req.client_bank_name || '',
     client_bank_account_name: req.client_bank_account_name || '',
     client_bank_account_number: req.client_bank_account_number || '',
@@ -372,6 +373,12 @@ function EditableRequestCard({ req, clients, treasuryAccounts, psps, vendors, au
                 </div>
               </div>
 
+              {/* Transaction Date */}
+              <div>
+                <Label className="text-xs text-slate-500 uppercase font-bold">Transaction Date</Label>
+                <Input type="date" value={form.transaction_date} onChange={e => setForm({ ...form, transaction_date: e.target.value })} className="bg-slate-50 border-slate-200" />
+              </div>
+
               {/* Row 5: Description */}
               <div>
                 <Label className="text-xs text-slate-500 uppercase font-bold">Description</Label>
@@ -438,7 +445,7 @@ export default function TransactionRequests() {
   // Create dialog
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
-  const defaultForm = { transaction_type: 'withdrawal', client_id: '', amount: '', currency: 'USD', base_currency: 'USD', base_amount: '', exchange_rate: '', destination_type: 'bank', destination_account_id: '', psp_id: '', vendor_id: '', reference: '', crm_reference: '', description: '', client_bank_name: '', client_bank_account_name: '', client_bank_account_number: '', client_bank_swift_iban: '', client_bank_currency: '', client_usdt_address: '', client_usdt_network: '' };
+  const defaultForm = { transaction_type: 'withdrawal', client_id: '', amount: '', currency: 'USD', base_currency: 'USD', base_amount: '', exchange_rate: '', destination_type: 'bank', destination_account_id: '', psp_id: '', vendor_id: '', reference: '', crm_reference: '', description: '', transaction_date: new Date().toISOString().split('T')[0], client_bank_name: '', client_bank_account_name: '', client_bank_account_number: '', client_bank_swift_iban: '', client_bank_currency: '', client_usdt_address: '', client_usdt_network: '' };
   const [form, setForm] = useState({ ...defaultForm });
   const [proofImage, setProofImage] = useState(null);
 
@@ -889,6 +896,7 @@ export default function TransactionRequests() {
               <div><Label className="text-xs text-slate-500 uppercase">Reference</Label><Input value={form.reference} onChange={e => setForm({ ...form, reference: e.target.value })} className="bg-slate-50 font-mono" placeholder="Optional" /></div>
               <div><Label className="text-xs text-slate-500 uppercase">CRM Reference</Label><Input value={form.crm_reference} onChange={e => setForm({ ...form, crm_reference: e.target.value })} className="bg-slate-50 font-mono" placeholder="Unique" /></div>
             </div>
+            <div><Label className="text-xs text-slate-500 uppercase">Transaction Date</Label><Input type="date" value={form.transaction_date} onChange={e => setForm({ ...form, transaction_date: e.target.value })} className="bg-slate-50" data-testid="txreq-transaction-date" /></div>
             <div><Label className="text-xs text-slate-500 uppercase">Description</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="bg-slate-50" rows={2} /></div>
             <div>
               <Label className="text-xs text-slate-500 uppercase">Proof of Payment</Label>
