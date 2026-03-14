@@ -224,6 +224,16 @@ function EditableRequestCard({ req, clients, treasuryAccounts, psps, vendors, au
           <Badge className={isPending ? 'bg-yellow-100 text-yellow-700 text-xs' : 'bg-green-100 text-green-700 text-xs'}>
             {req.status}
           </Badge>
+          {req.transaction_status && req.transaction_status !== 'pending' && (
+            <Badge className={
+              req.transaction_status === 'approved' ? 'bg-blue-100 text-blue-700 text-xs' :
+              req.transaction_status === 'rejected' ? 'bg-red-100 text-red-700 text-xs' :
+              req.transaction_status === 'completed' ? 'bg-emerald-100 text-emerald-700 text-xs' :
+              'bg-slate-100 text-slate-600 text-xs'
+            }>
+              {req.transaction_status}
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-xs text-slate-400">{formatDate(req.transaction_date || req.created_at)}</span>
