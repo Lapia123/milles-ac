@@ -226,7 +226,7 @@ function EditableRequestCard({ req, clients, treasuryAccounts, psps, vendors, au
           </Badge>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs text-slate-400">{formatDate(req.created_at)}</span>
+          <span className="text-xs text-slate-400">{formatDate(req.transaction_date || req.created_at)}</span>
           {expanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </div>
       </div>
@@ -593,7 +593,7 @@ export default function TransactionRequests() {
     if (!requests.length) { toast.error('No data to export'); return; }
     const headers = ['Date', 'Type', 'Client', 'Amount (USD)', 'Base Amount', 'Base Currency', 'Rate', 'Status', 'Destination', 'CRM Ref', 'Reference', 'Created By', 'Description'];
     const rows = requests.map(r => [
-      formatDate(r.created_at), r.transaction_type, r.client_name, r.amount,
+      formatDate(r.transaction_date || r.created_at), r.transaction_type, r.client_name, r.amount,
       r.base_amount || '', r.base_currency || '', r.exchange_rate || '',
       r.status, r.destination_type, r.crm_reference || '', r.reference || '',
       r.created_by_name || '', r.description || '',
@@ -615,7 +615,7 @@ export default function TransactionRequests() {
     if (!requests.length) { toast.error('No data to export'); return; }
     const headers = ['Date', 'Type', 'Client', 'Amount (USD)', 'Base', 'Status', 'Destination', 'CRM Ref', 'Created By'];
     const rows = requests.map(r => [
-      formatDate(r.created_at), r.transaction_type, r.client_name,
+      formatDate(r.transaction_date || r.created_at), r.transaction_type, r.client_name,
       `$${r.amount?.toLocaleString()}`,
       r.base_amount && r.base_currency !== 'USD' ? `${r.base_amount?.toLocaleString()} ${r.base_currency}` : '-',
       r.status, r.destination_type, r.crm_reference || '-', r.created_by_name || '-',
@@ -920,6 +920,7 @@ export default function TransactionRequests() {
                 <div className="flex justify-between"><span className="text-slate-500">Client</span><span>{processDialog.client_name}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Amount</span><span className="font-mono font-bold">${processDialog.amount?.toLocaleString()}</span></div>
                 {processDialog.crm_reference && <div className="flex justify-between"><span className="text-slate-500">CRM Ref</span><span className="font-mono text-purple-600">{processDialog.crm_reference}</span></div>}
+                {processDialog.transaction_date && <div className="flex justify-between"><span className="text-slate-500">Transaction Date</span><span className="text-slate-800">{processDialog.transaction_date}</span></div>}
               </div>
               <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
                 <p className="text-sm font-medium text-yellow-800 mb-2">Verify: What is {captcha.a} + {captcha.b}?</p>

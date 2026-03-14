@@ -601,11 +601,11 @@ export default function Transactions() {
     // Date filters
     let matchesDate = true;
     if (dateFrom) {
-      const txDate = new Date(tx.created_at).toISOString().split('T')[0];
+      const txDate = new Date(tx.transaction_date || tx.created_at).toISOString().split('T')[0];
       matchesDate = matchesDate && txDate >= dateFrom;
     }
     if (dateTo) {
-      const txDate = new Date(tx.created_at).toISOString().split('T')[0];
+      const txDate = new Date(tx.transaction_date || tx.created_at).toISOString().split('T')[0];
       matchesDate = matchesDate && txDate <= dateTo;
     }
     
@@ -628,7 +628,7 @@ export default function Transactions() {
   const downloadCSV = () => {
     const headers = ['Date', 'Client', 'Type', 'Amount', 'Currency', 'USD Equivalent', 'Status', 'Destination', 'Reference', 'Description'];
     const rows = filteredTransactions.map(tx => [
-      formatDate(tx.created_at),
+      formatDate(tx.transaction_date || tx.created_at),
       tx.client_name || getClientName(tx.client_id),
       tx.transaction_type,
       tx.amount,
@@ -660,7 +660,7 @@ export default function Transactions() {
     // Create a simple Excel-compatible HTML table
     const headers = ['Date', 'Client', 'Type', 'Amount', 'Currency', 'USD Equivalent', 'Status', 'Destination', 'Reference', 'Description'];
     const rows = filteredTransactions.map(tx => [
-      formatDate(tx.created_at),
+      formatDate(tx.transaction_date || tx.created_at),
       tx.client_name || getClientName(tx.client_id),
       tx.transaction_type,
       tx.amount,
@@ -699,7 +699,7 @@ export default function Transactions() {
     // Generate a printable HTML page
     const headers = ['Date', 'Client', 'Type', 'Amount', 'Currency', 'Status', 'Destination'];
     const rows = filteredTransactions.map(tx => [
-      formatDate(tx.created_at),
+      formatDate(tx.transaction_date || tx.created_at),
       tx.client_name || getClientName(tx.client_id),
       tx.transaction_type,
       `${tx.amount} ${tx.currency}`,
@@ -1625,6 +1625,7 @@ export default function Transactions() {
               <TableHeader>
                 <TableRow className="border-slate-200 hover:bg-transparent">
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">CRM Ref</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Client</TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Email</TableHead>
@@ -1639,13 +1640,13 @@ export default function Transactions() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8">
+                    <TableCell colSpan={11} className="text-center py-8">
                       <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : filteredTransactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-slate-500">
+                    <TableCell colSpan={11} className="text-center py-8 text-slate-500">
                       No transactions found
                     </TableCell>
                   </TableRow>
@@ -1672,6 +1673,7 @@ export default function Transactions() {
                           )}
                         </div>
                       </TableCell>
+                      <TableCell className="text-slate-500 text-xs whitespace-nowrap">{formatDate(tx.transaction_date || tx.created_at)}</TableCell>
                       <TableCell className="font-mono text-xs text-purple-600">{tx.crm_reference || '-'}</TableCell>
                       <TableCell className="text-slate-800">{tx.client_name || getClientName(tx.client_id)}</TableCell>
                       <TableCell className="text-slate-600 text-sm">{tx.client_email || '-'}</TableCell>
@@ -1769,7 +1771,7 @@ export default function Transactions() {
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Created</p>
-                  <p className="text-slate-800 text-sm">{formatDate(viewTransaction.created_at)}</p>
+                  <p className="text-slate-800 text-sm">{formatDate(viewTransaction.transaction_date || viewTransaction.created_at)}</p>
                 </div>
               </div>
               {viewTransaction.destination_account_name && (

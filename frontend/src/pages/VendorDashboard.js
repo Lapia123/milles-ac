@@ -1204,7 +1204,7 @@ export default function ExchangerDashboard() {
                         )}
                       </TableCell>
                       <TableCell>{getStatusBadge(tx.status)}</TableCell>
-                      <TableCell className="text-slate-500 text-sm">{formatDate(tx.created_at)}</TableCell>
+                      <TableCell className="text-slate-500 text-sm">{formatDate(tx.transaction_date || tx.created_at)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button 
@@ -1387,7 +1387,7 @@ export default function ExchangerDashboard() {
                                   {tx.status === 'pending_vendor' ? 'PENDING' : tx.status?.toUpperCase()}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-slate-500 text-xs">{formatDate(tx.created_at)}</TableCell>
+                              <TableCell className="text-slate-500 text-xs">{formatDate(tx.transaction_date || tx.created_at)}</TableCell>
                               <TableCell className="text-right">
                                 {isPending && (
                                   <div className="flex gap-1 justify-end">
