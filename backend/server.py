@@ -7050,8 +7050,14 @@ async def get_transaction_requests(
     user: dict = Depends(require_permission(Modules.TRANSACTION_REQUESTS, Actions.VIEW))
 ):
     query = {}
+    # Handle approved/rejected as transaction_status filters
+    tx_status_filter = None
     if status and status != "all":
-        query["status"] = status
+        if status in ("approved", "rejected"):
+            query["status"] = "processed"
+            tx_status_filter = status
+        else:
+            query["status"] = status
     if transaction_type and transaction_type != "all":
         query["transaction_type"] = transaction_type
     if search:
@@ -7081,6 +7087,11 @@ async def get_transaction_requests(
         for req in result.get("items", []):
             if req.get("transaction_id"):
                 req["transaction_status"] = tx_status_map.get(req["transaction_id"])
+    
+    # Filter by transaction status if requested
+    if tx_status_filter:
+        result["items"] = [r for r in result.get("items", []) if r.get("transaction_status") == tx_status_filter]
+        result["total"] = len(result["items"])
     
     return result
 

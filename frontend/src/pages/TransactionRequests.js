@@ -748,7 +748,7 @@ export default function TransactionRequests() {
           <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">Status</label>
           <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
             className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800 h-8" data-testid="filter-status">
-            <option value="all">All</option><option value="pending">Pending</option><option value="processed">Processed</option>
+            <option value="all">All</option><option value="pending">Pending</option><option value="processed">Processed</option><option value="approved">Approved</option><option value="rejected">Rejected</option>
           </select>
         </div>
         <div className="min-w-[110px]">
