@@ -1844,7 +1844,7 @@ export default function Transactions() {
                 <div className="pt-4 border-t border-slate-200">
                   <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Client Proof of Payment</p>
                   <img 
-                    src={`data:image/png;base64,${viewTransaction.proof_image}`} 
+                    src={viewTransaction.proof_image?.startsWith('http') ? viewTransaction.proof_image : `data:image/png;base64,${viewTransaction.proof_image}`} 
                     alt="Client proof of payment" 
                     className="max-w-full rounded border border-slate-200"
                   />
@@ -1859,10 +1859,10 @@ export default function Transactions() {
                   </p>
                   <div className="relative group">
                     <img 
-                      src={`data:image/png;base64,${viewTransaction.accountant_proof_image}`} 
+                      src={viewTransaction.accountant_proof_image?.startsWith('http') ? viewTransaction.accountant_proof_image : `data:image/png;base64,${viewTransaction.accountant_proof_image}`} 
                       alt="Accountant approval proof" 
                       className="w-full max-h-48 object-contain rounded border border-[#66FCF1]/30 bg-slate-50 cursor-pointer hover:border-[#66FCF1]"
-                      onClick={() => window.open(`data:image/png;base64,${viewTransaction.accountant_proof_image}`, '_blank')}
+                      onClick={() => window.open(viewTransaction.accountant_proof_image?.startsWith('http') ? viewTransaction.accountant_proof_image : `data:image/png;base64,${viewTransaction.accountant_proof_image}`, '_blank')}
                       data-testid="accountant-proof-thumbnail"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded">
@@ -1885,10 +1885,10 @@ export default function Transactions() {
                   </p>
                   <div className="relative group">
                     <img 
-                      src={`data:image/png;base64,${viewTransaction.vendor_proof_image}`} 
+                      src={viewTransaction.vendor_proof_image?.startsWith('http') ? viewTransaction.vendor_proof_image : `data:image/png;base64,${viewTransaction.vendor_proof_image}`} 
                       alt="Exchanger payment proof" 
                       className="w-full max-h-48 object-contain rounded border border-orange-400/30 bg-slate-50 cursor-pointer hover:border-orange-400"
-                      onClick={() => window.open(`data:image/png;base64,${viewTransaction.vendor_proof_image}`, '_blank')}
+                      onClick={() => window.open(viewTransaction.vendor_proof_image?.startsWith('http') ? viewTransaction.vendor_proof_image : `data:image/png;base64,${viewTransaction.vendor_proof_image}`, '_blank')}
                       data-testid="vendor-proof-thumbnail"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded">

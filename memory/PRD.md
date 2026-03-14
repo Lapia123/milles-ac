@@ -11,6 +11,13 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - Reconciliation Phase 1, Audit & Compliance, Logs, Reports, Settings
 
 
+**R2 Cloud Storage Migration (COMPLETE):**
+- Migrated ALL file/image uploads from base64-in-MongoDB to Cloudflare R2 bucket storage
+- Endpoints migrated: vendor proof, accountant proof, transaction creation with proof, transaction request proof, income/expense vendor proof, invoice upload, message attachments
+- Backend utility function `upload_to_r2()` with organized folders (proofs/, invoices/, attachments/)
+- Frontend backward-compatible: if value starts with 'http' use as URL, otherwise base64 for legacy data
+- Files: `backend/server.py`, `backend/.env`, `Transactions.js`, `AccountantDashboard.js`, `VendorDashboard.js`, `IncomeExpenses.js`
+
 **PSP Settlement History - Expandable Compound Detail (COMPLETE):**
 - Added expand/collapse chevron button for compound settlements in Settlement History
 - Clicking expand fetches and shows all included transactions in a detail sub-table

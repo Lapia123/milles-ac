@@ -1710,7 +1710,7 @@ export default function ExchangerDashboard() {
                 <div className="pt-4 border-t border-slate-200">
                   <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Proof of Payment</p>
                   <img 
-                    src={`data:image/png;base64,${viewTransaction.proof_image}`} 
+                    src={viewTransaction.proof_image?.startsWith('http') ? viewTransaction.proof_image : `data:image/png;base64,${viewTransaction.proof_image}`} 
                     alt="Proof of payment" 
                     className="max-w-full rounded border border-slate-200"
                   />
@@ -1720,7 +1720,7 @@ export default function ExchangerDashboard() {
                 <div className="pt-4 border-t border-slate-200">
                   <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Exchanger Proof (Withdrawal)</p>
                   <img 
-                    src={`data:image/png;base64,${viewTransaction.vendor_proof_image}`} 
+                    src={viewTransaction.vendor_proof_image?.startsWith('http') ? viewTransaction.vendor_proof_image : `data:image/png;base64,${viewTransaction.vendor_proof_image}`} 
                     alt="Exchanger proof" 
                     className="max-w-full rounded border border-slate-200"
                   />
