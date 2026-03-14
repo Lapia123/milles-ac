@@ -11,6 +11,20 @@ Build a comprehensive back-office accounting software for an FX broker named "Mi
 - Reconciliation Phase 1, Audit & Compliance, Logs, Reports, Settings
 
 
+**PSP Extra Charges in Payment Currency (COMPLETE):**
+- Changed the extra charges input in PSP pending settlement actions to use payment currency instead of USD
+- Auto-converts from payment currency to USD before saving to backend
+- Settlement preview now shows dual-currency breakdown (Gross, Commission, Reserve, Extra, Net) in both USD and payment currency
+- Files Modified: `frontend/src/pages/PSPs.js`
+
+**PSP Report - Extra Charges Column + Base Currency (COMPLETE):**
+- Added "Extra Charges" column to PSP Summary report in Reports & Analytics
+- Added "Pay Currency" column showing the PSP's operating currency
+- All amount columns (Volume, Commission, Extra Charges, Net) now show dual-currency: USD + payment currency in blue
+- Backend aggregation pipeline updated to include `total_extra_charges`, `total_base_amount`, `base_currencies`, `total_reserve`
+- CSV export updated with new columns
+- Files Modified: `backend/server.py` (psp-summary report endpoint), `frontend/src/pages/Reports.js`
+
 **Transaction Date Field (COMPLETE):**
 - Added "Transaction Date" date picker field to both Create Transaction and Transaction Request forms
 - Defaults to today's date, user can change to any date
