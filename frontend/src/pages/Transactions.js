@@ -203,6 +203,9 @@ export default function Transactions() {
   const [clientBankAccounts, setClientBankAccounts] = useState([]);
   const [selectedBankAccount, setSelectedBankAccount] = useState('new');
   const [clientSearchOpen, setClientSearchOpen] = useState(false);
+  const [createCaptcha, setCreateCaptcha] = useState({ a: 0, b: 0 });
+  const [createCaptchaAnswer, setCreateCaptchaAnswer] = useState('');
+  const [showCreateCaptcha, setShowCreateCaptcha] = useState(false);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -403,8 +406,27 @@ export default function Transactions() {
     }
   };
 
-  const handleSubmit = async (e) => {
+  // Show captcha before actual submission
+  const handlePreSubmit = (e) => {
     e.preventDefault();
+    if (!formData.client_id || !formData.amount) {
+      toast.error('Please fill in required fields');
+      return;
+    }
+    const a = Math.floor(Math.random() * 10) + 1;
+    const b = Math.floor(Math.random() * 10) + 1;
+    setCreateCaptcha({ a, b });
+    setCreateCaptchaAnswer('');
+    setShowCreateCaptcha(true);
+  };
+
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (parseInt(createCaptchaAnswer) !== createCaptcha.a + createCaptcha.b) {
+      toast.error('Incorrect verification answer');
+      return;
+    }
+    setShowCreateCaptcha(false);
     setSubmitting(true);
     try {
       const formDataToSend = new FormData();
@@ -820,7 +842,7 @@ export default function Transactions() {
                 Create Transaction
               </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handlePreSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-slate-500 text-xs uppercase tracking-wider">Client *</Label>
                 <ClientServerSearch
@@ -1525,6 +1547,34 @@ export default function Transactions() {
                   )}
                 </Button>
               </div>
+
+              {/* Captcha Verification */}
+              {showCreateCaptcha && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-sm space-y-2" data-testid="create-tx-captcha">
+                  <p className="text-sm text-amber-800 font-medium">Verify to confirm: What is {createCaptcha.a} + {createCaptcha.b}?</p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={createCaptchaAnswer}
+                      onChange={(e) => setCreateCaptchaAnswer(e.target.value)}
+                      className="bg-white border-amber-300 w-24 text-center font-mono"
+                      placeholder="?"
+                      autoFocus
+                      data-testid="create-tx-captcha-input"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handleSubmit()}
+                      disabled={submitting || !createCaptchaAnswer}
+                      className="bg-green-600 text-white hover:bg-green-700 font-bold"
+                      data-testid="create-tx-captcha-confirm"
+                    >
+                      {submitting ? 'Creating...' : 'Confirm'}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </form>
           </DialogContent>
         </Dialog>
