@@ -200,7 +200,7 @@ export default function Transactions() {
   const [destForm, setDestForm] = useState({ destination_type: '', vendor_id: '', destination_account_id: '', description: '', crm_reference: '' });
   const [destSaving, setDestSaving] = useState(false);
   const [fieldEditTx, setFieldEditTx] = useState(null);
-  const [fieldEditForm, setFieldEditForm] = useState({ crm_reference: '', amount: '', reference: '' });
+  const [fieldEditForm, setFieldEditForm] = useState({ crm_reference: '', amount: '', reference: '', base_amount: '', base_currency: 'USD', exchange_rate: '' });
   const [fieldEditSaving, setFieldEditSaving] = useState(false);
   const [proofImage, setProofImage] = useState(null);
   const [proofPreview, setProofPreview] = useState(null);
@@ -620,8 +620,27 @@ export default function Transactions() {
       crm_reference: tx.crm_reference || '',
       amount: tx.amount?.toString() || '',
       reference: tx.reference || '',
+      base_amount: tx.base_amount?.toString() || '',
+      base_currency: tx.base_currency || 'USD',
+      exchange_rate: tx.exchange_rate?.toString() || '',
     });
     setFieldEditTx(tx);
+  };
+
+  const handleFieldEditBaseAmountChange = (val) => {
+    const newForm = { ...fieldEditForm, base_amount: val };
+    if (val && fieldEditForm.exchange_rate) {
+      newForm.amount = (parseFloat(val) * parseFloat(fieldEditForm.exchange_rate)).toFixed(2);
+    }
+    setFieldEditForm(newForm);
+  };
+
+  const handleFieldEditExchangeRateChange = (val) => {
+    const newForm = { ...fieldEditForm, exchange_rate: val };
+    if (val && fieldEditForm.base_amount) {
+      newForm.amount = (parseFloat(fieldEditForm.base_amount) * parseFloat(val)).toFixed(2);
+    }
+    setFieldEditForm(newForm);
   };
 
   const handleSaveFieldEdit = async () => {
@@ -632,6 +651,9 @@ export default function Transactions() {
       if (fieldEditForm.crm_reference !== (fieldEditTx.crm_reference || '')) payload.crm_reference = fieldEditForm.crm_reference;
       if (fieldEditForm.reference !== (fieldEditTx.reference || '')) payload.reference = fieldEditForm.reference;
       if (fieldEditForm.amount !== (fieldEditTx.amount?.toString() || '')) payload.amount = parseFloat(fieldEditForm.amount);
+      if (fieldEditForm.base_amount !== (fieldEditTx.base_amount?.toString() || '')) payload.base_amount = parseFloat(fieldEditForm.base_amount) || null;
+      if (fieldEditForm.base_currency !== (fieldEditTx.base_currency || 'USD')) payload.base_currency = fieldEditForm.base_currency;
+      if (fieldEditForm.exchange_rate !== (fieldEditTx.exchange_rate?.toString() || '')) payload.exchange_rate = parseFloat(fieldEditForm.exchange_rate) || null;
       if (Object.keys(payload).length === 0) { toast.info('No changes'); setFieldEditTx(null); setFieldEditSaving(false); return; }
       const response = await fetch(`${API_URL}/api/transactions/${fieldEditTx.transaction_id}`, {
         method: 'PUT',
@@ -2112,9 +2134,9 @@ export default function Transactions() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Fields Dialog (CRM Reference, Amount, Reference) */}
+      {/* Edit Fields Dialog (CRM Reference, Amount, Reference, Payment Currency) */}
       <Dialog open={!!fieldEditTx} onOpenChange={() => setFieldEditTx(null)}>
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold uppercase" style={{ fontFamily: 'Barlow Condensed' }}>
               Edit Transaction
@@ -2133,12 +2155,46 @@ export default function Transactions() {
                 <Input value={fieldEditForm.crm_reference} onChange={e => setFieldEditForm({ ...fieldEditForm, crm_reference: e.target.value })} className="bg-slate-50 font-mono" placeholder="CRM Reference" data-testid="field-edit-crm" />
               </div>
               <div>
-                <Label className="text-xs text-slate-500 uppercase">Amount (USD)</Label>
-                <Input type="number" step="0.01" value={fieldEditForm.amount} onChange={e => setFieldEditForm({ ...fieldEditForm, amount: e.target.value })} className="bg-slate-50 font-mono" placeholder="0.00" data-testid="field-edit-amount" />
-              </div>
-              <div>
                 <Label className="text-xs text-slate-500 uppercase">Reference</Label>
                 <Input value={fieldEditForm.reference} onChange={e => setFieldEditForm({ ...fieldEditForm, reference: e.target.value })} className="bg-slate-50 font-mono" placeholder="Reference" data-testid="field-edit-reference" />
+              </div>
+
+              {/* Payment Currency Section */}
+              <div className="p-3 bg-blue-50 rounded border border-blue-200 space-y-3">
+                <p className="text-xs text-blue-600 uppercase font-bold">Payment Currency</p>
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase">Currency</Label>
+                  <Select value={fieldEditForm.base_currency} onValueChange={v => setFieldEditForm({ ...fieldEditForm, base_currency: v })}>
+                    <SelectTrigger className="bg-white border-slate-200" data-testid="field-edit-base-currency"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY', 'USDT'].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {fieldEditForm.base_currency !== 'USD' ? (
+                  <>
+                    <div>
+                      <Label className="text-xs text-slate-500 uppercase">Amount in {fieldEditForm.base_currency}</Label>
+                      <Input type="number" step="0.01" value={fieldEditForm.base_amount} onChange={e => handleFieldEditBaseAmountChange(e.target.value)} className="bg-white font-mono" placeholder={`0.00 ${fieldEditForm.base_currency}`} data-testid="field-edit-base-amount" />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500 uppercase">Exchange Rate (1 {fieldEditForm.base_currency} = ? USD)</Label>
+                      <Input type="number" step="0.0001" value={fieldEditForm.exchange_rate} onChange={e => handleFieldEditExchangeRateChange(e.target.value)} className="bg-white font-mono" placeholder="0.0000" data-testid="field-edit-exchange-rate" />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500 uppercase">Amount in USD (Auto)</Label>
+                      <Input type="number" value={fieldEditForm.amount} readOnly className="bg-slate-100 font-mono text-slate-500" />
+                      {fieldEditForm.base_amount && fieldEditForm.exchange_rate && (
+                        <p className="text-xs text-blue-600 mt-1">{fieldEditForm.base_amount} {fieldEditForm.base_currency} x {fieldEditForm.exchange_rate} = {fieldEditForm.amount} USD</p>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <Label className="text-xs text-slate-500 uppercase">Amount (USD)</Label>
+                    <Input type="number" step="0.01" value={fieldEditForm.amount} onChange={e => setFieldEditForm({ ...fieldEditForm, amount: e.target.value })} className="bg-white font-mono" placeholder="0.00" data-testid="field-edit-amount" />
+                  </div>
+                )}
               </div>
 
               <Button onClick={handleSaveFieldEdit} disabled={fieldEditSaving} className="w-full bg-emerald-600 text-white hover:bg-emerald-700" data-testid="field-edit-save">

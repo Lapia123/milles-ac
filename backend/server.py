@@ -892,6 +892,9 @@ class TransactionUpdate(BaseModel):
     rejection_reason: Optional[str] = None
     crm_reference: Optional[str] = None
     amount: Optional[float] = None
+    base_amount: Optional[float] = None
+    base_currency: Optional[str] = None
+    exchange_rate: Optional[float] = None
     reference: Optional[str] = None
 
 # ============== HELPER FUNCTIONS ==============
@@ -6673,12 +6676,12 @@ async def update_transaction(request: Request, transaction_id: str, update_data:
     
     now = datetime.now(timezone.utc)
     
-    # Editable fields (crm_reference, amount, reference) only allowed on pending transactions
-    editable_fields = {"crm_reference", "amount", "reference"}
+    # Editable fields only allowed on pending transactions
+    editable_fields = {"crm_reference", "amount", "base_amount", "base_currency", "exchange_rate", "reference"}
     has_editable_fields = any(k in editable_fields for k in updates)
     if has_editable_fields:
         if tx["status"] != TransactionStatus.PENDING:
-            raise HTTPException(status_code=400, detail="CRM Reference, Amount, and Reference can only be edited on pending transactions")
+            raise HTTPException(status_code=400, detail="These fields can only be edited on pending transactions")
     
     # Validate CRM reference uniqueness if being updated
     if "crm_reference" in updates and updates["crm_reference"]:
@@ -6698,11 +6701,26 @@ async def update_transaction(request: Request, transaction_id: str, update_data:
             raise HTTPException(status_code=400, detail=f"Reference '{updates['reference']}' already exists")
         updates["reference"] = updates["reference"].strip()
     
-    # If amount is updated, recalculate commissions
+    # Validate amounts
     if "amount" in updates:
         updates["amount"] = float(updates["amount"])
         if updates["amount"] <= 0:
             raise HTTPException(status_code=400, detail="Amount must be positive")
+    if "base_amount" in updates and updates["base_amount"] is not None:
+        updates["base_amount"] = float(updates["base_amount"])
+        if updates["base_amount"] <= 0:
+            raise HTTPException(status_code=400, detail="Base amount must be positive")
+    if "exchange_rate" in updates and updates["exchange_rate"] is not None:
+        updates["exchange_rate"] = float(updates["exchange_rate"])
+        if updates["exchange_rate"] <= 0:
+            raise HTTPException(status_code=400, detail="Exchange rate must be positive")
+    
+    # Auto-calculate USD amount if base_amount and exchange_rate are provided
+    new_base = updates.get("base_amount", tx.get("base_amount"))
+    new_rate = updates.get("exchange_rate", tx.get("exchange_rate"))
+    new_base_currency = updates.get("base_currency", tx.get("base_currency", "USD"))
+    if new_base_currency and new_base_currency != "USD" and new_base and new_rate:
+        updates["amount"] = round(float(new_base) * float(new_rate), 2)
     
     # If approving/completing or rejecting transaction
     if updates.get("status") in [TransactionStatus.APPROVED, TransactionStatus.COMPLETED, TransactionStatus.REJECTED]:
