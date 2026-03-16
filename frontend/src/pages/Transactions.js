@@ -67,6 +67,7 @@ import {
   FileSpreadsheet,
   FileText,
   Edit,
+  Pencil,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -198,6 +199,9 @@ export default function Transactions() {
   const [destEditTx, setDestEditTx] = useState(null);
   const [destForm, setDestForm] = useState({ destination_type: '', vendor_id: '', destination_account_id: '', description: '', crm_reference: '' });
   const [destSaving, setDestSaving] = useState(false);
+  const [fieldEditTx, setFieldEditTx] = useState(null);
+  const [fieldEditForm, setFieldEditForm] = useState({ crm_reference: '', amount: '', reference: '' });
+  const [fieldEditSaving, setFieldEditSaving] = useState(false);
   const [proofImage, setProofImage] = useState(null);
   const [proofPreview, setProofPreview] = useState(null);
   const [clientBankAccounts, setClientBankAccounts] = useState([]);
@@ -609,6 +613,41 @@ export default function Transactions() {
       }
     } catch { toast.error('Failed to update'); }
     finally { setDestSaving(false); }
+  };
+
+  const openFieldEdit = (tx) => {
+    setFieldEditForm({
+      crm_reference: tx.crm_reference || '',
+      amount: tx.amount?.toString() || '',
+      reference: tx.reference || '',
+    });
+    setFieldEditTx(tx);
+  };
+
+  const handleSaveFieldEdit = async () => {
+    if (!fieldEditTx) return;
+    setFieldEditSaving(true);
+    try {
+      const payload = {};
+      if (fieldEditForm.crm_reference !== (fieldEditTx.crm_reference || '')) payload.crm_reference = fieldEditForm.crm_reference;
+      if (fieldEditForm.reference !== (fieldEditTx.reference || '')) payload.reference = fieldEditForm.reference;
+      if (fieldEditForm.amount !== (fieldEditTx.amount?.toString() || '')) payload.amount = parseFloat(fieldEditForm.amount);
+      if (Object.keys(payload).length === 0) { toast.info('No changes'); setFieldEditTx(null); setFieldEditSaving(false); return; }
+      const response = await fetch(`${API_URL}/api/transactions/${fieldEditTx.transaction_id}`, {
+        method: 'PUT',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        toast.success('Transaction updated');
+        setFieldEditTx(null);
+        fetchTransactions();
+      } else {
+        const err = await response.json();
+        toast.error(err.detail || 'Failed to update');
+      }
+    } catch { toast.error('Failed to update'); }
+    finally { setFieldEditSaving(false); }
   };
 
   const filteredTransactions = transactions.filter(tx => {
@@ -1765,9 +1804,14 @@ export default function Transactions() {
                             <Eye className="w-4 h-4" />
                           </Button>
                           {tx.status === 'pending' && (
-                            <Button variant="ghost" size="sm" onClick={() => openDestEdit(tx)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 h-7 w-7 p-0" title="Edit Destination" data-testid={`tx-dest-edit-${tx.transaction_id}`}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
+                            <>
+                              <Button variant="ghost" size="sm" onClick={() => openFieldEdit(tx)} className="text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 h-7 w-7 p-0" title="Edit Details" data-testid={`tx-field-edit-${tx.transaction_id}`}>
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => openDestEdit(tx)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 h-7 w-7 p-0" title="Edit Destination" data-testid={`tx-dest-edit-${tx.transaction_id}`}>
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </TableCell>
@@ -2062,6 +2106,43 @@ export default function Transactions() {
 
               <Button onClick={handleSaveDest} disabled={destSaving} className="w-full bg-blue-600 text-white hover:bg-blue-700" data-testid="dest-edit-save">
                 {destSaving ? 'Saving...' : 'Save Destination'}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Fields Dialog (CRM Reference, Amount, Reference) */}
+      <Dialog open={!!fieldEditTx} onOpenChange={() => setFieldEditTx(null)}>
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold uppercase" style={{ fontFamily: 'Barlow Condensed' }}>
+              Edit Transaction
+            </DialogTitle>
+          </DialogHeader>
+          {fieldEditTx && (
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-50 rounded border space-y-1 text-sm">
+                <div className="flex justify-between"><span className="text-slate-500">Transaction</span><span className="font-mono">{fieldEditTx.transaction_id}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Type</span><Badge className={fieldEditTx.transaction_type === 'deposit' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}>{fieldEditTx.transaction_type}</Badge></div>
+                <div className="flex justify-between"><span className="text-slate-500">Client</span><span>{fieldEditTx.client_name}</span></div>
+              </div>
+
+              <div>
+                <Label className="text-xs text-slate-500 uppercase">CRM Reference</Label>
+                <Input value={fieldEditForm.crm_reference} onChange={e => setFieldEditForm({ ...fieldEditForm, crm_reference: e.target.value })} className="bg-slate-50 font-mono" placeholder="CRM Reference" data-testid="field-edit-crm" />
+              </div>
+              <div>
+                <Label className="text-xs text-slate-500 uppercase">Amount (USD)</Label>
+                <Input type="number" step="0.01" value={fieldEditForm.amount} onChange={e => setFieldEditForm({ ...fieldEditForm, amount: e.target.value })} className="bg-slate-50 font-mono" placeholder="0.00" data-testid="field-edit-amount" />
+              </div>
+              <div>
+                <Label className="text-xs text-slate-500 uppercase">Reference</Label>
+                <Input value={fieldEditForm.reference} onChange={e => setFieldEditForm({ ...fieldEditForm, reference: e.target.value })} className="bg-slate-50 font-mono" placeholder="Reference" data-testid="field-edit-reference" />
+              </div>
+
+              <Button onClick={handleSaveFieldEdit} disabled={fieldEditSaving} className="w-full bg-emerald-600 text-white hover:bg-emerald-700" data-testid="field-edit-save">
+                {fieldEditSaving ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
           )}
