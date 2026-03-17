@@ -200,7 +200,7 @@ export default function Transactions() {
   const [destForm, setDestForm] = useState({ destination_type: '', vendor_id: '', destination_account_id: '', description: '', crm_reference: '' });
   const [destSaving, setDestSaving] = useState(false);
   const [fieldEditTx, setFieldEditTx] = useState(null);
-  const [fieldEditForm, setFieldEditForm] = useState({ crm_reference: '', amount: '', reference: '', base_amount: '', base_currency: 'USD', exchange_rate: '' });
+  const [fieldEditForm, setFieldEditForm] = useState({ crm_reference: '', amount: '', reference: '', base_amount: '', base_currency: 'USD', exchange_rate: '', transaction_date: '' });
   const [fieldEditSaving, setFieldEditSaving] = useState(false);
   const [proofImage, setProofImage] = useState(null);
   const [proofPreview, setProofPreview] = useState(null);
@@ -623,6 +623,7 @@ export default function Transactions() {
       base_amount: tx.base_amount?.toString() || '',
       base_currency: tx.base_currency || 'USD',
       exchange_rate: tx.exchange_rate?.toString() || '',
+      transaction_date: tx.transaction_date || '',
     });
     setFieldEditTx(tx);
   };
@@ -654,6 +655,7 @@ export default function Transactions() {
       if (fieldEditForm.base_amount !== (fieldEditTx.base_amount?.toString() || '')) payload.base_amount = parseFloat(fieldEditForm.base_amount) || null;
       if (fieldEditForm.base_currency !== (fieldEditTx.base_currency || 'USD')) payload.base_currency = fieldEditForm.base_currency;
       if (fieldEditForm.exchange_rate !== (fieldEditTx.exchange_rate?.toString() || '')) payload.exchange_rate = parseFloat(fieldEditForm.exchange_rate) || null;
+      if (fieldEditForm.transaction_date !== (fieldEditTx.transaction_date || '')) payload.transaction_date = fieldEditForm.transaction_date;
       if (Object.keys(payload).length === 0) { toast.info('No changes'); setFieldEditTx(null); setFieldEditSaving(false); return; }
       const response = await fetch(`${API_URL}/api/transactions/${fieldEditTx.transaction_id}`, {
         method: 'PUT',
@@ -2157,6 +2159,10 @@ export default function Transactions() {
               <div>
                 <Label className="text-xs text-slate-500 uppercase">Reference</Label>
                 <Input value={fieldEditForm.reference} onChange={e => setFieldEditForm({ ...fieldEditForm, reference: e.target.value })} className="bg-slate-50 font-mono" placeholder="Reference" data-testid="field-edit-reference" />
+              </div>
+              <div>
+                <Label className="text-xs text-slate-500 uppercase">Transaction Date</Label>
+                <Input type="date" value={fieldEditForm.transaction_date} onChange={e => setFieldEditForm({ ...fieldEditForm, transaction_date: e.target.value })} className="bg-slate-50" data-testid="field-edit-date" />
               </div>
 
               {/* Payment Currency Section */}

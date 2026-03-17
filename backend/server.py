@@ -896,6 +896,7 @@ class TransactionUpdate(BaseModel):
     base_currency: Optional[str] = None
     exchange_rate: Optional[float] = None
     reference: Optional[str] = None
+    transaction_date: Optional[str] = None
 
 # ============== HELPER FUNCTIONS ==============
 
@@ -6677,7 +6678,7 @@ async def update_transaction(request: Request, transaction_id: str, update_data:
     now = datetime.now(timezone.utc)
     
     # Editable fields only allowed on pending transactions
-    editable_fields = {"crm_reference", "amount", "base_amount", "base_currency", "exchange_rate", "reference"}
+    editable_fields = {"crm_reference", "amount", "base_amount", "base_currency", "exchange_rate", "reference", "transaction_date"}
     has_editable_fields = any(k in editable_fields for k in updates)
     if has_editable_fields:
         if tx["status"] != TransactionStatus.PENDING:
