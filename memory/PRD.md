@@ -11,23 +11,21 @@ Build a comprehensive back-office accounting software for FX brokerage "Miles Ca
 
 ## What's Been Implemented
 
-### Session 1-N (Previous Sessions)
+### Previous Sessions
 - Full auth system (JWT), role-based access (Admin, Accountant, CRM Admin, Exchanger)
-- Client management (CRUD, KYC, bank accounts)
-- Transaction lifecycle (create, approve, reject, settle)
-- PSP management (CRUD, settlements, reserve funds, chargebacks)
-- Treasury accounts with balance tracking
-- Exchanger/Vendor management with commissions
-- Reconciliation module (basic)
-- Reports & Analytics (PDF/Excel export, scheduled reports)
-- Income & Expenses module
-- Loans module, O/S Accounts, LP Management
+- Client management, Transaction lifecycle, PSP management, Treasury, Exchangers
+- Reconciliation module (basic), Reports & Analytics, Income & Expenses, Loans, O/S Accounts, LP Management
 - Audit logs, messaging system
+- File storage migration to Cloudflare R2
+- PSP compound settlement, transaction back-dating, security captcha
+- Enhanced transaction request status display & filtering
+- PSP module overhaul (calculations, dual-currency, extra charges)
 
-### Current Session (Mar 16, 2026)
-- **[FIX] Destination carried over from TX Request to Transaction:** Auto-processing (deposits) and manual processing (withdrawals) now correctly populate `psp_name`, `vendor_name`, `destination_account_name` in the transaction document. GET /api/transactions also enriches missing destination names from their respective collections.
-- **[FIX] Treasury destination option added to Transaction Request forms:** Both Edit and Create forms for deposit requests now include "Treasury / Bank Account" as a destination option with treasury account selector.
-- **[FEATURE] Edit Transaction fields on Transactions Summary:** Added ability to edit CRM Reference, Amount, and Reference on all pending transactions (before approval). Includes uniqueness validation for CRM Reference and Reference.
+### Current Session (Mar 17, 2026)
+- **[FIX] Destination carried over from TX Request to Transaction:** Auto-processing (deposits) and manual processing (withdrawals) now correctly populate psp_name, vendor_name, destination_account_name. GET /api/transactions enriches missing names.
+- **[FIX] Treasury destination option added to Transaction Request forms**
+- **[FEATURE] Edit Transaction on Transactions Summary:** CRM Reference, Amount, Reference, Payment Currency (base_amount, base_currency, exchange_rate), and Transaction Date editable on all pending transactions
+- **[FEATURE] Bank Receipt Date on Approval:** Added optional "Bank Receipt Date" field to approval dialog. Treasury transactions use this date for reconciliation matching instead of approval date. Defaults to transaction_date.
 
 ## Pending Issues
 - **P1:** "Operation failed" generic toast during transaction creation (unreproduced)

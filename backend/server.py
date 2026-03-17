@@ -6823,6 +6823,7 @@ async def approve_transaction(
 
     transaction_id: str, 
     source_account_id: Optional[str] = None,
+    bank_receipt_date: Optional[str] = None,
     require_proof: bool = True,
     user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.APPROVE))
 ):
@@ -6836,12 +6837,18 @@ async def approve_transaction(
     
     now = datetime.now(timezone.utc)
     
+    # Use bank_receipt_date for treasury records if provided, otherwise use current time
+    treasury_date = bank_receipt_date if bank_receipt_date else now.isoformat()
+    
     updates = {
         "status": TransactionStatus.APPROVED,
         "processed_by": user["user_id"],
         "processed_by_name": user["name"],
         "processed_at": now.isoformat()
     }
+    
+    if bank_receipt_date:
+        updates["bank_receipt_date"] = bank_receipt_date
     
     # For deposits, require proof of payment screenshot
     if tx["transaction_type"] == TransactionType.DEPOSIT:
@@ -6918,7 +6925,7 @@ async def approve_transaction(
                 "reference": f"Withdrawal: {tx.get('client_name', 'Client')} - {tx.get('reference', '')}",
                 "transaction_id": transaction_id,
                 "client_id": tx.get("client_id"),
-                "created_at": now.isoformat(),
+                "created_at": treasury_date,
                 "created_by": user["user_id"],
                 "created_by_name": user["name"]
             }
@@ -6977,7 +6984,7 @@ async def approve_transaction(
                     "reference": f"Withdrawal: {tx.get('client_name', 'Client')} - {tx.get('reference', '')}",
                     "transaction_id": transaction_id,
                     "client_id": tx.get("client_id"),
-                    "created_at": now.isoformat(),
+                    "created_at": treasury_date,
                     "created_by": user["user_id"],
                     "created_by_name": user["name"]
                 }
@@ -7031,7 +7038,7 @@ async def approve_transaction(
                 "reference": f"Deposit: {tx.get('client_name', 'Client')} - {tx.get('reference', '')}",
                 "transaction_id": transaction_id,
                 "client_id": tx.get("client_id"),
-                "created_at": now.isoformat(),
+                "created_at": treasury_date,
                 "created_by": user["user_id"],
                 "created_by_name": user["name"]
             }
