@@ -6838,7 +6838,11 @@ async def approve_transaction(
     now = datetime.now(timezone.utc)
     
     # Use bank_receipt_date for treasury records if provided, otherwise use current time
-    treasury_date = bank_receipt_date if bank_receipt_date else now.isoformat()
+    # Normalize to ISO datetime format for consistent querying
+    if bank_receipt_date:
+        treasury_date = f"{bank_receipt_date}T00:00:00" if 'T' not in bank_receipt_date else bank_receipt_date
+    else:
+        treasury_date = now.isoformat()
     
     updates = {
         "status": TransactionStatus.APPROVED,
@@ -12162,14 +12166,19 @@ async def get_account_history_for_reconciliation(
     """Get transaction history for an account on a specific date"""
     date_start = f"{date}T00:00:00"
     date_end = f"{date}T23:59:59"
+    # Also match date-only strings (e.g., "2026-03-01" without time component)
+    date_only = date
     
     transactions = []
     
     if type == "treasury":
-        # Get treasury transactions
+        # Get treasury transactions - match both ISO datetime and date-only formats
         txs = await db.treasury_transactions.find({
             "account_id": account_id,
-            "created_at": {"$gte": date_start, "$lte": date_end}
+            "$or": [
+                {"created_at": {"$gte": date_start, "$lte": date_end}},
+                {"created_at": date_only}
+            ]
         }, {"_id": 0}).to_list(500)
         
         for tx in txs:
