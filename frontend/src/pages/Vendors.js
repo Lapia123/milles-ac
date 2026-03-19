@@ -890,17 +890,26 @@ export default function Exchangers() {
       )}
 
       {/* View Exchanger Details Dialog */}
-      <Dialog open={!!viewExchanger} onOpenChange={() => { setViewExchanger(null); setPendingTransactions([]); setSettlements([]); }}>
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-4xl max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-3" style={{ fontFamily: 'Barlow Condensed' }}>
-              <Store className="w-6 h-6 text-blue-600" />
-              {viewExchanger?.vendor_name}
-              {detailLoading && <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />}
-            </DialogTitle>
-          </DialogHeader>
-          {viewExchanger && (
-            <div className="space-y-4">
+      {/* Exchanger Detail - Full Page View */}
+      {viewExchanger && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex" data-testid="exchanger-detail-overlay">
+          <div className="flex-1 bg-white overflow-hidden flex flex-col ml-0 lg:ml-[200px]" data-testid="exchanger-detail-panel">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white shrink-0">
+              <div className="flex items-center gap-3">
+                <Store className="w-6 h-6 text-blue-600" />
+                <h2 className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+                  {viewExchanger?.vendor_name}
+                </h2>
+                {detailLoading && <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />}
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => { setViewExchanger(null); setPendingTransactions([]); setSettlements([]); }} className="text-slate-400 hover:text-slate-800 h-8 w-8 p-0" data-testid="close-exchanger-detail">
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+            <div className="space-y-4 max-w-[1400px]">
               {detailLoading && (
                 <div className="flex items-center justify-center py-8">
                   <RefreshCw className="w-6 h-6 animate-spin text-blue-500 mr-2" />
@@ -1038,7 +1047,7 @@ export default function Exchangers() {
                 </TabsList>
                 
                 <TabsContent value="transactions" className="mt-4">
-                  <ScrollArea className="h-[250px]">
+                  <ScrollArea className="h-[500px]">
                     {pendingTransactions.length === 0 ? (
                       <div className="text-center py-8 text-slate-500">
                         No transactions
@@ -1127,7 +1136,7 @@ export default function Exchangers() {
                 </TabsContent>
                 
                 <TabsContent value="history" className="mt-4">
-                  <ScrollArea className="h-[250px]">
+                  <ScrollArea className="h-[500px]">
                     {settlements.length === 0 ? (
                       <div className="text-center py-8 text-slate-500">
                         No settlement history
@@ -1196,7 +1205,7 @@ export default function Exchangers() {
                 </TabsContent>
 
                 <TabsContent value="ie" className="mt-4">
-                  <ScrollArea className="h-[300px]">
+                  <ScrollArea className="h-[500px]">
                     {vendorIeEntries.length === 0 ? (
                       <div className="text-center py-8 text-slate-500">
                         <p>No income/expense entries for this exchanger</p>
@@ -1273,7 +1282,7 @@ export default function Exchangers() {
 
                 {/* Loan Transactions Tab */}
                 <TabsContent value="loans" className="mt-4">
-                  <ScrollArea className="h-[250px]">
+                  <ScrollArea className="h-[500px]">
                     {vendorLoanTxs.length === 0 ? (
                       <div className="text-center py-8 text-slate-500">
                         No loan transactions involving this exchanger
@@ -1334,9 +1343,10 @@ export default function Exchangers() {
                 </TabsContent>
               </Tabs>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Settle Exchanger Dialog */}
       <Dialog open={settleDialogOpen} onOpenChange={() => { 
