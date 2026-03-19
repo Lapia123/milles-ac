@@ -14780,56 +14780,73 @@ async def generate_daily_report_html():
     
     return html
 
+_daily_report_lock = asyncio.Lock()
+
 async def send_daily_report():
     """Send daily report to all directors"""
-    try:
-        settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
-        
-        if not settings or not settings.get("report_enabled"):
-            logger.info("Daily report is disabled or not configured")
-            return
-        
-        if not settings.get("smtp_email") or not settings.get("smtp_password"):
-            logger.warning("SMTP settings not configured - skipping daily report")
-            return
-        
-        if not settings.get("director_emails"):
-            logger.warning("No director emails configured - skipping daily report")
-            return
-        
-        html_content = await generate_daily_report_html()
-        
-        await send_email(
-            to_emails=settings["director_emails"],
-            subject=f"Miles Capitals - Daily Report ({datetime.now(timezone.utc).strftime('%Y-%m-%d')})",
-            html_content=html_content,
-            smtp_host=settings.get("smtp_host", "smtp.gmail.com"),
-            smtp_port=settings.get("smtp_port", 587),
-            smtp_email=settings["smtp_email"],
-            smtp_password=settings["smtp_password"],
-            smtp_from_email=settings.get("smtp_from_email", settings["smtp_email"])
-        )
-        
-        # Log successful send
-        await db.email_logs.insert_one({
-            "log_id": f"email_{uuid.uuid4().hex[:12]}",
-            "type": "daily_report",
-            "recipients": settings["director_emails"],
-            "status": "sent",
-            "sent_at": datetime.now(timezone.utc).isoformat()
-        })
-        
-        logger.info(f"Daily report sent to {len(settings['director_emails'])} directors")
-        
-    except Exception as e:
-        logger.error(f"Failed to send daily report: {e}")
-        await db.email_logs.insert_one({
-            "log_id": f"email_{uuid.uuid4().hex[:12]}",
-            "type": "daily_report",
-            "status": "failed",
-            "error": str(e),
-            "attempted_at": datetime.now(timezone.utc).isoformat()
-        })
+    if _daily_report_lock.locked():
+        logger.warning("Daily report already in progress - skipping duplicate execution")
+        return
+    
+    async with _daily_report_lock:
+        try:
+            settings = await db.app_settings.find_one({"setting_type": "email"}, {"_id": 0})
+            
+            if not settings or not settings.get("report_enabled"):
+                logger.info("Daily report is disabled or not configured")
+                return
+            
+            if not settings.get("smtp_email") or not settings.get("smtp_password"):
+                logger.warning("SMTP settings not configured - skipping daily report")
+                return
+            
+            if not settings.get("director_emails"):
+                logger.warning("No director emails configured - skipping daily report")
+                return
+            
+            # Dedup check: skip if report was already sent in the last 30 minutes
+            recent_log = await db.email_logs.find_one({
+                "type": "daily_report",
+                "status": "sent",
+                "sent_at": {"$gte": (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat()}
+            }, {"_id": 0})
+            if recent_log:
+                logger.warning("Daily report already sent within last 30 minutes - skipping duplicate")
+                return
+            
+            html_content = await generate_daily_report_html()
+            
+            await send_email(
+                to_emails=settings["director_emails"],
+                subject=f"Miles Capitals - Daily Report ({datetime.now(timezone.utc).strftime('%Y-%m-%d')})",
+                html_content=html_content,
+                smtp_host=settings.get("smtp_host", "smtp.gmail.com"),
+                smtp_port=settings.get("smtp_port", 587),
+                smtp_email=settings["smtp_email"],
+                smtp_password=settings["smtp_password"],
+                smtp_from_email=settings.get("smtp_from_email", settings["smtp_email"])
+            )
+            
+            # Log successful send
+            await db.email_logs.insert_one({
+                "log_id": f"email_{uuid.uuid4().hex[:12]}",
+                "type": "daily_report",
+                "recipients": settings["director_emails"],
+                "status": "sent",
+                "sent_at": datetime.now(timezone.utc).isoformat()
+            })
+            
+            logger.info(f"Daily report sent to {len(settings['director_emails'])} directors")
+            
+        except Exception as e:
+            logger.error(f"Failed to send daily report: {e}")
+            await db.email_logs.insert_one({
+                "log_id": f"email_{uuid.uuid4().hex[:12]}",
+                "type": "daily_report",
+                "status": "failed",
+                "error": str(e),
+                "attempted_at": datetime.now(timezone.utc).isoformat()
+            })
 
 @api_router.post("/reports/send-now")
 async def send_report_now(user: dict = Depends(require_permission(Modules.REPORTS, Actions.EXPORT))):
@@ -14868,6 +14885,7 @@ async def get_email_logs(limit: int = 20, user: dict = Depends(require_permissio
 
 # Scheduler instance
 scheduler = AsyncIOScheduler()
+_scheduler_started = False
 
 async def reschedule_daily_report():
     """Reschedule the daily report based on current settings"""
@@ -16313,7 +16331,12 @@ async def startup_db_indexes():
     
     # Start scheduler and schedule daily report
     try:
+        global _scheduler_started
+        # Prevent duplicate scheduler starts during hot-reload
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
         scheduler.start()
+        _scheduler_started = True
         await reschedule_daily_report()
         await reschedule_audit_scan()
         logger.info("Scheduler started successfully")
