@@ -11,35 +11,28 @@ Build a comprehensive back-office accounting software for FX brokerage "Miles Ca
 
 ## What's Been Implemented
 
-### Previous Sessions
-- Full auth system (JWT), role-based access (Admin, Accountant, CRM Admin, Exchanger)
-- Client management, Transaction lifecycle, PSP management, Treasury, Exchangers
-- Reconciliation module (basic), Reports & Analytics, Income & Expenses, Loans, O/S Accounts, LP Management
-- Audit logs, messaging system
-- File storage migration to Cloudflare R2
-- PSP compound settlement, transaction back-dating, security captcha
-- Enhanced transaction request status display & filtering
-- PSP module overhaul (calculations, dual-currency, extra charges)
-
-### Current Session (Mar 17, 2026)
-- **[FIX] Destination carried over from TX Request to Transaction:** Auto-processing (deposits) and manual processing (withdrawals) now correctly populate psp_name, vendor_name, destination_account_name. GET /api/transactions enriches missing names.
+### Current Session (Mar 17-19, 2026)
+- **[FIX] Destination carried over from TX Request to Transaction:** Enriched psp_name, vendor_name, destination_account_name in auto-processing and manual processing. GET /api/transactions enriches missing names.
 - **[FIX] Treasury destination option added to Transaction Request forms**
-- **[FEATURE] Edit Transaction on Transactions Summary:** CRM Reference, Amount, Reference, Payment Currency (base_amount, base_currency, exchange_rate), and Transaction Date editable on all pending transactions
-- **[FEATURE] Bank Receipt Date on Approval:** Added optional "Bank Receipt Date" field to approval dialog. Treasury transactions use this date for reconciliation matching instead of approval date. Defaults to transaction_date.
+- **[FEATURE] Edit Transaction on Transactions Summary:** CRM Reference, Amount, Reference, Payment Currency, and Transaction Date editable on all pending transactions
+- **[FEATURE] Bank Receipt Date on Approval:** Optional field for actual payment date, used for treasury/reconciliation date matching
+- **[FIX] Reconciliation date matching:** Fixed date-only string not matching ISO datetime ranges; normalized all dates
+- **[FIX] Daily Report 4x emails:** Fixed scheduler duplicate execution with lock + dedup check
+- **[FEATURE] Exchangers full-page detail:** Converted from cramped modal to full-page view with back button
+- **[FEATURE] PSP Compound Settlement Date:** Added settlement_date field to batch settle dialog; treasury transactions and settlement records use this date for reconciliation matching
 
 ## Pending Issues
-- **P1:** "Operation failed" generic toast during transaction creation (unreproduced)
-- **P1:** Database performance issues causing slow page loads
-- **P2:** Eye icon on Reconciliation history tab doesn't open detail view
-- **P3:** Minor session management redirect bug (recurring)
-- **P3:** Error during withdrawal creation to an Exchanger
+- P1: "Operation failed" generic toast during transaction creation
+- P1: Database performance issues
+- P2: Eye icon on Reconciliation history tab
+- P3: Session management redirect bug
+- P3: Withdrawal to Exchanger error
 
 ## Upcoming Tasks
-- **P1:** Implement Reconciliation backend logic (automated matching)
-- **P2:** Refactor `backend/server.py` into modular APIRouter files
-- **P2:** Implement Reconciliation "Final Approval" step
-- **P3:** Refactor frontend pagination into reusable hook
-- **P3:** Refactor duplicated client search component
+- P1: Reconciliation backend logic (automated matching)
+- P2: Refactor backend/server.py into modular routers
+- P2: Reconciliation "Final Approval" step
+- P3: Frontend pagination/client search refactor
 
 ## Key Credentials
 - Admin: admin@fxbroker.com / admin123

@@ -3878,6 +3878,7 @@ async def settle_psp_transaction(
 class BatchSettleRequest(BaseModel):
     transaction_ids: List[str]
     destination_account_id: Optional[str] = None
+    settlement_date: Optional[str] = None
 
 @api_router.post("/psp/{psp_id}/settle-batch")
 async def batch_settle_psp_transactions(
@@ -3944,6 +3945,12 @@ async def batch_settle_psp_transactions(
 
     now = datetime.now(timezone.utc)
     settlement_id = f"stl_{uuid.uuid4().hex[:12]}"
+    
+    # Use provided settlement_date or current time for treasury/settlement records
+    if body.settlement_date:
+        settle_date = f"{body.settlement_date}T00:00:00" if 'T' not in body.settlement_date else body.settlement_date
+    else:
+        settle_date = now.isoformat()
 
     # Create ONE compound settlement record
     settlement_doc = {
@@ -3965,9 +3972,10 @@ async def batch_settle_psp_transactions(
         "settlement_destination_id": dest_account_id,
         "settlement_destination_name": dest["account_name"],
         "status": PSPSettlementStatus.COMPLETED,
-        "expected_settlement_date": now.isoformat(),
-        "created_at": now.isoformat(),
-        "settled_at": now.isoformat(),
+        "expected_settlement_date": settle_date,
+        "settlement_date": body.settlement_date or now.strftime("%Y-%m-%d"),
+        "created_at": settle_date,
+        "settled_at": settle_date,
         "created_by": user["user_id"],
         "created_by_name": user["name"]
     }
@@ -3996,7 +4004,7 @@ async def batch_settle_psp_transactions(
         "related_settlement_id": settlement_id,
         "psp_id": psp_id,
         "psp_name": psp["psp_name"],
-        "created_at": now.isoformat(),
+        "created_at": settle_date,
         "created_by": user["user_id"],
         "created_by_name": user["name"]
     }
