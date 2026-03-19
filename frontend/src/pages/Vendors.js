@@ -73,6 +73,7 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
+  ArrowLeft,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -516,427 +517,40 @@ export default function Exchangers() {
   const pendingApproved = pendingTransactions.filter(t => t.status === 'approved' && !t.settled);
 
   return (
-    <div className="space-y-6 animate-fade-in" data-testid="vendors-page">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+    <>
+    {viewExchanger ? (
+      <div className="space-y-6 animate-fade-in" data-testid="exchanger-detail-page">
+        {/* Back button + Header */}
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => { setViewExchanger(null); setPendingTransactions([]); setSettlements([]); }} className="text-slate-500 hover:text-slate-800 h-8 w-8 p-0" data-testid="back-to-exchangers">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <Store className="w-6 h-6 text-blue-600" />
           <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
-            Exchangers
+            {viewExchanger?.vendor_name}
           </h1>
-          <p className="text-slate-500">Manage exchangers, commissions, and settlements</p>
+          {detailLoading && <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />}
         </div>
-        {isAccountantOrAdmin && (
-          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button
-                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
-                data-testid="add-vendor-btn"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Exchanger
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
-                  {selectedExchanger ? 'Edit Exchanger' : 'Add New Exchanger'}
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Exchanger Name *</Label>
-                  <Input
-                    value={formData.vendor_name}
-                    onChange={(e) => setFormData({ ...formData, vendor_name: e.target.value })}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
-                    placeholder="e.g., MoneyExchange Pro"
-                    data-testid="vendor-name"
-                    required
-                  />
-                </div>
-                
-                {!selectedExchanger && (
-                  <>
-                    <div className="space-y-2">
-                      <Label className="text-slate-500 text-xs uppercase tracking-wider">Email (Login) *</Label>
-                      <Input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
-                        placeholder="vendor@example.com"
-                        data-testid="vendor-email"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-slate-500 text-xs uppercase tracking-wider">Password *</Label>
-                      <Input
-                        type="password"
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
-                        placeholder="Min 6 characters"
-                        data-testid="vendor-password"
-                        required
-                      />
-                    </div>
-                  </>
-                )}
-                
-                <div className="space-y-3">
-                  <p className="text-slate-500 text-xs uppercase tracking-wider font-semibold">Commission Rates (%)</p>
-                  <div className="grid grid-cols-3 gap-2 items-center">
-                    <div></div>
-                    <Label className="text-center text-xs text-blue-600 uppercase">Bank</Label>
-                    <Label className="text-center text-xs text-amber-600 uppercase">Cash</Label>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 items-center">
-                    <Label className="text-slate-500 text-xs uppercase">Money In</Label>
-                    <Input type="number" step="0.01" value={formData.deposit_commission} onChange={(e) => setFormData({ ...formData, deposit_commission: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 font-mono" placeholder="0" data-testid="vendor-deposit-commission" />
-                    <Input type="number" step="0.01" value={formData.deposit_commission_cash} onChange={(e) => setFormData({ ...formData, deposit_commission_cash: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 font-mono" placeholder="0" data-testid="vendor-deposit-commission-cash" />
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 items-center">
-                    <Label className="text-slate-500 text-xs uppercase">Money Out</Label>
-                    <Input type="number" step="0.01" value={formData.withdrawal_commission} onChange={(e) => setFormData({ ...formData, withdrawal_commission: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 font-mono" placeholder="0" data-testid="vendor-withdrawal-commission" />
-                    <Input type="number" step="0.01" value={formData.withdrawal_commission_cash} onChange={(e) => setFormData({ ...formData, withdrawal_commission_cash: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 font-mono" placeholder="0" data-testid="vendor-withdrawal-commission-cash" />
-                  </div>
-                </div>
-                
-                {selectedExchanger && (
-                  <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Status</Label>
-                    <Select
-                      value={formData.status}
-                      onValueChange={(value) => setFormData({ ...formData, status: value })}
-                    >
-                      <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="vendor-status">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200">
-                        <SelectItem value="active" className="text-slate-800 hover:bg-slate-100">Active</SelectItem>
-                        <SelectItem value="inactive" className="text-slate-800 hover:bg-slate-100">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                
-                <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Description</Label>
-                  <Textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
-                    rows={2}
-                    data-testid="vendor-description"
-                  />
-                </div>
-                
-                <div className="flex justify-end gap-3 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => { setIsDialogOpen(false); resetForm(); }}
-                    className="border-slate-200 text-slate-500 hover:bg-slate-100"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={submitting}
-                    className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
-                    data-testid="save-vendor-btn"
-                  >
-                    {submitting ? (
-                      <><div className="w-4 h-4 border-2 border-[#0B0C10] border-t-transparent rounded-full animate-spin mr-2" />Saving...</>
-                    ) : (
-                      selectedExchanger ? 'Update' : 'Create'
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        )}
-      </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-white border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total Exchangers</p>
-                <p className="text-3xl font-bold font-mono text-slate-800">{vendors.length}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-sm">
-                <Store className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-white border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Net Settlement</p>
-                <p className="text-3xl font-bold font-mono text-blue-600">${totalPendingAmount.toLocaleString()}</p>
-              </div>
-              <div className="p-3 bg-yellow-500/10 rounded-sm">
-                <DollarSign className="w-6 h-6 text-yellow-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-white border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Active Exchangers</p>
-                <p className="text-3xl font-bold font-mono text-slate-800">{vendors.filter(v => v.status === 'active').length}</p>
-              </div>
-              <div className="p-3 bg-green-500/10 rounded-sm">
-                <CheckCircle2 className="w-6 h-6 text-green-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            type="text"
-            placeholder="Search exchangers..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="pl-10 bg-white border-slate-200"
-            data-testid="vendor-search"
-          />
-        </div>
-        <div className="text-sm text-slate-500">
-          Showing {vendors.length} of {totalItems} exchangers
-        </div>
-      </div>
-
-      {/* Exchangers Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {loading ? (
-          <div className="col-span-full flex justify-center py-12">
-            <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
+        {/* Exchanger Info */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-sm">
+          <div>
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money In (Bank)</p>
+            <p className="text-xl font-mono text-slate-800">{viewExchanger.deposit_commission || 0}%</p>
           </div>
-        ) : vendors.length === 0 ? (
-          <div className="col-span-full text-center py-12">
-            <Store className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-            <p className="text-slate-500">No vendors found</p>
-            {isAccountantOrAdmin && <p className="text-sm text-slate-500/60 mt-2">Click "Add Exchanger" to create one</p>}
+          <div>
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money In (Cash)</p>
+            <p className="text-xl font-mono text-amber-600">{viewExchanger.deposit_commission_cash || 0}%</p>
           </div>
-        ) : (
-          vendors.map((vendor) => (
-            <Card 
-              key={vendor.vendor_id} 
-              className="bg-white border-slate-200 card-hover cursor-pointer"
-              onClick={() => openExchangerView(vendor)}
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-sm">
-                      <Store className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg text-slate-800">{vendor.vendor_name}</CardTitle>
-                      <p className="text-xs text-slate-500">{vendor.email}</p>
-                    </div>
-                  </div>
-                  {isAccountantOrAdmin && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" data-testid={`vendor-actions-${vendor.vendor_id}`}>
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white border-slate-200">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openExchangerView(vendor); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
-                          <Eye className="w-4 h-4 mr-2" /> View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(vendor); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
-                          <Edit className="w-4 h-4 mr-2" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(vendor.vendor_id); }} className="text-red-600 hover:bg-red-50 cursor-pointer">
-                          <Trash2 className="w-4 h-4 mr-2" /> Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="grid grid-cols-3 gap-1 text-xs">
-                    <div></div>
-                    <span className="text-center text-blue-600 font-semibold">Bank</span>
-                    <span className="text-center text-amber-600 font-semibold">Cash</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-1 items-center">
-                    <span className="text-slate-500 text-sm flex items-center gap-1">
-                      <ArrowDownRight className="w-3 h-3 text-green-400" /> In
-                    </span>
-                    <span className="text-slate-800 font-mono text-center">{vendor.deposit_commission || 0}%</span>
-                    <span className="text-slate-800 font-mono text-center">{vendor.deposit_commission_cash || 0}%</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-1 items-center">
-                    <span className="text-slate-500 text-sm flex items-center gap-1">
-                      <ArrowUpRight className="w-3 h-3 text-red-400" /> Out
-                    </span>
-                    <span className="text-slate-800 font-mono text-center">{vendor.withdrawal_commission || 0}%</span>
-                    <span className="text-slate-800 font-mono text-center">{vendor.withdrawal_commission_cash || 0}%</span>
-                  </div>
-                  <div className="pt-2 border-t border-slate-200">
-                    <span className="text-slate-500 text-xs uppercase tracking-wider">Net Settlement</span>
-                    {vendor.settlement_by_currency && vendor.settlement_by_currency.length > 0 ? (
-                      <div className="mt-1 space-y-1">
-                        {vendor.settlement_by_currency.map((item, idx) => (
-                          <div key={idx} className="flex justify-between items-center">
-                            <Badge className={`text-xs ${
-                              item.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
-                              item.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
-                              item.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
-                              item.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
-                              item.currency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
-                              'bg-gray-500/20 text-gray-400'
-                            }`}>
-                              {item.currency}
-                            </Badge>
-                            <span className="text-blue-600 font-mono">
-                              {item.amount?.toLocaleString()}
-                              {item.currency !== 'USD' && (
-                                <span className="text-slate-500 text-xs ml-1">(${item.usd_equivalent?.toLocaleString()})</span>
-                              )}
-                            </span>
-                          </div>
-                        ))}
-                        <div className="flex justify-between items-center pt-1 border-t border-slate-200">
-                          <span className="text-slate-500 text-xs">Total USD</span>
-                          <span className="text-blue-600 font-mono font-bold">${(vendor.pending_amount || 0).toLocaleString()}</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-slate-500 text-sm mt-1">No pending settlement</p>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-                    <span className="text-slate-500 text-sm">Status</span>
-                    {getStatusBadge(vendor.status)}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center mt-6">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
-                  className={`cursor-pointer ${currentPage === 1 ? 'pointer-events-none opacity-50' : ''}`}
-                />
-              </PaginationItem>
-              
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum;
-                if (totalPages <= 5) {
-                  pageNum = i + 1;
-                } else if (currentPage <= 3) {
-                  pageNum = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i;
-                } else {
-                  pageNum = currentPage - 2 + i;
-                }
-                return (
-                  <PaginationItem key={pageNum}>
-                    <PaginationLink
-                      onClick={() => setCurrentPage(pageNum)}
-                      isActive={currentPage === pageNum}
-                      className="cursor-pointer"
-                    >
-                      {pageNum}
-                    </PaginationLink>
-                  </PaginationItem>
-                );
-              })}
-              
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
-                  className={`cursor-pointer ${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}`}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+          <div>
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money Out (Bank)</p>
+            <p className="text-xl font-mono text-slate-800">{viewExchanger.withdrawal_commission || 0}%</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money Out (Cash)</p>
+            <p className="text-xl font-mono text-amber-600">{viewExchanger.withdrawal_commission_cash || 0}%</p>
+          </div>
         </div>
-      )}
-
-      {/* View Exchanger Details Dialog */}
-      {/* Exchanger Detail - Full Page View */}
-      {viewExchanger && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex" data-testid="exchanger-detail-overlay">
-          <div className="flex-1 bg-white overflow-hidden flex flex-col ml-0 lg:ml-[200px]" data-testid="exchanger-detail-panel">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white shrink-0">
-              <div className="flex items-center gap-3">
-                <Store className="w-6 h-6 text-blue-600" />
-                <h2 className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
-                  {viewExchanger?.vendor_name}
-                </h2>
-                {detailLoading && <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />}
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => { setViewExchanger(null); setPendingTransactions([]); setSettlements([]); }} className="text-slate-400 hover:text-slate-800 h-8 w-8 p-0" data-testid="close-exchanger-detail">
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-            <div className="space-y-4 max-w-[1400px]">
-              {detailLoading && (
-                <div className="flex items-center justify-center py-8">
-                  <RefreshCw className="w-6 h-6 animate-spin text-blue-500 mr-2" />
-                  <span className="text-slate-500">Loading exchanger data...</span>
-                </div>
-              )}
-              {/* Exchanger Info */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-sm">
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money In (Bank)</p>
-                  <p className="text-xl font-mono text-slate-800">{viewExchanger.deposit_commission || 0}%</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money In (Cash)</p>
-                  <p className="text-xl font-mono text-amber-600">{viewExchanger.deposit_commission_cash || 0}%</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money Out (Bank)</p>
-                  <p className="text-xl font-mono text-slate-800">{viewExchanger.withdrawal_commission || 0}%</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money Out (Cash)</p>
-                  <p className="text-xl font-mono text-amber-600">{viewExchanger.withdrawal_commission_cash || 0}%</p>
-                </div>
-              </div>
-              
-              {/* Settlement Balance by Currency */}
               <div className="p-4 bg-slate-50 rounded-sm border-l-4 border-l-[#66FCF1]">
                 <p className="text-xs text-blue-600 uppercase tracking-wider mb-3">Settlement Balance (Money In - Money Out - Commission)</p>
                 {viewExchanger.settlement_by_currency && viewExchanger.settlement_by_currency.length > 0 ? (
@@ -1343,10 +957,381 @@ export default function Exchangers() {
                 </TabsContent>
               </Tabs>
             </div>
+    ) : (
+    <div className="space-y-6 animate-fade-in" data-testid="vendors-page">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
+            Exchangers
+          </h1>
+          <p className="text-slate-500">Manage exchangers, commissions, and settlements</p>
+        </div>
+        {isAccountantOrAdmin && (
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
+                data-testid="add-vendor-btn"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Exchanger
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+                  {selectedExchanger ? 'Edit Exchanger' : 'Add New Exchanger'}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Exchanger Name *</Label>
+                  <Input
+                    value={formData.vendor_name}
+                    onChange={(e) => setFormData({ ...formData, vendor_name: e.target.value })}
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                    placeholder="e.g., MoneyExchange Pro"
+                    data-testid="vendor-name"
+                    required
+                  />
+                </div>
+                
+                {!selectedExchanger && (
+                  <>
+                    <div className="space-y-2">
+                      <Label className="text-slate-500 text-xs uppercase tracking-wider">Email (Login) *</Label>
+                      <Input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                        placeholder="vendor@example.com"
+                        data-testid="vendor-email"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-slate-500 text-xs uppercase tracking-wider">Password *</Label>
+                      <Input
+                        type="password"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                        placeholder="Min 6 characters"
+                        data-testid="vendor-password"
+                        required
+                      />
+                    </div>
+                  </>
+                )}
+                
+                <div className="space-y-3">
+                  <p className="text-slate-500 text-xs uppercase tracking-wider font-semibold">Commission Rates (%)</p>
+                  <div className="grid grid-cols-3 gap-2 items-center">
+                    <div></div>
+                    <Label className="text-center text-xs text-blue-600 uppercase">Bank</Label>
+                    <Label className="text-center text-xs text-amber-600 uppercase">Cash</Label>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 items-center">
+                    <Label className="text-slate-500 text-xs uppercase">Money In</Label>
+                    <Input type="number" step="0.01" value={formData.deposit_commission} onChange={(e) => setFormData({ ...formData, deposit_commission: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 font-mono" placeholder="0" data-testid="vendor-deposit-commission" />
+                    <Input type="number" step="0.01" value={formData.deposit_commission_cash} onChange={(e) => setFormData({ ...formData, deposit_commission_cash: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 font-mono" placeholder="0" data-testid="vendor-deposit-commission-cash" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 items-center">
+                    <Label className="text-slate-500 text-xs uppercase">Money Out</Label>
+                    <Input type="number" step="0.01" value={formData.withdrawal_commission} onChange={(e) => setFormData({ ...formData, withdrawal_commission: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 font-mono" placeholder="0" data-testid="vendor-withdrawal-commission" />
+                    <Input type="number" step="0.01" value={formData.withdrawal_commission_cash} onChange={(e) => setFormData({ ...formData, withdrawal_commission_cash: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 font-mono" placeholder="0" data-testid="vendor-withdrawal-commission-cash" />
+                  </div>
+                </div>
+                
+                {selectedExchanger && (
+                  <div className="space-y-2">
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Status</Label>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(value) => setFormData({ ...formData, status: value })}
+                    >
+                      <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="vendor-status">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-slate-200">
+                        <SelectItem value="active" className="text-slate-800 hover:bg-slate-100">Active</SelectItem>
+                        <SelectItem value="inactive" className="text-slate-800 hover:bg-slate-100">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Description</Label>
+                  <Textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                    rows={2}
+                    data-testid="vendor-description"
+                  />
+                </div>
+                
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => { setIsDialogOpen(false); resetForm(); }}
+                    className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={submitting}
+                    className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
+                    data-testid="save-vendor-btn"
+                  >
+                    {submitting ? (
+                      <><div className="w-4 h-4 border-2 border-[#0B0C10] border-t-transparent rounded-full animate-spin mr-2" />Saving...</>
+                    ) : (
+                      selectedExchanger ? 'Update' : 'Create'
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-white border-slate-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total Exchangers</p>
+                <p className="text-3xl font-bold font-mono text-slate-800">{vendors.length}</p>
+              </div>
+              <div className="p-3 bg-blue-100 rounded-sm">
+                <Store className="w-6 h-6 text-blue-600" />
+              </div>
             </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-white border-slate-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Net Settlement</p>
+                <p className="text-3xl font-bold font-mono text-blue-600">${totalPendingAmount.toLocaleString()}</p>
+              </div>
+              <div className="p-3 bg-yellow-500/10 rounded-sm">
+                <DollarSign className="w-6 h-6 text-yellow-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-white border-slate-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Active Exchangers</p>
+                <p className="text-3xl font-bold font-mono text-slate-800">{vendors.filter(v => v.status === 'active').length}</p>
+              </div>
+              <div className="p-3 bg-green-500/10 rounded-sm">
+                <CheckCircle2 className="w-6 h-6 text-green-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            type="text"
+            placeholder="Search exchangers..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="pl-10 bg-white border-slate-200"
+            data-testid="vendor-search"
+          />
+        </div>
+        <div className="text-sm text-slate-500">
+          Showing {vendors.length} of {totalItems} exchangers
+        </div>
+      </div>
+
+      {/* Exchangers Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {loading ? (
+          <div className="col-span-full flex justify-center py-12">
+            <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
           </div>
+        ) : vendors.length === 0 ? (
+          <div className="col-span-full text-center py-12">
+            <Store className="w-12 h-12 text-slate-500 mx-auto mb-4" />
+            <p className="text-slate-500">No vendors found</p>
+            {isAccountantOrAdmin && <p className="text-sm text-slate-500/60 mt-2">Click "Add Exchanger" to create one</p>}
+          </div>
+        ) : (
+          vendors.map((vendor) => (
+            <Card 
+              key={vendor.vendor_id} 
+              className="bg-white border-slate-200 card-hover cursor-pointer"
+              onClick={() => openExchangerView(vendor)}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 rounded-sm">
+                      <Store className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg text-slate-800">{vendor.vendor_name}</CardTitle>
+                      <p className="text-xs text-slate-500">{vendor.email}</p>
+                    </div>
+                  </div>
+                  {isAccountantOrAdmin && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" data-testid={`vendor-actions-${vendor.vendor_id}`}>
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-white border-slate-200">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openExchangerView(vendor); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
+                          <Eye className="w-4 h-4 mr-2" /> View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(vendor); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
+                          <Edit className="w-4 h-4 mr-2" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(vendor.vendor_id); }} className="text-red-600 hover:bg-red-50 cursor-pointer">
+                          <Trash2 className="w-4 h-4 mr-2" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-3 gap-1 text-xs">
+                    <div></div>
+                    <span className="text-center text-blue-600 font-semibold">Bank</span>
+                    <span className="text-center text-amber-600 font-semibold">Cash</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 items-center">
+                    <span className="text-slate-500 text-sm flex items-center gap-1">
+                      <ArrowDownRight className="w-3 h-3 text-green-400" /> In
+                    </span>
+                    <span className="text-slate-800 font-mono text-center">{vendor.deposit_commission || 0}%</span>
+                    <span className="text-slate-800 font-mono text-center">{vendor.deposit_commission_cash || 0}%</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 items-center">
+                    <span className="text-slate-500 text-sm flex items-center gap-1">
+                      <ArrowUpRight className="w-3 h-3 text-red-400" /> Out
+                    </span>
+                    <span className="text-slate-800 font-mono text-center">{vendor.withdrawal_commission || 0}%</span>
+                    <span className="text-slate-800 font-mono text-center">{vendor.withdrawal_commission_cash || 0}%</span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-200">
+                    <span className="text-slate-500 text-xs uppercase tracking-wider">Net Settlement</span>
+                    {vendor.settlement_by_currency && vendor.settlement_by_currency.length > 0 ? (
+                      <div className="mt-1 space-y-1">
+                        {vendor.settlement_by_currency.map((item, idx) => (
+                          <div key={idx} className="flex justify-between items-center">
+                            <Badge className={`text-xs ${
+                              item.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
+                              item.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                              item.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
+                              item.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                              item.currency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
+                              'bg-gray-500/20 text-gray-400'
+                            }`}>
+                              {item.currency}
+                            </Badge>
+                            <span className="text-blue-600 font-mono">
+                              {item.amount?.toLocaleString()}
+                              {item.currency !== 'USD' && (
+                                <span className="text-slate-500 text-xs ml-1">(${item.usd_equivalent?.toLocaleString()})</span>
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between items-center pt-1 border-t border-slate-200">
+                          <span className="text-slate-500 text-xs">Total USD</span>
+                          <span className="text-blue-600 font-mono font-bold">${(vendor.pending_amount || 0).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-slate-500 text-sm mt-1">No pending settlement</p>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                    <span className="text-slate-500 text-sm">Status</span>
+                    {getStatusBadge(vendor.status)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-6">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+                  className={`cursor-pointer ${currentPage === 1 ? 'pointer-events-none opacity-50' : ''}`}
+                />
+              </PaginationItem>
+              
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+                return (
+                  <PaginationItem key={pageNum}>
+                    <PaginationLink
+                      onClick={() => setCurrentPage(pageNum)}
+                      isActive={currentPage === pageNum}
+                      className="cursor-pointer"
+                    >
+                      {pageNum}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+              
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+                  className={`cursor-pointer ${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}`}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
+    </div>
+    )}
 
       {/* Settle Exchanger Dialog */}
       <Dialog open={settleDialogOpen} onOpenChange={() => { 
@@ -1823,6 +1808,6 @@ export default function Exchangers() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
