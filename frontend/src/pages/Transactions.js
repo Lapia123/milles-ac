@@ -700,7 +700,7 @@ export default function Transactions() {
         const err = await res.json();
         toast.error(err.detail || 'Validation failed');
       }
-    } catch { toast.error('Failed to validate file'); }
+    } catch (e) { toast.error('Failed to validate file: ' + (e.message || 'Network error')); }
     finally { setBulkLoading(false); }
   };
 
@@ -2326,6 +2326,7 @@ export default function Transactions() {
                 </Button>
               </div>
               {bulkFile && <p className="text-xs text-slate-500">{bulkFile.name}</p>}
+              <p className="text-[10px] text-slate-400">Supported formats: .csv, .xlsx — Apple Numbers users: File &gt; Export To &gt; CSV</p>
             </div>
 
             {/* Step 3: Validation Results */}

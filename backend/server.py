@@ -6411,11 +6411,11 @@ async def bulk_validate_transactions(
         elif filename.endswith('.csv'):
             df = pd.read_csv(io.BytesIO(content))
         else:
-            raise HTTPException(status_code=400, detail="Unsupported file format. Use CSV or Excel (.xlsx)")
+            raise HTTPException(status_code=400, detail=f"Unsupported file format '{filename.split('.')[-1]}'. Please save as CSV or Excel (.xlsx). If using Apple Numbers, go to File > Export To > CSV or Excel.")
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to parse file: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Failed to parse file: {str(e)}. Make sure the file is a valid CSV or Excel (.xlsx) file.")
     
     # Normalize column names
     col_map = {}
