@@ -11,15 +11,16 @@ Build a comprehensive back-office accounting software for FX brokerage "Miles Ca
 
 ## What's Been Implemented
 
-### Current Session (Mar 17-19, 2026)
-- **[FIX] Destination carried over from TX Request to Transaction:** Enriched psp_name, vendor_name, destination_account_name in auto-processing and manual processing. GET /api/transactions enriches missing names.
-- **[FIX] Treasury destination option added to Transaction Request forms**
-- **[FEATURE] Edit Transaction on Transactions Summary:** CRM Reference, Amount, Reference, Payment Currency, and Transaction Date editable on all pending transactions
-- **[FEATURE] Bank Receipt Date on Approval:** Optional field for actual payment date, used for treasury/reconciliation date matching
-- **[FIX] Reconciliation date matching:** Fixed date-only string not matching ISO datetime ranges; normalized all dates
-- **[FIX] Daily Report 4x emails:** Fixed scheduler duplicate execution with lock + dedup check
-- **[FEATURE] Exchangers full-page detail:** Converted from cramped modal to full-page view with back button
-- **[FEATURE] PSP Compound Settlement Date:** Added settlement_date field to batch settle dialog; treasury transactions and settlement records use this date for reconciliation matching
+### Current Session (Mar 17-21, 2026)
+- **[FIX] Destination carried over from TX Request to Transaction**
+- **[FIX] Treasury destination option in Transaction Request forms**
+- **[FEATURE] Edit Transaction on Transactions Summary:** CRM Ref, Amount, Reference, Payment Currency, Transaction Date
+- **[FEATURE] Bank Receipt Date on Approval:** Optional field for reconciliation date matching
+- **[FIX] Reconciliation date matching:** Fixed date-only string not matching ISO datetime ranges
+- **[FIX] Daily Report 4x emails:** Scheduler dedup with lock + 30-min check
+- **[FEATURE] Exchangers full-page detail view** with back button
+- **[FEATURE] PSP Compound Settlement Date** for reconciliation matching
+- **[FEATURE] Bulk Upload Transactions:** CSV + Excel support, template download, row-by-row validation with error preview, all-or-nothing import. Columns: Client Email, Type, Payment Currency, Amount, Exchange Rate, Destination Type, Destination, Transaction Date, Reference, CRM Reference, Description
 
 ## Pending Issues
 - P1: "Operation failed" generic toast during transaction creation

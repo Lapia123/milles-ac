@@ -6335,6 +6335,404 @@ async def get_transaction(transaction_id: str, user: dict = Depends(require_perm
         raise HTTPException(status_code=404, detail="Transaction not found")
     return transaction
 
+@api_router.get("/transactions/bulk-template")
+async def download_bulk_template(
+    format: str = "csv",
+    user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.CREATE))
+):
+    """Download a template for bulk transaction upload"""
+    import io
+    headers_list = [
+        "Client Email", "Type", "Payment Currency", "Amount", 
+        "Exchange Rate", "Destination Type", "Destination", 
+        "Transaction Date", "Reference", "CRM Reference", "Description"
+    ]
+    sample_rows = [
+        ["client@example.com", "deposit", "AED", "3700", "0.2723", "treasury", "test usd", "2026-03-01", "", "CRM001", "Client deposit"],
+        ["client@example.com", "withdrawal", "USD", "500", "", "bank", "", "2026-03-01", "", "", "Client withdrawal"],
+    ]
+    
+    if format == "xlsx":
+        import openpyxl
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Transactions"
+        ws.append(headers_list)
+        for row in sample_rows:
+            ws.append(row)
+        # Notes sheet
+        ns = wb.create_sheet("Notes")
+        ns.append(["Column", "Required", "Notes"])
+        ns.append(["Client Email", "Yes", "Must match an existing client email"])
+        ns.append(["Type", "Yes", "deposit or withdrawal"])
+        ns.append(["Payment Currency", "No", "USD if empty. e.g. AED, EUR, GBP, INR"])
+        ns.append(["Amount", "Yes", "Amount in Payment Currency"])
+        ns.append(["Exchange Rate", "No", "Required if currency != USD. Rate: 1 PaymentCurrency = ? USD"])
+        ns.append(["Destination Type", "Yes", "treasury, psp, vendor, bank, usdt"])
+        ns.append(["Destination", "No", "Name of treasury account, PSP, or exchanger. Required for treasury/psp/vendor"])
+        ns.append(["Transaction Date", "No", "YYYY-MM-DD format. Today if empty"])
+        ns.append(["Reference", "No", "Auto-generated if empty"])
+        ns.append(["CRM Reference", "No", "Optional CRM reference"])
+        ns.append(["Description", "No", "Optional description"])
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        from starlette.responses import StreamingResponse
+        return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                 headers={"Content-Disposition": "attachment; filename=bulk_transactions_template.xlsx"})
+    else:
+        buf = io.StringIO()
+        import csv as csv_mod
+        writer = csv_mod.writer(buf)
+        writer.writerow(headers_list)
+        for row in sample_rows:
+            writer.writerow(row)
+        buf.seek(0)
+        from starlette.responses import StreamingResponse
+        return StreamingResponse(io.BytesIO(buf.getvalue().encode()), media_type="text/csv",
+                                 headers={"Content-Disposition": "attachment; filename=bulk_transactions_template.csv"})
+
+
+@api_router.post("/transactions/bulk-validate")
+async def bulk_validate_transactions(
+    request: Request,
+    file: UploadFile = File(...),
+    user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.CREATE))
+):
+    """Parse and validate a bulk transaction upload file. Returns validation results without creating transactions."""
+    import pandas as pd
+    import io
+    
+    content = await file.read()
+    filename = file.filename.lower()
+    
+    try:
+        if filename.endswith('.xlsx') or filename.endswith('.xls'):
+            df = pd.read_excel(io.BytesIO(content), sheet_name=0)
+        elif filename.endswith('.csv'):
+            df = pd.read_csv(io.BytesIO(content))
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file format. Use CSV or Excel (.xlsx)")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to parse file: {str(e)}")
+    
+    # Normalize column names
+    col_map = {}
+    for col in df.columns:
+        cl = str(col).strip().lower().replace(' ', '_')
+        if 'client' in cl and ('email' in cl or 'id' in cl): col_map[col] = 'client_email'
+        elif cl in ['type', 'transaction_type']: col_map[col] = 'type'
+        elif 'payment' in cl and 'currency' in cl or cl == 'currency': col_map[col] = 'payment_currency'
+        elif cl in ['amount', 'amt']: col_map[col] = 'amount'
+        elif 'exchange' in cl and 'rate' in cl: col_map[col] = 'exchange_rate'
+        elif 'destination' in cl and 'type' in cl: col_map[col] = 'destination_type'
+        elif cl in ['destination', 'dest']: col_map[col] = 'destination'
+        elif 'transaction' in cl and 'date' in cl or cl == 'date': col_map[col] = 'transaction_date'
+        elif cl in ['reference', 'ref']: col_map[col] = 'reference'
+        elif 'crm' in cl: col_map[col] = 'crm_reference'
+        elif cl in ['description', 'desc', 'notes']: col_map[col] = 'description'
+    
+    df = df.rename(columns=col_map)
+    
+    # Build lookup caches
+    all_clients = await db.clients.find({}, {"_id": 0, "client_id": 1, "email": 1, "full_name": 1}).to_list(10000)
+    email_to_client = {c["email"].lower(): c for c in all_clients if c.get("email")}
+    
+    all_treasury = await db.treasury_accounts.find({}, {"_id": 0, "account_id": 1, "account_name": 1, "currency": 1}).to_list(1000)
+    treasury_name_map = {a["account_name"].lower(): a for a in all_treasury}
+    
+    all_psps = await db.psps.find({}, {"_id": 0, "psp_id": 1, "psp_name": 1}).to_list(1000)
+    psp_name_map = {p["psp_name"].lower(): p for p in all_psps}
+    
+    all_vendors = await db.vendors.find({}, {"_id": 0, "vendor_id": 1, "vendor_name": 1}).to_list(1000)
+    vendor_name_map = {v["vendor_name"].lower(): v for v in all_vendors}
+    
+    rows = []
+    has_errors = False
+    
+    for idx, row in df.iterrows():
+        errors = []
+        row_data = {}
+        
+        # Client validation
+        client_email = str(row.get('client_email', '')).strip().lower()
+        if not client_email or client_email == 'nan':
+            errors.append("Client Email is required")
+        elif client_email not in email_to_client:
+            errors.append(f"Client '{client_email}' not found")
+        else:
+            c = email_to_client[client_email]
+            row_data['client_id'] = c['client_id']
+            row_data['client_name'] = c.get('full_name', client_email)
+            row_data['client_email'] = client_email
+        
+        # Type validation
+        tx_type = str(row.get('type', '')).strip().lower()
+        if tx_type not in ['deposit', 'withdrawal']:
+            errors.append("Type must be 'deposit' or 'withdrawal'")
+        row_data['type'] = tx_type
+        
+        # Amount validation
+        try:
+            amount_raw = float(row.get('amount', 0))
+            if amount_raw <= 0:
+                errors.append("Amount must be positive")
+            row_data['amount_raw'] = amount_raw
+        except (ValueError, TypeError):
+            errors.append("Amount must be a valid number")
+            row_data['amount_raw'] = 0
+        
+        # Currency & exchange rate
+        currency = str(row.get('payment_currency', 'USD')).strip().upper()
+        if not currency or currency == 'NAN':
+            currency = 'USD'
+        row_data['payment_currency'] = currency
+        
+        exchange_rate = None
+        if currency != 'USD':
+            try:
+                er = row.get('exchange_rate')
+                if er is not None and str(er).strip() and str(er).strip().lower() != 'nan':
+                    exchange_rate = float(er)
+                    if exchange_rate <= 0:
+                        errors.append("Exchange Rate must be positive")
+                else:
+                    errors.append(f"Exchange Rate required for currency {currency}")
+            except (ValueError, TypeError):
+                errors.append("Exchange Rate must be a valid number")
+        row_data['exchange_rate'] = exchange_rate
+        
+        # Calculate USD amount
+        if currency == 'USD':
+            row_data['usd_amount'] = row_data['amount_raw']
+            row_data['base_amount'] = None
+        else:
+            row_data['base_amount'] = row_data['amount_raw']
+            row_data['usd_amount'] = round(row_data['amount_raw'] * (exchange_rate or 0), 2)
+        
+        # Destination type
+        dest_type = str(row.get('destination_type', '')).strip().lower()
+        if not dest_type or dest_type == 'nan':
+            errors.append("Destination Type is required")
+        elif dest_type not in ['treasury', 'psp', 'vendor', 'bank', 'usdt']:
+            errors.append(f"Invalid Destination Type '{dest_type}'. Must be: treasury, psp, vendor, bank, usdt")
+        row_data['destination_type'] = dest_type
+        
+        # Destination name resolution
+        dest_name = str(row.get('destination', '')).strip()
+        if dest_name.lower() == 'nan':
+            dest_name = ''
+        row_data['destination_name'] = dest_name
+        row_data['destination_id'] = None
+        row_data['psp_id'] = None
+        row_data['vendor_id'] = None
+        
+        if dest_type in ['treasury', 'usdt']:
+            if dest_name:
+                matched = treasury_name_map.get(dest_name.lower())
+                if matched:
+                    row_data['destination_id'] = matched['account_id']
+                    row_data['destination_resolved'] = matched['account_name']
+                else:
+                    errors.append(f"Treasury account '{dest_name}' not found")
+            else:
+                errors.append("Destination name required for treasury/usdt type")
+        elif dest_type == 'psp':
+            if dest_name:
+                matched = psp_name_map.get(dest_name.lower())
+                if matched:
+                    row_data['psp_id'] = matched['psp_id']
+                    row_data['destination_resolved'] = matched['psp_name']
+                else:
+                    errors.append(f"PSP '{dest_name}' not found")
+            else:
+                errors.append("Destination name required for PSP type")
+        elif dest_type == 'vendor':
+            if dest_name:
+                matched = vendor_name_map.get(dest_name.lower())
+                if matched:
+                    row_data['vendor_id'] = matched['vendor_id']
+                    row_data['destination_resolved'] = matched['vendor_name']
+                else:
+                    errors.append(f"Exchanger '{dest_name}' not found")
+            else:
+                errors.append("Destination name required for vendor/exchanger type")
+        
+        # Transaction date
+        tx_date = str(row.get('transaction_date', '')).strip()
+        if not tx_date or tx_date.lower() == 'nan' or tx_date.lower() == 'nat':
+            tx_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        else:
+            try:
+                parsed = datetime.strptime(tx_date[:10], "%Y-%m-%d")
+                tx_date = parsed.strftime("%Y-%m-%d")
+            except ValueError:
+                errors.append(f"Invalid date format '{tx_date}'. Use YYYY-MM-DD")
+                tx_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        row_data['transaction_date'] = tx_date
+        
+        # Reference
+        ref = str(row.get('reference', '')).strip()
+        if ref.lower() == 'nan':
+            ref = ''
+        row_data['reference'] = ref
+        
+        # CRM Reference
+        crm_ref = str(row.get('crm_reference', '')).strip()
+        if crm_ref.lower() == 'nan':
+            crm_ref = ''
+        row_data['crm_reference'] = crm_ref
+        
+        # Description
+        desc = str(row.get('description', '')).strip()
+        if desc.lower() == 'nan':
+            desc = ''
+        row_data['description'] = desc
+        
+        if errors:
+            has_errors = True
+        
+        rows.append({
+            "row_number": idx + 2,  # +2 for 1-indexed + header row
+            "errors": errors,
+            "valid": len(errors) == 0,
+            "data": row_data
+        })
+    
+    return {
+        "total_rows": len(rows),
+        "valid_rows": sum(1 for r in rows if r["valid"]),
+        "error_rows": sum(1 for r in rows if not r["valid"]),
+        "has_errors": has_errors,
+        "can_proceed": not has_errors and len(rows) > 0,
+        "rows": rows
+    }
+
+
+@api_router.post("/transactions/bulk-create")
+async def bulk_create_transactions(
+    request: Request,
+    body: dict = Body(...),
+    user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.CREATE))
+):
+    """Create transactions from validated bulk data"""
+    rows = body.get("rows", [])
+    if not rows:
+        raise HTTPException(status_code=400, detail="No rows to process")
+    
+    now = datetime.now(timezone.utc)
+    created = []
+    
+    # Lookup caches for enrichment
+    psp_cache = {}
+    vendor_cache = {}
+    treasury_cache = {}
+    
+    for row_item in rows:
+        data = row_item.get("data", {})
+        if not row_item.get("valid"):
+            continue
+        
+        tx_id = f"tx_{uuid.uuid4().hex[:12]}"
+        ref = data.get("reference") or f"REF{uuid.uuid4().hex[:8].upper()}"
+        tx_type = data["type"]
+        currency = data.get("payment_currency", "USD")
+        usd_amount = data.get("usd_amount", 0)
+        base_amount = data.get("base_amount")
+        exchange_rate = data.get("exchange_rate")
+        dest_type = data.get("destination_type", "bank")
+        
+        # Enrich PSP info
+        psp_name = None
+        psp_commission_rate = None
+        psp_commission_amount = None
+        psp_net_amount = usd_amount
+        if data.get("psp_id"):
+            if data["psp_id"] not in psp_cache:
+                psp_cache[data["psp_id"]] = await db.psps.find_one({"psp_id": data["psp_id"]}, {"_id": 0})
+            psp_info = psp_cache.get(data["psp_id"])
+            if psp_info:
+                psp_name = psp_info["psp_name"]
+                psp_commission_rate = psp_info.get("commission_rate", 0)
+                comm = psp_commission_rate / 100
+                psp_commission_amount = round(usd_amount * comm, 2)
+                psp_net_amount = usd_amount - psp_commission_amount
+        
+        # Enrich vendor info
+        vendor_name = None
+        v_comm_rate = 0
+        v_comm_amt = 0
+        if data.get("vendor_id"):
+            if data["vendor_id"] not in vendor_cache:
+                vendor_cache[data["vendor_id"]] = await db.vendors.find_one({"vendor_id": data["vendor_id"]}, {"_id": 0})
+            vendor_info = vendor_cache.get(data["vendor_id"])
+            if vendor_info:
+                vendor_name = vendor_info["vendor_name"]
+                v_comm_rate = vendor_info.get("deposit_commission" if tx_type == "deposit" else "withdrawal_commission", 0)
+                if v_comm_rate > 0:
+                    v_comm_amt = round(usd_amount * v_comm_rate / 100, 2)
+        
+        # Enrich treasury info
+        dest_account_name = None
+        if data.get("destination_id"):
+            if data["destination_id"] not in treasury_cache:
+                treasury_cache[data["destination_id"]] = await db.treasury_accounts.find_one({"account_id": data["destination_id"]}, {"_id": 0})
+            treasury_info = treasury_cache.get(data["destination_id"])
+            if treasury_info:
+                dest_account_name = treasury_info["account_name"]
+        
+        tx_doc = {
+            "transaction_id": tx_id,
+            "client_id": data["client_id"],
+            "client_name": data.get("client_name", ""),
+            "transaction_type": tx_type,
+            "amount": usd_amount,
+            "currency": "USD",
+            "base_currency": currency if currency != "USD" else None,
+            "base_amount": base_amount,
+            "exchange_rate": exchange_rate,
+            "destination_type": dest_type,
+            "destination_account_id": data.get("destination_id"),
+            "destination_account_name": dest_account_name,
+            "vendor_id": data.get("vendor_id"),
+            "vendor_name": vendor_name,
+            "psp_id": data.get("psp_id"),
+            "psp_name": psp_name,
+            "psp_commission_rate": psp_commission_rate,
+            "psp_commission_amount": psp_commission_amount,
+            "psp_net_amount": psp_net_amount if data.get("psp_id") else None,
+            "vendor_commission_rate": v_comm_rate if v_comm_rate > 0 else None,
+            "vendor_commission_amount": v_comm_amt if v_comm_amt > 0 else None,
+            "transaction_mode": "bank",
+            "status": TransactionStatus.PENDING,
+            "description": data.get("description", ""),
+            "reference": ref,
+            "crm_reference": data.get("crm_reference") or None,
+            "transaction_date": data.get("transaction_date") or now.strftime("%Y-%m-%d"),
+            "proof_image": None,
+            "created_by": user["user_id"],
+            "created_by_name": user["name"],
+            "processed_by": None,
+            "processed_by_name": None,
+            "rejection_reason": None,
+            "settled": False,
+            "settlement_id": None,
+            "settlement_status": None,
+            "request_id": None,
+            "bulk_upload": True,
+            "created_at": now.isoformat(),
+            "processed_at": None
+        }
+        await db.transactions.insert_one(tx_doc)
+        created.append({"transaction_id": tx_id, "reference": ref, "client_name": data.get("client_name"), "amount": usd_amount})
+    
+    await log_activity(request, user, "create", "transactions", f"Bulk created {len(created)} transactions")
+    
+    return {"created": len(created), "transactions": created}
+
+
 @api_router.post("/transactions")
 async def create_transaction(
 

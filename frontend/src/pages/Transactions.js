@@ -56,12 +56,14 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Upload,
+  FileUp,
   Image as ImageIcon,
   CreditCard,
   Store,
   Building2,
   Wallet,
   Check,
+  AlertTriangle,
   ChevronsUpDown,
   Download,
   FileSpreadsheet,
@@ -202,6 +204,11 @@ export default function Transactions() {
   const [fieldEditTx, setFieldEditTx] = useState(null);
   const [fieldEditForm, setFieldEditForm] = useState({ crm_reference: '', amount: '', reference: '', base_amount: '', base_currency: 'USD', exchange_rate: '', transaction_date: '' });
   const [fieldEditSaving, setFieldEditSaving] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkFile, setBulkFile] = useState(null);
+  const [bulkValidation, setBulkValidation] = useState(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkCreating, setBulkCreating] = useState(false);
   const [proofImage, setProofImage] = useState(null);
   const [proofPreview, setProofPreview] = useState(null);
   const [clientBankAccounts, setClientBankAccounts] = useState([]);
@@ -674,6 +681,64 @@ export default function Transactions() {
     finally { setFieldEditSaving(false); }
   };
 
+  // Bulk upload handlers
+  const handleBulkValidate = async () => {
+    if (!bulkFile) return;
+    setBulkLoading(true);
+    setBulkValidation(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', bulkFile);
+      const res = await fetch(`${API_URL}/api/transactions/bulk-validate`, {
+        method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }, body: fd
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBulkValidation(data);
+      } else {
+        const err = await res.json();
+        toast.error(err.detail || 'Validation failed');
+      }
+    } catch { toast.error('Failed to validate file'); }
+    finally { setBulkLoading(false); }
+  };
+
+  const handleBulkCreate = async () => {
+    if (!bulkValidation?.can_proceed) return;
+    setBulkCreating(true);
+    try {
+      const res = await fetch(`${API_URL}/api/transactions/bulk-create`, {
+        method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: bulkValidation.rows })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(`Successfully created ${data.created} transactions`);
+        setBulkOpen(false); setBulkFile(null); setBulkValidation(null);
+        fetchTransactions();
+      } else {
+        const err = await res.json();
+        toast.error(err.detail || 'Bulk creation failed');
+      }
+    } catch { toast.error('Failed to create transactions'); }
+    finally { setBulkCreating(false); }
+  };
+
+  const handleDownloadTemplate = async (format) => {
+    try {
+      const res = await fetch(`${API_URL}/api/transactions/bulk-template?format=${format}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url;
+        a.download = `bulk_transactions_template.${format}`; a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch { toast.error('Failed to download template'); }
+  };
+
   const filteredTransactions = transactions.filter(tx => {
     const clientName = (tx.client_name || getClientName(tx.client_id)).toLowerCase();
     const ref = (tx.reference || '').toLowerCase();
@@ -888,6 +953,15 @@ export default function Transactions() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          
+          <Button
+            onClick={() => { setBulkOpen(true); setBulkFile(null); setBulkValidation(null); }}
+            className="bg-blue-600 text-white hover:bg-blue-700 font-bold uppercase tracking-wider rounded-sm"
+            data-testid="bulk-upload-btn"
+          >
+            <FileUp className="w-4 h-4 mr-2" />
+            Bulk Upload
+          </Button>
           
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
@@ -2208,6 +2282,107 @@ export default function Transactions() {
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Upload Dialog */}
+      <Dialog open={bulkOpen} onOpenChange={(open) => { setBulkOpen(open); if (!open) { setBulkFile(null); setBulkValidation(null); } }}>
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+              Bulk Upload Transactions
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 overflow-y-auto flex-1 pr-1">
+            {/* Step 1: Download Template */}
+            <div className="p-4 bg-blue-50 rounded border border-blue-200 space-y-2">
+              <p className="text-sm font-bold text-blue-700 uppercase">Step 1: Download Template</p>
+              <p className="text-xs text-blue-600">Download the template, fill in your transactions, then upload.</p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => handleDownloadTemplate('csv')} className="text-blue-700 border-blue-300" data-testid="download-csv-template">
+                  <Download className="w-3 h-3 mr-1" /> CSV Template
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleDownloadTemplate('xlsx')} className="text-blue-700 border-blue-300" data-testid="download-xlsx-template">
+                  <Download className="w-3 h-3 mr-1" /> Excel Template
+                </Button>
+              </div>
+            </div>
+
+            {/* Step 2: Upload File */}
+            <div className="p-4 bg-slate-50 rounded border space-y-2">
+              <p className="text-sm font-bold text-slate-700 uppercase">Step 2: Upload File</p>
+              <div className="flex gap-2 items-center">
+                <Input
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  onChange={e => { setBulkFile(e.target.files[0]); setBulkValidation(null); }}
+                  className="flex-1"
+                  data-testid="bulk-file-input"
+                />
+                <Button onClick={handleBulkValidate} disabled={!bulkFile || bulkLoading} className="bg-slate-800 text-white hover:bg-slate-700" data-testid="bulk-validate-btn">
+                  {bulkLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Validate'}
+                </Button>
+              </div>
+              {bulkFile && <p className="text-xs text-slate-500">{bulkFile.name}</p>}
+            </div>
+
+            {/* Step 3: Validation Results */}
+            {bulkValidation && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-4 p-3 rounded border bg-slate-50">
+                  <div className="text-sm"><span className="font-bold">{bulkValidation.total_rows}</span> total rows</div>
+                  <div className="text-sm text-green-600"><span className="font-bold">{bulkValidation.valid_rows}</span> valid</div>
+                  {bulkValidation.error_rows > 0 && <div className="text-sm text-red-600"><span className="font-bold">{bulkValidation.error_rows}</span> errors</div>}
+                  {bulkValidation.can_proceed && <Badge className="bg-green-100 text-green-700 ml-auto">Ready to Import</Badge>}
+                  {bulkValidation.has_errors && <Badge className="bg-red-100 text-red-700 ml-auto">Fix Errors First</Badge>}
+                </div>
+
+                {/* Preview Table */}
+                <div className="border rounded overflow-auto max-h-[300px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-100">
+                        <TableHead className="text-xs w-12">Row</TableHead>
+                        <TableHead className="text-xs">Status</TableHead>
+                        <TableHead className="text-xs">Client</TableHead>
+                        <TableHead className="text-xs">Type</TableHead>
+                        <TableHead className="text-xs">Amount</TableHead>
+                        <TableHead className="text-xs">Currency</TableHead>
+                        <TableHead className="text-xs">USD</TableHead>
+                        <TableHead className="text-xs">Destination</TableHead>
+                        <TableHead className="text-xs">Date</TableHead>
+                        <TableHead className="text-xs">Errors</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {bulkValidation.rows.map((r, i) => (
+                        <TableRow key={i} className={r.valid ? 'bg-white' : 'bg-red-50'}>
+                          <TableCell className="text-xs font-mono">{r.row_number}</TableCell>
+                          <TableCell>{r.valid ? <Check className="w-4 h-4 text-green-500" /> : <AlertTriangle className="w-4 h-4 text-red-500" />}</TableCell>
+                          <TableCell className="text-xs">{r.data.client_email || '-'}</TableCell>
+                          <TableCell className="text-xs"><Badge variant="outline" className={r.data.type === 'deposit' ? 'border-green-300 text-green-700' : 'border-red-300 text-red-700'}>{r.data.type || '-'}</Badge></TableCell>
+                          <TableCell className="text-xs font-mono">{r.data.amount_raw || '-'}</TableCell>
+                          <TableCell className="text-xs">{r.data.payment_currency || '-'}</TableCell>
+                          <TableCell className="text-xs font-mono">${r.data.usd_amount?.toLocaleString() || '-'}</TableCell>
+                          <TableCell className="text-xs">{r.data.destination_resolved || r.data.destination_name || r.data.destination_type || '-'}</TableCell>
+                          <TableCell className="text-xs">{r.data.transaction_date || '-'}</TableCell>
+                          <TableCell className="text-xs text-red-600">{r.errors?.join('; ') || ''}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Import Button */}
+                {bulkValidation.can_proceed && (
+                  <Button onClick={handleBulkCreate} disabled={bulkCreating} className="w-full bg-green-600 text-white hover:bg-green-700 font-bold" data-testid="bulk-create-btn">
+                    {bulkCreating ? 'Creating...' : `Import ${bulkValidation.valid_rows} Transactions`}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
