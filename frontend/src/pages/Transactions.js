@@ -57,6 +57,7 @@ import {
   ArrowDownRight,
   Upload,
   FileUp,
+  RefreshCw,
   Image as ImageIcon,
   CreditCard,
   Store,
