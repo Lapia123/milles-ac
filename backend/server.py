@@ -6328,13 +6328,6 @@ async def get_transaction_form_data(user: dict = Depends(require_permission(Modu
         "vendors": vendors,
     }
 
-@api_router.get("/transactions/{transaction_id}")
-async def get_transaction(transaction_id: str, user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.VIEW))):
-    transaction = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
-    if not transaction:
-        raise HTTPException(status_code=404, detail="Transaction not found")
-    return transaction
-
 @api_router.get("/transactions/bulk-template")
 async def download_bulk_template(
     format: str = "csv",
@@ -6360,7 +6353,6 @@ async def download_bulk_template(
         ws.append(headers_list)
         for row in sample_rows:
             ws.append(row)
-        # Notes sheet
         ns = wb.create_sheet("Notes")
         ns.append(["Column", "Required", "Notes"])
         ns.append(["Client Email", "Yes", "Must match an existing client email"])
@@ -6391,6 +6383,13 @@ async def download_bulk_template(
         from starlette.responses import StreamingResponse
         return StreamingResponse(io.BytesIO(buf.getvalue().encode()), media_type="text/csv",
                                  headers={"Content-Disposition": "attachment; filename=bulk_transactions_template.csv"})
+
+@api_router.get("/transactions/{transaction_id}")
+async def get_transaction(transaction_id: str, user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.VIEW))):
+    transaction = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    return transaction
 
 
 @api_router.post("/transactions/bulk-validate")
