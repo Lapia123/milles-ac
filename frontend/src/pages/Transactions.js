@@ -524,11 +524,20 @@ export default function Transactions() {
         resetForm();
         fetchTransactions();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Operation failed');
+        let errorMsg = `Server error (${response.status})`;
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.detail || errorMsg;
+        } catch {
+          const text = await response.text();
+          if (text) errorMsg = text.substring(0, 200);
+        }
+        console.error('Transaction creation failed:', response.status, errorMsg);
+        toast.error(errorMsg);
       }
     } catch (error) {
-      toast.error('Operation failed');
+      console.error('Transaction creation error:', error);
+      toast.error(error.message || 'Network error - please check your connection');
     } finally {
       setSubmitting(false);
     }

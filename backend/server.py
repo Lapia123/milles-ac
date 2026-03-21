@@ -812,7 +812,7 @@ def convert_currency(amount: float, from_currency: str, to_currency: str) -> flo
     if from_currency.upper() == to_currency.upper():
         return amount
     usd_amount = convert_to_usd(amount, from_currency)
-    return convert_from_usd(usd_amount, to_currency)
+    return round(convert_from_usd(usd_amount, to_currency), 2)
 
 class TreasuryAccountCreate(BaseModel):
     account_name: str
@@ -6769,8 +6769,49 @@ async def create_transaction(
     proof_image: Optional[UploadFile] = File(None),
     user: dict = Depends(require_permission(Modules.TRANSACTIONS, Actions.CREATE))
 ):
+    try:
+        return await _create_transaction_impl(
+            request, client_id, transaction_type, amount, currency, base_currency,
+            base_amount, exchange_rate, destination_type, destination_account_id,
+            psp_id, vendor_id, commission_paid_by, description, reference,
+            client_bank_name, client_bank_account_name, client_bank_account_number,
+            client_bank_swift_iban, client_bank_currency, save_bank_to_client,
+            client_usdt_address, client_usdt_network, transaction_mode,
+            collecting_person_name, collecting_person_number, crm_reference,
+            transaction_date, proof_image, user
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Transaction creation failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Transaction creation failed: {str(e)}")
+
+async def _create_transaction_impl(
+    request, client_id, transaction_type, amount, currency, base_currency,
+    base_amount, exchange_rate, destination_type, destination_account_id,
+    psp_id, vendor_id, commission_paid_by, description, reference,
+    client_bank_name, client_bank_account_name, client_bank_account_number,
+    client_bank_swift_iban, client_bank_currency, save_bank_to_client,
+    client_usdt_address, client_usdt_network, transaction_mode,
+    collecting_person_name, collecting_person_number, crm_reference,
+    transaction_date, proof_image, user
+):
     now = datetime.now(timezone.utc)
     
+    # ===== INPUT VALIDATION =====
+    if not client_id or not client_id.strip():
+        raise HTTPException(status_code=400, detail="Client is required")
+    if not transaction_type or transaction_type not in ["deposit", "withdrawal"]:
+        raise HTTPException(status_code=400, detail="Invalid transaction type")
+    if not amount or amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be greater than 0")
+    if destination_type == "psp" and not psp_id:
+        raise HTTPException(status_code=400, detail="PSP selection is required for PSP destination")
+    if destination_type == "vendor" and not vendor_id:
+        raise HTTPException(status_code=400, detail="Exchanger selection is required for vendor destination")
+    if destination_type in ["treasury", "usdt"] and not destination_account_id:
+        raise HTTPException(status_code=400, detail="Account selection is required for treasury/USDT destination")
+
     # ===== DUPLICATE DETECTION =====
     # Check 1: If reference is provided, ensure it's unique
     if reference:
@@ -16723,6 +16764,55 @@ async def startup_db_indexes():
         # Index for roles
         await db.roles.create_index("role_id", unique=True, sparse=True)
         await db.roles.create_index("name", unique=True, sparse=True)
+        
+        # CRITICAL: transaction_id index (used in 20+ find_one calls)
+        try:
+            await db.transactions.create_index("transaction_id", unique=True)
+        except Exception:
+            # Index may already exist without unique constraint
+            pass
+        await db.transactions.create_index("psp_id", sparse=True)
+        await db.transactions.create_index("crm_reference", sparse=True)
+        
+        # PSP indexes
+        await db.psps.create_index("psp_id", unique=True, sparse=True)
+        await db.psps.create_index([("status", 1)])
+        
+        # PSP settlements
+        await db.psp_settlements.create_index([("psp_id", 1), ("created_at", -1)])
+        await db.psp_settlements.create_index([("status", 1)])
+        
+        # Treasury accounts
+        await db.treasury_accounts.create_index("account_id", unique=True, sparse=True)
+        await db.treasury_accounts.create_index([("status", 1)])
+        
+        # Users
+        await db.users.create_index("user_id", unique=True, sparse=True)
+        await db.users.create_index("email", unique=True, sparse=True)
+        
+        # Transaction requests
+        await db.transaction_requests.create_index([("status", 1), ("created_at", -1)])
+        await db.transaction_requests.create_index("request_id", unique=True, sparse=True)
+        
+        # Reconciliation
+        await db.reconciliations.create_index([("date", -1), ("account_type", 1), ("account_id", 1)])
+        await db.reconciliations.create_index("recon_id", unique=True, sparse=True)
+        await db.reconciliations.create_index([("status", 1), ("created_at", -1)])
+        
+        # Activity log
+        await db.activity_log.create_index([("created_at", -1)])
+        await db.activity_log.create_index([("user_id", 1), ("created_at", -1)])
+        
+        # Client bank accounts
+        await db.client_bank_accounts.create_index([("client_id", 1)])
+        
+        # Loan transactions
+        await db.loan_transactions.create_index("transaction_id", unique=True, sparse=True)
+        await db.loan_transactions.create_index([("vendor_id", 1), ("status", 1)])
+        
+        # App settings
+        await db.app_settings.create_index("setting_type", unique=True, sparse=True)
+        
         logger.info("Database indexes created/verified successfully")
     except Exception as e:
         logger.warning(f"Index creation warning (may already exist): {e}")
