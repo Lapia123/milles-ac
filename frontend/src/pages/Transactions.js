@@ -785,20 +785,28 @@ export default function Transactions() {
   };
 
   // Download functions
+  const getDestinationDisplay = (tx) => {
+    if (tx.destination_type === 'treasury' || tx.destination_type === 'usdt') return tx.destination_account_name || tx.destination_type?.toUpperCase();
+    if (tx.destination_type === 'psp') return tx.psp_name || 'PSP';
+    if (tx.destination_type === 'vendor') return tx.vendor_name || 'Exchanger';
+    if (tx.destination_type === 'bank') return tx.client_bank_name || 'Bank Transfer';
+    return tx.destination_type || '-';
+  };
+
   const downloadCSV = () => {
-    const headers = ['Date', 'Client', 'Type', 'Amount', 'Currency', 'USD Equivalent', 'Status', 'Destination', 'Reference', 'Description'];
+    const headers = ['Date', 'Client', 'Type', 'Payment Currency', 'Amount', 'Exchange Rate', 'USD Amount', 'Status', 'Destination', 'Reference', 'CRM Reference', 'Description'];
     const rows = filteredTransactions.map(tx => [
       formatDate(tx.transaction_date || tx.created_at),
       tx.client_name || getClientName(tx.client_id),
       tx.transaction_type,
+      tx.base_currency || tx.currency || 'USD',
+      tx.base_amount || tx.amount,
+      tx.exchange_rate || (tx.base_currency && tx.base_currency !== 'USD' ? '' : '1'),
       tx.amount,
-      tx.currency,
-      tx.amount_usd || tx.amount,
       tx.status,
-      tx.destination_type === 'treasury' ? tx.treasury_account_name : 
-        tx.destination_type === 'psp' ? tx.psp_name : 
-        tx.destination_type === 'vendor' ? tx.vendor_name : tx.destination_type,
+      getDestinationDisplay(tx),
       tx.reference || '',
+      tx.crm_reference || '',
       tx.description || ''
     ]);
     
@@ -818,19 +826,19 @@ export default function Transactions() {
 
   const downloadExcel = () => {
     // Create a simple Excel-compatible HTML table
-    const headers = ['Date', 'Client', 'Type', 'Amount', 'Currency', 'USD Equivalent', 'Status', 'Destination', 'Reference', 'Description'];
+    const headers = ['Date', 'Client', 'Type', 'Payment Currency', 'Amount', 'Exchange Rate', 'USD Amount', 'Status', 'Destination', 'Reference', 'CRM Reference', 'Description'];
     const rows = filteredTransactions.map(tx => [
       formatDate(tx.transaction_date || tx.created_at),
       tx.client_name || getClientName(tx.client_id),
       tx.transaction_type,
+      tx.base_currency || tx.currency || 'USD',
+      tx.base_amount || tx.amount,
+      tx.exchange_rate || (tx.base_currency && tx.base_currency !== 'USD' ? '' : '1'),
       tx.amount,
-      tx.currency,
-      tx.amount_usd || tx.amount,
       tx.status,
-      tx.destination_type === 'treasury' ? tx.treasury_account_name : 
-        tx.destination_type === 'psp' ? tx.psp_name : 
-        tx.destination_type === 'vendor' ? tx.vendor_name : tx.destination_type,
+      getDestinationDisplay(tx),
       tx.reference || '',
+      tx.crm_reference || '',
       tx.description || ''
     ]);
     
@@ -857,17 +865,16 @@ export default function Transactions() {
 
   const downloadPDF = () => {
     // Generate a printable HTML page
-    const headers = ['Date', 'Client', 'Type', 'Amount', 'Currency', 'Status', 'Destination'];
+    const headers = ['Date', 'Client', 'Type', 'Payment Currency', 'Amount', 'USD Amount', 'Status', 'Destination'];
     const rows = filteredTransactions.map(tx => [
       formatDate(tx.transaction_date || tx.created_at),
       tx.client_name || getClientName(tx.client_id),
       tx.transaction_type,
-      `${tx.amount} ${tx.currency}`,
-      tx.amount_usd ? `$${tx.amount_usd}` : '-',
+      tx.base_currency || tx.currency || 'USD',
+      tx.base_amount || tx.amount,
+      tx.amount,
       tx.status,
-      tx.destination_type === 'treasury' ? tx.treasury_account_name : 
-        tx.destination_type === 'psp' ? tx.psp_name : 
-        tx.destination_type === 'vendor' ? tx.vendor_name : tx.destination_type,
+      getDestinationDisplay(tx),
     ]);
     
     // Calculate summary

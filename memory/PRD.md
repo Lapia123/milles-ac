@@ -11,27 +11,32 @@ Build a comprehensive back-office accounting software for FX brokerage "Miles Ca
 
 ## What's Been Implemented
 
-### Current Session (Mar 17-21, 2026)
-- **[FIX] Destination carried over from TX Request to Transaction**
-- **[FIX] Treasury destination option in Transaction Request forms**
-- **[FEATURE] Edit Transaction on Transactions Summary:** CRM Ref, Amount, Reference, Payment Currency, Transaction Date
-- **[FEATURE] Bank Receipt Date on Approval:** Optional field for reconciliation date matching
-- **[FIX] Reconciliation date matching:** Fixed date-only string not matching ISO datetime ranges
-- **[FIX] Daily Report 4x emails:** Scheduler dedup with lock + 30-min check
-- **[FEATURE] Exchangers full-page detail view** with back button
-- **[FEATURE] PSP Compound Settlement Date** for reconciliation matching
-- **[FEATURE] Bulk Upload Transactions:** CSV + Excel support, template download, row-by-row validation with error preview, all-or-nothing import. Columns: Client Email, Type, Payment Currency, Amount, Exchange Rate, Destination Type, Destination, Transaction Date, Reference, CRM Reference, Description
+### Session Mar 22, 2026
+- **[FIX] Transaction Report Downloads:** Fixed destination showing "undefined" by using correct field `destination_account_name` instead of `treasury_account_name`. Added Payment Currency, Exchange Rate, CRM Reference columns to CSV/Excel/PDF exports.
+- **[FIX] "Operation failed" Toast (P1):** Improved error handling in transaction creation - backend now wraps create_transaction in try/except with descriptive error messages; frontend parses JSON errors and falls back to response text with status code.
+- **[FIX] Database Performance (P1):** Added ~20 comprehensive MongoDB indexes covering transaction_id, psp_id, crm_reference, psps, users, treasury_accounts, reconciliations, transaction_requests, activity_log, client_bank_accounts, loan_transactions, app_settings.
+- **[FIX] Reconciliation Eye Icon (P2):** Fixed stale closure in dialog onOpenChange handler.
+- **[FIX] Transaction Creation Validation:** Added backend input validation for empty client_id, missing vendor_id for vendor destinations, missing psp_id for PSP destinations, missing account_id for treasury/USDT, negative/zero amounts.
+
+### Session Mar 17-21, 2026
+- Destination carried over from TX Request to Transaction
+- Treasury destination option in Transaction Request forms
+- Edit Transaction on Transactions Summary (CRM Ref, Amount, Reference, Payment Currency, Transaction Date)
+- Bank Receipt Date on Approval
+- Reconciliation date matching fix
+- Daily Report 4x emails fix (APScheduler)
+- Exchangers full-page detail view
+- PSP Compound Settlement Date
+- Bulk Upload Transactions (CSV + Excel)
+- Currency Rounding Bug fix
 
 ## Pending Issues
-- P1: "Operation failed" generic toast during transaction creation
-- P1: Database performance issues
-- P2: Eye icon on Reconciliation history tab
 - P3: Session management redirect bug
-- P3: Withdrawal to Exchanger error
+- P3: Withdrawal to Exchanger error (validation improved but full flow untested)
 
 ## Upcoming Tasks
 - P1: Reconciliation backend logic (automated matching)
-- P2: Refactor backend/server.py into modular routers
+- P2: Refactor backend/server.py into modular routers (17K+ lines)
 - P2: Reconciliation "Final Approval" step
 - P3: Frontend pagination/client search refactor
 
