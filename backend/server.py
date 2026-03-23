@@ -6663,6 +6663,8 @@ async def bulk_create_transactions(
         vendor_name = None
         v_comm_rate = 0
         v_comm_amt = 0
+        v_comm_base_amt = 0
+        v_comm_base_currency = None
         if data.get("vendor_id"):
             if data["vendor_id"] not in vendor_cache:
                 vendor_cache[data["vendor_id"]] = await db.vendors.find_one({"vendor_id": data["vendor_id"]}, {"_id": 0})
@@ -6671,7 +6673,12 @@ async def bulk_create_transactions(
                 vendor_name = vendor_info["vendor_name"]
                 v_comm_rate = vendor_info.get("deposit_commission" if tx_type == "deposit" else "withdrawal_commission", 0)
                 if v_comm_rate > 0:
+                    # USD commission
                     v_comm_amt = round(usd_amount * v_comm_rate / 100, 2)
+                    # Base/payment currency commission
+                    v_base = base_amount if (currency and currency != "USD" and base_amount) else usd_amount
+                    v_comm_base_amt = round(v_base * v_comm_rate / 100, 2)
+                    v_comm_base_currency = currency if (currency and currency != "USD") else "USD"
         
         # Enrich treasury info
         dest_account_name = None
@@ -6704,6 +6711,10 @@ async def bulk_create_transactions(
             "psp_net_amount": psp_net_amount if data.get("psp_id") else None,
             "vendor_commission_rate": v_comm_rate if v_comm_rate > 0 else None,
             "vendor_commission_amount": v_comm_amt if v_comm_amt > 0 else None,
+            "vendor_commission_base_amount": v_comm_base_amt if v_comm_base_amt > 0 else None,
+            "vendor_commission_base_currency": v_comm_base_currency,
+            "vendor_deposit_commission": vendor_info.get("deposit_commission") if (data.get("vendor_id") and vendor_cache.get(data["vendor_id"]) and tx_type == "deposit") else None,
+            "vendor_withdrawal_commission": vendor_info.get("withdrawal_commission") if (data.get("vendor_id") and vendor_cache.get(data["vendor_id"]) and tx_type == "withdrawal") else None,
             "transaction_mode": "bank",
             "status": TransactionStatus.PENDING,
             "description": data.get("description", ""),

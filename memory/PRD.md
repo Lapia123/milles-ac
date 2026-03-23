@@ -12,16 +12,18 @@ Build a comprehensive back-office accounting software for FX brokerage "Miles Ca
 ## What's Been Implemented
 
 ### Session Mar 22, 2026
-- **[FIX] Transaction Report Downloads:** Fixed destination showing "undefined" by using correct field `destination_account_name` instead of `treasury_account_name`. Added Payment Currency, Exchange Rate, CRM Reference columns to CSV/Excel/PDF exports.
-- **[FIX] "Operation failed" Toast (P1):** Improved error handling in transaction creation - backend now wraps create_transaction in try/except with descriptive error messages; frontend parses JSON errors and falls back to response text with status code.
-- **[FIX] Database Performance (P1):** Added ~20 comprehensive MongoDB indexes covering transaction_id, psp_id, crm_reference, psps, users, treasury_accounts, reconciliations, transaction_requests, activity_log, client_bank_accounts, loan_transactions, app_settings.
-- **[FIX] Reconciliation Eye Icon (P2):** Fixed stale closure in dialog onOpenChange handler.
-- **[FIX] Transaction Creation Validation:** Added backend input validation for empty client_id, missing vendor_id for vendor destinations, missing psp_id for PSP destinations, missing account_id for treasury/USDT, negative/zero amounts.
+- **[FIX] Bulk Upload Vendor Commission:** Fixed bulk_create_transactions endpoint not calculating `vendor_commission_base_amount` and `vendor_commission_base_currency`. Now correctly computes commission in the payment/base currency (e.g., INR) and USD separately.
+- **[FIX] Transaction Report Downloads:** Fixed destination showing "undefined" by using correct field `destination_account_name`. Added Payment Currency, Exchange Rate, CRM Reference columns.
+- **[FIX] "Operation failed" Toast (P1):** Backend try/except wrapper with descriptive errors; frontend JSON error parsing with status codes.
+- **[FIX] Database Performance (P1):** Added ~20 MongoDB indexes (transaction_id, psp_id, users, treasury_accounts, reconciliations, etc.)
+- **[FIX] Reconciliation Eye Icon (P2):** Fixed stale closure in dialog onOpenChange.
+- **[FIX] Transaction Creation Validation:** Backend input validation for missing required fields.
+- **[DB FIX] Retroactive commission fix:** Updated REF0C749335 to include vendor_commission_base_amount=24.0 INR.
 
 ### Session Mar 17-21, 2026
 - Destination carried over from TX Request to Transaction
 - Treasury destination option in Transaction Request forms
-- Edit Transaction on Transactions Summary (CRM Ref, Amount, Reference, Payment Currency, Transaction Date)
+- Edit Transaction on Transactions Summary
 - Bank Receipt Date on Approval
 - Reconciliation date matching fix
 - Daily Report 4x emails fix (APScheduler)
@@ -32,7 +34,7 @@ Build a comprehensive back-office accounting software for FX brokerage "Miles Ca
 
 ## Pending Issues
 - P3: Session management redirect bug
-- P3: Withdrawal to Exchanger error (validation improved but full flow untested)
+- P3: Withdrawal to Exchanger error
 
 ## Upcoming Tasks
 - P1: Reconciliation backend logic (automated matching)
