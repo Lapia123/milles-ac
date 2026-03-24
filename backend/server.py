@@ -10677,6 +10677,7 @@ async def export_loans_csv(user: dict = Depends(require_permission(Modules.LOANS
     ])
     
     for loan in loans:
+        outstanding = loan.get("amount", 0) + loan.get("total_interest", 0) - loan.get("total_repaid", 0)
         writer.writerow([
             loan.get("loan_id", ""),
             loan.get("borrower_name", ""),
@@ -10685,7 +10686,7 @@ async def export_loans_csv(user: dict = Depends(require_permission(Modules.LOANS
             loan.get("interest_rate", 0),
             loan.get("loan_date", ""),
             loan.get("due_date", ""),
-            loan.get("outstanding_balance", 0),
+            outstanding,
             loan.get("total_repaid", 0),
             loan.get("status", ""),
             loan.get("repayment_mode", ""),
@@ -10734,6 +10735,7 @@ async def export_loans_excel(user: dict = Depends(require_permission(Modules.LOA
         cell.border = thin_border
     
     for row, loan in enumerate(loans, 2):
+        outstanding = loan.get("amount", 0) + loan.get("total_interest", 0) - loan.get("total_repaid", 0)
         ws.cell(row=row, column=1, value=loan.get("loan_id", "")).border = thin_border
         ws.cell(row=row, column=2, value=loan.get("borrower_name", "")).border = thin_border
         ws.cell(row=row, column=3, value=loan.get("amount", 0)).border = thin_border
@@ -10741,7 +10743,7 @@ async def export_loans_excel(user: dict = Depends(require_permission(Modules.LOA
         ws.cell(row=row, column=5, value=loan.get("interest_rate", 0)).border = thin_border
         ws.cell(row=row, column=6, value=str(loan.get("loan_date", ""))).border = thin_border
         ws.cell(row=row, column=7, value=str(loan.get("due_date", ""))).border = thin_border
-        ws.cell(row=row, column=8, value=loan.get("outstanding_balance", 0)).border = thin_border
+        ws.cell(row=row, column=8, value=outstanding).border = thin_border
         ws.cell(row=row, column=9, value=loan.get("total_repaid", 0)).border = thin_border
         ws.cell(row=row, column=10, value=loan.get("status", "")).border = thin_border
     
@@ -10787,6 +10789,7 @@ async def export_loans_pdf(user: dict = Depends(require_permission(Modules.LOANS
     # Table data
     data = [["Loan ID", "Borrower", "Amount", "Currency", "Interest", "Due Date", "Outstanding", "Status"]]
     for loan in loans:
+        outstanding = loan.get("amount", 0) + loan.get("total_interest", 0) - loan.get("total_repaid", 0)
         data.append([
             loan.get("loan_id", "")[:12],
             loan.get("borrower_name", "")[:20],
@@ -10794,7 +10797,7 @@ async def export_loans_pdf(user: dict = Depends(require_permission(Modules.LOANS
             loan.get("currency", "USD"),
             f"{loan.get('interest_rate', 0)}%",
             str(loan.get("due_date", ""))[:10],
-            f"${loan.get('outstanding_balance', 0):,.2f}",
+            f"${outstanding:,.2f}",
             loan.get("status", "").replace("_", " ").title()
         ])
     
