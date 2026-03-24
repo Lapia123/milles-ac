@@ -7080,9 +7080,11 @@ async def _create_transaction_impl(
     
     # Update PSP pending balance if this is a PSP transaction
     if destination_type == "psp" and psp_info:
+        # Deposits add to pending_settlement (PSP owes us), withdrawals subtract
+        psp_delta = net_amount if transaction_type == "deposit" else -net_amount
         await db.psps.update_one(
             {"psp_id": psp_id},
-            {"$inc": {"pending_settlement": net_amount}}
+            {"$inc": {"pending_settlement": psp_delta}}
         )
     
     # Update vendor pending balance if this is a vendor transaction
@@ -7506,6 +7508,45 @@ async def approve_transaction(
                 }
                 await db.treasury_transactions.insert_one(treasury_tx_doc)
     
+    # Handle PSP-destination withdrawals - deduct from PSP balance
+    if tx.get("destination_type") == "psp" and tx.get("psp_id") and tx["transaction_type"] == TransactionType.WITHDRAWAL:
+        psp = await db.psps.find_one({"psp_id": tx["psp_id"]}, {"_id": 0})
+        if psp:
+            withdrawal_amount = round(tx["amount"], 2)
+            
+            # Deduct from PSP current_balance
+            await db.psps.update_one(
+                {"psp_id": tx["psp_id"]},
+                {
+                    "$inc": {"current_balance": -withdrawal_amount},
+                    "$set": {"updated_at": now.isoformat()}
+                }
+            )
+            
+            updates["source_account_id"] = tx["psp_id"]
+            updates["source_account_name"] = psp.get("psp_name")
+            updates["source_type"] = "psp"
+            updates["withdrawal_amount_in_source_currency"] = withdrawal_amount
+            updates["source_currency"] = psp.get("currency", "USD")
+            
+            # Record PSP transaction
+            treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+            psp_tx_doc = {
+                "treasury_transaction_id": treasury_tx_id,
+                "account_id": tx["psp_id"],
+                "account_type": "psp",
+                "transaction_type": "withdrawal",
+                "amount": -withdrawal_amount,
+                "currency": psp.get("currency", "USD"),
+                "reference": f"Withdrawal via PSP: {tx.get('client_name', 'Client')} - {tx.get('reference', '')}",
+                "transaction_id": transaction_id,
+                "client_id": tx.get("client_id"),
+                "created_at": treasury_date,
+                "created_by": user["user_id"],
+                "created_by_name": user["name"]
+            }
+            await db.treasury_transactions.insert_one(psp_tx_doc)
+
     # Update treasury balance for deposits going to treasury
     if tx.get("destination_account_id") and tx["transaction_type"] == TransactionType.DEPOSIT:
         # Get the destination account to check its currency
