@@ -59,6 +59,10 @@ import {
   Calendar,
   ArrowLeftRight,
   Calculator,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 
 import PaginationControls from '../components/PaginationControls';
@@ -93,6 +97,10 @@ export default function Treasury() {
   const [historyAccount, setHistoryAccount] = useState(null);
   const [historyData, setHistoryData] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize] = useState(15);
+  const [historyTotalPages, setHistoryTotalPages] = useState(1);
+  const [historyTotal, setHistoryTotal] = useState(0);
   const [historyFilters, setHistoryFilters] = useState({
     startDate: '',
     endDate: '',
@@ -166,10 +174,10 @@ export default function Treasury() {
     }
   };
 
-  const fetchAccountHistory = async (accountId) => {
+  const fetchAccountHistory = async (accountId, page = historyPage) => {
     setHistoryLoading(true);
     try {
-      let url = `${API_URL}/api/treasury/${accountId}/history?limit=100`;
+      let url = `${API_URL}/api/treasury/${accountId}/history?page=${page}&page_size=${historyPageSize}`;
       if (historyFilters.startDate) {
         url += `&start_date=${historyFilters.startDate}`;
       }
@@ -184,6 +192,8 @@ export default function Treasury() {
       if (response.ok) {
         const data = await response.json();
         setHistoryData(Array.isArray(data) ? data : data.items || []);
+        setHistoryTotalPages(data.total_pages || 1);
+        setHistoryTotal(data.total || 0);
       }
     } catch (error) {
       console.error('Error fetching history:', error);
@@ -410,9 +420,9 @@ export default function Treasury() {
 
   useEffect(() => {
     if (historyAccount) {
-      fetchAccountHistory(historyAccount.account_id);
+      fetchAccountHistory(historyAccount.account_id, historyPage);
     }
-  }, [historyAccount, historyFilters]);
+  }, [historyAccount, historyFilters, historyPage]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -822,58 +832,42 @@ export default function Treasury() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-white border-slate-200">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-slate-500 uppercase tracking-wider">Total Balance (USD)</p>
-              <div className="p-2 bg-blue-100 rounded-sm">
-                <DollarSign className="w-5 h-5 text-blue-600" />
-              </div>
+      {/* Summary Bar */}
+      <div className="flex flex-wrap items-stretch gap-3">
+        <Card className="bg-white border-slate-200 flex-1 min-w-[160px]">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-sm shrink-0">
+              <DollarSign className="w-4 h-4 text-blue-600" />
             </div>
-            <p className="text-3xl font-bold font-mono text-slate-800" data-testid="total-balance-usd">${totalBalanceUSD.toLocaleString()}</p>
-            <p className="text-xs text-slate-400 mt-1">Across all accounts</p>
+            <div>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Total (USD)</p>
+              <p className="text-xl font-bold font-mono text-slate-800" data-testid="total-balance-usd">${totalBalanceUSD.toLocaleString()}</p>
+            </div>
           </CardContent>
         </Card>
-        <Card className="bg-white border-slate-200">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-slate-500 uppercase tracking-wider">Active Accounts</p>
-              <div className="p-2 bg-green-100 rounded-sm">
-                <Building2 className="w-5 h-5 text-green-600" />
-              </div>
+        <Card className="bg-white border-slate-200 min-w-[100px]">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 bg-green-100 rounded-sm shrink-0">
+              <Building2 className="w-4 h-4 text-green-600" />
             </div>
-            <p className="text-3xl font-bold font-mono text-slate-800" data-testid="active-accounts">{activeAccounts}</p>
-            <p className="text-xs text-slate-400 mt-1">of {accounts.length} total</p>
+            <div>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Accounts</p>
+              <p className="text-xl font-bold font-mono text-slate-800" data-testid="active-accounts">{activeAccounts}<span className="text-sm text-slate-400 font-normal">/{accounts.length}</span></p>
+            </div>
           </CardContent>
         </Card>
-        {Object.entries(balanceByCurrency).slice(0, 2).map(([cur, data]) => (
-          <Card key={cur} className="bg-white border-slate-200">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs text-slate-500 uppercase tracking-wider">{cur} Balance</p>
-                <Badge variant="outline" className="text-xs">{data.count} acct{data.count > 1 ? 's' : ''}</Badge>
+        {Object.entries(balanceByCurrency).map(([cur, data]) => (
+          <Card key={cur} className="bg-white border-slate-200 min-w-[130px]">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider">{cur}</p>
+                <span className="text-[10px] text-slate-400">{data.count} acct{data.count > 1 ? 's' : ''}</span>
               </div>
-              <p className="text-3xl font-bold font-mono text-slate-800" data-testid={`balance-${cur}`}>{data.balance.toLocaleString()} {cur}</p>
+              <p className="text-lg font-bold font-mono text-slate-800" data-testid={`balance-${cur}`}>{data.balance.toLocaleString()}</p>
             </CardContent>
           </Card>
         ))}
       </div>
-      {/* More currencies if present */}
-      {Object.keys(balanceByCurrency).length > 2 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          {Object.entries(balanceByCurrency).slice(2).map(([cur, data]) => (
-            <Card key={cur} className="bg-white border-slate-200">
-              <CardContent className="p-3">
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">{cur}</p>
-                <p className="text-lg font-bold font-mono text-slate-800">{data.balance.toLocaleString()}</p>
-                <p className="text-xs text-slate-400">{data.count} account{data.count > 1 ? 's' : ''}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
 
       {/* Accounts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -912,7 +906,7 @@ export default function Treasury() {
                         <DropdownMenuItem onClick={() => setViewAccount(account)} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
                           <Eye className="w-4 h-4 mr-2" /> View
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setHistoryAccount(account)} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
+                        <DropdownMenuItem onClick={() => { setHistoryPage(1); setHistoryAccount(account); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
                           <History className="w-4 h-4 mr-2" /> History
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEdit(account)} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
@@ -956,7 +950,7 @@ export default function Treasury() {
                     </div>
                   )}
                   <Button
-                    onClick={() => setHistoryAccount(account)}
+                    onClick={() => { setHistoryPage(1); setHistoryAccount(account); }}
                     variant="outline"
                     size="sm"
                     className="w-full mt-2 border-[#66FCF1]/30 text-blue-600 hover:bg-blue-100"
@@ -1079,7 +1073,7 @@ export default function Treasury() {
                   <Input
                     type="date"
                     value={historyFilters.startDate}
-                    onChange={(e) => setHistoryFilters({ ...historyFilters, startDate: e.target.value })}
+                    onChange={(e) => { setHistoryPage(1); setHistoryFilters({ ...historyFilters, startDate: e.target.value }); }}
                     className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                     data-testid="history-start-date"
                   />
@@ -1089,7 +1083,7 @@ export default function Treasury() {
                   <Input
                     type="date"
                     value={historyFilters.endDate}
-                    onChange={(e) => setHistoryFilters({ ...historyFilters, endDate: e.target.value })}
+                    onChange={(e) => { setHistoryPage(1); setHistoryFilters({ ...historyFilters, endDate: e.target.value }); }}
                     className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1]"
                     data-testid="history-end-date"
                   />
@@ -1098,7 +1092,7 @@ export default function Treasury() {
                   <Label className="text-slate-500 text-xs uppercase tracking-wider">Type</Label>
                   <Select
                     value={historyFilters.transactionType}
-                    onValueChange={(value) => setHistoryFilters({ ...historyFilters, transactionType: value === 'all' ? '' : value })}
+                    onValueChange={(value) => { setHistoryPage(1); setHistoryFilters({ ...historyFilters, transactionType: value === 'all' ? '' : value }); }}
                   >
                     <SelectTrigger className="bg-white border-slate-200 text-slate-800" data-testid="history-type-filter">
                       <SelectValue placeholder="All Types" />
@@ -1226,6 +1220,60 @@ export default function Treasury() {
                   </Table>
                 )}
               </ScrollArea>
+
+              {/* Pagination */}
+              {historyTotalPages > 1 && (
+                <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+                  <p className="text-xs text-slate-500">
+                    Showing {((historyPage - 1) * historyPageSize) + 1}-{Math.min(historyPage * historyPageSize, historyTotal)} of {historyTotal} transactions
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setHistoryPage(1); }}
+                      disabled={historyPage <= 1}
+                      className="h-8 px-2 border-slate-200 text-slate-600"
+                      data-testid="history-first-page"
+                    >
+                      <ChevronsLeft className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setHistoryPage(p => Math.max(1, p - 1)); }}
+                      disabled={historyPage <= 1}
+                      className="h-8 px-2 border-slate-200 text-slate-600"
+                      data-testid="history-prev-page"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <span className="text-sm text-slate-600 px-3 font-mono">
+                      {historyPage} / {historyTotalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setHistoryPage(p => Math.min(historyTotalPages, p + 1)); }}
+                      disabled={historyPage >= historyTotalPages}
+                      className="h-8 px-2 border-slate-200 text-slate-600"
+                      data-testid="history-next-page"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setHistoryPage(historyTotalPages); }}
+                      disabled={historyPage >= historyTotalPages}
+                      className="h-8 px-2 border-slate-200 text-slate-600"
+                      data-testid="history-last-page"
+                    >
+                      <ChevronsRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

@@ -12,23 +12,22 @@ Build a comprehensive back-office accounting software for FX brokerage "Miles Ca
 ## What's Been Implemented
 
 ### Session Mar 24, 2026
-- **[FEATURE] Treasury Summary Enhancement:** Added per-currency balance breakdown cards (AED, USDT, INR, USD with account counts), Active Accounts card, alongside existing Total USD Balance.
-- **[FEATURE] Treasury Statement Export (PDF/Excel):** Replaced single CSV download with dropdown offering CSV, Excel (.xls), and Print/PDF. All exports include account summary (opening balance, total credits, total debits, closing balance), proper debit/credit columns, and description.
-- **[FEATURE] Treasury History Summary Cards:** Added Opening Balance, Total Credits, Total Debits, Closing Balance summary cards inside the history dialog.
-- **[FEATURE] Treasury History Table Improvement:** Split Amount column into separate Debit (red) and Credit (green) columns. Added Description column showing client name/notes.
-- **[FIX] Bulk Upload Vendor Commission:** Fixed bulk_create_transactions not calculating vendor_commission_base_amount/currency. Retroactively fixed REF0C749335 (24.0 INR).
+- **[FIX] Treasury UI Compacted:** Replaced two-row oversized summary cards with a single compact horizontal bar showing Total USD, Active Accounts, and per-currency balances all in one line.
+- **[FEATURE] Treasury History Pagination:** Added server-side pagination (15 per page) with First/Prev/Next/Last controls. Page resets on filter or account change.
+- **[FEATURE] Treasury Summary Enhancement:** Per-currency balance cards, statement summary (opening/closing balance, credits/debits).
+- **[FEATURE] Treasury Export (PDF/Excel/CSV):** Dropdown with CSV, Excel (.xls), and Print/PDF — all include account summary header.
+- **[FEATURE] Treasury History Table:** Separate Debit/Credit columns, Description column.
+- **[FIX] Bulk Upload Vendor Commission:** Fixed missing base currency commission fields.
 - **[FIX] Transaction Report Downloads:** Fixed destination "undefined", added Payment Currency column.
-- **[FIX] "Operation failed" Toast (P1):** Descriptive backend errors + frontend parsing.
-- **[FIX] Database Performance (P1):** Added ~20 MongoDB indexes.
-- **[FIX] Reconciliation Eye Icon (P2):** Fixed stale closure in dialog.
+- **[FIX] "Operation failed" Toast (P1):** Descriptive errors.
+- **[FIX] Database Performance (P1):** ~20 MongoDB indexes.
+- **[FIX] Reconciliation Eye Icon (P2):** Fixed dialog closure.
 
 ### Session Mar 17-21, 2026
 - Destination carried over from TX Request to Transaction
-- Treasury destination option in Transaction Request forms
 - Edit Transaction on Transactions Summary
 - Bank Receipt Date on Approval
-- Reconciliation date matching fix
-- Daily Report 4x emails fix (APScheduler)
+- Daily Report 4x emails fix
 - Exchangers full-page detail view
 - PSP Compound Settlement Date
 - Bulk Upload Transactions (CSV + Excel)
