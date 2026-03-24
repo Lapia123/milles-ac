@@ -98,7 +98,7 @@ export default function Treasury() {
   const [historyData, setHistoryData] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
-  const [historyPageSize] = useState(15);
+  const [historyPageSize] = useState(100);
   const [historyTotalPages, setHistoryTotalPages] = useState(1);
   const [historyTotal, setHistoryTotal] = useState(0);
   const [historyFilters, setHistoryFilters] = useState({
