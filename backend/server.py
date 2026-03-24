@@ -7322,75 +7322,130 @@ async def approve_transaction(
             if not source_account_id:
                 raise HTTPException(status_code=400, detail="Source account is required for withdrawal approvals")
             
-            # Verify source account exists and has sufficient balance
-            source_account = await db.treasury_accounts.find_one({"account_id": source_account_id}, {"_id": 0})
-            if not source_account:
-                raise HTTPException(status_code=404, detail="Source account not found")
+            # Check if source is a PSP (prefixed with psp_)
+            is_psp_source = source_account_id.startswith("psp_")
             
-            # Calculate withdrawal amount in source account's currency
-            source_currency = source_account.get("currency", "USD")
-            tx_currency = tx.get("currency", "USD")
-            withdrawal_amount = tx["amount"]
-            
-            # PRIORITY: Use manual base_amount if source currency matches base_currency
-            # This ensures the treasury uses the same amount the user entered (e.g., 10,000 AED)
-            if tx.get("base_currency") == source_currency and tx.get("base_amount"):
-                # Use the original base_amount from the transaction (manual entry)
-                withdrawal_amount = tx["base_amount"]
-            # Convert if currencies are different and no matching base_amount
-            elif tx_currency == "USD" and source_currency != "USD":
-                # Convert from USD to source account currency using manual exchange rate if available
-                if tx.get("exchange_rate") and tx.get("base_amount") and tx.get("base_currency") == source_currency:
+            if is_psp_source:
+                # Source is a PSP account
+                psp_id = source_account_id  # Already has psp_ prefix
+                psp_account = await db.psps.find_one({"psp_id": psp_id}, {"_id": 0})
+                if not psp_account:
+                    raise HTTPException(status_code=404, detail="PSP account not found")
+                
+                psp_currency = psp_account.get("currency", "USD")
+                tx_currency = tx.get("currency", "USD")
+                withdrawal_amount = tx["amount"]
+                
+                # Convert currencies if needed
+                if tx.get("base_currency") == psp_currency and tx.get("base_amount"):
                     withdrawal_amount = tx["base_amount"]
-                else:
-                    withdrawal_amount = convert_from_usd(tx["amount"], source_currency)
-            elif tx_currency != "USD" and source_currency == "USD":
-                # Convert from transaction currency to USD
-                withdrawal_amount = convert_to_usd(tx["amount"], tx_currency)
-            elif tx_currency != source_currency:
-                # Convert via USD as intermediate
-                usd_amount = convert_to_usd(tx["amount"], tx_currency)
-                withdrawal_amount = convert_from_usd(usd_amount, source_currency)
+                elif tx_currency == "USD" and psp_currency != "USD":
+                    withdrawal_amount = convert_from_usd(tx["amount"], psp_currency)
+                elif tx_currency != "USD" and psp_currency == "USD":
+                    withdrawal_amount = convert_to_usd(tx["amount"], tx_currency)
+                elif tx_currency != psp_currency:
+                    usd_amount = convert_to_usd(tx["amount"], tx_currency)
+                    withdrawal_amount = convert_from_usd(usd_amount, psp_currency)
+                
+                withdrawal_amount = round(withdrawal_amount, 2)
+                
+                psp_balance = psp_account.get("current_balance", 0)
+                if psp_balance < withdrawal_amount:
+                    raise HTTPException(status_code=400, detail=f"Insufficient PSP balance. Required: {withdrawal_amount:,.2f} {psp_currency}, Available: {psp_balance:,.2f} {psp_currency}")
+                
+                # Deduct from PSP balance
+                await db.psps.update_one(
+                    {"psp_id": psp_id},
+                    {"$inc": {"current_balance": -withdrawal_amount}, "$set": {"updated_at": now.isoformat()}}
+                )
+                
+                updates["source_account_id"] = psp_id
+                updates["source_account_name"] = psp_account.get("psp_name")
+                updates["source_type"] = "psp"
+                updates["withdrawal_amount_in_source_currency"] = withdrawal_amount
+                updates["source_currency"] = psp_currency
+                
+                # Record PSP transaction entry
+                treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+                treasury_tx = {
+                    "treasury_transaction_id": treasury_tx_id,
+                    "account_id": psp_id,
+                    "account_type": "psp",
+                    "transaction_type": "withdrawal",
+                    "amount": -withdrawal_amount,
+                    "currency": psp_currency,
+                    "transaction_id": transaction_id,
+                    "reference": tx.get("reference", ""),
+                    "client_name": tx.get("client_name", ""),
+                    "notes": f"Withdrawal from PSP {psp_account.get('psp_name')} for {tx.get('client_name', 'Unknown')}",
+                    "created_at": treasury_date,
+                    "created_by": user["user_id"],
+                    "created_by_name": user["name"]
+                }
+                await db.treasury_transactions.insert_one(treasury_tx)
+            else:
+                # Source is a Treasury account (existing logic)
+                source_account = await db.treasury_accounts.find_one({"account_id": source_account_id}, {"_id": 0})
+                if not source_account:
+                    raise HTTPException(status_code=404, detail="Source account not found")
             
-            if source_account.get("balance", 0) < withdrawal_amount:
-                raise HTTPException(status_code=400, detail=f"Insufficient balance in source account. Required: {withdrawal_amount:,.2f} {source_currency}, Available: {source_account.get('balance', 0):,.2f} {source_currency}")
+                # Calculate withdrawal amount in source account's currency
+                source_currency = source_account.get("currency", "USD")
+                tx_currency = tx.get("currency", "USD")
+                withdrawal_amount = tx["amount"]
+                
+                # PRIORITY: Use manual base_amount if source currency matches base_currency
+                if tx.get("base_currency") == source_currency and tx.get("base_amount"):
+                    withdrawal_amount = tx["base_amount"]
+                elif tx_currency == "USD" and source_currency != "USD":
+                    if tx.get("exchange_rate") and tx.get("base_amount") and tx.get("base_currency") == source_currency:
+                        withdrawal_amount = tx["base_amount"]
+                    else:
+                        withdrawal_amount = convert_from_usd(tx["amount"], source_currency)
+                elif tx_currency != "USD" and source_currency == "USD":
+                    withdrawal_amount = convert_to_usd(tx["amount"], tx_currency)
+                elif tx_currency != source_currency:
+                    usd_amount = convert_to_usd(tx["amount"], tx_currency)
+                    withdrawal_amount = convert_from_usd(usd_amount, source_currency)
+                
+                if source_account.get("balance", 0) < withdrawal_amount:
+                    raise HTTPException(status_code=400, detail=f"Insufficient balance in source account. Required: {withdrawal_amount:,.2f} {source_currency}, Available: {source_account.get('balance', 0):,.2f} {source_currency}")
+                
+                # Deduct from source account
+                await db.treasury_accounts.update_one(
+                    {"account_id": source_account_id},
+                    {"$inc": {"balance": -withdrawal_amount}, "$set": {"updated_at": now.isoformat()}}
+                )
+                
+                updates["source_account_id"] = source_account_id
+                updates["source_account_name"] = source_account.get("account_name")
+                updates["source_type"] = "treasury"
+                updates["withdrawal_amount_in_source_currency"] = withdrawal_amount
+                updates["source_currency"] = source_currency
+                
+                # Record treasury transaction
+                treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+                original_amt = tx.get("base_amount") if tx.get("base_amount") else tx["amount"]
+                original_curr = tx.get("base_currency") if tx.get("base_currency") else tx_currency
+                manual_rate = tx.get("exchange_rate") if tx.get("exchange_rate") else (withdrawal_amount / tx["amount"] if tx["amount"] > 0 else 1)
             
-            # Deduct from source account
-            await db.treasury_accounts.update_one(
-                {"account_id": source_account_id},
-                {"$inc": {"balance": -withdrawal_amount}, "$set": {"updated_at": now.isoformat()}}
-            )
-            
-            updates["source_account_id"] = source_account_id
-            updates["source_account_name"] = source_account.get("account_name")
-            updates["withdrawal_amount_in_source_currency"] = withdrawal_amount
-            updates["source_currency"] = source_currency
-            
-            # Record treasury transaction
-            treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
-            # Determine original amount/currency - use base_amount if available (manual entry)
-            original_amt = tx.get("base_amount") if tx.get("base_amount") else tx["amount"]
-            original_curr = tx.get("base_currency") if tx.get("base_currency") else tx_currency
-            # Use manual exchange rate if provided, otherwise calculate
-            manual_rate = tx.get("exchange_rate") if tx.get("exchange_rate") else (withdrawal_amount / tx["amount"] if tx["amount"] > 0 else 1)
-            
-            treasury_tx_doc = {
-                "treasury_transaction_id": treasury_tx_id,
-                "account_id": source_account_id,
-                "transaction_type": "withdrawal",
-                "amount": -withdrawal_amount,
-                "currency": source_currency,
-                "original_amount": original_amt,
-                "original_currency": original_curr,
-                "exchange_rate": manual_rate,
-                "reference": f"Withdrawal: {tx.get('client_name', 'Client')} - {tx.get('reference', '')}",
-                "transaction_id": transaction_id,
-                "client_id": tx.get("client_id"),
-                "created_at": treasury_date,
-                "created_by": user["user_id"],
-                "created_by_name": user["name"]
-            }
-            await db.treasury_transactions.insert_one(treasury_tx_doc)
+                treasury_tx_doc = {
+                    "treasury_transaction_id": treasury_tx_id,
+                    "account_id": source_account_id,
+                    "transaction_type": "withdrawal",
+                    "amount": -withdrawal_amount,
+                    "currency": source_currency,
+                    "original_amount": original_amt,
+                    "original_currency": original_curr,
+                    "exchange_rate": manual_rate,
+                    "reference": f"Withdrawal: {tx.get('client_name', 'Client')} - {tx.get('reference', '')}",
+                    "transaction_id": transaction_id,
+                    "client_id": tx.get("client_id"),
+                    "created_at": treasury_date,
+                    "created_by": user["user_id"],
+                    "created_by_name": user["name"]
+                }
+                await db.treasury_transactions.insert_one(treasury_tx_doc)
         
         # For withdrawals with treasury destination, deduct from that treasury account
         elif tx.get("destination_type") == "treasury" and tx.get("destination_account_id"):
