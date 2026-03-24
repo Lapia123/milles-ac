@@ -105,6 +105,7 @@ export default function Treasury() {
     startDate: '',
     endDate: '',
     transactionType: '',
+    period: 'all',
   });
   
   // Transfer state
@@ -1067,28 +1068,87 @@ export default function Treasury() {
               </div>
 
               {/* Filters */}
-              <div className="flex flex-wrap items-end gap-4 p-4 bg-slate-50 rounded-sm">
-                <div className="flex-1 min-w-[150px] space-y-1">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Start Date</Label>
-                  <Input
-                    type="date"
-                    value={historyFilters.startDate}
-                    onChange={(e) => { setHistoryPage(1); setHistoryFilters({ ...historyFilters, startDate: e.target.value }); }}
-                    className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1]"
-                    data-testid="history-start-date"
-                  />
+              <div className="flex flex-wrap items-end gap-3 p-4 bg-slate-50 rounded-sm">
+                <div className="min-w-[150px] space-y-1">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Period</Label>
+                  <Select
+                    value={historyFilters.period || 'all'}
+                    onValueChange={(value) => {
+                      const today = new Date();
+                      const fmt = (d) => d.toISOString().split('T')[0];
+                      let start = '', end = '';
+                      if (value === 'today') {
+                        start = end = fmt(today);
+                      } else if (value === 'yesterday') {
+                        const y = new Date(today); y.setDate(y.getDate() - 1);
+                        start = end = fmt(y);
+                      } else if (value === 'this_week') {
+                        const d = new Date(today); d.setDate(d.getDate() - d.getDay());
+                        start = fmt(d); end = fmt(today);
+                      } else if (value === 'last_week') {
+                        const d = new Date(today); d.setDate(d.getDate() - d.getDay() - 7);
+                        const e = new Date(d); e.setDate(e.getDate() + 6);
+                        start = fmt(d); end = fmt(e);
+                      } else if (value === 'this_month') {
+                        start = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
+                        end = fmt(today);
+                      } else if (value === 'last_month') {
+                        const s = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                        const e = new Date(today.getFullYear(), today.getMonth(), 0);
+                        start = fmt(s); end = fmt(e);
+                      } else if (value === 'this_year') {
+                        start = fmt(new Date(today.getFullYear(), 0, 1));
+                        end = fmt(today);
+                      } else if (value === 'last_3_months') {
+                        const s = new Date(today); s.setMonth(s.getMonth() - 3);
+                        start = fmt(s); end = fmt(today);
+                      }
+                      setHistoryPage(1);
+                      setHistoryFilters({ ...historyFilters, period: value, startDate: start, endDate: end });
+                    }}
+                  >
+                    <SelectTrigger className="bg-white border-slate-200 text-slate-800" data-testid="history-period-filter">
+                      <SelectValue placeholder="All Time" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-slate-200">
+                      <SelectItem value="all" className="text-slate-800 hover:bg-slate-100">All Time</SelectItem>
+                      <SelectItem value="today" className="text-slate-800 hover:bg-slate-100">Today</SelectItem>
+                      <SelectItem value="yesterday" className="text-slate-800 hover:bg-slate-100">Yesterday</SelectItem>
+                      <SelectItem value="this_week" className="text-slate-800 hover:bg-slate-100">This Week</SelectItem>
+                      <SelectItem value="last_week" className="text-slate-800 hover:bg-slate-100">Last Week</SelectItem>
+                      <SelectItem value="this_month" className="text-slate-800 hover:bg-slate-100">This Month</SelectItem>
+                      <SelectItem value="last_month" className="text-slate-800 hover:bg-slate-100">Last Month</SelectItem>
+                      <SelectItem value="last_3_months" className="text-slate-800 hover:bg-slate-100">Last 3 Months</SelectItem>
+                      <SelectItem value="this_year" className="text-slate-800 hover:bg-slate-100">This Year</SelectItem>
+                      <SelectItem value="custom" className="text-slate-800 hover:bg-slate-100">Custom Range</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="flex-1 min-w-[150px] space-y-1">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">End Date</Label>
-                  <Input
-                    type="date"
-                    value={historyFilters.endDate}
-                    onChange={(e) => { setHistoryPage(1); setHistoryFilters({ ...historyFilters, endDate: e.target.value }); }}
-                    className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1]"
-                    data-testid="history-end-date"
-                  />
-                </div>
-                <div className="flex-1 min-w-[150px] space-y-1">
+                {(historyFilters.period === 'custom' || (!historyFilters.period && (historyFilters.startDate || historyFilters.endDate))) && (
+                  <>
+                    <div className="min-w-[140px] space-y-1">
+                      <Label className="text-slate-500 text-xs uppercase tracking-wider">From</Label>
+                      <Input
+                        type="date"
+                        value={historyFilters.startDate}
+                        onChange={(e) => { setHistoryPage(1); setHistoryFilters({ ...historyFilters, startDate: e.target.value, period: 'custom' }); }}
+                        className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                        data-testid="history-start-date"
+                      />
+                    </div>
+                    <div className="min-w-[140px] space-y-1">
+                      <Label className="text-slate-500 text-xs uppercase tracking-wider">To</Label>
+                      <Input
+                        type="date"
+                        value={historyFilters.endDate}
+                        onChange={(e) => { setHistoryPage(1); setHistoryFilters({ ...historyFilters, endDate: e.target.value, period: 'custom' }); }}
+                        className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                        data-testid="history-end-date"
+                      />
+                    </div>
+                  </>
+                )}
+                <div className="min-w-[140px] space-y-1">
                   <Label className="text-slate-500 text-xs uppercase tracking-wider">Type</Label>
                   <Select
                     value={historyFilters.transactionType}
