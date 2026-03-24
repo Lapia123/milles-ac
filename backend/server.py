@@ -3441,10 +3441,11 @@ async def complete_settlement(request: Request, settlement_id: str, user: dict =
 # Get pending PSP transactions (not yet settled)
 @api_router.get("/psp/{psp_id}/pending-transactions")
 async def get_psp_pending_transactions(psp_id: str, user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
-    """Get approved transactions for a PSP that haven't been settled"""
+    """Get approved DEPOSIT transactions for a PSP that haven't been settled"""
     transactions = await db.transactions.find({
         "psp_id": psp_id,
         "destination_type": "psp",
+        "transaction_type": "deposit",
         "status": TransactionStatus.APPROVED,
         "settled": {"$ne": True}
     }, {"_id": 0}).sort("created_at", -1).to_list(1000)
@@ -3463,6 +3464,7 @@ async def get_psp_summary(user: dict = Depends(require_permission(Modules.PSP, A
         pending_txs = await db.transactions.find({
             "psp_id": psp["psp_id"],
             "destination_type": "psp",
+            "transaction_type": "deposit",
             "status": TransactionStatus.APPROVED,
             "settled": {"$ne": True}
         }, {"_id": 0}).to_list(1000)
