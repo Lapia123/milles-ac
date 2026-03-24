@@ -10156,6 +10156,90 @@ async def update_loan(request: Request, loan_id: str, update_data: LoanUpdate, u
 
     return updated
 
+@api_router.post("/loans/{loan_id}/attachments")
+async def upload_loan_attachments(
+    request: Request,
+    loan_id: str,
+    files: list[UploadFile] = File(...),
+    user: dict = Depends(require_permission(Modules.LOANS, Actions.EDIT))
+):
+    """Upload attachments (xlsx, pdf, images) to a loan"""
+    loan = await db.loans.find_one({"loan_id": loan_id}, {"_id": 0})
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    
+    ALLOWED_EXTENSIONS = {'pdf', 'xlsx', 'xls', 'csv', 'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+    
+    uploaded = []
+    now = datetime.now(timezone.utc).isoformat()
+    
+    for file in files:
+        ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+        if ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(status_code=400, detail=f"File type .{ext} not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}")
+        
+        content = await file.read()
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail=f"File {file.filename} exceeds 10MB limit")
+        
+        url = upload_to_r2(content, file.filename, file.content_type or "application/octet-stream", folder=f"loans/{loan_id}")
+        
+        attachment = {
+            "attachment_id": f"att_{uuid.uuid4().hex[:10]}",
+            "filename": file.filename,
+            "url": url,
+            "file_type": ext,
+            "size": len(content),
+            "uploaded_at": now,
+            "uploaded_by": user["user_id"],
+            "uploaded_by_name": user["name"]
+        }
+        uploaded.append(attachment)
+    
+    await db.loans.update_one(
+        {"loan_id": loan_id},
+        {"$push": {"attachments": {"$each": uploaded}}}
+    )
+    
+    # Also log in loan_transactions
+    await db.loan_transactions.insert_one({
+        "transaction_id": f"ltx_{uuid.uuid4().hex[:12]}",
+        "loan_id": loan_id,
+        "transaction_type": "attachment",
+        "description": f"Uploaded {len(uploaded)} file(s): {', '.join(f.filename for f in files)}",
+        "amount": 0,
+        "amount_usd": 0,
+        "currency": loan.get("currency", "USD"),
+        "status": "completed",
+        "attachments": uploaded,
+        "created_at": now,
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    })
+    
+    await log_activity(request, user, "edit", "loans", f"Uploaded {len(uploaded)} attachment(s) to loan {loan_id}")
+    return {"message": f"{len(uploaded)} file(s) uploaded", "attachments": uploaded}
+
+@api_router.delete("/loans/{loan_id}/attachments/{attachment_id}")
+async def delete_loan_attachment(
+    request: Request,
+    loan_id: str,
+    attachment_id: str,
+    user: dict = Depends(require_permission(Modules.LOANS, Actions.EDIT))
+):
+    """Delete an attachment from a loan"""
+    loan = await db.loans.find_one({"loan_id": loan_id}, {"_id": 0})
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    
+    await db.loans.update_one(
+        {"loan_id": loan_id},
+        {"$pull": {"attachments": {"attachment_id": attachment_id}}}
+    )
+    await log_activity(request, user, "delete", "loans", f"Removed attachment from loan {loan_id}")
+    return {"message": "Attachment removed"}
+
 @api_router.post("/loans/{loan_id}/repayment")
 async def record_loan_repayment(request: Request, loan_id: str, repayment: LoanRepaymentCreate, user: dict = Depends(require_permission(Modules.LOANS, Actions.CREATE))):
 

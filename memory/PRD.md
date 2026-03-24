@@ -1,7 +1,7 @@
 # Miles Capitals - Back-Office Accounting Software PRD
 
 ## Original Problem Statement
-Build a comprehensive back-office accounting software for FX brokerage "Miles Capitals" with modules for transactions, clients, PSP management, treasury, exchangers, reconciliation, reports, and more.
+Build a comprehensive back-office accounting software for FX brokerage "Miles Capitals" with modules for transactions, clients, PSP management, treasury, exchangers, reconciliation, reports, loans, and more.
 
 ## Core Architecture
 - **Frontend:** React + Tailwind CSS + Shadcn UI (port 3000)
@@ -12,26 +12,24 @@ Build a comprehensive back-office accounting software for FX brokerage "Miles Ca
 ## What's Been Implemented
 
 ### Session Mar 24, 2026
-- **[FIX] Treasury UI Compacted:** Replaced two-row oversized summary cards with a single compact horizontal bar showing Total USD, Active Accounts, and per-currency balances all in one line.
-- **[FEATURE] Treasury History Pagination:** Added server-side pagination (15 per page) with First/Prev/Next/Last controls. Page resets on filter or account change.
-- **[FEATURE] Treasury Summary Enhancement:** Per-currency balance cards, statement summary (opening/closing balance, credits/debits).
-- **[FEATURE] Treasury Export (PDF/Excel/CSV):** Dropdown with CSV, Excel (.xls), and Print/PDF — all include account summary header.
-- **[FEATURE] Treasury History Table:** Separate Debit/Credit columns, Description column.
+- **[FEATURE] Loan Attachments:** File upload on New Loan form (PDF, Excel, Images, max 10MB). Files stored in Cloudflare R2. Shown in Loan Transactions Log with clickable links. Also viewable/uploadable from Loan Detail dialog.
+- **[FEATURE] Treasury Period Filter:** Preset date ranges (Today, Yesterday, This/Last Week/Month, Last 3 Months, This Year, Custom Range).
+- **[FIX] Treasury UI Compacted:** Single-row summary bar, pagination (100/page), Debit/Credit split columns.
+- **[FEATURE] Treasury Export (PDF/Excel/CSV):** Full statement export with summary header.
 - **[FIX] Bulk Upload Vendor Commission:** Fixed missing base currency commission fields.
-- **[FIX] Transaction Report Downloads:** Fixed destination "undefined", added Payment Currency column.
-- **[FIX] "Operation failed" Toast (P1):** Descriptive errors.
+- **[FIX] Transaction Report Downloads:** Fixed destination "undefined", added Payment Currency.
+- **[FIX] "Operation failed" Toast (P1):** Descriptive backend errors.
 - **[FIX] Database Performance (P1):** ~20 MongoDB indexes.
 - **[FIX] Reconciliation Eye Icon (P2):** Fixed dialog closure.
 
-### Session Mar 17-21, 2026
-- Destination carried over from TX Request to Transaction
-- Edit Transaction on Transactions Summary
-- Bank Receipt Date on Approval
-- Daily Report 4x emails fix
-- Exchangers full-page detail view
-- PSP Compound Settlement Date
-- Bulk Upload Transactions (CSV + Excel)
-- Currency Rounding Bug fix
+### Earlier Sessions
+- Destination bug fix, TX edit, Bank Receipt Date, Reconciliation date fix
+- APScheduler fix, Exchangers UI overhaul, PSP Settlement Date
+- Bulk Upload Transactions, Currency Rounding fix
+
+## Key API Endpoints (New)
+- `POST /api/loans/{loan_id}/attachments` — Upload files to loan (multipart)
+- `DELETE /api/loans/{loan_id}/attachments/{attachment_id}` — Remove attachment
 
 ## Pending Issues
 - P3: Session management redirect bug
