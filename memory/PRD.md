@@ -11,14 +11,16 @@ Build a comprehensive back-office accounting software for FX brokerage "Miles Ca
 
 ## What's Been Implemented
 
-### Session Mar 22, 2026
-- **[FIX] Bulk Upload Vendor Commission:** Fixed bulk_create_transactions endpoint not calculating `vendor_commission_base_amount` and `vendor_commission_base_currency`. Now correctly computes commission in the payment/base currency (e.g., INR) and USD separately.
-- **[FIX] Transaction Report Downloads:** Fixed destination showing "undefined" by using correct field `destination_account_name`. Added Payment Currency, Exchange Rate, CRM Reference columns.
-- **[FIX] "Operation failed" Toast (P1):** Backend try/except wrapper with descriptive errors; frontend JSON error parsing with status codes.
-- **[FIX] Database Performance (P1):** Added ~20 MongoDB indexes (transaction_id, psp_id, users, treasury_accounts, reconciliations, etc.)
-- **[FIX] Reconciliation Eye Icon (P2):** Fixed stale closure in dialog onOpenChange.
-- **[FIX] Transaction Creation Validation:** Backend input validation for missing required fields.
-- **[DB FIX] Retroactive commission fix:** Updated REF0C749335 to include vendor_commission_base_amount=24.0 INR.
+### Session Mar 24, 2026
+- **[FEATURE] Treasury Summary Enhancement:** Added per-currency balance breakdown cards (AED, USDT, INR, USD with account counts), Active Accounts card, alongside existing Total USD Balance.
+- **[FEATURE] Treasury Statement Export (PDF/Excel):** Replaced single CSV download with dropdown offering CSV, Excel (.xls), and Print/PDF. All exports include account summary (opening balance, total credits, total debits, closing balance), proper debit/credit columns, and description.
+- **[FEATURE] Treasury History Summary Cards:** Added Opening Balance, Total Credits, Total Debits, Closing Balance summary cards inside the history dialog.
+- **[FEATURE] Treasury History Table Improvement:** Split Amount column into separate Debit (red) and Credit (green) columns. Added Description column showing client name/notes.
+- **[FIX] Bulk Upload Vendor Commission:** Fixed bulk_create_transactions not calculating vendor_commission_base_amount/currency. Retroactively fixed REF0C749335 (24.0 INR).
+- **[FIX] Transaction Report Downloads:** Fixed destination "undefined", added Payment Currency column.
+- **[FIX] "Operation failed" Toast (P1):** Descriptive backend errors + frontend parsing.
+- **[FIX] Database Performance (P1):** Added ~20 MongoDB indexes.
+- **[FIX] Reconciliation Eye Icon (P2):** Fixed stale closure in dialog.
 
 ### Session Mar 17-21, 2026
 - Destination carried over from TX Request to Transaction

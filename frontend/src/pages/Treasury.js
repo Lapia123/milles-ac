@@ -193,42 +193,130 @@ export default function Treasury() {
     }
   };
 
-  const downloadStatement = () => {
+  const downloadStatement = (format = 'csv') => {
     if (!historyAccount || historyData.length === 0) return;
     
-    // Generate CSV content
-    const headers = ['Date', 'Type', 'Reference', 'Amount', 'Running Balance', 'Currency'];
-    const rows = historyData.map(tx => [
-      new Date(tx.created_at).toLocaleDateString(),
-      tx.transaction_type || 'N/A',
-      `"${(tx.reference || 'N/A').replace(/"/g, '""')}"`,
-      tx.amount?.toLocaleString() || '0',
-      (tx.running_balance ?? 0).toLocaleString(),
-      historyAccount.currency || 'USD'
-    ]);
-    
-    const csvContent = [
-      `Treasury Account Statement - ${historyAccount.account_name}`,
-      `Currency: ${historyAccount.currency}`,
-      `Balance: ${historyAccount.balance?.toLocaleString()}`,
-      `Generated: ${new Date().toLocaleDateString()}`,
-      '',
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n');
-    
-    // Download file
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `statement_${historyAccount.account_name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    
-    toast.success('Statement downloaded');
+    const acctName = historyAccount.account_name;
+    const acctCurrency = historyAccount.currency || 'USD';
+    const dateStr = new Date().toISOString().split('T')[0];
+    const headers = ['Date', 'Type', 'Reference', 'Description', 'Debit', 'Credit', 'Running Balance', 'Currency'];
+
+    // Calculate summary from history
+    const totalCredit = historyData.filter(tx => tx.amount > 0).reduce((s, tx) => s + tx.amount, 0);
+    const totalDebit = historyData.filter(tx => tx.amount < 0).reduce((s, tx) => s + Math.abs(tx.amount), 0);
+    const closingBalance = historyData.length > 0 ? historyData[0].running_balance : historyAccount.balance;
+    const openingBalance = historyData.length > 0 ? (historyData[historyData.length - 1].running_balance - (historyData[historyData.length - 1].amount || 0)) : historyAccount.balance;
+
+    const buildRows = () => historyData.map(tx => {
+      const isCredit = tx.amount > 0;
+      return [
+        new Date(tx.created_at).toLocaleDateString(),
+        (tx.transaction_type || 'N/A').replace(/_/g, ' '),
+        (tx.reference || '-'),
+        tx.client_name || tx.notes || '-',
+        isCredit ? '' : Math.abs(tx.amount).toLocaleString(),
+        isCredit ? tx.amount.toLocaleString() : '',
+        (tx.running_balance ?? 0).toLocaleString(),
+        acctCurrency,
+      ];
+    });
+
+    if (format === 'csv') {
+      const rows = buildRows();
+      const csvContent = [
+        `Account Statement - ${acctName}`,
+        `Currency: ${acctCurrency}`,
+        `Opening Balance: ${openingBalance.toLocaleString()} ${acctCurrency}`,
+        `Closing Balance: ${closingBalance.toLocaleString()} ${acctCurrency}`,
+        `Total Credits: ${totalCredit.toLocaleString()} ${acctCurrency}`,
+        `Total Debits: ${totalDebit.toLocaleString()} ${acctCurrency}`,
+        `Period: ${historyFilters.startDate || 'All'} to ${historyFilters.endDate || 'Present'}`,
+        `Generated: ${new Date().toLocaleDateString()}`,
+        '',
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `statement_${acctName.replace(/\s+/g, '_')}_${dateStr}.csv`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      toast.success('CSV statement downloaded');
+    } else if (format === 'excel') {
+      const rows = buildRows();
+      const htmlContent = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+        <head><meta charset="UTF-8"></head>
+        <body>
+          <table>
+            <tr><td colspan="8" style="font-size:16px;font-weight:bold;">Account Statement - ${acctName}</td></tr>
+            <tr><td>Currency:</td><td>${acctCurrency}</td><td></td><td>Opening Balance:</td><td style="font-weight:bold;">${openingBalance.toLocaleString()} ${acctCurrency}</td></tr>
+            <tr><td>Total Credits:</td><td style="color:green;">${totalCredit.toLocaleString()}</td><td></td><td>Closing Balance:</td><td style="font-weight:bold;">${closingBalance.toLocaleString()} ${acctCurrency}</td></tr>
+            <tr><td>Total Debits:</td><td style="color:red;">${totalDebit.toLocaleString()}</td><td></td><td>Generated:</td><td>${new Date().toLocaleDateString()}</td></tr>
+            <tr><td colspan="8"></td></tr>
+          </table>
+          <table border="1">
+            <thead><tr>${headers.map(h => `<th style="background:#1F2833;color:#fff;font-weight:bold;padding:6px 10px;">${h}</th>`).join('')}</tr></thead>
+            <tbody>${rows.map(row => `<tr>${row.map((cell, i) => `<td style="padding:4px 8px;${i === 4 ? 'color:red;' : ''}${i === 5 ? 'color:green;' : ''}">${cell}</td>`).join('')}</tr>`).join('')}</tbody>
+          </table>
+        </body>
+        </html>
+      `;
+      const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `statement_${acctName.replace(/\s+/g, '_')}_${dateStr}.xls`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      toast.success('Excel statement downloaded');
+    } else if (format === 'pdf') {
+      const rows = buildRows();
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html>
+        <head>
+          <title>Account Statement - ${acctName}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 30px; color: #333; }
+            h1 { color: #1F2833; border-bottom: 3px solid #66FCF1; padding-bottom: 10px; font-size: 22px; }
+            .meta { display: flex; justify-content: space-between; margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 6px; }
+            .meta-item { text-align: center; }
+            .meta-item label { display: block; font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 4px; }
+            .meta-item span { font-size: 18px; font-weight: bold; }
+            .credit { color: #22c55e; } .debit { color: #ef4444; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
+            th { background: #1F2833; color: white; padding: 8px 10px; text-align: left; }
+            td { padding: 6px 10px; border-bottom: 1px solid #eee; }
+            tr:hover { background: #f9f9f9; }
+            .footer { margin-top: 25px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 10px; }
+            @media print { .no-print { display: none; } }
+          </style>
+        </head>
+        <body>
+          <h1>Account Statement: ${acctName}</h1>
+          <p style="color:#666;font-size:12px;">Bank: ${historyAccount.bank_name || '-'} | Account: ${historyAccount.account_number || '-'} | Currency: ${acctCurrency}</p>
+          <div class="meta">
+            <div class="meta-item"><label>Opening Balance</label><span>${openingBalance.toLocaleString()} ${acctCurrency}</span></div>
+            <div class="meta-item"><label>Total Credits</label><span class="credit">+${totalCredit.toLocaleString()} ${acctCurrency}</span></div>
+            <div class="meta-item"><label>Total Debits</label><span class="debit">-${totalDebit.toLocaleString()} ${acctCurrency}</span></div>
+            <div class="meta-item"><label>Closing Balance</label><span>${closingBalance.toLocaleString()} ${acctCurrency}</span></div>
+          </div>
+          <table>
+            <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+            <tbody>${rows.map(row => `<tr>${row.map((cell, i) => `<td style="${i === 4 ? 'color:#ef4444;' : ''}${i === 5 ? 'color:#22c55e;' : ''}">${cell}</td>`).join('')}</tr>`).join('')}</tbody>
+          </table>
+          <div class="footer">
+            <p>Miles Capitals - Treasury Statement | Generated: ${new Date().toLocaleString()} | ${historyData.length} transactions</p>
+          </div>
+          <button class="no-print" onclick="window.print()" style="margin-top:15px;padding:8px 20px;background:#1F2833;color:white;border:none;cursor:pointer;border-radius:4px;">Print / Save as PDF</button>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+      toast.success('PDF statement opened');
+    }
   };
 
   // Transfer functions
@@ -455,6 +543,16 @@ export default function Treasury() {
   };
 
   const totalBalanceUSD = accounts.reduce((sum, acc) => sum + (acc.balance_usd || 0), 0);
+  const activeAccounts = accounts.filter(a => a.status === 'active').length;
+
+  // Group balances by currency
+  const balanceByCurrency = accounts.reduce((acc, a) => {
+    const cur = a.currency || 'USD';
+    if (!acc[cur]) acc[cur] = { balance: 0, count: 0 };
+    acc[cur].balance += (a.balance || 0);
+    acc[cur].count += 1;
+    return acc;
+  }, {});
 
   return (
     <div className="space-y-6 animate-fade-in" data-testid="treasury-page">
@@ -724,21 +822,58 @@ export default function Treasury() {
         </div>
       </div>
 
-      {/* Summary Card */}
-      <Card className="bg-white border-slate-200">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total Treasury Balance (USD Equivalent)</p>
-              <p className="text-4xl font-bold font-mono text-slate-800">${totalBalanceUSD.toLocaleString()}</p>
-              <p className="text-xs text-slate-500 mt-1">Based on manual FX rates (Settings)</p>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-white border-slate-200">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-slate-500 uppercase tracking-wider">Total Balance (USD)</p>
+              <div className="p-2 bg-blue-100 rounded-sm">
+                <DollarSign className="w-5 h-5 text-blue-600" />
+              </div>
             </div>
-            <div className="p-4 bg-blue-100 rounded-sm">
-              <DollarSign className="w-8 h-8 text-blue-600" />
+            <p className="text-3xl font-bold font-mono text-slate-800" data-testid="total-balance-usd">${totalBalanceUSD.toLocaleString()}</p>
+            <p className="text-xs text-slate-400 mt-1">Across all accounts</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-slate-200">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-slate-500 uppercase tracking-wider">Active Accounts</p>
+              <div className="p-2 bg-green-100 rounded-sm">
+                <Building2 className="w-5 h-5 text-green-600" />
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+            <p className="text-3xl font-bold font-mono text-slate-800" data-testid="active-accounts">{activeAccounts}</p>
+            <p className="text-xs text-slate-400 mt-1">of {accounts.length} total</p>
+          </CardContent>
+        </Card>
+        {Object.entries(balanceByCurrency).slice(0, 2).map(([cur, data]) => (
+          <Card key={cur} className="bg-white border-slate-200">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-slate-500 uppercase tracking-wider">{cur} Balance</p>
+                <Badge variant="outline" className="text-xs">{data.count} acct{data.count > 1 ? 's' : ''}</Badge>
+              </div>
+              <p className="text-3xl font-bold font-mono text-slate-800" data-testid={`balance-${cur}`}>{data.balance.toLocaleString()} {cur}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      {/* More currencies if present */}
+      {Object.keys(balanceByCurrency).length > 2 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          {Object.entries(balanceByCurrency).slice(2).map(([cur, data]) => (
+            <Card key={cur} className="bg-white border-slate-200">
+              <CardContent className="p-3">
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">{cur}</p>
+                <p className="text-lg font-bold font-mono text-slate-800">{data.balance.toLocaleString()}</p>
+                <p className="text-xs text-slate-400">{data.count} account{data.count > 1 ? 's' : ''}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Accounts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -973,19 +1108,68 @@ export default function Treasury() {
                       <SelectItem value="deposit" className="text-slate-800 hover:bg-slate-100">Deposit</SelectItem>
                       <SelectItem value="withdrawal" className="text-slate-800 hover:bg-slate-100">Withdrawal</SelectItem>
                       <SelectItem value="settlement_in" className="text-slate-800 hover:bg-slate-100">Settlement In</SelectItem>
+                      <SelectItem value="transfer_in" className="text-slate-800 hover:bg-slate-100">Transfer In</SelectItem>
+                      <SelectItem value="transfer_out" className="text-slate-800 hover:bg-slate-100">Transfer Out</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <Button
-                  onClick={downloadStatement}
-                  disabled={historyData.length === 0}
-                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
-                  data-testid="download-statement-btn"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Statement
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      disabled={historyData.length === 0}
+                      className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+                      data-testid="export-statement-btn"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export Statement
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-white border-slate-200">
+                    <DropdownMenuItem onClick={() => downloadStatement('csv')} className="cursor-pointer hover:bg-slate-100">
+                      <Download className="w-4 h-4 mr-2" /> Download CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => downloadStatement('excel')} className="cursor-pointer hover:bg-slate-100">
+                      <Download className="w-4 h-4 mr-2" /> Download Excel
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => downloadStatement('pdf')} className="cursor-pointer hover:bg-slate-100">
+                      <Download className="w-4 h-4 mr-2" /> Print / PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
+
+              {/* Statement Summary */}
+              {historyData.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
+                    <p className="text-xs text-slate-500 uppercase tracking-wider">Opening Balance</p>
+                    <p className="text-lg font-mono font-bold text-slate-800" data-testid="opening-balance">
+                      {(() => {
+                        const last = historyData[historyData.length - 1];
+                        return ((last?.running_balance || 0) - (last?.amount || 0)).toLocaleString();
+                      })()} {historyAccount.currency}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-green-50 rounded-sm border border-green-200">
+                    <p className="text-xs text-green-600 uppercase tracking-wider">Total Credits</p>
+                    <p className="text-lg font-mono font-bold text-green-700" data-testid="total-credits">
+                      +{historyData.filter(tx => tx.amount > 0).reduce((s, tx) => s + tx.amount, 0).toLocaleString()} {historyAccount.currency}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-red-50 rounded-sm border border-red-200">
+                    <p className="text-xs text-red-600 uppercase tracking-wider">Total Debits</p>
+                    <p className="text-lg font-mono font-bold text-red-700" data-testid="total-debits">
+                      -{historyData.filter(tx => tx.amount < 0).reduce((s, tx) => s + Math.abs(tx.amount), 0).toLocaleString()} {historyAccount.currency}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-blue-50 rounded-sm border border-blue-200">
+                    <p className="text-xs text-blue-600 uppercase tracking-wider">Closing Balance</p>
+                    <p className="text-lg font-mono font-bold text-blue-700" data-testid="closing-balance">
+                      {(historyData[0]?.running_balance || historyAccount.balance || 0).toLocaleString()} {historyAccount.currency}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Transaction Table */}
               <ScrollArea className="h-[350px]">
@@ -1006,28 +1190,34 @@ export default function Treasury() {
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
                         <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Running Balance</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Description</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Debit</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Credit</TableHead>
+                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Balance</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {historyData.map((tx, idx) => {
-                        const isIncoming = tx.amount > 0 || tx.transaction_type === 'deposit' || tx.transaction_type === 'settlement_in';
+                        const isIncoming = tx.amount > 0;
                         return (
                           <TableRow key={tx.treasury_transaction_id || idx} className="border-slate-200 hover:bg-slate-100">
-                            <TableCell className="text-slate-800 text-sm">{formatDate(tx.created_at)}</TableCell>
+                            <TableCell className="text-slate-800 text-sm whitespace-nowrap">{formatDate(tx.created_at)}</TableCell>
                             <TableCell>
-                              <div className={`flex items-center gap-1 ${isIncoming ? 'text-green-400' : 'text-red-400'}`}>
+                              <div className={`flex items-center gap-1 ${isIncoming ? 'text-green-600' : 'text-red-500'}`}>
                                 {isIncoming ? <ArrowDownRight className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
-                                <span className="capitalize text-sm">{tx.transaction_type || 'N/A'}</span>
+                                <span className="capitalize text-xs">{(tx.transaction_type || 'N/A').replace(/_/g, ' ')}</span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-slate-800 text-sm max-w-[200px] truncate">{tx.reference || '-'}</TableCell>
-                            <TableCell className={`font-mono text-right ${isIncoming ? 'text-green-400' : 'text-red-400'}`}>
-                              {isIncoming ? '+' : ''}{Math.abs(tx.amount || 0).toLocaleString()} {historyAccount.currency}
+                            <TableCell className="text-slate-800 text-xs max-w-[160px] truncate font-mono">{tx.reference || '-'}</TableCell>
+                            <TableCell className="text-slate-500 text-xs max-w-[140px] truncate">{tx.client_name || tx.notes || '-'}</TableCell>
+                            <TableCell className="font-mono text-right text-red-500 text-sm">
+                              {!isIncoming ? Math.abs(tx.amount || 0).toLocaleString() : ''}
                             </TableCell>
-                            <TableCell className="font-mono text-right text-slate-800 font-medium" data-testid={`running-balance-${idx}`}>
-                              {(tx.running_balance ?? 0).toLocaleString()} {historyAccount.currency}
+                            <TableCell className="font-mono text-right text-green-600 text-sm">
+                              {isIncoming ? tx.amount.toLocaleString() : ''}
+                            </TableCell>
+                            <TableCell className="font-mono text-right text-slate-800 font-medium text-sm" data-testid={`running-balance-${idx}`}>
+                              {(tx.running_balance ?? 0).toLocaleString()}
                             </TableCell>
                           </TableRow>
                         );
