@@ -93,6 +93,11 @@ export default function PSPs() {
   const [batchSettling, setBatchSettling] = useState(false);
   const [expandedSettlement, setExpandedSettlement] = useState(null);
   const [expandedTxs, setExpandedTxs] = useState([]);
+  // Net settlement state
+  const [netSettleDialogOpen, setNetSettleDialogOpen] = useState(false);
+  const [netSettleDestination, setNetSettleDestination] = useState('');
+  const [netSettleDate, setNetSettleDate] = useState('');
+  const [netSettling, setNetSettling] = useState(false);
   const [formData, setFormData] = useState({
     psp_name: '',
     commission_rate: '',
@@ -592,6 +597,44 @@ export default function PSPs() {
     }
   };
 
+  // Handle net settlement (all deposits + withdrawals)
+  const handleNetSettle = async () => {
+    if (!viewPsp) return;
+    setNetSettling(true);
+    try {
+      const destId = netSettleDestination || viewPsp.settlement_destination_id;
+      const response = await fetch(`${API_URL}/api/psp/${viewPsp.psp_id}/net-settle`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          destination_account_id: destId || null,
+          settlement_date: netSettleDate || null,
+        }),
+      });
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(`Net settlement created: ${result.deposit_count} deposits + ${result.withdrawal_count} withdrawals, Net $${result.net_amount?.toLocaleString()}`);
+        setNetSettleDialogOpen(false);
+        setNetSettleDestination('');
+        setNetSettleDate('');
+        setSelectedSettleTxIds([]);
+        fetchPendingTransactions(viewPsp.psp_id);
+        fetchPspWithdrawals(viewPsp.psp_id);
+        fetchSettlements(viewPsp.psp_id);
+        fetchPsps();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Net settlement failed');
+      }
+    } catch (error) {
+      toast.error('Net settlement failed');
+    } finally {
+      setNetSettling(false);
+    }
+  };
+
+
   // Toggle expanded settlement detail to show included transactions
   const toggleSettlementDetail = async (settlement) => {
     if (expandedSettlement === settlement.settlement_id) {
@@ -1088,18 +1131,28 @@ export default function PSPs() {
                   <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Net Pending</p>
                   {(() => {
                     const totalDeposits = pendingTransactions.reduce((s, tx) => s + (tx.amount || 0), 0);
-                    const totalWithdrawals = pspWithdrawals.reduce((s, tx) => s + (tx.amount || 0), 0);
+                    const totalWithdrawals = pspWithdrawals.filter(tx => tx.status === 'approved').reduce((s, tx) => s + (tx.amount || 0), 0);
                     const totalComm = pendingTransactions.reduce((s, tx) => s + (tx.psp_commission_amount || 0), 0);
                     const totalDepExtraCharges = pendingTransactions.reduce((s, tx) => s + (tx.psp_extra_charges || 0), 0);
                     const totalDepExtraComm = pendingTransactions.reduce((s, tx) => s + (tx.psp_extra_commission || 0), 0);
                     const totalDepReserve = pendingTransactions.reduce((s, tx) => s + (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0), 0);
-                    const totalWdrExtraComm = pspWithdrawals.reduce((s, tx) => s + (tx.psp_withdrawal_extra_commission || 0), 0);
+                    const totalWdrExtraComm = pspWithdrawals.filter(tx => tx.status === 'approved').reduce((s, tx) => s + (tx.psp_withdrawal_extra_commission || 0), 0);
                     const totalAllDeductions = totalComm + totalDepExtraCharges + totalDepExtraComm + totalDepReserve + totalWdrExtraComm;
                     const net = totalDeposits - totalWithdrawals - totalAllDeductions;
                     return (
                       <div>
                         <p className="text-xl font-mono text-yellow-400">${net.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
                         <p className="text-[10px] text-slate-400">Dep: ${totalDeposits.toLocaleString()} - Wdr: ${totalWithdrawals.toLocaleString()} - Ded: ${totalAllDeductions.toLocaleString()}</p>
+                        {net > 0 && (pendingTransactions.length > 0 || pspWithdrawals.filter(tx => tx.status === 'approved').length > 0) && (
+                          <Button
+                            size="sm"
+                            className="mt-2 bg-green-600 text-white hover:bg-green-700 h-7 text-xs font-bold"
+                            onClick={() => { setNetSettleDate(new Date().toISOString().split('T')[0]); setNetSettleDialogOpen(true); }}
+                            data-testid="net-settle-btn"
+                          >
+                            <ArrowRight className="w-3 h-3 mr-1" /> Settle Net ${net.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          </Button>
+                        )}
                       </div>
                     );
                   })()}
@@ -2274,6 +2327,133 @@ export default function PSPs() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+      {/* Net Settlement Dialog */}
+      <Dialog open={netSettleDialogOpen} onOpenChange={setNetSettleDialogOpen}>
+        <DialogContent className="sm:max-w-lg bg-white border border-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-slate-800 flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-green-600" />
+              Net Pending Settlement
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-slate-500">
+              This will settle <strong className="text-slate-800">all pending deposits and approved withdrawals</strong> for <strong className="text-[#66FCF1]">{viewPsp?.psp_name}</strong> as a single net amount to your treasury.
+            </p>
+
+            {(() => {
+              const deps = pendingTransactions;
+              const wdrs = pspWithdrawals.filter(tx => tx.status === 'approved');
+              const depGross = deps.reduce((s, tx) => s + (tx.amount || 0), 0);
+              const depComm = deps.reduce((s, tx) => s + (tx.psp_commission_amount || 0), 0);
+              const depExtraCharges = deps.reduce((s, tx) => s + (tx.psp_extra_charges || 0), 0);
+              const depExtraComm = deps.reduce((s, tx) => s + (tx.psp_extra_commission || 0), 0);
+              const depReserve = deps.reduce((s, tx) => s + (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0), 0);
+              const depGateway = deps.reduce((s, tx) => s + (tx.psp_gateway_fee || 0), 0);
+              const depDeductions = depComm + depExtraCharges + depExtraComm + depReserve + depGateway;
+              const depNet = depGross - depDeductions;
+              const wdrGross = wdrs.reduce((s, tx) => s + (tx.amount || 0), 0);
+              const wdrExtraComm = wdrs.reduce((s, tx) => s + (tx.psp_withdrawal_extra_commission || 0), 0);
+              const wdrTotal = wdrGross + wdrExtraComm;
+              const netAmount = depNet - wdrTotal;
+              return (
+                <div className="bg-slate-50 border border-slate-200 rounded-sm p-4 space-y-2">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider font-bold mb-2">Deposits ({deps.length})</p>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Gross Amount</span>
+                    <span className="font-mono text-slate-800">${depGross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                  </div>
+                  {depDeductions > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Deductions (Comm + Extra + Reserve)</span>
+                      <span className="font-mono text-yellow-600">-${depDeductions.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm font-medium">
+                    <span className="text-slate-600">Deposit Net</span>
+                    <span className="font-mono text-slate-800">${depNet.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                  </div>
+
+                  {wdrs.length > 0 && (
+                    <>
+                      <div className="border-t border-slate-200 my-2" />
+                      <p className="text-xs text-slate-500 uppercase tracking-wider font-bold mb-2">Withdrawals ({wdrs.length})</p>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-500">Withdrawal Amount</span>
+                        <span className="font-mono text-red-500">-${wdrGross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                      </div>
+                      {wdrExtraComm > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-500">Withdrawal Extra Commission</span>
+                          <span className="font-mono text-red-500">-${wdrExtraComm.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  <div className="border-t border-slate-300 pt-2 flex justify-between text-sm font-bold">
+                    <span className="text-slate-700">Net to Treasury</span>
+                    <span className="font-mono text-green-600">${netAmount.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="space-y-1.5">
+              <Label className="text-slate-600 text-xs uppercase tracking-wider">Destination Treasury Account</Label>
+              <Select
+                value={netSettleDestination || viewPsp?.settlement_destination_id || ''}
+                onValueChange={setNetSettleDestination}
+              >
+                <SelectTrigger className="border-slate-200 bg-white text-slate-800" data-testid="net-settle-destination">
+                  <SelectValue placeholder="Use PSP default destination" />
+                </SelectTrigger>
+                <SelectContent>
+                  {treasuryAccounts.map((account) => (
+                    <SelectItem key={account.account_id} value={account.account_id}>
+                      {account.account_name} - {account.bank_name} ({account.currency})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {viewPsp?.settlement_destination_name && !netSettleDestination && (
+                <p className="text-[10px] text-slate-400">Default: {viewPsp.settlement_destination_name}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-slate-600 text-xs uppercase tracking-wider">Settlement Date</Label>
+              <Input
+                type="date"
+                value={netSettleDate}
+                onChange={e => setNetSettleDate(e.target.value)}
+                className="border-slate-200 bg-white text-slate-800"
+                data-testid="net-settle-date"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setNetSettleDialogOpen(false)}
+                className="border-slate-200 text-slate-600"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleNetSettle}
+                disabled={netSettling}
+                className="bg-green-600 text-white hover:bg-green-700 font-bold"
+                data-testid="confirm-net-settle-btn"
+              >
+                {netSettling ? 'Processing...' : 'Confirm Net Settlement'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

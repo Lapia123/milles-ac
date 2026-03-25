@@ -4149,6 +4149,181 @@ async def batch_settle_psp_transactions(
     return result
 
 
+
+# Net Settlement: Settle ALL pending deposits + withdrawals as one net amount
+class NetSettleRequest(BaseModel):
+    destination_account_id: Optional[str] = None
+    settlement_date: Optional[str] = None
+
+@api_router.post("/psp/{psp_id}/net-settle")
+async def net_settle_psp(
+    request: Request,
+    psp_id: str,
+    body: NetSettleRequest,
+    user: dict = Depends(require_permission(Modules.PSP, Actions.APPROVE))
+):
+    """Create a net settlement from ALL pending deposits and withdrawals"""
+    psp = await db.psps.find_one({"psp_id": psp_id}, {"_id": 0})
+    if not psp:
+        raise HTTPException(status_code=404, detail="PSP not found")
+
+    # Fetch all unsettled deposits
+    deposit_txs = await db.transactions.find({
+        "psp_id": psp_id,
+        "destination_type": "psp",
+        "transaction_type": "deposit",
+        "status": TransactionStatus.APPROVED,
+        "settled": {"$ne": True}
+    }, {"_id": 0}).to_list(10000)
+
+    # Fetch all unsettled approved withdrawals
+    withdrawal_txs = await db.transactions.find({
+        "psp_id": psp_id,
+        "destination_type": "psp",
+        "transaction_type": "withdrawal",
+        "status": TransactionStatus.APPROVED,
+        "settled": {"$ne": True}
+    }, {"_id": 0}).to_list(10000)
+
+    if not deposit_txs and not withdrawal_txs:
+        raise HTTPException(status_code=400, detail="No pending transactions to settle")
+
+    # Calculate deposit totals
+    dep_gross = sum(tx.get("amount", 0) for tx in deposit_txs)
+    dep_commission = sum(tx.get("psp_commission_amount", 0) or 0 for tx in deposit_txs)
+    dep_reserve = sum((tx.get("psp_reserve_fund_amount", 0) or tx.get("psp_chargeback_amount", 0) or 0) for tx in deposit_txs)
+    dep_extra_charges = sum(tx.get("psp_extra_charges", 0) or 0 for tx in deposit_txs)
+    dep_extra_comm = sum(tx.get("psp_extra_commission", 0) or 0 for tx in deposit_txs)
+    dep_gateway = sum(tx.get("psp_gateway_fee", 0) or 0 for tx in deposit_txs)
+    dep_total_deductions = dep_commission + dep_reserve + dep_extra_charges + dep_extra_comm + dep_gateway
+    dep_net = dep_gross - dep_total_deductions
+
+    # Calculate withdrawal totals
+    wdr_gross = sum(tx.get("amount", 0) for tx in withdrawal_txs)
+    wdr_extra_comm = sum(tx.get("psp_withdrawal_extra_commission", 0) or 0 for tx in withdrawal_txs)
+    wdr_total = wdr_gross + wdr_extra_comm
+
+    # Net amount = deposit net - withdrawal total
+    net_amount = round(dep_net - wdr_total, 2)
+
+    if net_amount <= 0:
+        raise HTTPException(status_code=400, detail=f"Net settlement amount is ${net_amount:,.2f}. Cannot settle zero or negative amounts.")
+
+    # Determine destination treasury account
+    dest_account_id = body.destination_account_id or psp.get("settlement_destination_id")
+    if not dest_account_id:
+        raise HTTPException(status_code=400, detail="No destination account specified")
+
+    dest = await db.treasury_accounts.find_one({"account_id": dest_account_id}, {"_id": 0})
+    if not dest:
+        raise HTTPException(status_code=404, detail="Destination treasury account not found")
+
+    dest_currency = dest.get("currency", "USD")
+    treasury_amount = convert_currency(net_amount, "USD", dest_currency)
+
+    now = datetime.now(timezone.utc)
+    settlement_id = f"stl_{uuid.uuid4().hex[:12]}"
+
+    if body.settlement_date:
+        settle_date = f"{body.settlement_date}T00:00:00" if 'T' not in body.settlement_date else body.settlement_date
+    else:
+        settle_date = now.isoformat()
+
+    all_tx_ids = [tx["transaction_id"] for tx in deposit_txs] + [tx["transaction_id"] for tx in withdrawal_txs]
+
+    settlement_doc = {
+        "settlement_id": settlement_id,
+        "psp_id": psp_id,
+        "psp_name": psp["psp_name"],
+        "settlement_type": "net_settlement",
+        "deposit_count": len(deposit_txs),
+        "withdrawal_count": len(withdrawal_txs),
+        "deposit_gross": round(dep_gross, 2),
+        "deposit_deductions": round(dep_total_deductions, 2),
+        "deposit_net": round(dep_net, 2),
+        "withdrawal_gross": round(wdr_gross, 2),
+        "withdrawal_extra_commission": round(wdr_extra_comm, 2),
+        "withdrawal_total": round(wdr_total, 2),
+        "gross_amount": round(dep_gross, 2),
+        "commission_amount": round(dep_commission, 2),
+        "reserve_fund_amount": round(dep_reserve, 2),
+        "extra_charges": round(dep_extra_charges + dep_extra_comm, 2),
+        "gateway_fees": round(dep_gateway, 2),
+        "total_deductions": round(dep_total_deductions + wdr_total, 2),
+        "net_amount": round(net_amount, 2),
+        "treasury_amount": round(treasury_amount, 2),
+        "treasury_currency": dest_currency,
+        "transaction_count": len(all_tx_ids),
+        "transaction_ids": all_tx_ids,
+        "settlement_destination_id": dest_account_id,
+        "settlement_destination_name": dest["account_name"],
+        "status": PSPSettlementStatus.COMPLETED,
+        "expected_settlement_date": settle_date,
+        "settlement_date": body.settlement_date or now.strftime("%Y-%m-%d"),
+        "created_at": settle_date,
+        "settled_at": settle_date,
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    await db.psp_settlements.insert_one(settlement_doc)
+
+    # Credit treasury with net amount
+    await db.treasury_accounts.update_one(
+        {"account_id": dest_account_id},
+        {"$inc": {"balance": treasury_amount}, "$set": {"updated_at": now.isoformat()}}
+    )
+
+    # Add treasury transaction record
+    treasury_tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+    conversion_note = f" (Converted: USD {net_amount:,.2f} -> {dest_currency} {treasury_amount:,.2f})" if dest_currency != "USD" else ""
+    treasury_tx = {
+        "treasury_transaction_id": treasury_tx_id,
+        "account_id": dest_account_id,
+        "account_name": dest["account_name"],
+        "transaction_type": "psp_settlement",
+        "amount": treasury_amount,
+        "currency": dest_currency,
+        "original_amount": net_amount,
+        "original_currency": "USD",
+        "reference": f"PSP Net Settlement - {settlement_id}",
+        "description": f"Net settlement ({len(deposit_txs)} deposits, {len(withdrawal_txs)} withdrawals) from {psp['psp_name']}{conversion_note}",
+        "related_settlement_id": settlement_id,
+        "psp_id": psp_id,
+        "psp_name": psp["psp_name"],
+        "created_at": settle_date,
+        "created_by": user["user_id"],
+        "created_by_name": user["name"]
+    }
+    await db.treasury_transactions.insert_one(treasury_tx)
+
+    # Mark ALL transactions as settled
+    await db.transactions.update_many(
+        {"transaction_id": {"$in": all_tx_ids}},
+        {"$set": {
+            "settled": True,
+            "settlement_id": settlement_id,
+            "settlement_status": "completed",
+            "settled_at": now.isoformat(),
+            "settled_by": user["user_id"],
+            "settled_by_name": user["name"],
+            "settlement_destination_id": dest_account_id,
+            "settlement_destination_name": dest["account_name"]
+        }}
+    )
+
+    # Reset PSP pending_settlement to 0 (everything is settled)
+    await db.psps.update_one(
+        {"psp_id": psp_id},
+        {"$set": {"pending_settlement": 0}, "$inc": {"total_volume": dep_gross, "total_commission": dep_commission}}
+    )
+
+    await log_activity(request, user, "approve", "psp", f"Net settlement: {len(deposit_txs)} deposits + {len(withdrawal_txs)} withdrawals, net ${net_amount:,.2f}")
+
+    result = await db.psp_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
+    return result
+
+
+
 # Migration endpoint: Backfill existing settled PSP transactions into psp_settlements
 @api_router.post("/psp/backfill-settlements")
 async def backfill_psp_settlements(user: dict = Depends(require_permission(Modules.PSP, Actions.CREATE))):
