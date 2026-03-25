@@ -72,7 +72,7 @@ export default function PSPs() {
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [pendingTransactions, setPendingTransactions] = useState([]);
   const [pspWithdrawals, setPspWithdrawals] = useState([]);
-  const [extraCommDialog, setExtraCommDialog] = useState({ open: false, tx: null, amount: '', note: '' });
+  const [extraCommDialog, setExtraCommDialog] = useState({ open: false, tx: null, amount: '', note: '', type: 'withdrawal' });
   const [settlements, setSettlements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -184,8 +184,9 @@ export default function PSPs() {
 
   const handleExtraCommission = async () => {
     if (!extraCommDialog.tx) return;
+    const endpoint = extraCommDialog.type === 'deposit' ? 'deposit-extra-commission' : 'withdrawal-extra-commission';
     try {
-      const response = await fetch(`${API_URL}/api/psp/${viewPsp.psp_id}/withdrawal-extra-commission`, {
+      const response = await fetch(`${API_URL}/api/psp/${viewPsp.psp_id}/${endpoint}`, {
         method: 'POST',
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -197,8 +198,10 @@ export default function PSPs() {
       });
       if (response.ok) {
         toast.success('Extra commission updated');
-        setExtraCommDialog({ open: false, tx: null, amount: '', note: '' });
+        setExtraCommDialog({ open: false, tx: null, amount: '', note: '', type: 'withdrawal' });
+        fetchPendingTransactions(viewPsp.psp_id);
         fetchPspWithdrawals(viewPsp.psp_id);
+        fetchPsps();
       } else {
         const err = await response.json();
         toast.error(err.detail || 'Failed');
@@ -1087,12 +1090,13 @@ export default function PSPs() {
                     const totalDeposits = pendingTransactions.reduce((s, tx) => s + (tx.amount || 0), 0);
                     const totalWithdrawals = pspWithdrawals.reduce((s, tx) => s + (tx.amount || 0), 0);
                     const totalComm = pendingTransactions.reduce((s, tx) => s + (tx.psp_commission_amount || 0), 0);
-                    const totalExtraComm = pspWithdrawals.reduce((s, tx) => s + (tx.psp_withdrawal_extra_commission || 0), 0);
-                    const net = totalDeposits - totalWithdrawals - totalComm - totalExtraComm;
+                    const totalDepExtraComm = pendingTransactions.reduce((s, tx) => s + (tx.psp_extra_commission || 0), 0);
+                    const totalWdrExtraComm = pspWithdrawals.reduce((s, tx) => s + (tx.psp_withdrawal_extra_commission || 0), 0);
+                    const net = totalDeposits - totalWithdrawals - totalComm - totalDepExtraComm - totalWdrExtraComm;
                     return (
                       <div>
                         <p className="text-xl font-mono text-yellow-400">${net.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
-                        <p className="text-[10px] text-slate-400">Dep: ${totalDeposits.toLocaleString()} - Wdr: ${totalWithdrawals.toLocaleString()}</p>
+                        <p className="text-[10px] text-slate-400">Dep: ${totalDeposits.toLocaleString()} - Wdr: ${totalWithdrawals.toLocaleString()} - Comm: ${(totalComm + totalDepExtraComm + totalWdrExtraComm).toLocaleString()}</p>
                       </div>
                     );
                   })()}
@@ -1164,6 +1168,7 @@ export default function PSPs() {
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Gross</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Deductions</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Net</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Extra Comm.</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Holding</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Release Date</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
@@ -1174,8 +1179,8 @@ export default function PSPs() {
                           {pendingTransactions.map((tx) => {
                             const overdue = isOverdue(tx.psp_expected_settlement_date);
                             const holdingReleaseOverdue = isOverdue(tx.psp_holding_release_date);
-                            const netAmount = (tx.amount || 0) - (tx.psp_commission_amount || 0) - (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0) - (tx.psp_extra_charges || 0);
-                            const totalDeductions = (tx.psp_commission_amount || 0) + (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0) + (tx.psp_extra_charges || 0);
+                            const netAmount = (tx.amount || 0) - (tx.psp_commission_amount || 0) - (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0) - (tx.psp_extra_charges || 0) - (tx.psp_extra_commission || 0);
+                            const totalDeductions = (tx.psp_commission_amount || 0) + (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0) + (tx.psp_extra_charges || 0) + (tx.psp_extra_commission || 0);
                             const holdingDays = tx.psp_holding_days || viewPsp?.holding_days || 0;
                             const isReleased = tx.psp_holding_release_date && new Date(tx.psp_holding_release_date) <= new Date();
                             const hasDiffCurrency = tx.base_currency && tx.base_currency !== 'USD' && tx.base_currency !== tx.currency;
@@ -1261,6 +1266,18 @@ export default function PSPs() {
                                   <div className="font-mono text-blue-600 font-bold">
                                     ${netAmount.toLocaleString()}
                                     {hasDiffCurrency && <p className="text-[10px] text-blue-500 font-normal">{baseNet?.toLocaleString(undefined, {maximumFractionDigits: 2})} {tx.base_currency}</p>}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="cursor-pointer" onClick={() => setExtraCommDialog({ open: true, tx, amount: (tx.psp_extra_commission || '').toString(), note: tx.psp_extra_commission_note || '', type: 'deposit' })}>
+                                    {tx.psp_extra_commission > 0 ? (
+                                      <div>
+                                        <span className="font-mono text-orange-400 text-xs hover:underline">${tx.psp_extra_commission.toLocaleString()}</span>
+                                        {tx.psp_extra_commission_note && <p className="text-[10px] text-slate-400 truncate max-w-[80px]" title={tx.psp_extra_commission_note}>{tx.psp_extra_commission_note}</p>}
+                                      </div>
+                                    ) : (
+                                      <span className="text-[10px] text-orange-400 hover:text-orange-600">+ Add</span>
+                                    )}
                                   </div>
                                 </TableCell>
                                 <TableCell>

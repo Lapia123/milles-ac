@@ -3462,6 +3462,53 @@ async def get_psp_withdrawal_transactions(psp_id: str, user: dict = Depends(requ
     }, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return transactions
 
+@api_router.post("/psp/{psp_id}/deposit-extra-commission")
+async def update_psp_deposit_extra_commission(
+    request: Request,
+    psp_id: str,
+    user: dict = Depends(require_permission(Modules.PSP, Actions.EDIT))
+):
+    """Add extra commission to a PSP deposit transaction"""
+    body = await request.json()
+    transaction_id = body.get("transaction_id")
+    extra_commission = float(body.get("extra_commission", 0))
+    extra_commission_note = body.get("note", "")
+    
+    if not transaction_id:
+        raise HTTPException(status_code=400, detail="Transaction ID required")
+    
+    tx = await db.transactions.find_one({"transaction_id": transaction_id, "psp_id": psp_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    old_extra = tx.get("psp_extra_commission", 0) or 0
+    
+    # Recalculate net amount: gross - commission - extra commission
+    gross = tx.get("amount", 0)
+    commission = tx.get("psp_commission_amount", 0)
+    new_net = round(gross - commission - extra_commission, 2)
+    
+    await db.transactions.update_one(
+        {"transaction_id": transaction_id},
+        {"$set": {
+            "psp_extra_commission": round(extra_commission, 2),
+            "psp_extra_commission_note": extra_commission_note,
+            "psp_net_amount": new_net,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Update PSP pending_settlement: adjust by the difference in extra commission
+    diff = extra_commission - old_extra
+    if diff != 0:
+        await db.psps.update_one(
+            {"psp_id": psp_id},
+            {"$inc": {"pending_settlement": -diff}}
+        )
+    
+    await log_activity(request, user, "edit", "psp", f"Added extra commission ${extra_commission} to PSP deposit {transaction_id}")
+    return {"message": "Extra commission updated", "new_net_amount": new_net}
+
 @api_router.post("/psp/{psp_id}/withdrawal-extra-commission")
 async def update_psp_withdrawal_extra_commission(
     request: Request,
