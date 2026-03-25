@@ -71,6 +71,8 @@ export default function PSPs() {
   const [psps, setPsps] = useState([]);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [pendingTransactions, setPendingTransactions] = useState([]);
+  const [pspWithdrawals, setPspWithdrawals] = useState([]);
+  const [extraCommDialog, setExtraCommDialog] = useState({ open: false, tx: null, amount: '', note: '' });
   const [settlements, setSettlements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -169,6 +171,41 @@ export default function PSPs() {
     }
   };
 
+  const fetchPspWithdrawals = async (pspId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/psp/${pspId}/withdrawal-transactions`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setPspWithdrawals(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching PSP withdrawals:', error);
+    }
+  };
+
+  const handleExtraCommission = async () => {
+    if (!extraCommDialog.tx) return;
+    try {
+      const response = await fetch(`${API_URL}/api/psp/${viewPsp.psp_id}/withdrawal-extra-commission`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          transaction_id: extraCommDialog.tx.transaction_id,
+          extra_commission: parseFloat(extraCommDialog.amount) || 0,
+          note: extraCommDialog.note,
+        }),
+      });
+      if (response.ok) {
+        toast.success('Extra commission updated');
+        setExtraCommDialog({ open: false, tx: null, amount: '', note: '' });
+        fetchPspWithdrawals(viewPsp.psp_id);
+      } else {
+        const err = await response.json();
+        toast.error(err.detail || 'Failed');
+      }
+    } catch { toast.error('Failed to update extra commission'); }
+  };
+
   const fetchSettlements = async (pspId) => {
     try {
       const response = await fetch(`${API_URL}/api/psp/${pspId}/settlements`, { headers: getAuthHeaders(), credentials: 'include' });
@@ -252,6 +289,7 @@ export default function PSPs() {
   useEffect(() => {
     if (viewPsp) {
       fetchPendingTransactions(viewPsp.psp_id);
+      fetchPspWithdrawals(viewPsp.psp_id);
       fetchSettlements(viewPsp.psp_id);
       fetchReserveFundLedger(viewPsp.psp_id);
     }
@@ -1015,7 +1053,7 @@ export default function PSPs() {
       </div>
 
       {/* View PSP Details Dialog */}
-      <Dialog open={!!viewPsp} onOpenChange={() => { setViewPsp(null); setPendingTransactions([]); setSettlements([]); setSelectedSettleTxIds([]); }}>
+      <Dialog open={!!viewPsp} onOpenChange={() => { setViewPsp(null); setPendingTransactions([]); setPspWithdrawals([]); setSettlements([]); setSelectedSettleTxIds([]); }}>
         <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-6xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-3" style={{ fontFamily: 'Barlow Condensed' }}>
@@ -1044,8 +1082,20 @@ export default function PSPs() {
                   <p className="text-xl font-mono text-slate-800">T+{viewPsp.settlement_days}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Pending Amount</p>
-                  <p className="text-xl font-mono text-yellow-400">${(viewPsp.pending_amount || 0).toLocaleString()}</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Net Pending</p>
+                  {(() => {
+                    const totalDeposits = pendingTransactions.reduce((s, tx) => s + (tx.amount || 0), 0);
+                    const totalWithdrawals = pspWithdrawals.reduce((s, tx) => s + (tx.amount || 0), 0);
+                    const totalComm = pendingTransactions.reduce((s, tx) => s + (tx.psp_commission_amount || 0), 0);
+                    const totalExtraComm = pspWithdrawals.reduce((s, tx) => s + (tx.psp_withdrawal_extra_commission || 0), 0);
+                    const net = totalDeposits - totalWithdrawals - totalComm - totalExtraComm;
+                    return (
+                      <div>
+                        <p className="text-xl font-mono text-yellow-400">${net.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+                        <p className="text-[10px] text-slate-400">Dep: ${totalDeposits.toLocaleString()} - Wdr: ${totalWithdrawals.toLocaleString()}</p>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Settlement To</p>
@@ -1075,7 +1125,10 @@ export default function PSPs() {
               <Tabs defaultValue="pending" className="w-full">
                 <TabsList className="bg-slate-50 border border-slate-200">
                   <TabsTrigger value="pending" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-                    Pending Settlements ({pendingTransactions.length})
+                    Deposits ({pendingTransactions.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="withdrawals" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+                    Withdrawals ({pspWithdrawals.length})
                   </TabsTrigger>
                   <TabsTrigger value="reserve-fund" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]" data-testid="reserve-fund-tab">
                     Reserve Fund
@@ -1298,6 +1351,93 @@ export default function PSPs() {
                       </div>
                     </div>
                   )}
+                </TabsContent>
+
+                {/* Withdrawals Tab */}
+                <TabsContent value="withdrawals" className="mt-4">
+                  {/* Withdrawal Summary */}
+                  <div className="grid grid-cols-4 gap-3 mb-4">
+                    <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider">Total Withdrawals</p>
+                      <p className="text-lg font-mono text-red-500 font-bold">${pspWithdrawals.reduce((s, tx) => s + (tx.amount || 0), 0).toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider">Commission</p>
+                      <p className="text-lg font-mono text-yellow-500 font-bold">${pspWithdrawals.reduce((s, tx) => s + (tx.psp_commission_amount || 0), 0).toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider">Extra Commission</p>
+                      <p className="text-lg font-mono text-orange-400 font-bold">${pspWithdrawals.reduce((s, tx) => s + (tx.psp_withdrawal_extra_commission || 0), 0).toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider">Count</p>
+                      <p className="text-lg font-mono text-slate-800 font-bold">{pspWithdrawals.length}</p>
+                    </div>
+                  </div>
+
+                  <ScrollArea className="h-[300px]">
+                    {pspWithdrawals.length === 0 ? (
+                      <div className="text-center py-8 text-slate-500">
+                        <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
+                        No withdrawal transactions
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-slate-200 hover:bg-transparent">
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Tx Date</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Client</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Commission</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Extra Comm.</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {pspWithdrawals.map((tx) => (
+                            <TableRow key={tx.transaction_id} className="border-slate-200 hover:bg-slate-100">
+                              <TableCell>
+                                <div>
+                                  <span className="font-mono text-slate-800 text-xs">{tx.reference}</span>
+                                  <p className="text-[10px] text-slate-500">{tx.crm_reference || ''}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-xs text-slate-600">
+                                {(tx.transaction_date || tx.created_at) ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString() : '-'}
+                              </TableCell>
+                              <TableCell className="text-xs text-slate-600">{tx.client_name || '-'}</TableCell>
+                              <TableCell className="font-mono text-right text-red-500 text-sm">${tx.amount?.toLocaleString()}</TableCell>
+                              <TableCell className="font-mono text-right text-yellow-500 text-xs">${(tx.psp_commission_amount || 0).toLocaleString()}</TableCell>
+                              <TableCell className="font-mono text-right text-orange-400 text-xs">
+                                {tx.psp_withdrawal_extra_commission ? `$${tx.psp_withdrawal_extra_commission.toLocaleString()}` : '-'}
+                                {tx.psp_withdrawal_extra_commission_note && (
+                                  <p className="text-[10px] text-slate-400 truncate max-w-[100px]" title={tx.psp_withdrawal_extra_commission_note}>{tx.psp_withdrawal_extra_commission_note}</p>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={`text-xs ${tx.status === 'approved' ? 'text-green-600 border-green-300' : 'text-yellow-600 border-yellow-300'}`}>
+                                  {tx.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setExtraCommDialog({ open: true, tx, amount: tx.psp_withdrawal_extra_commission?.toString() || '', note: tx.psp_withdrawal_extra_commission_note || '' })}
+                                  className="h-7 text-xs text-orange-400 hover:text-orange-600 hover:bg-orange-50"
+                                  data-testid={`extra-comm-${tx.transaction_id}`}
+                                >
+                                  <DollarSign className="w-3 h-3 mr-1" /> Extra Comm.
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </ScrollArea>
                 </TabsContent>
                 
                 {/* Reserve Fund Ledger Tab */}
@@ -2061,6 +2201,59 @@ export default function PSPs() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Extra Commission Dialog */}
+      <Dialog open={extraCommDialog.open} onOpenChange={(open) => { if (!open) setExtraCommDialog({ open: false, tx: null, amount: '', note: '' }); }}>
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">Extra Commission</DialogTitle>
+          </DialogHeader>
+          {extraCommDialog.tx && (
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Reference:</span>
+                  <span className="font-mono text-slate-800">{extraCommDialog.tx.reference}</span>
+                </div>
+                <div className="flex justify-between text-sm mt-1">
+                  <span className="text-slate-500">Amount:</span>
+                  <span className="font-mono text-red-500">${extraCommDialog.tx.amount?.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm mt-1">
+                  <span className="text-slate-500">Client:</span>
+                  <span className="text-slate-800">{extraCommDialog.tx.client_name || '-'}</span>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Extra Commission Amount (USD)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={extraCommDialog.amount}
+                  onChange={(e) => setExtraCommDialog(prev => ({ ...prev, amount: e.target.value }))}
+                  className="border-slate-200 bg-white text-slate-800"
+                  placeholder="0.00"
+                  data-testid="extra-comm-amount"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Note (Optional)</Label>
+                <Input
+                  value={extraCommDialog.note}
+                  onChange={(e) => setExtraCommDialog(prev => ({ ...prev, note: e.target.value }))}
+                  className="border-slate-200 bg-white text-slate-800"
+                  placeholder="Reason for extra commission"
+                  data-testid="extra-comm-note"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setExtraCommDialog({ open: false, tx: null, amount: '', note: '' })} className="border-slate-200 text-slate-600">Cancel</Button>
+                <Button size="sm" onClick={handleExtraCommission} className="bg-orange-500 text-white hover:bg-orange-600" data-testid="save-extra-comm-btn">Save Extra Commission</Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

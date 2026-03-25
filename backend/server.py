@@ -3451,6 +3451,48 @@ async def get_psp_pending_transactions(psp_id: str, user: dict = Depends(require
     }, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return transactions
 
+@api_router.get("/psp/{psp_id}/withdrawal-transactions")
+async def get_psp_withdrawal_transactions(psp_id: str, user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
+    """Get withdrawal transactions for a PSP"""
+    transactions = await db.transactions.find({
+        "psp_id": psp_id,
+        "destination_type": "psp",
+        "transaction_type": "withdrawal",
+        "status": {"$in": [TransactionStatus.APPROVED, TransactionStatus.PENDING]}
+    }, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return transactions
+
+@api_router.post("/psp/{psp_id}/withdrawal-extra-commission")
+async def update_psp_withdrawal_extra_commission(
+    request: Request,
+    psp_id: str,
+    user: dict = Depends(require_permission(Modules.PSP, Actions.EDIT))
+):
+    """Add extra commission to a PSP withdrawal transaction"""
+    body = await request.json()
+    transaction_id = body.get("transaction_id")
+    extra_commission = float(body.get("extra_commission", 0))
+    extra_commission_note = body.get("note", "")
+    
+    if not transaction_id:
+        raise HTTPException(status_code=400, detail="Transaction ID required")
+    
+    tx = await db.transactions.find_one({"transaction_id": transaction_id, "psp_id": psp_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    await db.transactions.update_one(
+        {"transaction_id": transaction_id},
+        {"$set": {
+            "psp_withdrawal_extra_commission": round(extra_commission, 2),
+            "psp_withdrawal_extra_commission_note": extra_commission_note,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    await log_activity(request, user, "edit", "psp", f"Added extra commission ${extra_commission} to PSP withdrawal {transaction_id}")
+    return {"message": "Extra commission updated"}
+
 # Get PSP dashboard summary
 @api_router.get("/psp-summary")
 async def get_psp_summary(user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
