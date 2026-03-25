@@ -3560,6 +3560,15 @@ async def get_psp_summary(user: dict = Depends(require_permission(Modules.PSP, A
             "settled": {"$ne": True}
         }, {"_id": 0}).to_list(1000)
         
+        # Get unsettled approved withdrawals
+        withdrawal_txs = await db.transactions.find({
+            "psp_id": psp["psp_id"],
+            "destination_type": "psp",
+            "transaction_type": "withdrawal",
+            "status": TransactionStatus.APPROVED,
+            "settled": {"$ne": True}
+        }, {"_id": 0}).to_list(1000)
+        
         pending_count = len(pending_txs)
         pending_amount_gross = sum(tx.get("psp_net_amount", tx.get("amount", 0)) for tx in pending_txs)
         
@@ -3584,8 +3593,10 @@ async def get_psp_summary(user: dict = Depends(require_permission(Modules.PSP, A
             else:
                 reserve_from_pending += round(tx.get("amount", 0) * reserve_fund_rate, 2)
 
-        # Pending Amount = Gross - Commission - Reserve Fund
-        pending_amount = round(pending_amount_gross - reserve_from_pending, 2)
+        # Pending Amount = Deposit Net - Reserve Fund - Withdrawals - Withdrawal Extra Commission
+        withdrawal_total = sum(tx.get("amount", 0) for tx in withdrawal_txs)
+        withdrawal_extra_comm = sum(tx.get("psp_withdrawal_extra_commission", 0) or 0 for tx in withdrawal_txs)
+        pending_amount = round(pending_amount_gross - reserve_from_pending - withdrawal_total - withdrawal_extra_comm, 2)
 
         # Total reserve held includes pending + settled unreleased
         total_reserve_held = reserve_from_pending
