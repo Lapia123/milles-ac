@@ -1138,12 +1138,14 @@ export default function PSPs() {
                     const totalDepReserve = pendingTransactions.reduce((s, tx) => s + (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0), 0);
                     const totalWdrExtraComm = pspWithdrawals.filter(tx => tx.status === 'approved').reduce((s, tx) => s + (tx.psp_withdrawal_extra_commission || 0), 0);
                     const totalAllDeductions = totalComm + totalDepExtraCharges + totalDepExtraComm + totalDepReserve + totalWdrExtraComm;
-                    const net = totalDeposits - totalWithdrawals - totalAllDeductions;
+                    const rawNet = totalDeposits - totalWithdrawals - totalAllDeductions;
+                    const net = Math.max(rawNet, 0);
+                    const hasItems = pendingTransactions.length > 0 || pspWithdrawals.filter(tx => tx.status === 'approved').length > 0;
                     return (
                       <div>
-                        <p className="text-xl font-mono text-yellow-400">${net.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
-                        <p className="text-[10px] text-slate-400">Dep: ${totalDeposits.toLocaleString()} - Wdr: ${totalWithdrawals.toLocaleString()} - Ded: ${totalAllDeductions.toLocaleString()}</p>
-                        {net > 0 && (pendingTransactions.length > 0 || pspWithdrawals.filter(tx => tx.status === 'approved').length > 0) && (
+                        <p className={`text-xl font-mono ${net === 0 ? 'text-slate-400' : 'text-yellow-400'}`}>${net.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+                        {hasItems && <p className="text-[10px] text-slate-400">Dep: ${totalDeposits.toLocaleString()} - Wdr: ${totalWithdrawals.toLocaleString()} - Ded: ${totalAllDeductions.toLocaleString()}</p>}
+                        {net > 0 && hasItems && (
                           <Button
                             size="sm"
                             className="mt-2 bg-green-600 text-white hover:bg-green-700 h-7 text-xs font-bold"

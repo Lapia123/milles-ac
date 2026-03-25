@@ -3453,12 +3453,13 @@ async def get_psp_pending_transactions(psp_id: str, user: dict = Depends(require
 
 @api_router.get("/psp/{psp_id}/withdrawal-transactions")
 async def get_psp_withdrawal_transactions(psp_id: str, user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
-    """Get withdrawal transactions for a PSP"""
+    """Get withdrawal transactions for a PSP (unsettled only)"""
     transactions = await db.transactions.find({
         "psp_id": psp_id,
         "destination_type": "psp",
         "transaction_type": "withdrawal",
-        "status": {"$in": [TransactionStatus.APPROVED, TransactionStatus.PENDING]}
+        "status": {"$in": [TransactionStatus.APPROVED, TransactionStatus.PENDING]},
+        "settled": {"$ne": True}
     }, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return transactions
 
@@ -3596,7 +3597,7 @@ async def get_psp_summary(user: dict = Depends(require_permission(Modules.PSP, A
         # Pending Amount = Deposit Net - Reserve Fund - Withdrawals - Withdrawal Extra Commission
         withdrawal_total = sum(tx.get("amount", 0) for tx in withdrawal_txs)
         withdrawal_extra_comm = sum(tx.get("psp_withdrawal_extra_commission", 0) or 0 for tx in withdrawal_txs)
-        pending_amount = round(pending_amount_gross - reserve_from_pending - withdrawal_total - withdrawal_extra_comm, 2)
+        pending_amount = max(round(pending_amount_gross - reserve_from_pending - withdrawal_total - withdrawal_extra_comm, 2), 0)
 
         # Total reserve held includes pending + settled unreleased
         total_reserve_held = reserve_from_pending
@@ -4144,14 +4145,13 @@ async def batch_settle_psp_transactions(
         }}
     )
 
-    # Update PSP stats
+    # Update PSP stats - ensure pending_settlement never goes below 0
+    current_psp = await db.psps.find_one({"psp_id": psp_id}, {"_id": 0, "pending_settlement": 1})
+    new_pending = max((current_psp.get("pending_settlement", 0) or 0) - net_amount, 0)
     await db.psps.update_one(
         {"psp_id": psp_id},
-        {"$inc": {
-            "total_volume": gross_amount,
-            "total_commission": total_commission,
-            "pending_settlement": -net_amount
-        }}
+        {"$set": {"pending_settlement": round(new_pending, 2)},
+         "$inc": {"total_volume": gross_amount, "total_commission": total_commission}}
     )
 
     await log_activity(request, user, "approve", "psp", f"Compound settlement: {len(selected_txs)} transactions, net ${net_amount:,.2f}")
