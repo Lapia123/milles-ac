@@ -3269,7 +3269,7 @@ async def get_settlement_transactions(psp_id: str, settlement_id: str, user: dic
         return []
     txs = await db.transactions.find(
         {"transaction_id": {"$in": tx_ids}},
-        {"_id": 0, "transaction_id": 1, "reference": 1, "client_name": 1, "amount": 1, "base_amount": 1, "base_currency": 1, "exchange_rate": 1, "created_at": 1, "psp_commission_amount": 1, "psp_reserve_fund_amount": 1, "psp_chargeback_amount": 1, "psp_extra_charges": 1, "psp_gateway_fee": 1}
+        {"_id": 0, "transaction_id": 1, "reference": 1, "client_name": 1, "amount": 1, "base_amount": 1, "base_currency": 1, "exchange_rate": 1, "created_at": 1, "transaction_date": 1, "transaction_type": 1, "psp_commission_amount": 1, "psp_reserve_fund_amount": 1, "psp_chargeback_amount": 1, "psp_extra_charges": 1, "psp_extra_commission": 1, "psp_withdrawal_extra_commission": 1, "psp_gateway_fee": 1, "psp_net_amount": 1}
     ).to_list(len(tx_ids))
     return txs
 

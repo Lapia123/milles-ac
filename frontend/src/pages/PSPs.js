@@ -1687,7 +1687,8 @@ export default function PSPs() {
                             const extraUsd = (settlement.extra_charges || 0) + (settlement.gateway_fees || 0);
                             const baseExtra = hasDiffCurrency && baseGross ? (extraUsd / rate) : null;
                             const baseNet = hasDiffCurrency && baseGross ? (baseGross - (baseComm || 0) - (baseReserve || 0) - (baseExtra || 0)) : null;
-                            const isCompound = settlement.settlement_type === 'compound' || (settlement.transaction_count > 1);
+                            const isCompound = settlement.settlement_type === 'compound' || settlement.settlement_type === 'net_settlement' || (settlement.transaction_count > 1);
+                            const isNetSettle = settlement.settlement_type === 'net_settlement';
                             const isExpanded = expandedSettlement === settlement.settlement_id;
                             return (
                             <React.Fragment key={settlement.settlement_id}>
@@ -1706,9 +1707,15 @@ export default function PSPs() {
                                   <div>
                                     <span className="font-mono text-slate-800 text-xs">{settlement.reference || settlement.settlement_id}</span>
                                     {settlement.transaction_count > 1 && (
-                                      <p className="text-[10px] text-slate-500">{settlement.transaction_count} transactions</p>
+                                      <p className="text-[10px] text-slate-500">
+                                        {isNetSettle 
+                                          ? `${settlement.deposit_count || 0} deposits + ${settlement.withdrawal_count || 0} withdrawals`
+                                          : `${settlement.transaction_count} transactions`}
+                                      </p>
                                     )}
-                                    {isCompound && (
+                                    {isNetSettle ? (
+                                      <Badge className="bg-green-100 text-green-700 border-green-300 text-[9px] mt-0.5">Net Settlement</Badge>
+                                    ) : isCompound && (
                                       <Badge className="bg-[#66FCF1]/10 text-[#0B0C10] border-[#66FCF1]/30 text-[9px] mt-0.5">Compound</Badge>
                                     )}
                                   </div>
@@ -1756,7 +1763,14 @@ export default function PSPs() {
                               <TableRow className="bg-slate-50/80">
                                 <TableCell colSpan={9} className="p-0">
                                   <div className="px-6 py-3 border-l-2 border-[#66FCF1] ml-4">
-                                    <p className="text-xs text-slate-500 font-bold mb-2 uppercase tracking-wider">Included Transactions ({expandedTxs.length})</p>
+                                    <p className="text-xs text-slate-500 font-bold mb-2 uppercase tracking-wider">
+                                      Included Transactions ({expandedTxs.length})
+                                      {isNetSettle && expandedTxs.length > 0 && (
+                                        <span className="normal-case font-normal ml-2">
+                                          — {expandedTxs.filter(t => t.transaction_type === 'deposit').length} Deposits, {expandedTxs.filter(t => t.transaction_type === 'withdrawal').length} Withdrawals
+                                        </span>
+                                      )}
+                                    </p>
                                     {expandedTxs.length === 0 ? (
                                       <p className="text-xs text-slate-400">Loading...</p>
                                     ) : (
@@ -1764,36 +1778,54 @@ export default function PSPs() {
                                         <thead>
                                           <tr className="text-slate-400 border-b border-slate-200">
                                             <th className="text-left py-1 font-medium">Reference</th>
+                                            <th className="text-left py-1 font-medium">Type</th>
                                             <th className="text-left py-1 font-medium">Client</th>
-                                            <th className="text-left py-1 font-medium">Currency</th>
                                             <th className="text-right py-1 font-medium">Amount (USD)</th>
-                                            <th className="text-right py-1 font-medium">Pay Amount</th>
                                             <th className="text-right py-1 font-medium">Commission</th>
                                             <th className="text-right py-1 font-medium">Extra Charges</th>
+                                            <th className="text-right py-1 font-medium">Extra Comm.</th>
+                                            <th className="text-right py-1 font-medium">Net</th>
                                             <th className="text-left py-1 font-medium">Date</th>
                                           </tr>
                                         </thead>
                                         <tbody>
-                                          {expandedTxs.map((tx) => (
+                                          {expandedTxs.map((tx) => {
+                                            const isWithdrawal = tx.transaction_type === 'withdrawal';
+                                            const comm = tx.psp_commission_amount || 0;
+                                            const extraCharges = (tx.psp_extra_charges || 0) + (tx.psp_gateway_fee || 0);
+                                            const extraComm = isWithdrawal ? (tx.psp_withdrawal_extra_commission || 0) : (tx.psp_extra_commission || 0);
+                                            const reserve = tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0;
+                                            const netAmt = isWithdrawal
+                                              ? -(tx.amount + extraComm)
+                                              : (tx.amount - comm - extraCharges - extraComm - reserve);
+                                            return (
                                             <tr key={tx.transaction_id} className="border-b border-slate-100">
                                               <td className="py-1.5 font-mono text-slate-700">{tx.reference || tx.transaction_id}</td>
+                                              <td className="py-1.5">
+                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${isWithdrawal ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+                                                  {tx.transaction_type || '-'}
+                                                </span>
+                                              </td>
                                               <td className="py-1.5 text-slate-600">{tx.client_name || '-'}</td>
-                                              <td className="py-1.5 text-slate-600">{tx.base_currency || 'USD'}</td>
-                                              <td className="py-1.5 text-right font-mono text-slate-800">${tx.amount?.toLocaleString()}</td>
-                                              <td className="py-1.5 text-right font-mono text-blue-500">
-                                                {tx.base_amount && tx.base_currency && tx.base_currency !== 'USD'
-                                                  ? `${tx.base_amount.toLocaleString()} ${tx.base_currency}`
-                                                  : '-'}
+                                              <td className={`py-1.5 text-right font-mono ${isWithdrawal ? 'text-red-500' : 'text-slate-800'}`}>
+                                                {isWithdrawal ? '-' : ''}${tx.amount?.toLocaleString()}
                                               </td>
                                               <td className="py-1.5 text-right font-mono text-yellow-500">
-                                                {tx.psp_commission_amount ? `-$${tx.psp_commission_amount.toLocaleString()}` : '-'}
+                                                {comm > 0 ? `-$${comm.toLocaleString()}` : '-'}
                                               </td>
                                               <td className="py-1.5 text-right font-mono text-orange-400">
-                                                {(tx.psp_extra_charges || tx.psp_gateway_fee) ? `-$${((tx.psp_extra_charges || 0) + (tx.psp_gateway_fee || 0)).toLocaleString()}` : '-'}
+                                                {extraCharges > 0 ? `-$${extraCharges.toLocaleString()}` : '-'}
+                                              </td>
+                                              <td className="py-1.5 text-right font-mono text-orange-400">
+                                                {extraComm > 0 ? `-$${extraComm.toLocaleString()}` : '-'}
+                                              </td>
+                                              <td className={`py-1.5 text-right font-mono font-bold ${netAmt >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                {netAmt >= 0 ? '+' : ''}${netAmt.toLocaleString(undefined, {maximumFractionDigits: 2})}
                                               </td>
                                               <td className="py-1.5 text-slate-500">{(tx.transaction_date || tx.created_at) ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString() : '-'}</td>
                                             </tr>
-                                          ))}
+                                            );
+                                          })}
                                         </tbody>
                                       </table>
                                     )}
