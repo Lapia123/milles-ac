@@ -1090,13 +1090,16 @@ export default function PSPs() {
                     const totalDeposits = pendingTransactions.reduce((s, tx) => s + (tx.amount || 0), 0);
                     const totalWithdrawals = pspWithdrawals.reduce((s, tx) => s + (tx.amount || 0), 0);
                     const totalComm = pendingTransactions.reduce((s, tx) => s + (tx.psp_commission_amount || 0), 0);
+                    const totalDepExtraCharges = pendingTransactions.reduce((s, tx) => s + (tx.psp_extra_charges || 0), 0);
                     const totalDepExtraComm = pendingTransactions.reduce((s, tx) => s + (tx.psp_extra_commission || 0), 0);
+                    const totalDepReserve = pendingTransactions.reduce((s, tx) => s + (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0), 0);
                     const totalWdrExtraComm = pspWithdrawals.reduce((s, tx) => s + (tx.psp_withdrawal_extra_commission || 0), 0);
-                    const net = totalDeposits - totalWithdrawals - totalComm - totalDepExtraComm - totalWdrExtraComm;
+                    const totalAllDeductions = totalComm + totalDepExtraCharges + totalDepExtraComm + totalDepReserve + totalWdrExtraComm;
+                    const net = totalDeposits - totalWithdrawals - totalAllDeductions;
                     return (
                       <div>
                         <p className="text-xl font-mono text-yellow-400">${net.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
-                        <p className="text-[10px] text-slate-400">Dep: ${totalDeposits.toLocaleString()} - Wdr: ${totalWithdrawals.toLocaleString()} - Comm: ${(totalComm + totalDepExtraComm + totalWdrExtraComm).toLocaleString()}</p>
+                        <p className="text-[10px] text-slate-400">Dep: ${totalDeposits.toLocaleString()} - Wdr: ${totalWithdrawals.toLocaleString()} - Ded: ${totalAllDeductions.toLocaleString()}</p>
                       </div>
                     );
                   })()}

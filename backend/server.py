@@ -3483,10 +3483,12 @@ async def update_psp_deposit_extra_commission(
     
     old_extra = tx.get("psp_extra_commission", 0) or 0
     
-    # Recalculate net amount: gross - commission - extra commission
+    # Recalculate net amount: gross - commission - extra charges - reserve fund - extra commission
     gross = tx.get("amount", 0)
     commission = tx.get("psp_commission_amount", 0)
-    new_net = round(gross - commission - extra_commission, 2)
+    extra_charges = tx.get("psp_extra_charges", 0) or 0
+    reserve_fund = tx.get("psp_reserve_fund_amount", tx.get("psp_chargeback_amount", 0)) or 0
+    new_net = round(gross - commission - extra_charges - reserve_fund - extra_commission, 2)
     
     await db.transactions.update_one(
         {"transaction_id": transaction_id},
@@ -3648,17 +3650,22 @@ async def update_psp_transaction_charges(
     
     now = datetime.now(timezone.utc)
     
-    # Calculate new net amount
+    # Calculate old net for pending_settlement adjustment
+    old_extra_charges = tx.get("psp_extra_charges", 0) or 0
+    old_reserve_fund = tx.get("psp_reserve_fund_amount", tx.get("psp_chargeback_amount", 0)) or 0
+    extra_commission = tx.get("psp_extra_commission", 0) or 0
+    
+    # Calculate new net amount (include extra_commission if it exists)
     gross_amount = tx.get("amount", 0)
     commission = tx.get("psp_commission_amount", 0)
-    new_net = gross_amount - commission - charges.reserve_fund_amount - charges.extra_charges
+    new_net = round(gross_amount - commission - charges.reserve_fund_amount - charges.extra_charges - extra_commission, 2)
     
     updates = {
         "psp_reserve_fund_amount": charges.reserve_fund_amount,
         "psp_chargeback_amount": charges.reserve_fund_amount,
         "psp_extra_charges": charges.extra_charges,
         "psp_charges_description": charges.charges_description,
-        "psp_total_deductions": commission + charges.reserve_fund_amount + charges.extra_charges,
+        "psp_total_deductions": commission + charges.reserve_fund_amount + charges.extra_charges + extra_commission,
         "psp_net_amount": new_net,
         "charges_updated_at": now.isoformat(),
         "charges_updated_by": user["user_id"],
@@ -3669,6 +3676,16 @@ async def update_psp_transaction_charges(
         {"transaction_id": transaction_id},
         {"$set": updates}
     )
+    
+    # Adjust PSP pending_settlement by the difference in deductions
+    old_deductions = old_extra_charges + old_reserve_fund
+    new_deductions = charges.extra_charges + charges.reserve_fund_amount
+    deduction_diff = new_deductions - old_deductions
+    if deduction_diff != 0 and tx.get("psp_id"):
+        await db.psps.update_one(
+            {"psp_id": tx["psp_id"]},
+            {"$inc": {"pending_settlement": round(-deduction_diff, 2)}}
+        )
     
     await log_activity(request, user, "edit", "psp", "Updated PSP transaction charges")
 
