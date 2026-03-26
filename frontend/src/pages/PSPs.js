@@ -115,12 +115,15 @@ export default function PSPs() {
   const [depPage, setDepPage] = useState(1);
   const [depTotalPages, setDepTotalPages] = useState(1);
   const [depTotal, setDepTotal] = useState(0);
+  const [depPageSize, setDepPageSize] = useState(20);
   const [wdrPage, setWdrPage] = useState(1);
   const [wdrTotalPages, setWdrTotalPages] = useState(1);
   const [wdrTotal, setWdrTotal] = useState(0);
+  const [wdrPageSize, setWdrPageSize] = useState(20);
   const [stlPage, setStlPage] = useState(1);
   const [stlTotalPages, setStlTotalPages] = useState(1);
   const [stlTotal, setStlTotal] = useState(0);
+  const [stlPageSize, setStlPageSize] = useState(20);
   const [formData, setFormData] = useState({
     psp_name: '',
     commission_rate: '',
@@ -162,9 +165,9 @@ export default function PSPs() {
     };
   };
 
-  const fetchPsps = async (pg = pspPage) => {
+  const fetchPsps = async (pg = pspPage, ps = pspPageSize) => {
     try {
-      const response = await fetch(`${API_URL}/api/psp-summary?page=${pg}&page_size=${pspPageSize}`, { headers: getAuthHeaders(), credentials: 'include' });
+      const response = await fetch(`${API_URL}/api/psp-summary?page=${pg}&page_size=${ps}`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setPsps(data.items || data);
@@ -192,9 +195,9 @@ export default function PSPs() {
     }
   };
 
-  const fetchPendingTransactions = async (pspId, pg = 1) => {
+  const fetchPendingTransactions = async (pspId, pg = 1, ps = depPageSize) => {
     try {
-      const params = new URLSearchParams({ page: pg, page_size: 20 });
+      const params = new URLSearchParams({ page: pg, page_size: ps });
       if (depDateFrom) params.append('date_from', depDateFrom);
       if (depDateTo) params.append('date_to', depDateTo);
       const response = await fetch(`${API_URL}/api/psp/${pspId}/pending-transactions?${params}`, { headers: getAuthHeaders(), credentials: 'include' });
@@ -210,9 +213,9 @@ export default function PSPs() {
     }
   };
 
-  const fetchPspWithdrawals = async (pspId, pg = 1) => {
+  const fetchPspWithdrawals = async (pspId, pg = 1, ps = wdrPageSize) => {
     try {
-      const params = new URLSearchParams({ page: pg, page_size: 20 });
+      const params = new URLSearchParams({ page: pg, page_size: ps });
       if (wdrDateFrom) params.append('date_from', wdrDateFrom);
       if (wdrDateTo) params.append('date_to', wdrDateTo);
       const response = await fetch(`${API_URL}/api/psp/${pspId}/withdrawal-transactions?${params}`, { headers: getAuthHeaders(), credentials: 'include' });
@@ -255,9 +258,9 @@ export default function PSPs() {
     } catch { toast.error('Failed to update extra commission'); }
   };
 
-  const fetchSettlements = async (pspId, pg = 1) => {
+  const fetchSettlements = async (pspId, pg = 1, ps = stlPageSize) => {
     try {
-      const params = new URLSearchParams({ page: pg, page_size: 20 });
+      const params = new URLSearchParams({ page: pg, page_size: ps });
       if (stlDateFrom) params.append('date_from', stlDateFrom);
       if (stlDateTo) params.append('date_to', stlDateTo);
       const response = await fetch(`${API_URL}/api/psp/${pspId}/settlements?${params}`, { headers: getAuthHeaders(), credentials: 'include' });
@@ -1158,7 +1161,7 @@ export default function PSPs() {
       </div>
       {pspTotalPages > 1 && (
         <div className="mt-4">
-          <PaginationControls currentPage={pspPage} totalPages={pspTotalPages} totalItems={pspTotal} pageSize={pspPageSize} onPageChange={(p) => fetchPsps(p)} onPageSizeChange={() => {}} />
+          <PaginationControls currentPage={pspPage} totalPages={pspTotalPages} totalItems={pspTotal} pageSize={pspPageSize} onPageChange={(p) => fetchPsps(p)} onPageSizeChange={(ps) => { setPspPageSize(ps); setPspPage(1); fetchPsps(1, ps); }} />
         </div>
       )}
 
@@ -1474,7 +1477,7 @@ export default function PSPs() {
                   </ScrollArea>
                   {depTotalPages > 1 && (
                     <div className="mt-2">
-                      <PaginationControls currentPage={depPage} totalPages={depTotalPages} totalItems={depTotal} pageSize={20} onPageChange={(p) => fetchPendingTransactions(viewPsp.psp_id, p)} onPageSizeChange={() => {}} />
+                      <PaginationControls currentPage={depPage} totalPages={depTotalPages} totalItems={depTotal} pageSize={depPageSize} onPageChange={(p) => fetchPendingTransactions(viewPsp.psp_id, p)} onPageSizeChange={(ps) => { setDepPageSize(ps); setDepPage(1); fetchPendingTransactions(viewPsp.psp_id, 1, ps); }} />
                     </div>
                   )}
 
@@ -1607,7 +1610,7 @@ export default function PSPs() {
                   </ScrollArea>
                   {wdrTotalPages > 1 && (
                     <div className="mt-2">
-                      <PaginationControls currentPage={wdrPage} totalPages={wdrTotalPages} totalItems={wdrTotal} pageSize={20} onPageChange={(p) => fetchPspWithdrawals(viewPsp.psp_id, p)} onPageSizeChange={() => {}} />
+                      <PaginationControls currentPage={wdrPage} totalPages={wdrTotalPages} totalItems={wdrTotal} pageSize={wdrPageSize} onPageChange={(p) => fetchPspWithdrawals(viewPsp.psp_id, p)} onPageSizeChange={(ps) => { setWdrPageSize(ps); setWdrPage(1); fetchPspWithdrawals(viewPsp.psp_id, 1, ps); }} />
                     </div>
                   )}
                 </TabsContent>
@@ -1956,7 +1959,7 @@ export default function PSPs() {
                   })()}
                   {stlTotalPages > 1 && (
                     <div className="mt-2">
-                      <PaginationControls currentPage={stlPage} totalPages={stlTotalPages} totalItems={stlTotal} pageSize={20} onPageChange={(p) => fetchSettlements(viewPsp.psp_id, p)} onPageSizeChange={() => {}} />
+                      <PaginationControls currentPage={stlPage} totalPages={stlTotalPages} totalItems={stlTotal} pageSize={stlPageSize} onPageChange={(p) => fetchSettlements(viewPsp.psp_id, p)} onPageSizeChange={(ps) => { setStlPageSize(ps); setStlPage(1); fetchSettlements(viewPsp.psp_id, 1, ps); }} />
                     </div>
                   )}
                 </TabsContent>
