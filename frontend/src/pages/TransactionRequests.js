@@ -487,6 +487,8 @@ export default function TransactionRequests() {
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [psps, setPsps] = useState([]);
   const [vendors, setVendors] = useState([]);
+  const [clientTags, setClientTags] = useState([]);
+  const [formTags, setFormTags] = useState([]);
 
   const authHeaders = useCallback(() => {
     const token = localStorage.getItem('auth_token');
@@ -528,6 +530,9 @@ export default function TransactionRequests() {
         if (tRes.ok) { const d = await tRes.json(); setTreasuryAccounts(d.items || d); }
         if (pRes.ok) setPsps(await pRes.json());
         if (vRes.ok) { const d = await vRes.json(); setVendors(d.items || d || []); }
+        // Fetch client tags
+        const tagRes = await fetch(`${API_URL}/api/client-tags`, { headers: authHeaders() });
+        if (tagRes.ok) setClientTags(await tagRes.json());
       } catch (e) { console.error(e); }
     };
     fetchData();
@@ -553,6 +558,7 @@ export default function TransactionRequests() {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => { if (v) fd.append(k, v); });
       if (proofImage) fd.append('proof_image', proofImage);
+      if (formTags.length > 0) fd.append('client_tags', formTags.join(','));
       const headers = authHeaders();
       delete headers['Content-Type'];
       const res = await fetch(`${API_URL}/api/transaction-requests`, { method: 'POST', headers, body: fd });
@@ -565,6 +571,7 @@ export default function TransactionRequests() {
         }
         setCreateOpen(false);
         setForm({ ...defaultForm });
+        setFormTags([]);
         setProofImage(null);
         fetchRequests();
       } else { const e = await res.json(); toast.error(e.detail || 'Failed'); }
@@ -830,7 +837,11 @@ export default function TransactionRequests() {
               </div>
               <div>
                 <Label className="text-xs text-slate-500 uppercase">Client *</Label>
-                <ClientSearchPicker clients={clients} value={form.client_id} onChange={v => setForm({ ...form, client_id: v })} testId="create-client-search" authHeaders={authHeaders} />
+                <ClientSearchPicker clients={clients} value={form.client_id} onChange={v => {
+                  setForm({ ...form, client_id: v });
+                  const cl = clients.find(c => c.client_id === v);
+                  if (cl?.tags) setFormTags(cl.tags);
+                }} testId="create-client-search" authHeaders={authHeaders} />
               </div>
             </div>
 
@@ -948,6 +959,30 @@ export default function TransactionRequests() {
               <div><Label className="text-xs text-slate-500 uppercase">CRM Reference</Label><Input value={form.crm_reference} onChange={e => setForm({ ...form, crm_reference: e.target.value })} className="bg-slate-50 font-mono" placeholder="Unique" /></div>
             </div>
             <div><Label className="text-xs text-slate-500 uppercase">Transaction Date</Label><Input type="date" value={form.transaction_date} onChange={e => setForm({ ...form, transaction_date: e.target.value })} className="bg-slate-50" data-testid="txreq-transaction-date" /></div>
+            <div>
+              <Label className="text-xs text-slate-500 uppercase">Client Tags</Label>
+              <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 bg-slate-50 border border-slate-200 rounded-sm">
+                {formTags.map(tag => {
+                  const tagObj = clientTags.find(t => t.name === tag);
+                  return (
+                    <span key={tag} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium text-white" style={{ backgroundColor: tagObj?.color || '#64748B' }}>
+                      {tag}
+                      <button type="button" onClick={() => setFormTags(formTags.filter(t => t !== tag))} className="ml-0.5 hover:bg-white/20 rounded-full w-3.5 h-3.5 flex items-center justify-center text-[9px]">&times;</button>
+                    </span>
+                  );
+                })}
+                <Select onValueChange={val => { if (!formTags.includes(val)) setFormTags([...formTags, val]); }}>
+                  <SelectTrigger className="w-auto h-6 border-0 bg-transparent text-xs text-slate-400 p-0 px-1 shadow-none"><span>+ Add tag</span></SelectTrigger>
+                  <SelectContent>
+                    {clientTags.map(tag => (
+                      <SelectItem key={tag.tag_id} value={tag.name} disabled={formTags.includes(tag.name)}>
+                        <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} /> {tag.name}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div><Label className="text-xs text-slate-500 uppercase">Description</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="bg-slate-50" rows={2} /></div>
             <div>
               <Label className="text-xs text-slate-500 uppercase">Proof of Payment</Label>
