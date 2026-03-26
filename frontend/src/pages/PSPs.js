@@ -110,6 +110,7 @@ export default function PSPs() {
   // Pagination state
   const [pspPage, setPspPage] = useState(1);
   const [pspTotalPages, setPspTotalPages] = useState(1);
+  const [pspTotal, setPspTotal] = useState(0);
   const [pspPageSize, setPspPageSize] = useState(20);
   const [depPage, setDepPage] = useState(1);
   const [depTotalPages, setDepTotalPages] = useState(1);
@@ -168,6 +169,8 @@ export default function PSPs() {
         const data = await response.json();
         setPsps(data.items || data);
         setPspTotalPages(data.total_pages || 1);
+        setPspTotal(data.total || 0);
+        setPspPage(pg);
       }
     } catch (error) {
       console.error('Error fetching PSPs:', error);
@@ -1153,6 +1156,11 @@ export default function PSPs() {
           ))
         )}
       </div>
+      {pspTotalPages > 1 && (
+        <div className="mt-4">
+          <PaginationControls currentPage={pspPage} totalPages={pspTotalPages} totalItems={pspTotal} pageSize={pspPageSize} onPageChange={(p) => fetchPsps(p)} onPageSizeChange={() => {}} />
+        </div>
+      )}
 
       {/* View PSP Details - Full Page */}
       {viewPsp && (
@@ -1466,7 +1474,7 @@ export default function PSPs() {
                   </ScrollArea>
                   {depTotalPages > 1 && (
                     <div className="mt-2">
-                      <PaginationControls currentPage={depPage} totalPages={depTotalPages} onPageChange={(p) => fetchPendingTransactions(viewPsp.psp_id, p)} pageSize={20} onPageSizeChange={() => {}} />
+                      <PaginationControls currentPage={depPage} totalPages={depTotalPages} totalItems={depTotal} pageSize={20} onPageChange={(p) => fetchPendingTransactions(viewPsp.psp_id, p)} onPageSizeChange={() => {}} />
                     </div>
                   )}
 
@@ -1555,7 +1563,7 @@ export default function PSPs() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredWdrs.map((tx) => (
+                          {pspWithdrawals.map((tx) => (
                             <TableRow key={tx.transaction_id} className="border-slate-200 hover:bg-slate-100">
                               <TableCell>
                                 <div>
@@ -1597,9 +1605,11 @@ export default function PSPs() {
                       </Table>
                     )}
                   </ScrollArea>
-                  </>
-                    );
-                  })()}
+                  {wdrTotalPages > 1 && (
+                    <div className="mt-2">
+                      <PaginationControls currentPage={wdrPage} totalPages={wdrTotalPages} totalItems={wdrTotal} pageSize={20} onPageChange={(p) => fetchPspWithdrawals(viewPsp.psp_id, p)} onPageSizeChange={() => {}} />
+                    </div>
+                  )}
                 </TabsContent>
                 
                 {/* Reserve Fund Ledger Tab */}
@@ -1944,6 +1954,11 @@ export default function PSPs() {
                   </ScrollArea>
                     );
                   })()}
+                  {stlTotalPages > 1 && (
+                    <div className="mt-2">
+                      <PaginationControls currentPage={stlPage} totalPages={stlTotalPages} totalItems={stlTotal} pageSize={20} onPageChange={(p) => fetchSettlements(viewPsp.psp_id, p)} onPageSizeChange={() => {}} />
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </div>
