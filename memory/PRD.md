@@ -32,6 +32,9 @@ Comprehensive back-office accounting software for FX brokerage "Miles Capitals".
 - [x] Backend charges endpoint now adjusts PSP pending_settlement
 - [x] Inter-Treasury Transfer: added Transfer Date field
 - [x] Client Tags system: CRUD API, tag selector in Create Transaction & TX Request forms, tag filter, Tags column in table, Manage Tags dialog
+- [x] PSP Detail View: Full-page overlay with date filters
+- [x] PSP Pagination: Backend (all 4 endpoints) + Frontend (Deposits, Withdrawals, Settlement History, main PSP grid)
+- [x] Fixed PSPs.js JSX syntax error (broken closing tags from mid-edit state)
 
 ## Completed Features (Previous Sessions)
 - [x] Destination bug fix (auto-processing deposits/withdrawals)
