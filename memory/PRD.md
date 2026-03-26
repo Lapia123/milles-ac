@@ -1,48 +1,83 @@
-# Miles Capitals - Back-Office Accounting Software PRD
+# Miles Capitals - Back-Office Accounting Software
 
-## Original Problem Statement
-Build a comprehensive back-office accounting software for FX brokerage "Miles Capitals" with modules for transactions, clients, PSP management, treasury, exchangers, reconciliation, reports, loans, and more.
+## Problem Statement
+Comprehensive back-office accounting software for FX brokerage "Miles Capitals". Manages transactions, treasury, PSPs, exchangers, clients, reconciliation, loans, and reporting.
 
-## Core Architecture
-- **Frontend:** React + Tailwind CSS + Shadcn UI (port 3000)
-- **Backend:** FastAPI + MongoDB Atlas (port 8001)
-- **Storage:** Cloudflare R2 (file uploads)
-- **Cache:** Redis
+## Tech Stack
+- **Frontend:** React + Shadcn UI + Tailwind CSS
+- **Backend:** FastAPI (Python) — monolithic server.py (~17K lines)
+- **Database:** MongoDB Atlas
+- **Storage:** Cloudflare R2 (via boto3)
+- **Other:** Redis (caching), pandas/openpyxl (bulk uploads)
 
-## What's Been Implemented
+## Core Features
+- Transaction Management (deposits/withdrawals, CRUD, bulk upload)
+- Transaction Requests (approval workflow)
+- Treasury Management (accounts, transfers, statements, export)
+- PSP Management (settlements, commissions, withdrawal management, net settlements)
+- Exchanger Management (vendors, commissions)
+- Client Management (with tags)
+- Loan Management (with file attachments)
+- Reconciliation System
+- Accountant Dashboard (approval workflow)
+- Multi-role access control (Admin, CRM, Accountant)
+- Daily Report Scheduler
+- Audit Logging
 
-### Session Mar 24, 2026
-- **[FEATURE] Loan Attachments:** File upload on New Loan form (PDF, Excel, Images, max 10MB). Files stored in Cloudflare R2. Shown in Loan Transactions Log with clickable links. Also viewable/uploadable from Loan Detail dialog.
-- **[FEATURE] Treasury Period Filter:** Preset date ranges (Today, Yesterday, This/Last Week/Month, Last 3 Months, This Year, Custom Range).
-- **[FIX] Treasury UI Compacted:** Single-row summary bar, pagination (100/page), Debit/Credit split columns.
-- **[FEATURE] Treasury Export (PDF/Excel/CSV):** Full statement export with summary header.
-- **[FIX] Bulk Upload Vendor Commission:** Fixed missing base currency commission fields.
-- **[FIX] Transaction Report Downloads:** Fixed destination "undefined", added Payment Currency.
-- **[FIX] "Operation failed" Toast (P1):** Descriptive backend errors.
-- **[FIX] Database Performance (P1):** ~20 MongoDB indexes.
-- **[FIX] Reconciliation Eye Icon (P2):** Fixed dialog closure.
+## Completed Features (This Session - March 2026)
+- [x] PSP Pending Settlement calculation fix (includes withdrawals + all deductions)
+- [x] PSP Net Settlement feature (settle all deposits + withdrawals at once)
+- [x] Settlement History: transaction type badges (DEPOSIT/WITHDRAWAL), full details
+- [x] PSP pending amounts never show negative (clamped to 0)
+- [x] Backend charges endpoint now adjusts PSP pending_settlement
+- [x] Inter-Treasury Transfer: added Transfer Date field
+- [x] Client Tags system: CRUD API, tag selector in Create Transaction & TX Request forms, tag filter, Tags column in table, Manage Tags dialog
 
-### Earlier Sessions
-- Destination bug fix, TX edit, Bank Receipt Date, Reconciliation date fix
-- APScheduler fix, Exchangers UI overhaul, PSP Settlement Date
-- Bulk Upload Transactions, Currency Rounding fix
-
-## Key API Endpoints (New)
-- `POST /api/loans/{loan_id}/attachments` — Upload files to loan (multipart)
-- `DELETE /api/loans/{loan_id}/attachments/{attachment_id}` — Remove attachment
+## Completed Features (Previous Sessions)
+- [x] Destination bug fix (auto-processing deposits/withdrawals)
+- [x] Transaction Summary edit (CRM ref, amount, reference, date, payment currency)
+- [x] Bank Receipt Date in approval flow
+- [x] Reconciliation date matching fix
+- [x] APScheduler duplicate email fix
+- [x] Exchangers UI redesign (full-page overlay)
+- [x] PSP Settlement Date
+- [x] Bulk Upload Transactions (CSV/Excel)
+- [x] Currency Rounding Bug fix
+- [x] Transaction Report Downloads fix
+- [x] "Operation failed" Toast improvement
+- [x] Database Performance (20+ MongoDB indexes)
+- [x] Reconciliation Eye Icon fix
+- [x] Bulk Upload Vendor Commission fix
+- [x] PSP Balance Logic fix (withdrawals)
+- [x] PSP Pending Settlements fix (exclude withdrawals from list)
+- [x] Loan Export Balance fix
+- [x] Loan Attachments (Cloudflare R2)
+- [x] Treasury Page UI/UX overhaul
+- [x] PSP as Withdrawal Source
+- [x] PSP Withdrawal Management
+- [x] PSP Extra Commission for deposits/withdrawals
 
 ## Pending Issues
-- P3: Session management redirect bug
-- P3: Withdrawal to Exchanger error
+- P3: Error during withdrawal creation to an Exchanger
+- P3: Minor session management redirect bug (recurring 4+)
 
 ## Upcoming Tasks
-- P1: Reconciliation backend logic (automated matching)
-- P2: Refactor backend/server.py into modular routers (17K+ lines)
-- P2: Reconciliation "Final Approval" step
-- P3: Frontend pagination/client search refactor
+- P1: Implement Reconciliation Backend Logic (automated matching)
+- P2: Implement Reconciliation "Final Approval" step
 
-## Key Credentials
+## Future/Backlog
+- P2: Refactor backend/server.py (17K+ lines → modular FastAPI routers) — CRITICAL TECH DEBT
+- P3: Refactor frontend pagination logic (reusable hook)
+- P3: Refactor client search component (reusable module)
+
+## Key API Endpoints
+- POST /api/client-tags — Create tag
+- GET /api/client-tags — List tags
+- DELETE /api/client-tags/{tag_id} — Delete tag
+- GET /api/transactions?client_tag=VIP — Filter by tag
+- POST /api/psp/{psp_id}/net-settle — Net settlement
+- POST /api/treasury/inter-transfer — Transfer with date
+
+## Credentials
 - Admin: admin@fxbroker.com / admin123
-- Exchanger (musi): musi@fxbroker.com / password
-- Accountant (safvan): 7209unneen@gmail.com / password
-- CRM Admin (Shafeel): Shafeel@fxbroker.com / password
+- CRM Admin: Shafeel@fxbroker.com / password
