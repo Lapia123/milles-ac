@@ -59,6 +59,11 @@ Comprehensive back-office accounting software for FX brokerage "Miles Capitals".
 - [x] PSP as Withdrawal Source
 - [x] PSP Withdrawal Management
 - [x] PSP Extra Commission for deposits/withdrawals
+- [x] PSP Detail View: Full-page overlay with date filters
+- [x] PSP Pagination: Backend (all 4 endpoints) + Frontend (all tabs + main grid)
+- [x] PSPs.js JSX syntax error fix (broken closing tags from mid-edit state)
+- [x] Transaction/TX Request creation bug fix (route ordering for pending-count, improved error messages)
+- [x] PSP Detail View: Full viewport height layout (no gap below table content)
 
 ## Pending Issues
 - P3: Error during withdrawal creation to an Exchanger

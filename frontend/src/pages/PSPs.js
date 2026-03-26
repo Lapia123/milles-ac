@@ -1164,8 +1164,8 @@ export default function PSPs() {
 
       {/* View PSP Details - Full Page */}
       {viewPsp && (
-      <div className="fixed inset-0 z-50 bg-white overflow-y-auto">
-        <div className="max-w-[1600px] mx-auto px-6 py-4">
+      <div className="fixed inset-0 z-50 bg-white overflow-y-auto dark:bg-slate-900">
+        <div className="max-w-[1600px] mx-auto px-6 py-4 min-h-screen flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between mb-6 border-b border-slate-200 pb-4">
             <div className="flex items-center gap-4">
@@ -1178,7 +1178,7 @@ export default function PSPs() {
               </div>
             </div>
           </div>
-            <div className="space-y-4">
+            <div className="space-y-4 flex-1 flex flex-col">
               {/* PSP Info */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-slate-50 rounded-sm">
                 <div>
@@ -1254,7 +1254,7 @@ export default function PSPs() {
               )}
 
               {/* Tabs */}
-              <Tabs defaultValue="pending" className="w-full">
+              <Tabs defaultValue="pending" className="w-full flex-1 flex flex-col">
                 <TabsList className="bg-slate-50 border border-slate-200">
                   <TabsTrigger value="pending" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
                     Deposits ({pendingTransactions.length})
@@ -1270,7 +1270,7 @@ export default function PSPs() {
                   </TabsTrigger>
                 </TabsList>
                 
-                <TabsContent value="pending" className="mt-4">
+                <TabsContent value="pending" className="mt-4 flex-1 flex flex-col">
                   {/* Date Filter */}
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
                     <Input type="date" value={depDateFrom} onChange={e => setDepDateFrom(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" placeholder="From" data-testid="dep-date-from" />
@@ -1279,7 +1279,7 @@ export default function PSPs() {
                     {(depDateFrom || depDateTo) && <Button variant="ghost" size="sm" onClick={() => { setDepDateFrom(''); setDepDateTo(''); }} className="text-slate-400 hover:text-red-500 h-8 text-xs">Clear</Button>}
                     <span className="text-xs text-slate-400 ml-auto">{depTotal} deposits</span>
                   </div>
-                  <ScrollArea className="max-h-[calc(100vh-480px)]">
+                  <ScrollArea className="h-[calc(100vh-480px)]">
                     {pendingTransactions.length === 0 ? (
                       <div className="text-center py-8 text-slate-500">
                         <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
@@ -1512,7 +1512,7 @@ export default function PSPs() {
                 </TabsContent>
 
                 {/* Withdrawals Tab */}
-                <TabsContent value="withdrawals" className="mt-4">
+                <TabsContent value="withdrawals" className="mt-4 flex-1 flex flex-col">
                   {/* Date Filter */}
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
                     <Input type="date" value={wdrDateFrom} onChange={e => setWdrDateFrom(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" data-testid="wdr-date-from" />
@@ -1542,7 +1542,7 @@ export default function PSPs() {
                     </div>
                   </div>
 
-                  <ScrollArea className="max-h-[calc(100vh-540px)]">
+                  <ScrollArea className="h-[calc(100vh-540px)]">
                     {pspWithdrawals.length === 0 ? (
                       <div className="text-center py-8 text-slate-500">
                         <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
@@ -1613,7 +1613,7 @@ export default function PSPs() {
                 </TabsContent>
                 
                 {/* Reserve Fund Ledger Tab */}
-                <TabsContent value="reserve-fund" className="mt-4">
+                <TabsContent value="reserve-fund" className="mt-4 flex-1 flex flex-col">
                   {reserveFundLoading ? (
                     <div className="flex justify-center py-8">
                       <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
@@ -1753,7 +1753,7 @@ export default function PSPs() {
                   )}
                 </TabsContent>
 
-                <TabsContent value="history" className="mt-4">
+                <TabsContent value="history" className="mt-4 flex-1 flex flex-col">
                   {/* Date Filter */}
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
                     <Input type="date" value={stlDateFrom} onChange={e => setStlDateFrom(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" data-testid="stl-date-from" />
@@ -1769,7 +1769,7 @@ export default function PSPs() {
                       return true;
                     });
                     return (
-                  <ScrollArea className="max-h-[calc(100vh-420px)]">
+                  <ScrollArea className="h-[calc(100vh-420px)]">
                     {filteredStls.length === 0 ? (
                       <div className="text-center py-8 text-slate-500">
                         No settlement history
