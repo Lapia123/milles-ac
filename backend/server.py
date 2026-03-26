@@ -3283,8 +3283,23 @@ async def delete_psp(request: Request, psp_id: str, user: dict = Depends(require
 
 # PSP Settlements
 @api_router.get("/psp/{psp_id}/settlements")
-async def get_psp_settlements(psp_id: str, user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
-    settlements = await db.psp_settlements.find({"psp_id": psp_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+async def get_psp_settlements(
+    psp_id: str,
+    page: int = 1,
+    page_size: int = 20,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))
+):
+    query = {"psp_id": psp_id}
+    if date_from:
+        query.setdefault("created_at", {})["$gte"] = date_from
+    if date_to:
+        query.setdefault("created_at", {})["$lte"] = date_to + "T23:59:59"
+    
+    total = await db.psp_settlements.count_documents(query)
+    skip = (page - 1) * page_size
+    settlements = await db.psp_settlements.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(page_size).to_list(page_size)
     # Enrich each settlement with payment currency info from its transactions
     for stl in settlements:
         tx_ids = stl.get("transaction_ids", [])
@@ -3304,7 +3319,7 @@ async def get_psp_settlements(psp_id: str, user: dict = Depends(require_permissi
                 stl["payment_currency"] = "USD"
         else:
             stl["payment_currency"] = stl.get("treasury_currency", "USD")
-    return settlements
+    return {"items": settlements, "total": total, "page": page, "page_size": page_size, "total_pages": max(1, -(-total // page_size))}
 
 # Get transactions included in a specific settlement
 @api_router.get("/psp/{psp_id}/settlement/{settlement_id}/transactions")
@@ -3488,28 +3503,58 @@ async def complete_settlement(request: Request, settlement_id: str, user: dict =
 
 # Get pending PSP transactions (not yet settled)
 @api_router.get("/psp/{psp_id}/pending-transactions")
-async def get_psp_pending_transactions(psp_id: str, user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
+async def get_psp_pending_transactions(
+    psp_id: str,
+    page: int = 1,
+    page_size: int = 20,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))
+):
     """Get approved DEPOSIT transactions for a PSP that haven't been settled"""
-    transactions = await db.transactions.find({
+    query = {
         "psp_id": psp_id,
         "destination_type": "psp",
         "transaction_type": "deposit",
         "status": TransactionStatus.APPROVED,
         "settled": {"$ne": True}
-    }, {"_id": 0}).sort("created_at", -1).to_list(1000)
-    return transactions
+    }
+    if date_from:
+        query.setdefault("created_at", {})["$gte"] = date_from
+    if date_to:
+        query.setdefault("created_at", {})["$lte"] = date_to + "T23:59:59"
+    
+    total = await db.transactions.count_documents(query)
+    skip = (page - 1) * page_size
+    transactions = await db.transactions.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(page_size).to_list(page_size)
+    return {"items": transactions, "total": total, "page": page, "page_size": page_size, "total_pages": max(1, -(-total // page_size))}
 
 @api_router.get("/psp/{psp_id}/withdrawal-transactions")
-async def get_psp_withdrawal_transactions(psp_id: str, user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
+async def get_psp_withdrawal_transactions(
+    psp_id: str,
+    page: int = 1,
+    page_size: int = 20,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))
+):
     """Get withdrawal transactions for a PSP (unsettled only)"""
-    transactions = await db.transactions.find({
+    query = {
         "psp_id": psp_id,
         "destination_type": "psp",
         "transaction_type": "withdrawal",
         "status": {"$in": [TransactionStatus.APPROVED, TransactionStatus.PENDING]},
         "settled": {"$ne": True}
-    }, {"_id": 0}).sort("created_at", -1).to_list(1000)
-    return transactions
+    }
+    if date_from:
+        query.setdefault("created_at", {})["$gte"] = date_from
+    if date_to:
+        query.setdefault("created_at", {})["$lte"] = date_to + "T23:59:59"
+    
+    total = await db.transactions.count_documents(query)
+    skip = (page - 1) * page_size
+    transactions = await db.transactions.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(page_size).to_list(page_size)
+    return {"items": transactions, "total": total, "page": page, "page_size": page_size, "total_pages": max(1, -(-total // page_size))}
 
 @api_router.post("/psp/{psp_id}/deposit-extra-commission")
 async def update_psp_deposit_extra_commission(
@@ -3593,9 +3638,15 @@ async def update_psp_withdrawal_extra_commission(
 
 # Get PSP dashboard summary
 @api_router.get("/psp-summary")
-async def get_psp_summary(user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))):
+async def get_psp_summary(
+    page: int = 1,
+    page_size: int = 20,
+    user: dict = Depends(require_permission(Modules.PSP, Actions.VIEW))
+):
     """Get summary of all PSPs with pending settlements"""
-    psps = await db.psps.find({"status": PSPStatus.ACTIVE}, {"_id": 0}).to_list(1000)
+    total = await db.psps.count_documents({"status": PSPStatus.ACTIVE})
+    skip = (page - 1) * page_size
+    psps = await db.psps.find({"status": PSPStatus.ACTIVE}, {"_id": 0}).skip(skip).limit(page_size).to_list(page_size)
     now = datetime.now(timezone.utc)
     
     result = []
@@ -3680,7 +3731,7 @@ async def get_psp_summary(user: dict = Depends(require_permission(Modules.PSP, A
             "settlement_destination_bank": dest.get("bank_name") if dest else None
         })
     
-    return result
+    return {"items": result, "total": total, "page": page, "page_size": page_size, "total_pages": max(1, -(-total // page_size))}
 
 # Model for PSP transaction charges
 class PSPTransactionCharges(BaseModel):
