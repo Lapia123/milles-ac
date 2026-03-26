@@ -574,7 +574,11 @@ export default function TransactionRequests() {
         setFormTags([]);
         setProofImage(null);
         fetchRequests();
-      } else { const e = await res.json(); toast.error(e.detail || 'Failed'); }
+      } else {
+        const e = await res.json();
+        const errMsg = Array.isArray(e.detail) ? e.detail.map(d => d.msg || d.message || JSON.stringify(d)).join(', ') : (e.detail || 'Failed');
+        toast.error(errMsg);
+      }
     } catch { toast.error('Failed'); }
     finally { setCreating(false); }
   };

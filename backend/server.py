@@ -8142,6 +8142,11 @@ async def get_transaction_requests(
     
     return result
 
+@api_router.get("/transaction-requests/pending-count")
+async def get_pending_request_count(user: dict = Depends(get_current_user)):
+    count = await db.transaction_requests.count_documents({"status": "pending"})
+    return {"count": count}
+
 @api_router.get("/transaction-requests/{request_id}")
 async def get_transaction_request(request_id: str, user: dict = Depends(require_permission(Modules.TRANSACTION_REQUESTS, Actions.VIEW))):
     req = await db.transaction_requests.find_one({"request_id": request_id}, {"_id": 0})
@@ -8617,11 +8622,6 @@ async def delete_transaction_request(request: Request, request_id: str, user: di
     await db.transaction_requests.delete_one({"request_id": request_id})
     await log_activity(request, user, "delete", "transaction_requests", "Deleted request")
     return {"message": "Request deleted"}
-
-@api_router.get("/transaction-requests/pending-count")
-async def get_pending_request_count(user: dict = Depends(get_current_user)):
-    count = await db.transaction_requests.count_documents({"status": "pending"})
-    return {"count": count}
 
 
 # ============== REPORTS/ANALYTICS ROUTES ==============
