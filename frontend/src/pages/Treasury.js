@@ -1633,18 +1633,18 @@ export default function Treasury() {
                 </p>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Actual Balance <span className="text-red-500">*</span></Label>
+                <Label className="text-sm font-medium">Actual Balance at Effective Date <span className="text-red-500">*</span></Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={balanceFixForm.actual_balance}
                   onChange={(e) => setBalanceFixForm({ ...balanceFixForm, actual_balance: e.target.value })}
-                  placeholder="Enter actual bank balance"
+                  placeholder="Enter actual bank balance at the date"
                   data-testid="balance-fix-amount"
                 />
                 {balanceFixForm.actual_balance !== '' && (
-                  <p className={`text-xs font-medium ${parseFloat(balanceFixForm.actual_balance) - (balanceFixAccount.balance || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    Adjustment: {parseFloat(balanceFixForm.actual_balance) - (balanceFixAccount.balance || 0) >= 0 ? '+' : ''}{(parseFloat(balanceFixForm.actual_balance) - (balanceFixAccount.balance || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {balanceFixAccount.currency}
+                  <p className="text-xs text-slate-500">
+                    The system will calculate the exact adjustment based on the running balance at the effective date, insert the correction, and recalculate all subsequent balances.
                   </p>
                 )}
               </div>

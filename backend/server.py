@@ -2222,7 +2222,7 @@ async def get_treasury_history(
     treasury_txs = await db.treasury_transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
     
     # Adjust amounts for display - outflows should be negative
-    outflow_types = ["debt_payment", "withdrawal", "transfer_out", "expense", "balance_adjustment_debit"]
+    outflow_types = ["debt_payment", "withdrawal", "transfer_out", "expense", "balance_adjustment_debit", "loan_disbursement"]
     for ttx in treasury_txs:
         if ttx.get("transaction_type") in outflow_types:
             ttx["amount"] = -abs(ttx.get("amount", 0))
@@ -2317,18 +2317,43 @@ class BalanceFixRequest(BaseModel):
 
 @api_router.post("/treasury/{account_id}/balance-fix")
 async def fix_treasury_balance(request: Request, account_id: str, fix: BalanceFixRequest, user: dict = Depends(require_admin)):
-    """Fix treasury balance by creating an adjustment entry. Admin only."""
+    """Fix treasury balance by creating an adjustment entry at effective date. 
+    Recalculates all running balances and the final account balance."""
     account = await db.treasury_accounts.find_one({"account_id": account_id}, {"_id": 0})
     if not account:
         raise HTTPException(status_code=404, detail="Treasury account not found")
     
-    current_balance = account.get("balance", 0)
-    adjustment = round(fix.actual_balance - current_balance, 2)
+    effective_date = fix.effective_date or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    # Normalize effective_date to ensure consistent format
+    if len(effective_date) == 10:  # YYYY-MM-DD
+        effective_date = f"{effective_date}T23:59:59"
+    
+    outflow_types = ["debt_payment", "withdrawal", "transfer_out", "expense", "balance_adjustment_debit", "loan_disbursement"]
+    
+    # Get all transactions for this account sorted by date
+    all_txs = await db.treasury_transactions.find(
+        {"account_id": account_id},
+        {"_id": 0, "treasury_transaction_id": 1, "created_at": 1, "amount": 1, "transaction_type": 1}
+    ).sort("created_at", 1).to_list(None)
+    
+    # Calculate running balance UP TO (and including) the effective date
+    running_at_effective = 0.0
+    for tx in all_txs:
+        tx_date = tx.get("created_at", "")
+        if tx_date > effective_date:
+            break
+        amt = tx.get("amount", 0)
+        if tx.get("transaction_type") in outflow_types:
+            running_at_effective -= abs(amt)
+        else:
+            running_at_effective += abs(amt)
+    
+    running_at_effective = round(running_at_effective, 2)
+    adjustment = round(fix.actual_balance - running_at_effective, 2)
     
     if adjustment == 0:
-        raise HTTPException(status_code=400, detail="Actual balance matches current balance. No adjustment needed.")
+        raise HTTPException(status_code=400, detail=f"Balance at effective date already matches {fix.actual_balance:,.2f}. No adjustment needed.")
     
-    effective_date = fix.effective_date or datetime.now(timezone.utc).isoformat()
     tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
     
     adjustment_entry = {
@@ -2338,38 +2363,30 @@ async def fix_treasury_balance(request: Request, account_id: str, fix: BalanceFi
         "amount": abs(adjustment),
         "currency": account.get("currency", "USD"),
         "reference": f"Balance Adjustment: {fix.reason or 'Manual correction'}",
-        "description": f"Balance fixed from {current_balance:,.2f} to {fix.actual_balance:,.2f}. Reason: {fix.reason or 'Manual correction'}",
+        "description": f"Balance fixed to {fix.actual_balance:,.2f} at {effective_date[:10]}. Previous running balance was {running_at_effective:,.2f}. Reason: {fix.reason or 'Manual correction'}",
         "created_at": effective_date,
         "created_by": user.get("email"),
         "created_by_name": user.get("name", user.get("email")),
         "adjustment_direction": "credit" if adjustment > 0 else "debit",
-        "previous_balance": current_balance,
+        "previous_balance": running_at_effective,
         "new_balance": fix.actual_balance,
     }
     
     # If negative adjustment, mark as outflow
     if adjustment < 0:
-        adjustment_entry["amount"] = abs(adjustment)
         adjustment_entry["transaction_type"] = "balance_adjustment_debit"
     
     await db.treasury_transactions.insert_one(adjustment_entry)
     adjustment_entry.pop("_id", None)
     
-    # Update account balance
-    await db.treasury_accounts.update_one(
-        {"account_id": account_id},
-        {"$set": {"balance": round(fix.actual_balance, 2), "updated_at": datetime.now(timezone.utc).isoformat()}}
-    )
-    
-    # Recalculate running balances for all treasury transactions after the effective date
-    all_txs = await db.treasury_transactions.find(
+    # Recalculate ALL running balances from the beginning (including the new adjustment)
+    all_txs_updated = await db.treasury_transactions.find(
         {"account_id": account_id},
         {"_id": 0, "treasury_transaction_id": 1, "created_at": 1, "amount": 1, "transaction_type": 1}
     ).sort("created_at", 1).to_list(None)
     
-    outflow_types = ["debt_payment", "withdrawal", "transfer_out", "expense", "balance_adjustment_debit"]
-    running = 0
-    for tx in all_txs:
+    running = 0.0
+    for tx in all_txs_updated:
         amt = tx.get("amount", 0)
         if tx.get("transaction_type") in outflow_types:
             running -= abs(amt)
@@ -2380,13 +2397,24 @@ async def fix_treasury_balance(request: Request, account_id: str, fix: BalanceFi
             {"$set": {"running_balance": round(running, 2)}}
         )
     
-    await log_activity(request, user, "edit", "treasury", f"Balance fix: {account.get('account_name')} adjusted by {adjustment:,.2f} ({account.get('currency', 'USD')})")
+    # Set final account balance to the LAST running balance (not the fix amount)
+    final_balance = round(running, 2)
+    old_balance = account.get("balance", 0)
+    await db.treasury_accounts.update_one(
+        {"account_id": account_id},
+        {"$set": {"balance": final_balance, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    await log_activity(request, user, "edit", "treasury", f"Balance fix at {effective_date[:10]}: {account.get('account_name')} adjusted by {adjustment:,.2f} ({account.get('currency', 'USD')}). Account balance: {old_balance:,.2f} → {final_balance:,.2f}")
     
     return {
-        "message": f"Balance adjusted from {current_balance:,.2f} to {fix.actual_balance:,.2f}",
+        "message": f"Balance at {effective_date[:10]} fixed to {fix.actual_balance:,.2f}. Account balance updated from {old_balance:,.2f} to {final_balance:,.2f}",
         "adjustment": adjustment,
         "treasury_transaction_id": tx_id,
-        "new_balance": fix.actual_balance
+        "effective_date": effective_date[:10],
+        "balance_at_effective_date": fix.actual_balance,
+        "new_account_balance": final_balance,
+        "old_account_balance": old_balance
     }
 
 # Inter-Treasury Transfer

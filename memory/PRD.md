@@ -27,16 +27,14 @@ Comprehensive back-office accounting software for FX brokerage "Miles Capitals".
 
 ## Completed Features (March 27, 2026)
 - [x] **Pending Approvals for ALL Financial Operations (P0):**
-  - Income/Expenses now create with status="pending", treasury deferred to approval
-  - Loan Disbursements now create with status="pending_approval", treasury deferred to approval
-  - Loan Repayments now create with status="pending_approval", treasury/loan updates deferred to approval
-  - PSP Compound & Net Settlements now create with status="pending", treasury deferred to approval
-  - Approve/Reject endpoints for: IE, Loan Disbursements, Loan Repayments, PSP Settlements
-  - Unified GET /api/pending-approvals/all endpoint returning all pending items grouped by type
-  - AccountantDashboard completely rewritten with 6 tabs: Transactions, Vendor Settlements, Income/Expenses, Loans, Repayments, PSP Settlements
-  - Sidebar badge updated to include all pending approval type counts
-  - IE page status badges updated for "pending"/"approved"
-  - Loans page status badges updated for "pending_approval"/"rejected"
+  - Income/Expenses, Loan Disbursements, Loan Repayments, PSP Settlements all route through Pending Approvals
+  - AccountantDashboard rewritten with 6 tabs, unified approve/reject endpoints
+- [x] **Treasury Fix Balance Effective Date Bug Fix:**
+  - Now correctly calculates adjustment against the running balance AT the effective date (not current balance)
+  - Inserts adjustment entry at the effective date position in the timeline
+  - Recalculates ALL running balances from beginning through to end
+  - Sets final account balance to the last running balance (properly cascading the fix through subsequent transactions)
+  - Fixed `loan_disbursement` missing from outflow_types in running balance calculation
 
 ## Completed Features (Previous Sessions)
 - [x] PSP Pending Settlement calculation fix, Net Settlement feature, Settlement History
