@@ -160,6 +160,7 @@ export default function AccountantDashboard() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [destFilter, setDestFilter] = useState('all');
   const [clientFilter, setClientFilter] = useState('');
+  const [clientTags, setClientTags] = useState([]);
   
   // Withdrawal approval dialog
   const [showApprovalDialog, setShowApprovalDialog] = useState(null);
@@ -241,10 +242,19 @@ export default function AccountantDashboard() {
     }
   };
 
+  const fetchClientTags = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/tags/clients`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) setClientTags(await response.json());
+    } catch (error) {
+      console.error('Error fetching client tags:', error);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchPendingTransactions(), fetchPendingSettlements(), fetchTreasuryAccounts(), fetchPsps()]);
+      await Promise.all([fetchPendingTransactions(), fetchPendingSettlements(), fetchTreasuryAccounts(), fetchPsps(), fetchClientTags()]);
       setLoading(false);
     };
     loadData();
@@ -683,7 +693,7 @@ export default function AccountantDashboard() {
                 return (
                 <Card key={tx.transaction_id} className={`border-slate-200 ${!hasProperDest ? 'bg-red-500/5 border-red-500/30' : 'bg-white'}`}>
                   <CardContent className="p-4">
-                    <div className="grid grid-cols-[140px_80px_120px_90px_120px_150px_140px_auto] items-center gap-3">
+                    <div className="grid grid-cols-[140px_80px_120px_90px_120px_150px_100px_100px_auto] items-center gap-3">
                       {/* Reference + CRM Ref */}
                       <div className="min-w-0">
                         <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Reference</p>
@@ -765,6 +775,20 @@ export default function AccountantDashboard() {
                         <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Created</p>
                         <p className="text-white text-xs">{formatDate(tx.transaction_date || tx.created_at)}</p>
                         <p className="text-[10px] text-[#C5C6C7]">by {tx.created_by_name || 'System'}</p>
+                      </div>
+                      {/* Tags */}
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Tags</p>
+                        <div className="flex flex-wrap gap-0.5">
+                          {(tx.client_tags || []).length > 0 ? (
+                            tx.client_tags.map((tag) => {
+                              const tagObj = clientTags.find(t => t.name === tag);
+                              return <span key={tag} className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white whitespace-nowrap" style={{ backgroundColor: tagObj?.color || '#64748B' }}>{tag}</span>;
+                            })
+                          ) : (
+                            <span className="text-[10px] text-[#C5C6C7]">-</span>
+                          )}
+                        </div>
                       </div>
                       {/* Actions */}
                       <div className="flex items-center gap-1.5 justify-end">
