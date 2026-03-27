@@ -30,11 +30,18 @@ Comprehensive back-office accounting software for FX brokerage "Miles Capitals".
   - Income/Expenses, Loan Disbursements, Loan Repayments, PSP Settlements all route through Pending Approvals
   - AccountantDashboard rewritten with 6 tabs, unified approve/reject endpoints
 - [x] **Treasury Fix Balance Effective Date Bug Fix:**
-  - Now correctly calculates adjustment against the running balance AT the effective date (not current balance)
-  - Inserts adjustment entry at the effective date position in the timeline
-  - Recalculates ALL running balances from beginning through to end
-  - Sets final account balance to the last running balance (properly cascading the fix through subsequent transactions)
-  - Fixed `loan_disbursement` missing from outflow_types in running balance calculation
+  - Now uses Opening Balance mode — adjustment placed at start-of-day
+  - Removes old adjustments on same date when re-fixing (no stacking)
+  - Recalculates all running balances and final account balance
+  - Fixed `loan_disbursement` missing from outflow_types
+- [x] **Exchanger Custom Amount Settlement (Multi-Currency):**
+  - Toggle between "Settle All" (full) and "Custom Amount" (partial) modes
+  - Custom mode: enter any amount in any currency (USD, AED, EUR, GBP, INR, etc.)
+  - Direct Transfer option: record payment without linking to treasury account
+  - Treasury destination option: link to specific treasury account
+  - All settlements go through Pending Approvals workflow
+  - Settlement preview with charges breakdown
+  - Notes field for settlement reference
 
 ## Completed Features (Previous Sessions)
 - [x] PSP Pending Settlement calculation fix, Net Settlement feature, Settlement History

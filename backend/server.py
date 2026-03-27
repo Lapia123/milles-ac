@@ -6281,7 +6281,7 @@ async def get_settlement_statement(settlement_id: str, user: dict = Depends(requ
 # Admin settle vendor balance
 class VendorSettlementRequest(BaseModel):
     settlement_type: str  # "bank" or "cash"
-    destination_account_id: str  # Required - treasury account
+    destination_account_id: Optional[str] = None  # Treasury account (optional for direct transfers)
     commission_amount: float = 0  # Manual commission entry
     charges_amount: float = 0  # Additional charges/fees
     charges_description: Optional[str] = None
@@ -6290,6 +6290,12 @@ class VendorSettlementRequest(BaseModel):
     destination_currency: str = "USD"  # Currency of destination treasury
     exchange_rate: float = 1.0  # Conversion rate
     settlement_amount_in_dest_currency: Optional[float] = None  # Final amount in destination currency
+    # Custom/partial amount settlement
+    settlement_mode: str = "full"  # "full" = settle all, "custom" = partial amount
+    custom_amount: Optional[float] = None  # Amount for custom settlement
+    custom_currency: Optional[str] = None  # Currency of custom amount
+    is_direct_transfer: bool = False  # True = just record (no treasury link)
+    notes: Optional[str] = None
 
 @api_router.post("/vendors/{vendor_id}/settle")
 async def settle_vendor_balance(
@@ -6304,85 +6310,97 @@ async def settle_vendor_balance(
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
     
-    # Get approved transactions for this vendor that haven't been settled
-    pending_txs = await db.transactions.find({
-        "vendor_id": vendor_id,
-        "destination_type": "vendor",
-        "status": {"$in": [TransactionStatus.APPROVED, TransactionStatus.COMPLETED]},
-        "settled": {"$ne": True}
-    }, {"_id": 0}).to_list(1000)
+    is_custom = settlement_request.settlement_mode == "custom"
+    is_direct = settlement_request.is_direct_transfer
     
-    # Also get approved IE entries for this vendor that haven't been settled
-    pending_ie = await db.income_expenses.find({
-        "vendor_id": vendor_id,
-        "status": "completed",
-        "settled": {"$ne": True},
-        "converted_to_loan": {"$ne": True},
-    }, {"_id": 0}).to_list(1000)
+    # Validate: non-direct transfers require a destination account
+    if not is_direct and not settlement_request.destination_account_id:
+        raise HTTPException(status_code=400, detail="Please select a settlement destination account")
     
-    # Also get completed loan transactions for this vendor that haven't been settled
-    pending_loans = await db.loan_transactions.find({
-        "$or": [
-            {"source_vendor_id": vendor_id},
-            {"credit_to_vendor_id": vendor_id}
-        ],
-        "status": "completed",
-        "settled": {"$ne": True}
-    }, {"_id": 0}).to_list(1000)
+    # Validate: custom mode requires amount and currency
+    if is_custom:
+        if not settlement_request.custom_amount or settlement_request.custom_amount <= 0:
+            raise HTTPException(status_code=400, detail="Please enter a valid custom settlement amount")
+        if not settlement_request.custom_currency:
+            raise HTTPException(status_code=400, detail="Please select a currency for the custom settlement")
     
-    if not pending_txs and not pending_ie and not pending_loans:
-        raise HTTPException(status_code=400, detail="No pending transactions to settle")
-    
-    # Calculate NET amounts - deposits minus withdrawals, using base_amount for source currency
-    source_currency = settlement_request.source_currency
-    gross_amount = 0
-    for tx in pending_txs:
-        # Determine the amount to use based on currency match
-        if tx.get("base_currency") == source_currency and tx.get("base_amount"):
-            # Use base amount in the source currency
-            tx_amount = tx["base_amount"]
-        elif tx.get("currency") == source_currency:
-            # Use main amount if it matches source currency
-            tx_amount = tx["amount"]
-        else:
-            # Default to main amount
-            tx_amount = tx["amount"]
-        
-        # Add for deposits, subtract for withdrawals (NET calculation)
-        if tx.get("transaction_type") == "deposit":
-            gross_amount += tx_amount
-        elif tx.get("transaction_type") == "withdrawal":
-            gross_amount -= tx_amount
-        else:
-            # Default: add
-            gross_amount += tx_amount
-    
-    # Add IE entries to gross amount
+    pending_txs = []
+    pending_ie = []
+    pending_loans = []
     ie_entry_ids = []
-    for ie in pending_ie:
-        if ie.get("base_currency") == source_currency and ie.get("base_amount"):
-            ie_amount = ie["base_amount"]
-        elif ie.get("currency") == source_currency:
-            ie_amount = ie["amount"]
-        else:
-            ie_amount = ie.get("amount_usd", ie["amount"])
-        
-        if ie["entry_type"] == "income":
-            gross_amount += ie_amount
-        else:  # expense
-            gross_amount -= ie_amount
-        ie_entry_ids.append(ie["entry_id"])
-    
-    # Add Loan transactions to gross amount
     loan_tx_ids = []
-    for ltx in pending_loans:
-        ltx_amount = ltx.get("amount", 0)
-        # Loan repayments TO vendor = Money In, Disbursements FROM vendor = Money Out
-        if ltx.get("credit_to_vendor_id") == vendor_id:
-            gross_amount += ltx_amount  # Money IN
-        elif ltx.get("source_vendor_id") == vendor_id:
-            gross_amount -= ltx_amount  # Money OUT
-        loan_tx_ids.append(ltx["transaction_id"])
+    gross_amount = 0
+    source_currency = settlement_request.source_currency
+    
+    if is_custom:
+        # Custom/partial: use the provided amount, no transactions marked
+        gross_amount = settlement_request.custom_amount
+        source_currency = settlement_request.custom_currency
+    else:
+        # Full: get all approved transactions for this vendor that haven't been settled
+        pending_txs = await db.transactions.find({
+            "vendor_id": vendor_id,
+            "destination_type": "vendor",
+            "status": {"$in": [TransactionStatus.APPROVED, TransactionStatus.COMPLETED]},
+            "settled": {"$ne": True}
+        }, {"_id": 0}).to_list(1000)
+        
+        # Also get approved IE entries for this vendor that haven't been settled
+        pending_ie = await db.income_expenses.find({
+            "vendor_id": vendor_id,
+            "status": {"$in": ["completed", "approved"]},
+            "settled": {"$ne": True},
+            "converted_to_loan": {"$ne": True},
+        }, {"_id": 0}).to_list(1000)
+        
+        # Also get completed loan transactions for this vendor that haven't been settled
+        pending_loans = await db.loan_transactions.find({
+            "$or": [
+                {"source_vendor_id": vendor_id},
+                {"credit_to_vendor_id": vendor_id}
+            ],
+            "status": "completed",
+            "settled": {"$ne": True}
+        }, {"_id": 0}).to_list(1000)
+        
+        if not pending_txs and not pending_ie and not pending_loans:
+            raise HTTPException(status_code=400, detail="No pending transactions to settle")
+        
+        # Calculate NET amounts
+        for tx in pending_txs:
+            if tx.get("base_currency") == source_currency and tx.get("base_amount"):
+                tx_amount = tx["base_amount"]
+            elif tx.get("currency") == source_currency:
+                tx_amount = tx["amount"]
+            else:
+                tx_amount = tx["amount"]
+            if tx.get("transaction_type") == "deposit":
+                gross_amount += tx_amount
+            elif tx.get("transaction_type") == "withdrawal":
+                gross_amount -= tx_amount
+            else:
+                gross_amount += tx_amount
+        
+        for ie in pending_ie:
+            if ie.get("base_currency") == source_currency and ie.get("base_amount"):
+                ie_amount = ie["base_amount"]
+            elif ie.get("currency") == source_currency:
+                ie_amount = ie["amount"]
+            else:
+                ie_amount = ie.get("amount_usd", ie["amount"])
+            if ie["entry_type"] == "income":
+                gross_amount += ie_amount
+            else:
+                gross_amount -= ie_amount
+            ie_entry_ids.append(ie["entry_id"])
+        
+        for ltx in pending_loans:
+            ltx_amount = ltx.get("amount", 0)
+            if ltx.get("credit_to_vendor_id") == vendor_id:
+                gross_amount += ltx_amount
+            elif ltx.get("source_vendor_id") == vendor_id:
+                gross_amount -= ltx_amount
+            loan_tx_ids.append(ltx["transaction_id"])
     
     # Manual commission and charges
     commission_amount = settlement_request.commission_amount
@@ -6402,34 +6420,39 @@ async def settle_vendor_balance(
     settlement_id = f"vstl_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
     
+    dest = None
     dest_account_id = settlement_request.destination_account_id
-    dest = await db.treasury_accounts.find_one({"account_id": dest_account_id}, {"_id": 0})
-    if not dest:
-        raise HTTPException(status_code=404, detail="Settlement destination account not found")
+    if dest_account_id and not is_direct:
+        dest = await db.treasury_accounts.find_one({"account_id": dest_account_id}, {"_id": 0})
+        if not dest:
+            raise HTTPException(status_code=404, detail="Settlement destination account not found")
     
     settlement_doc = {
         "settlement_id": settlement_id,
         "vendor_id": vendor_id,
         "vendor_name": vendor["vendor_name"],
         "settlement_type": settlement_request.settlement_type,
+        "settlement_mode": settlement_request.settlement_mode,
+        "is_direct_transfer": is_direct,
         "gross_amount": gross_amount,
-        "source_currency": settlement_request.source_currency,
+        "source_currency": source_currency,
         "commission_amount": commission_amount,
         "charges_amount": charges_amount,
         "charges_description": settlement_request.charges_description,
         "net_amount_source": net_amount_source,
         "exchange_rate": settlement_request.exchange_rate,
-        "destination_currency": settlement_request.destination_currency,
+        "destination_currency": settlement_request.destination_currency if dest else source_currency,
         "settlement_amount": settlement_amount,
         "transaction_count": len(pending_txs) + len(pending_ie) + len(pending_loans),
         "transaction_ids": [tx["transaction_id"] for tx in pending_txs],
         "ie_entry_ids": ie_entry_ids,
         "loan_tx_ids": loan_tx_ids,
-        "settlement_destination_id": dest_account_id,
-        "settlement_destination_name": dest["account_name"],
-        "status": VendorSettlementStatus.PENDING,  # Settlements go to pending first
+        "settlement_destination_id": dest_account_id if not is_direct else None,
+        "settlement_destination_name": dest["account_name"] if dest else ("Direct Transfer" if is_direct else None),
+        "notes": settlement_request.notes,
+        "status": VendorSettlementStatus.PENDING,
         "created_at": now.isoformat(),
-        "settled_at": None,  # Will be set on approval
+        "settled_at": None,
         "approved_at": None,
         "approved_by": None,
         "approved_by_name": None,
@@ -6440,27 +6463,28 @@ async def settle_vendor_balance(
     
     await db.vendor_settlements.insert_one(settlement_doc)
     
-    # Mark transactions as pending settlement (not fully settled yet)
-    await db.transactions.update_many(
-        {"transaction_id": {"$in": [tx["transaction_id"] for tx in pending_txs]}},
-        {"$set": {"settlement_id": settlement_id, "settlement_status": "pending_approval"}}
-    )
-    
-    # Mark IE entries as pending settlement
-    if ie_entry_ids:
-        await db.income_expenses.update_many(
-            {"entry_id": {"$in": ie_entry_ids}},
+    # Only mark specific transactions as pending settlement for full settlements
+    if not is_custom:
+        await db.transactions.update_many(
+            {"transaction_id": {"$in": [tx["transaction_id"] for tx in pending_txs]}},
             {"$set": {"settlement_id": settlement_id, "settlement_status": "pending_approval"}}
         )
+        
+        if ie_entry_ids:
+            await db.income_expenses.update_many(
+                {"entry_id": {"$in": ie_entry_ids}},
+                {"$set": {"settlement_id": settlement_id, "settlement_status": "pending_approval"}}
+            )
+        
+        if loan_tx_ids:
+            await db.loan_transactions.update_many(
+                {"transaction_id": {"$in": loan_tx_ids}},
+                {"$set": {"settlement_id": settlement_id, "settlement_status": "pending_approval"}}
+            )
     
-    # Mark Loan transactions as pending settlement
-    if loan_tx_ids:
-        await db.loan_transactions.update_many(
-            {"transaction_id": {"$in": loan_tx_ids}},
-            {"$set": {"settlement_id": settlement_id, "settlement_status": "pending_approval"}}
-        )
-    
-    await log_activity(request, user, "create", "exchangers", "Created vendor settlement")
+    mode_label = "Custom partial" if is_custom else "Full"
+    dest_label = "Direct Transfer" if is_direct else (dest["account_name"] if dest else "N/A")
+    await log_activity(request, user, "create", "exchangers", f"{mode_label} settlement for {vendor['vendor_name']}: {settlement_amount:,.2f} {settlement_request.destination_currency if dest else source_currency} → {dest_label}")
 
     # Send settlement approval notification email (fire and forget)
     import asyncio
@@ -6468,18 +6492,20 @@ async def settle_vendor_balance(
         "settlement_id": settlement_id,
         "vendor_name": vendor["vendor_name"],
         "gross_amount": gross_amount,
-        "currency": settlement_request.source_currency,
+        "currency": source_currency,
         "net_amount": settlement_amount,
-        "dest_currency": settlement_request.destination_currency,
+        "dest_currency": settlement_request.destination_currency if dest else source_currency,
         "tx_count": len(pending_txs) + len(pending_ie) + len(pending_loans),
-        "created_by": user["name"]
+        "created_by": user["name"],
+        "settlement_mode": settlement_request.settlement_mode,
+        "is_direct_transfer": is_direct,
     }))
 
     # Notify the exchanger about settlement
     asyncio.create_task(send_exchanger_notification("settlement", vendor_id, {
         "settlement_id": settlement_id,
-        "gross_display": f"{gross_amount:,.2f} {settlement_request.source_currency}",
-        "net_display": f"{settlement_amount:,.2f} {settlement_request.destination_currency}",
+        "gross_display": f"{gross_amount:,.2f} {source_currency}",
+        "net_display": f"{settlement_amount:,.2f} {(settlement_request.destination_currency if dest else source_currency)}",
         "tx_count": len(pending_txs) + len(pending_ie) + len(pending_loans),
     }))
 
