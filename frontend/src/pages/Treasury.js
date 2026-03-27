@@ -1633,18 +1633,18 @@ export default function Treasury() {
                 </p>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Opening Balance on Effective Date <span className="text-red-500">*</span></Label>
+                <Label className="text-sm font-medium">Correct Running Balance on This Date <span className="text-red-500">*</span></Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={balanceFixForm.actual_balance}
                   onChange={(e) => setBalanceFixForm({ ...balanceFixForm, actual_balance: e.target.value })}
-                  placeholder="Enter actual opening balance on that date"
+                  placeholder="Enter the correct balance for this date"
                   data-testid="balance-fix-amount"
                 />
                 {balanceFixForm.actual_balance !== '' && (
                   <p className="text-xs text-slate-500">
-                    The system will adjust the opening balance on the selected date, then recalculate all transactions from that date forward to fix the current balance.
+                    The system will insert an adjustment at the start of this date, then recalculate all transactions forward to fix the current balance. Any previous balance fix on the same date will be replaced.
                   </p>
                 )}
               </div>

@@ -2337,6 +2337,24 @@ async def fix_treasury_balance(request: Request, account_id: str, fix: BalanceFi
         {"_id": 0, "treasury_transaction_id": 1, "created_at": 1, "amount": 1, "transaction_type": 1}
     ).sort("created_at", 1).to_list(None)
     
+    # Remove any existing balance adjustments on the same date (re-fix scenario)
+    existing_adj_ids = []
+    for tx in all_txs:
+        tx_date = tx.get("created_at", "")[:10]
+        tx_type = tx.get("transaction_type", "")
+        if tx_date == day_str and tx_type in ("balance_adjustment", "balance_adjustment_debit"):
+            existing_adj_ids.append(tx["treasury_transaction_id"])
+    
+    if existing_adj_ids:
+        await db.treasury_transactions.delete_many(
+            {"treasury_transaction_id": {"$in": existing_adj_ids}}
+        )
+        # Refresh the transaction list after deletion
+        all_txs = await db.treasury_transactions.find(
+            {"account_id": account_id},
+            {"_id": 0, "treasury_transaction_id": 1, "created_at": 1, "amount": 1, "transaction_type": 1}
+        ).sort("created_at", 1).to_list(None)
+    
     # Calculate running balance BEFORE the selected date's real transactions start.
     # Include any existing midnight adjustments (they are prior opening fixes).
     # "Real" transactions on this day start after 00:00:00.
