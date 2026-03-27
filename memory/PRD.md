@@ -5,7 +5,7 @@ Comprehensive back-office accounting software for FX brokerage "Miles Capitals".
 
 ## Tech Stack
 - **Frontend:** React + Shadcn UI + Tailwind CSS
-- **Backend:** FastAPI (Python) — monolithic server.py (~17K lines)
+- **Backend:** FastAPI (Python) — monolithic server.py (~17.8K lines)
 - **Database:** MongoDB Atlas
 - **Storage:** Cloudflare R2 (via boto3)
 - **Other:** Redis (caching), pandas/openpyxl (bulk uploads)
@@ -13,60 +13,46 @@ Comprehensive back-office accounting software for FX brokerage "Miles Capitals".
 ## Core Features
 - Transaction Management (deposits/withdrawals, CRUD, bulk upload)
 - Transaction Requests (approval workflow)
-- Treasury Management (accounts, transfers, statements, export)
+- Treasury Management (accounts, transfers, statements, export, balance fix tool)
 - PSP Management (settlements, commissions, withdrawal management, net settlements)
 - Exchanger Management (vendors, commissions)
 - Client Management (with tags)
 - Loan Management (with file attachments)
+- Income & Expenses (with pending approval workflow)
 - Reconciliation System
-- Accountant Dashboard (approval workflow)
+- Accountant Dashboard (universal pending approval workflow - 6 tabs)
 - Multi-role access control (Admin, CRM, Accountant)
 - Daily Report Scheduler
 - Audit Logging
 
-## Completed Features (This Session - March 2026)
-- [x] PSP Pending Settlement calculation fix (includes withdrawals + all deductions)
-- [x] PSP Net Settlement feature (settle all deposits + withdrawals at once)
-- [x] Settlement History: transaction type badges (DEPOSIT/WITHDRAWAL), full details
-- [x] PSP pending amounts never show negative (clamped to 0)
-- [x] Backend charges endpoint now adjusts PSP pending_settlement
-- [x] Inter-Treasury Transfer: added Transfer Date field
-- [x] Client Tags system: CRUD API, tag selector in Create Transaction & TX Request forms, tag filter, Tags column in table, Manage Tags dialog
-- [x] PSP Detail View: Full-page overlay with date filters
-- [x] PSP Pagination: Backend (all 4 endpoints) + Frontend (Deposits, Withdrawals, Settlement History, main PSP grid)
-- [x] Fixed PSPs.js JSX syntax error (broken closing tags from mid-edit state)
+## Completed Features (March 27, 2026)
+- [x] **Pending Approvals for ALL Financial Operations (P0):**
+  - Income/Expenses now create with status="pending", treasury deferred to approval
+  - Loan Disbursements now create with status="pending_approval", treasury deferred to approval
+  - Loan Repayments now create with status="pending_approval", treasury/loan updates deferred to approval
+  - PSP Compound & Net Settlements now create with status="pending", treasury deferred to approval
+  - Approve/Reject endpoints for: IE, Loan Disbursements, Loan Repayments, PSP Settlements
+  - Unified GET /api/pending-approvals/all endpoint returning all pending items grouped by type
+  - AccountantDashboard completely rewritten with 6 tabs: Transactions, Vendor Settlements, Income/Expenses, Loans, Repayments, PSP Settlements
+  - Sidebar badge updated to include all pending approval type counts
+  - IE page status badges updated for "pending"/"approved"
+  - Loans page status badges updated for "pending_approval"/"rejected"
 
 ## Completed Features (Previous Sessions)
-- [x] Destination bug fix (auto-processing deposits/withdrawals)
-- [x] Transaction Summary edit (CRM ref, amount, reference, date, payment currency)
-- [x] Bank Receipt Date in approval flow
-- [x] Reconciliation date matching fix
-- [x] APScheduler duplicate email fix
-- [x] Exchangers UI redesign (full-page overlay)
-- [x] PSP Settlement Date
-- [x] Bulk Upload Transactions (CSV/Excel)
-- [x] Currency Rounding Bug fix
-- [x] Transaction Report Downloads fix
-- [x] "Operation failed" Toast improvement
+- [x] PSP Pending Settlement calculation fix, Net Settlement feature, Settlement History
+- [x] Client Tags system, PSP Detail View, PSP Pagination
+- [x] Destination bug fix, Transaction Summary edit, Bank Receipt Date
+- [x] Reconciliation date matching fix, APScheduler duplicate email fix
+- [x] Exchangers UI redesign, PSP Settlement Date, Bulk Upload Transactions
+- [x] Currency Rounding Bug fix, Transaction Report Downloads fix
 - [x] Database Performance (20+ MongoDB indexes)
-- [x] Reconciliation Eye Icon fix
-- [x] Bulk Upload Vendor Commission fix
-- [x] PSP Balance Logic fix (withdrawals)
-- [x] PSP Pending Settlements fix (exclude withdrawals from list)
-- [x] Loan Export Balance fix
-- [x] Loan Attachments (Cloudflare R2)
-- [x] Treasury Page UI/UX overhaul
-- [x] PSP as Withdrawal Source
-- [x] PSP Withdrawal Management
-- [x] PSP Extra Commission for deposits/withdrawals
-- [x] PSP Detail View: Full-page overlay with date filters
-- [x] PSP Pagination: Backend (all 4 endpoints) + Frontend (all tabs + main grid)
-- [x] PSPs.js JSX syntax error fix (broken closing tags from mid-edit state)
-- [x] Transaction/TX Request creation bug fix (route ordering for pending-count, improved error messages)
-- [x] PSP Detail View: Full viewport height layout (no gap below table content)
+- [x] Treasury Page UI/UX overhaul, Treasury Balance Fix tool
+- [x] PSP as Withdrawal Source, PSP Withdrawal Management, PSP Extra Commission
+- [x] Tags column in Pending Approvals, inline Tag editing in Transactions
+- [x] Daily Report shows all Treasury accounts, Treasury date filters always visible
 
 ## Pending Issues
-- P3: Error during withdrawal creation to an Exchanger
+- P1: Error during withdrawal creation to an Exchanger
 - P3: Minor session management redirect bug (recurring 4+)
 
 ## Upcoming Tasks
@@ -74,17 +60,20 @@ Comprehensive back-office accounting software for FX brokerage "Miles Capitals".
 - P2: Implement Reconciliation "Final Approval" step
 
 ## Future/Backlog
-- P2: Refactor backend/server.py (17K+ lines → modular FastAPI routers) — CRITICAL TECH DEBT
+- P2: Refactor backend/server.py (17.8K+ lines → modular FastAPI routers) — CRITICAL TECH DEBT
 - P3: Refactor frontend pagination logic (reusable hook)
 - P3: Refactor client search component (reusable module)
 
-## Key API Endpoints
-- POST /api/client-tags — Create tag
-- GET /api/client-tags — List tags
-- DELETE /api/client-tags/{tag_id} — Delete tag
-- GET /api/transactions?client_tag=VIP — Filter by tag
-- POST /api/psp/{psp_id}/net-settle — Net settlement
-- POST /api/treasury/inter-transfer — Transfer with date
+## Key API Endpoints (New)
+- GET /api/pending-approvals/all — All pending items grouped by type
+- POST /api/income-expenses/{entry_id}/approve — Approve IE entry
+- POST /api/income-expenses/{entry_id}/reject — Reject IE entry
+- POST /api/loans/{loan_id}/approve-disbursement — Approve loan disbursement
+- POST /api/loans/{loan_id}/reject-disbursement — Reject loan disbursement
+- POST /api/loan-repayments/{repayment_id}/approve — Approve loan repayment
+- POST /api/loan-repayments/{repayment_id}/reject — Reject loan repayment
+- POST /api/psp-settlements/{settlement_id}/approve — Approve PSP settlement
+- POST /api/psp-settlements/{settlement_id}/reject — Reject PSP settlement
 
 ## Credentials
 - Admin: admin@fxbroker.com / admin123
