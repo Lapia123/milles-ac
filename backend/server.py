@@ -2317,16 +2317,17 @@ class BalanceFixRequest(BaseModel):
 
 @api_router.post("/treasury/{account_id}/balance-fix")
 async def fix_treasury_balance(request: Request, account_id: str, fix: BalanceFixRequest, user: dict = Depends(require_admin)):
-    """Fix treasury balance by creating an adjustment entry at effective date. 
-    Recalculates all running balances and the final account balance."""
+    """Fix treasury opening balance at effective date.
+    Inserts an adjustment so the opening balance on that date matches the input.
+    Then recalculates all running balances and the final account balance."""
     account = await db.treasury_accounts.find_one({"account_id": account_id}, {"_id": 0})
     if not account:
         raise HTTPException(status_code=404, detail="Treasury account not found")
     
-    effective_date = fix.effective_date or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
-    # Normalize effective_date to ensure consistent format
-    if len(effective_date) == 10:  # YYYY-MM-DD
-        effective_date = f"{effective_date}T23:59:59"
+    # Effective date → adjustment placed at start-of-day (opening balance)
+    raw_date = fix.effective_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    day_str = raw_date[:10]  # YYYY-MM-DD
+    day_start = f"{day_str}T00:00:00"
     
     outflow_types = ["debt_payment", "withdrawal", "transfer_out", "expense", "balance_adjustment_debit", "loan_disbursement"]
     
@@ -2336,25 +2337,30 @@ async def fix_treasury_balance(request: Request, account_id: str, fix: BalanceFi
         {"_id": 0, "treasury_transaction_id": 1, "created_at": 1, "amount": 1, "transaction_type": 1}
     ).sort("created_at", 1).to_list(None)
     
-    # Calculate running balance UP TO (and including) the effective date
-    running_at_effective = 0.0
+    # Calculate running balance BEFORE the selected date's real transactions start.
+    # Include any existing midnight adjustments (they are prior opening fixes).
+    # "Real" transactions on this day start after 00:00:00.
+    running_before_date = 0.0
     for tx in all_txs:
         tx_date = tx.get("created_at", "")
-        if tx_date > effective_date:
+        # Include everything strictly before the day, PLUS any midnight entries (00:00:00)
+        if tx_date > day_start:
             break
         amt = tx.get("amount", 0)
         if tx.get("transaction_type") in outflow_types:
-            running_at_effective -= abs(amt)
+            running_before_date -= abs(amt)
         else:
-            running_at_effective += abs(amt)
+            running_before_date += abs(amt)
     
-    running_at_effective = round(running_at_effective, 2)
-    adjustment = round(fix.actual_balance - running_at_effective, 2)
+    running_before_date = round(running_before_date, 2)
+    adjustment = round(fix.actual_balance - running_before_date, 2)
     
     if adjustment == 0:
-        raise HTTPException(status_code=400, detail=f"Balance at effective date already matches {fix.actual_balance:,.2f}. No adjustment needed.")
+        raise HTTPException(status_code=400, detail=f"Opening balance on {day_str} already matches {fix.actual_balance:,.2f}. No adjustment needed.")
     
     tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
+    # Place slightly after midnight so it sorts after any existing midnight entries
+    adjustment_timestamp = f"{day_str}T00:00:00.500000"
     
     adjustment_entry = {
         "treasury_transaction_id": tx_id,
@@ -2362,17 +2368,16 @@ async def fix_treasury_balance(request: Request, account_id: str, fix: BalanceFi
         "transaction_type": "balance_adjustment",
         "amount": abs(adjustment),
         "currency": account.get("currency", "USD"),
-        "reference": f"Balance Adjustment: {fix.reason or 'Manual correction'}",
-        "description": f"Balance fixed to {fix.actual_balance:,.2f} at {effective_date[:10]}. Previous running balance was {running_at_effective:,.2f}. Reason: {fix.reason or 'Manual correction'}",
-        "created_at": effective_date,
+        "reference": f"Opening Balance Fix: {fix.reason or 'Manual correction'}",
+        "description": f"Opening balance on {day_str} fixed to {fix.actual_balance:,.2f}. Was {running_before_date:,.2f}. Reason: {fix.reason or 'Manual correction'}",
+        "created_at": adjustment_timestamp,
         "created_by": user.get("email"),
         "created_by_name": user.get("name", user.get("email")),
         "adjustment_direction": "credit" if adjustment > 0 else "debit",
-        "previous_balance": running_at_effective,
+        "previous_balance": running_before_date,
         "new_balance": fix.actual_balance,
     }
     
-    # If negative adjustment, mark as outflow
     if adjustment < 0:
         adjustment_entry["transaction_type"] = "balance_adjustment_debit"
     
@@ -2397,7 +2402,7 @@ async def fix_treasury_balance(request: Request, account_id: str, fix: BalanceFi
             {"$set": {"running_balance": round(running, 2)}}
         )
     
-    # Set final account balance to the LAST running balance (not the fix amount)
+    # Set final account balance to the LAST running balance
     final_balance = round(running, 2)
     old_balance = account.get("balance", 0)
     await db.treasury_accounts.update_one(
@@ -2405,14 +2410,14 @@ async def fix_treasury_balance(request: Request, account_id: str, fix: BalanceFi
         {"$set": {"balance": final_balance, "updated_at": datetime.now(timezone.utc).isoformat()}}
     )
     
-    await log_activity(request, user, "edit", "treasury", f"Balance fix at {effective_date[:10]}: {account.get('account_name')} adjusted by {adjustment:,.2f} ({account.get('currency', 'USD')}). Account balance: {old_balance:,.2f} → {final_balance:,.2f}")
+    await log_activity(request, user, "edit", "treasury", f"Opening balance fix on {day_str}: {account.get('account_name')} adjusted by {adjustment:,.2f} ({account.get('currency', 'USD')}). Account balance: {old_balance:,.2f} -> {final_balance:,.2f}")
     
     return {
-        "message": f"Balance at {effective_date[:10]} fixed to {fix.actual_balance:,.2f}. Account balance updated from {old_balance:,.2f} to {final_balance:,.2f}",
+        "message": f"Opening balance on {day_str} fixed to {fix.actual_balance:,.2f}. Account balance updated from {old_balance:,.2f} to {final_balance:,.2f}",
         "adjustment": adjustment,
         "treasury_transaction_id": tx_id,
-        "effective_date": effective_date[:10],
-        "balance_at_effective_date": fix.actual_balance,
+        "effective_date": day_str,
+        "opening_balance_on_date": fix.actual_balance,
         "new_account_balance": final_balance,
         "old_account_balance": old_balance
     }
