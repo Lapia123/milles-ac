@@ -47,6 +47,10 @@ import {
   CreditCard,
   Filter,
   AlertTriangle,
+  DollarSign,
+  HandCoins,
+  ReceiptText,
+  Landmark,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -88,10 +92,9 @@ const MathCaptcha = ({ onVerified, onCancel, actionType }) => {
         <Calculator className="w-5 h-5" />
         <span className="text-sm uppercase tracking-wider">Security Verification</span>
       </div>
-      
       <div className="p-4 bg-slate-50 rounded-sm border border-slate-200">
         <p className="text-[#C5C6C7] text-sm mb-3">
-          Please solve this math problem to {actionType === 'approve' ? 'approve' : 'reject'} the transaction:
+          Please solve this math problem to {actionType === 'approve' ? 'approve' : 'reject'}:
         </p>
         <div className="flex items-center justify-center gap-4 text-3xl font-mono text-white">
           <span>{num1}</span>
@@ -101,7 +104,6 @@ const MathCaptcha = ({ onVerified, onCancel, actionType }) => {
           <span className="text-[#66FCF1]">?</span>
         </div>
       </div>
-
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Your Answer</Label>
@@ -116,23 +118,9 @@ const MathCaptcha = ({ onVerified, onCancel, actionType }) => {
           />
           {error && <p className="text-red-400 text-sm">{error}</p>}
         </div>
-        
         <div className="flex gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            className={`flex-1 ${actionType === 'approve' 
-              ? 'bg-green-500 text-white hover:bg-green-600' 
-              : 'bg-red-500 text-white hover:bg-red-600'}`}
-            data-testid="captcha-submit"
-          >
+          <Button type="button" variant="outline" onClick={onCancel} className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5">Cancel</Button>
+          <Button type="submit" className={`flex-1 ${actionType === 'approve' ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-red-500 text-white hover:bg-red-600'}`} data-testid="captcha-submit">
             Verify & {actionType === 'approve' ? 'Approve' : 'Reject'}
           </Button>
         </div>
@@ -145,12 +133,18 @@ export default function AccountantDashboard() {
   const { user } = useAuth();
   const [pendingTransactions, setPendingTransactions] = useState([]);
   const [pendingSettlements, setPendingSettlements] = useState([]);
+  const [pendingIE, setPendingIE] = useState([]);
+  const [pendingLoans, setPendingLoans] = useState([]);
+  const [pendingRepayments, setPendingRepayments] = useState([]);
+  const [pendingPSPSettlements, setPendingPSPSettlements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewTransaction, setViewTransaction] = useState(null);
   const [viewSettlement, setViewSettlement] = useState(null);
+  const [viewItem, setViewItem] = useState(null); // Generic view for IE/Loan/Repayment/PSP
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectDialog, setShowRejectDialog] = useState(null);
   const [showSettlementRejectDialog, setShowSettlementRejectDialog] = useState(null);
+  const [showGenericRejectDialog, setShowGenericRejectDialog] = useState(null); // { type, id }
   const [processingId, setProcessingId] = useState(null);
   const [activeTab, setActiveTab] = useState('transactions');
   const [uploadingProof, setUploadingProof] = useState(null);
@@ -173,7 +167,7 @@ export default function AccountantDashboard() {
   
   // Captcha states
   const [showCaptcha, setShowCaptcha] = useState(false);
-  const [captchaAction, setCaptchaAction] = useState(null); // { type: 'approve' | 'reject', transactionId: string, isSettlement?: boolean }
+  const [captchaAction, setCaptchaAction] = useState(null);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -185,10 +179,7 @@ export default function AccountantDashboard() {
 
   const fetchTreasuryAccounts = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/treasury?page_size=200`, { 
-        headers: getAuthHeaders(), 
-        credentials: 'include' 
-      });
+      const response = await fetch(`${API_URL}/api/treasury?page_size=200`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
         const d = await response.json();
         setTreasuryAccounts(d.items || d);
@@ -200,10 +191,7 @@ export default function AccountantDashboard() {
 
   const fetchPsps = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/psp`, { 
-        headers: getAuthHeaders(), 
-        credentials: 'include' 
-      });
+      const response = await fetch(`${API_URL}/api/psp`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
         const d = await response.json();
         setPsps(Array.isArray(d) ? d : d.items || []);
@@ -215,30 +203,34 @@ export default function AccountantDashboard() {
 
   const fetchPendingTransactions = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/transactions/pending`, { 
-        headers: getAuthHeaders(), 
-        credentials: 'include' 
-      });
-      if (response.ok) {
-        setPendingTransactions(await response.json());
-      }
+      const response = await fetch(`${API_URL}/api/transactions/pending`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) setPendingTransactions(await response.json());
     } catch (error) {
       console.error('Error fetching pending transactions:', error);
-      toast.error('Failed to load pending transactions');
     }
   };
 
   const fetchPendingSettlements = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/settlements/pending`, { 
-        headers: getAuthHeaders(), 
-        credentials: 'include' 
-      });
-      if (response.ok) {
-        setPendingSettlements(await response.json());
-      }
+      const response = await fetch(`${API_URL}/api/settlements/pending`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) setPendingSettlements(await response.json());
     } catch (error) {
       console.error('Error fetching pending settlements:', error);
+    }
+  };
+
+  const fetchPendingApprovals = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/pending-approvals/all`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        setPendingIE(data.income_expenses || []);
+        setPendingLoans(data.loans || []);
+        setPendingRepayments(data.loan_repayments || []);
+        setPendingPSPSettlements(data.psp_settlements || []);
+      }
+    } catch (error) {
+      console.error('Error fetching pending approvals:', error);
     }
   };
 
@@ -254,20 +246,20 @@ export default function AccountantDashboard() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchPendingTransactions(), fetchPendingSettlements(), fetchTreasuryAccounts(), fetchPsps(), fetchClientTags()]);
+      await Promise.all([fetchPendingTransactions(), fetchPendingSettlements(), fetchPendingApprovals(), fetchTreasuryAccounts(), fetchPsps(), fetchClientTags()]);
       setLoading(false);
     };
     loadData();
   }, []);
 
-  // Auto-refresh: when user returns to tab or every 15s
   useAutoRefresh(() => {
     fetchPendingTransactions();
     fetchPendingSettlements();
+    fetchPendingApprovals();
   }, 15000);
 
+  // ---- Transaction Approve/Reject (existing logic) ----
   const initiateApprove = (transactionId, isSettlement = false) => {
-    // For withdrawals and deposits, show approval dialog with screenshot requirement
     if (!isSettlement) {
       const tx = pendingTransactions.find(t => t.transaction_id === transactionId);
       if (tx && (tx.transaction_type === 'withdrawal' || tx.transaction_type === 'deposit')) {
@@ -294,245 +286,173 @@ export default function AccountantDashboard() {
     if (file) {
       setApprovalProof(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setApprovalProofPreview(reader.result);
-      };
+      reader.onloadend = () => setApprovalProofPreview(reader.result);
       reader.readAsDataURL(file);
     }
   };
 
   const handleTransactionApproval = () => {
     const isWithdrawal = showApprovalDialog.transaction_type === 'withdrawal';
-    
-    // For withdrawals, validate source account
-    if (isWithdrawal && !approvalSourceAccount) {
-      toast.error('Please select a source treasury/USDT account');
-      return;
-    }
-    
-    // For both deposits and withdrawals, require proof (mandatory)
-    if (!approvalProof) {
-      toast.error('Please upload proof of payment screenshot');
-      return;
-    }
-    
-    // Proceed to captcha
-    setCaptchaAction({ 
-      type: 'approve', 
-      transactionId: showApprovalDialog.transaction_id, 
-      isSettlement: false,
-      sourceAccount: isWithdrawal ? approvalSourceAccount : null,
-      proofFile: approvalProof,
-      bankReceiptDate: bankReceiptDate || null
-    });
+    if (isWithdrawal && !approvalSourceAccount) { toast.error('Please select a source treasury/USDT account'); return; }
+    if (!approvalProof) { toast.error('Please upload proof of payment screenshot'); return; }
+    setCaptchaAction({ type: 'approve', transactionId: showApprovalDialog.transaction_id, isSettlement: false, sourceAccount: isWithdrawal ? approvalSourceAccount : null, proofFile: approvalProof, bankReceiptDate: bankReceiptDate || null });
     setShowApprovalDialog(null);
     setShowCaptcha(true);
   };
 
   const handleCaptchaVerified = async () => {
     if (!captchaAction) return;
-    
     setShowCaptcha(false);
-    
     if (captchaAction.type === 'approve') {
-      if (captchaAction.isSettlement) {
-        await executeApproveSettlement(captchaAction.transactionId);
-      } else {
-        await executeApprove(captchaAction.transactionId, captchaAction.sourceAccount, captchaAction.proofFile, captchaAction.bankReceiptDate);
-      }
+      if (captchaAction.isSettlement) await executeApproveSettlement(captchaAction.transactionId);
+      else if (captchaAction.genericType) await executeGenericApprove(captchaAction.genericType, captchaAction.genericId);
+      else await executeApprove(captchaAction.transactionId, captchaAction.sourceAccount, captchaAction.proofFile, captchaAction.bankReceiptDate);
     } else if (captchaAction.type === 'reject') {
-      if (captchaAction.isSettlement) {
-        await executeRejectSettlement(captchaAction.transactionId);
-      } else {
-        await executeReject(captchaAction.transactionId);
-      }
+      if (captchaAction.isSettlement) await executeRejectSettlement(captchaAction.transactionId);
+      else if (captchaAction.genericType) await executeGenericReject(captchaAction.genericType, captchaAction.genericId);
+      else await executeReject(captchaAction.transactionId);
     }
-    
-    // Reset approval dialog state
     setApprovalSourceAccount('');
     setApprovalProof(null);
     setApprovalProofPreview(null);
     setCaptchaAction(null);
   };
 
-  const executeApprove = async (transactionId, sourceAccount = null, proofFile = null, bankReceiptDate = null) => {
+  const executeApprove = async (transactionId, sourceAccount = null, proofFile = null, receiptDate = null) => {
     setProcessingId(transactionId);
     try {
-      // If there's a proof file, upload it first
       if (proofFile) {
         const formData = new FormData();
         formData.append('proof_image', proofFile);
-        
         const uploadResponse = await fetch(`${API_URL}/api/transactions/${transactionId}/upload-proof`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-          },
-          credentials: 'include',
-          body: formData,
+          method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }, credentials: 'include', body: formData,
         });
-        
-        if (!uploadResponse.ok) {
-          const error = await uploadResponse.json();
-          toast.error(error.detail || 'Failed to upload proof');
-          return;
-        }
+        if (!uploadResponse.ok) { const error = await uploadResponse.json(); toast.error(error.detail || 'Failed to upload proof'); return; }
       }
-      
-      // Approve the transaction (optionally with source account and bank receipt date)
       const params = new URLSearchParams();
       if (sourceAccount) params.append('source_account_id', sourceAccount);
-      if (bankReceiptDate) params.append('bank_receipt_date', bankReceiptDate);
+      if (receiptDate) params.append('bank_receipt_date', receiptDate);
       const queryStr = params.toString() ? `?${params.toString()}` : '';
-      const url = `${API_URL}/api/transactions/${transactionId}/approve${queryStr}`;
-        
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        toast.success('Transaction approved');
-        fetchPendingTransactions();
-      } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Approval failed');
-      }
-    } catch (error) {
-      toast.error('Approval failed');
-    } finally {
-      setProcessingId(null);
-    }
+      const response = await fetch(`${API_URL}/api/transactions/${transactionId}/approve${queryStr}`, { method: 'POST', headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) { toast.success('Transaction approved'); fetchPendingTransactions(); }
+      else { const error = await response.json(); toast.error(error.detail || 'Approval failed'); }
+    } catch { toast.error('Approval failed'); }
+    finally { setProcessingId(null); }
   };
 
-  const handleRejectWithCaptcha = () => {
-    // Show captcha for reject
-    setShowRejectDialog(null);
-    setShowCaptcha(true);
-  };
-
-  const handleSettlementRejectWithCaptcha = () => {
-    // Show captcha for settlement reject
-    setShowSettlementRejectDialog(null);
-    setShowCaptcha(true);
-  };
+  const handleRejectWithCaptcha = () => { setShowRejectDialog(null); setShowCaptcha(true); };
+  const handleSettlementRejectWithCaptcha = () => { setShowSettlementRejectDialog(null); setShowCaptcha(true); };
 
   const executeReject = async (transactionId) => {
     setProcessingId(transactionId);
     try {
-      const response = await fetch(`${API_URL}/api/transactions/${transactionId}/reject?reason=${encodeURIComponent(rejectReason)}`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        toast.success('Transaction rejected');
-        setRejectReason('');
-        fetchPendingTransactions();
-      } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Rejection failed');
-      }
-    } catch (error) {
-      toast.error('Rejection failed');
-    } finally {
-      setProcessingId(null);
-    }
+      const response = await fetch(`${API_URL}/api/transactions/${transactionId}/reject?reason=${encodeURIComponent(rejectReason)}`, { method: 'POST', headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) { toast.success('Transaction rejected'); setRejectReason(''); fetchPendingTransactions(); }
+      else { const error = await response.json(); toast.error(error.detail || 'Rejection failed'); }
+    } catch { toast.error('Rejection failed'); }
+    finally { setProcessingId(null); }
   };
 
   const executeApproveSettlement = async (settlementId) => {
     setProcessingId(settlementId);
     try {
-      const response = await fetch(`${API_URL}/api/settlements/${settlementId}/approve`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        toast.success('Settlement approved');
-        fetchPendingSettlements();
-      } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Settlement approval failed');
-      }
-    } catch (error) {
-      toast.error('Settlement approval failed');
-    } finally {
-      setProcessingId(null);
-    }
+      const response = await fetch(`${API_URL}/api/settlements/${settlementId}/approve`, { method: 'POST', headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) { toast.success('Settlement approved'); fetchPendingSettlements(); }
+      else { const error = await response.json(); toast.error(error.detail || 'Settlement approval failed'); }
+    } catch { toast.error('Settlement approval failed'); }
+    finally { setProcessingId(null); }
   };
 
   const executeRejectSettlement = async (settlementId) => {
     setProcessingId(settlementId);
     try {
-      const response = await fetch(`${API_URL}/api/settlements/${settlementId}/reject?reason=${encodeURIComponent(rejectReason)}`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        credentials: 'include',
-      });
+      const response = await fetch(`${API_URL}/api/settlements/${settlementId}/reject?reason=${encodeURIComponent(rejectReason)}`, { method: 'POST', headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) { toast.success('Settlement rejected'); setRejectReason(''); fetchPendingSettlements(); }
+      else { const error = await response.json(); toast.error(error.detail || 'Settlement rejection failed'); }
+    } catch { toast.error('Settlement rejection failed'); }
+    finally { setProcessingId(null); }
+  };
 
+  // ---- Generic Approve/Reject for IE, Loans, Repayments, PSP Settlements ----
+  const initiateGenericApprove = (type, id) => {
+    setCaptchaAction({ type: 'approve', genericType: type, genericId: id });
+    setShowCaptcha(true);
+  };
+
+  const initiateGenericReject = (type, id) => {
+    setCaptchaAction({ type: 'reject', genericType: type, genericId: id });
+    setShowGenericRejectDialog({ type, id });
+  };
+
+  const handleGenericRejectWithCaptcha = () => {
+    setShowGenericRejectDialog(null);
+    setShowCaptcha(true);
+  };
+
+  const executeGenericApprove = async (type, id) => {
+    setProcessingId(id);
+    const urlMap = {
+      ie: `/api/income-expenses/${id}/approve`,
+      loan: `/api/loans/${id}/approve-disbursement`,
+      repayment: `/api/loan-repayments/${id}/approve`,
+      psp_settlement: `/api/psp-settlements/${id}/approve`,
+    };
+    try {
+      const response = await fetch(`${API_URL}${urlMap[type]}`, { method: 'POST', headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        toast.success('Settlement rejected');
-        setRejectReason('');
-        fetchPendingSettlements();
+        toast.success('Approved successfully');
+        fetchPendingApprovals();
       } else {
         const error = await response.json();
-        toast.error(error.detail || 'Settlement rejection failed');
+        toast.error(error.detail || 'Approval failed');
       }
-    } catch (error) {
-      toast.error('Settlement rejection failed');
-    } finally {
-      setProcessingId(null);
-    }
+    } catch { toast.error('Approval failed'); }
+    finally { setProcessingId(null); }
+  };
+
+  const executeGenericReject = async (type, id) => {
+    setProcessingId(id);
+    const urlMap = {
+      ie: `/api/income-expenses/${id}/reject`,
+      loan: `/api/loans/${id}/reject-disbursement`,
+      repayment: `/api/loan-repayments/${id}/reject`,
+      psp_settlement: `/api/psp-settlements/${id}/reject`,
+    };
+    try {
+      const response = await fetch(`${API_URL}${urlMap[type]}?reason=${encodeURIComponent(rejectReason)}`, { method: 'POST', headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        toast.success('Rejected successfully');
+        setRejectReason('');
+        fetchPendingApprovals();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Rejection failed');
+      }
+    } catch { toast.error('Rejection failed'); }
+    finally { setProcessingId(null); }
   };
 
   const handleProofUpload = async (e) => {
     const file = e.target.files[0];
     if (!file || !uploadingProof) return;
-    
-    // Show preview
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setProofPreview(reader.result);
-    };
+    reader.onloadend = () => setProofPreview(reader.result);
     reader.readAsDataURL(file);
-    
-    // Upload the file
     setProcessingId(uploadingProof.transaction_id);
     try {
       const formData = new FormData();
       formData.append('proof_image', file);
-      
       const response = await fetch(`${API_URL}/api/transactions/${uploadingProof.transaction_id}/upload-proof`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-        },
-        credentials: 'include',
-        body: formData,
+        method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }, credentials: 'include', body: formData,
       });
-
-      if (response.ok) {
-        toast.success('Proof of payment uploaded');
-        setUploadingProof(null);
-        setProofPreview(null);
-        fetchPendingTransactions();
-      } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Upload failed');
-      }
-    } catch (error) {
-      toast.error('Upload failed');
-    } finally {
-      setProcessingId(null);
-    }
+      if (response.ok) { toast.success('Proof of payment uploaded'); setUploadingProof(null); setProofPreview(null); fetchPendingTransactions(); }
+      else { const error = await response.json(); toast.error(error.detail || 'Upload failed'); }
+    } catch { toast.error('Upload failed'); }
+    finally { setProcessingId(null); }
   };
 
   const getTypeBadge = (type) => {
-    const isIncoming = ['deposit', 'rebate'].includes(type);
+    const isIncoming = ['deposit', 'rebate', 'income'].includes(type);
     return (
       <div className={`flex items-center gap-1 ${isIncoming ? 'text-green-400' : 'text-red-400'}`}>
         {isIncoming ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
@@ -544,16 +464,14 @@ export default function AccountantDashboard() {
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
-  // Filter transactions
+  const formatCurrency = (amount, currency = 'USD') => {
+    if (amount == null) return '-';
+    return `${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+  };
+
   const filteredTransactions = pendingTransactions.filter(tx => {
     if (typeFilter !== 'all' && tx.transaction_type !== typeFilter) return false;
     if (destFilter !== 'all' && tx.destination_type !== destFilter) return false;
@@ -561,394 +479,327 @@ export default function AccountantDashboard() {
     return true;
   });
 
+  const totalPendingCount = filteredTransactions.length + pendingSettlements.length + pendingIE.length + pendingLoans.length + pendingRepayments.length + pendingPSPSettlements.length;
+
+  // ============ RENDER ============
   return (
     <div className="space-y-6 animate-fade-in" data-testid="accountant-dashboard">
       {/* Header */}
       <div>
-        <h1 className="text-4xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>
-          Pending Approvals
-        </h1>
-        <p className="text-[#C5C6C7]">Review and approve/reject transactions and settlements</p>
+        <h1 className="text-4xl font-bold uppercase tracking-tight text-white" style={{ fontFamily: 'Barlow Condensed' }}>Pending Approvals</h1>
+        <p className="text-[#C5C6C7]">Review and approve/reject all financial operations</p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="bg-white border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Pending Transactions</p>
-                <p className="text-4xl font-bold font-mono text-yellow-400">{filteredTransactions.length}</p>
-                {filteredTransactions.length !== pendingTransactions.length && (
-                  <p className="text-xs text-[#C5C6C7]">({pendingTransactions.length} total)</p>
-                )}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        {[
+          { label: 'Transactions', count: filteredTransactions.length, icon: Clock, color: 'yellow', tab: 'transactions' },
+          { label: 'Vendor Settlements', count: pendingSettlements.length, icon: Store, color: 'purple', tab: 'settlements' },
+          { label: 'Income/Expenses', count: pendingIE.length, icon: ReceiptText, color: 'blue', tab: 'ie' },
+          { label: 'Loan Disbursements', count: pendingLoans.length, icon: HandCoins, color: 'orange', tab: 'loans' },
+          { label: 'Loan Repayments', count: pendingRepayments.length, icon: DollarSign, color: 'emerald', tab: 'repayments' },
+          { label: 'PSP Settlements', count: pendingPSPSettlements.length, icon: Landmark, color: 'pink', tab: 'psp_settlements' },
+        ].map(({ label, count, icon: Icon, color, tab }) => (
+          <Card key={tab} className={`bg-white border-slate-200 cursor-pointer hover:border-${color}-400/50 transition-colors ${activeTab === tab ? `border-${color}-400` : ''}`} onClick={() => setActiveTab(tab)}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">{label}</p>
+                  <p className={`text-2xl font-bold font-mono text-${color}-400`}>{count}</p>
+                </div>
+                <Icon className={`w-5 h-5 text-${color}-400 opacity-50`} />
               </div>
-              <div className="p-4 bg-yellow-500/10 rounded-sm">
-                <Clock className="w-8 h-8 text-yellow-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-white border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Pending Settlements</p>
-                <p className="text-4xl font-bold font-mono text-purple-400">{pendingSettlements.length}</p>
-              </div>
-              <div className="p-4 bg-purple-500/10 rounded-sm">
-                <Wallet className="w-8 h-8 text-purple-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Filters */}
-      <Card className="bg-white border-slate-200">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-[#66FCF1]" />
-              <span className="text-[#C5C6C7] text-sm uppercase tracking-wider">Filters</span>
+      {/* Filters (for Transactions tab) */}
+      {activeTab === 'transactions' && (
+        <Card className="bg-white border-slate-200">
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-[#66FCF1]" />
+                <span className="text-[#C5C6C7] text-sm uppercase tracking-wider">Filters</span>
+              </div>
+              <div className="flex-1 flex flex-wrap gap-4">
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-[150px] bg-slate-50 border-slate-200 text-white"><SelectValue placeholder="Type" /></SelectTrigger>
+                  <SelectContent className="bg-white border-slate-200">
+                    <SelectItem value="all" className="text-white hover:bg-white/5">All Types</SelectItem>
+                    <SelectItem value="deposit" className="text-white hover:bg-white/5">Deposit</SelectItem>
+                    <SelectItem value="withdrawal" className="text-white hover:bg-white/5">Withdrawal</SelectItem>
+                    <SelectItem value="transfer" className="text-white hover:bg-white/5">Transfer</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={destFilter} onValueChange={setDestFilter}>
+                  <SelectTrigger className="w-[180px] bg-slate-50 border-slate-200 text-white"><SelectValue placeholder="Destination" /></SelectTrigger>
+                  <SelectContent className="bg-white border-slate-200">
+                    <SelectItem value="all" className="text-white hover:bg-white/5">All Destinations</SelectItem>
+                    <SelectItem value="treasury" className="text-white hover:bg-white/5">Treasury</SelectItem>
+                    <SelectItem value="bank" className="text-white hover:bg-white/5">Client Bank</SelectItem>
+                    <SelectItem value="usdt" className="text-white hover:bg-white/5">USDT</SelectItem>
+                    <SelectItem value="psp" className="text-white hover:bg-white/5">PSP</SelectItem>
+                    <SelectItem value="vendor" className="text-white hover:bg-white/5">Exchanger</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input value={clientFilter} onChange={(e) => setClientFilter(e.target.value)} placeholder="Search client..." className="w-[200px] bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1]" />
+                {(typeFilter !== 'all' || destFilter !== 'all' || clientFilter) && (
+                  <Button variant="ghost" size="sm" onClick={() => { setTypeFilter('all'); setDestFilter('all'); setClientFilter(''); }} className="text-[#66FCF1] hover:bg-[#66FCF1]/10">Clear Filters</Button>
+                )}
+              </div>
             </div>
-            <div className="flex-1 flex flex-wrap gap-4">
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[150px] bg-slate-50 border-slate-200 text-white">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200">
-                  <SelectItem value="all" className="text-white hover:bg-white/5">All Types</SelectItem>
-                  <SelectItem value="deposit" className="text-white hover:bg-white/5">Deposit</SelectItem>
-                  <SelectItem value="withdrawal" className="text-white hover:bg-white/5">Withdrawal</SelectItem>
-                  <SelectItem value="transfer" className="text-white hover:bg-white/5">Transfer</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={destFilter} onValueChange={setDestFilter}>
-                <SelectTrigger className="w-[180px] bg-slate-50 border-slate-200 text-white">
-                  <SelectValue placeholder="Destination" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200">
-                  <SelectItem value="all" className="text-white hover:bg-white/5">All Destinations</SelectItem>
-                  <SelectItem value="treasury" className="text-white hover:bg-white/5">Treasury</SelectItem>
-                  <SelectItem value="bank" className="text-white hover:bg-white/5">Client Bank</SelectItem>
-                  <SelectItem value="usdt" className="text-white hover:bg-white/5">USDT</SelectItem>
-                  <SelectItem value="psp" className="text-white hover:bg-white/5">PSP</SelectItem>
-                  <SelectItem value="vendor" className="text-white hover:bg-white/5">Exchanger</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input
-                value={clientFilter}
-                onChange={(e) => setClientFilter(e.target.value)}
-                placeholder="Search client..."
-                className="w-[200px] bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1]"
-              />
-              {(typeFilter !== 'all' || destFilter !== 'all' || clientFilter) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => { setTypeFilter('all'); setDestFilter('all'); setClientFilter(''); }}
-                  className="text-[#66FCF1] hover:bg-[#66FCF1]/10"
-                >
-                  Clear Filters
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Tabs for Transactions and Settlements */}
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-slate-50 border border-slate-200 mb-4">
-          <TabsTrigger value="transactions" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-            Transactions ({filteredTransactions.length})
-          </TabsTrigger>
-          <TabsTrigger value="settlements" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-            Settlements ({pendingSettlements.length})
-          </TabsTrigger>
+        <TabsList className="bg-slate-50 border border-slate-200 mb-4 flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="transactions" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10] text-xs">Transactions ({filteredTransactions.length})</TabsTrigger>
+          <TabsTrigger value="settlements" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10] text-xs">Vendor Settl. ({pendingSettlements.length})</TabsTrigger>
+          <TabsTrigger value="ie" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10] text-xs">Income/Exp ({pendingIE.length})</TabsTrigger>
+          <TabsTrigger value="loans" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10] text-xs">Loans ({pendingLoans.length})</TabsTrigger>
+          <TabsTrigger value="repayments" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10] text-xs">Repayments ({pendingRepayments.length})</TabsTrigger>
+          <TabsTrigger value="psp_settlements" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10] text-xs">PSP Settl. ({pendingPSPSettlements.length})</TabsTrigger>
         </TabsList>
 
-        {/* Transactions Tab */}
+        {/* ===== Transactions Tab ===== */}
         <TabsContent value="transactions">
-          <div className="space-y-4">
-            {loading ? (
-              <div className="flex justify-center py-12">
-                <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : filteredTransactions.length === 0 ? (
-              <Card className="bg-white border-slate-200">
-                <CardContent className="p-12 text-center">
-                  <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
-                  <p className="text-white text-lg">All caught up!</p>
-                  <p className="text-[#C5C6C7] mt-2">No pending transactions to review</p>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredTransactions.map((tx) => {
-                const hasProperDest = tx.destination_account_name || tx.vendor_name || tx.psp_name ||
-                  (tx.destination_type === 'bank' && tx.client_bank_name) ||
-                  (tx.destination_type === 'usdt' && tx.client_usdt_address);
-                return (
+          <PendingList loading={loading} items={filteredTransactions} emptyMsg="No pending transactions to review">
+            {filteredTransactions.map((tx) => {
+              const hasProperDest = tx.destination_account_name || tx.vendor_name || tx.psp_name || (tx.destination_type === 'bank' && tx.client_bank_name) || (tx.destination_type === 'usdt' && tx.client_usdt_address);
+              return (
                 <Card key={tx.transaction_id} className={`border-slate-200 ${!hasProperDest ? 'bg-red-500/5 border-red-500/30' : 'bg-white'}`}>
                   <CardContent className="p-4">
-                    <div className="grid grid-cols-[140px_80px_120px_90px_120px_150px_100px_100px_auto] items-center gap-3">
-                      {/* Reference + CRM Ref */}
-                      <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="min-w-[120px] flex-1">
                         <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Reference</p>
-                        <p className="text-white font-mono text-xs truncate" title={tx.reference}>{tx.reference}</p>
-                        {tx.crm_reference && <p className="text-purple-400 font-mono text-[10px] truncate" title={tx.crm_reference}>CRM: {tx.crm_reference}</p>}
-                        {tx.proof_image && <ImageIcon className="w-3 h-3 text-[#66FCF1] mt-0.5" />}
+                        <p className="text-white font-mono text-xs truncate">{tx.reference}</p>
+                        {tx.crm_reference && <p className="text-purple-400 font-mono text-[10px] truncate">CRM: {tx.crm_reference}</p>}
                       </div>
-                      {/* Description */}
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Desc</p>
-                        <p className="text-white text-[11px] truncate" title={tx.description || '-'}>{tx.description || '-'}</p>
-                      </div>
-                      {/* Client */}
-                      <div className="min-w-0">
+                      <div className="min-w-[100px]">
                         <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Client</p>
                         <p className="text-white text-sm truncate">{tx.client_name}</p>
                       </div>
-                      {/* Type */}
-                      <div>
+                      <div className="min-w-[80px]">
                         <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Type</p>
                         {getTypeBadge(tx.transaction_type)}
                       </div>
-                      {/* Amount */}
-                      <div>
+                      <div className="min-w-[100px]">
                         <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Amount</p>
                         <p className={`font-mono text-sm font-bold ${['deposit', 'rebate'].includes(tx.transaction_type) ? 'text-green-400' : 'text-red-400'}`}>
-                          {['deposit', 'rebate'].includes(tx.transaction_type) ? '+' : '-'}${tx.amount?.toLocaleString()}
-                        </p>
-                        <p className="text-[10px] text-[#C5C6C7] font-mono">
-                          {tx.currency || 'USD'}
-                          {tx.base_currency && tx.base_currency !== 'USD' && tx.base_amount ? ` (${tx.base_amount?.toLocaleString()} ${tx.base_currency})` : ''}
+                          {['deposit', 'rebate'].includes(tx.transaction_type) ? '+' : '-'}${tx.amount?.toLocaleString()} {tx.currency || 'USD'}
                         </p>
                       </div>
-                      {/* Destination */}
-                      <div className="min-w-0">
+                      <div className="min-w-[120px]">
                         <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Destination</p>
-                        {(() => {
-                          const hasProperDest = tx.destination_account_name || tx.vendor_name || tx.psp_name ||
-                            (tx.destination_type === 'bank' && tx.client_bank_name) ||
-                            (tx.destination_type === 'usdt' && tx.client_usdt_address);
-                          if (tx.destination_type === 'bank' && tx.client_bank_name) {
-                            return (
-                              <div>
-                                <p className="text-white text-xs font-medium truncate">{tx.client_bank_name}</p>
-                                <p className="text-[10px] text-[#C5C6C7] font-mono truncate">{tx.client_bank_account_number}</p>
-                                <p className="text-[10px] text-[#66FCF1]">{tx.client_bank_currency || 'USD'}</p>
-                              </div>
-                            );
-                          }
-                          if (tx.destination_type === 'usdt' && tx.client_usdt_address) {
-                            return (
-                              <div>
-                                <p className="text-white text-xs font-mono truncate">{tx.client_usdt_address?.slice(0, 8)}...{tx.client_usdt_address?.slice(-4)}</p>
-                                <Badge className="bg-green-500/20 text-green-400 text-[10px] mt-0.5">{tx.client_usdt_network || 'USDT'}</Badge>
-                              </div>
-                            );
-                          }
-                          if (hasProperDest) {
-                            return (
-                              <div>
-                                <p className="text-white text-xs truncate">{tx.destination_account_name || tx.vendor_name || tx.psp_name}</p>
-                                <p className="text-[10px] text-[#C5C6C7] truncate">{tx.destination_bank_name || (tx.psp_name ? 'PSP' : tx.vendor_name ? 'Exchanger' : '')}</p>
-                              </div>
-                            );
-                          }
-                          return (
-                            <div data-testid={`no-dest-warning-${tx.transaction_id}`}>
-                              <div className="flex items-center gap-1">
-                                <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                                <p className="text-red-400 text-xs font-semibold">No Destination</p>
-                              </div>
-                              <p className="text-[10px] text-red-400/70 mt-0.5">Assign destination before approval</p>
-                            </div>
-                          );
-                        })()}
+                        {hasProperDest ? (
+                          <p className="text-white text-xs truncate">{tx.destination_account_name || tx.vendor_name || tx.psp_name || tx.client_bank_name || 'USDT'}</p>
+                        ) : (
+                          <div className="flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5 text-red-400" /><p className="text-red-400 text-xs">No Destination</p></div>
+                        )}
                       </div>
-                      {/* Created */}
-                      <div>
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Created</p>
-                        <p className="text-white text-xs">{formatDate(tx.transaction_date || tx.created_at)}</p>
-                        <p className="text-[10px] text-[#C5C6C7]">by {tx.created_by_name || 'System'}</p>
-                      </div>
-                      {/* Tags */}
-                      <div className="min-w-0">
+                      <div className="min-w-[80px]">
                         <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Tags</p>
                         <div className="flex flex-wrap gap-0.5">
-                          {(tx.client_tags || []).length > 0 ? (
-                            tx.client_tags.map((tag) => {
-                              const tagObj = clientTags.find(t => t.name === tag);
-                              return <span key={tag} className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white whitespace-nowrap" style={{ backgroundColor: tagObj?.color || '#64748B' }}>{tag}</span>;
-                            })
-                          ) : (
-                            <span className="text-[10px] text-[#C5C6C7]">-</span>
-                          )}
+                          {(tx.client_tags || []).length > 0 ? tx.client_tags.map((tag) => {
+                            const tagObj = clientTags.find(t => t.name === tag);
+                            return <span key={tag} className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white whitespace-nowrap" style={{ backgroundColor: tagObj?.color || '#64748B' }}>{tag}</span>;
+                          }) : <span className="text-[10px] text-[#C5C6C7]">-</span>}
                         </div>
                       </div>
-                      {/* Actions */}
-                      <div className="flex items-center gap-1.5 justify-end">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setViewTransaction(tx)}
-                          className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0"
-                          data-testid={`view-tx-${tx.transaction_id}`}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        {tx.transaction_type === 'withdrawal' && !tx.accountant_proof_image && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setUploadingProof(tx)}
-                            className="text-[#66FCF1] hover:text-white hover:bg-[#66FCF1]/10 h-8 w-8 p-0"
-                            data-testid={`upload-proof-${tx.transaction_id}`}
-                          >
-                            <Upload className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {tx.accountant_proof_image && (
-                          <Badge className="bg-green-500/20 text-green-400 text-[10px]">
-                            <ImageIcon className="w-3 h-3 mr-0.5" />
-                            Proof
-                          </Badge>
-                        )}
-                        <Button
-                          size="sm"
-                          onClick={() => initiateApprove(tx.transaction_id, false)}
-                          disabled={processingId === tx.transaction_id || !hasProperDest}
-                          className={`h-8 text-xs px-3 ${!hasProperDest ? 'bg-slate-500/20 text-slate-500 border border-slate-500/30 cursor-not-allowed' : 'bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30'}`}
-                          data-testid={`approve-tx-${tx.transaction_id}`}
-                          title={!hasProperDest ? 'Cannot approve: No destination assigned' : 'Approve transaction'}
-                        >
-                          <CheckCircle className="w-3.5 h-3.5 mr-1" />
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => initiateReject(tx.transaction_id, false)}
-                          disabled={processingId === tx.transaction_id}
-                          className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3"
-                          data-testid={`reject-tx-${tx.transaction_id}`}
-                        >
-                          <XCircle className="w-3.5 h-3.5 mr-1" />
-                          Reject
-                        </Button>
-                      </div>
+                      <ApproveRejectButtons approveId={tx.transaction_id} onApprove={() => initiateApprove(tx.transaction_id)} onReject={() => initiateReject(tx.transaction_id)} onView={() => setViewTransaction(tx)} processing={processingId} disabled={!hasProperDest} />
                     </div>
                   </CardContent>
                 </Card>
-                );
-              })
-            )}
-          </div>
+              );
+            })}
+          </PendingList>
         </TabsContent>
 
-        {/* Settlements Tab */}
+        {/* ===== Vendor Settlements Tab ===== */}
         <TabsContent value="settlements">
-          <div className="space-y-4">
-            {loading ? (
-              <div className="flex justify-center py-12">
-                <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : pendingSettlements.length === 0 ? (
-              <Card className="bg-white border-slate-200">
-                <CardContent className="p-12 text-center">
-                  <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
-                  <p className="text-white text-lg">All caught up!</p>
-                  <p className="text-[#C5C6C7] mt-2">No pending settlements to review</p>
+          <PendingList loading={loading} items={pendingSettlements} emptyMsg="No pending vendor settlements">
+            {pendingSettlements.map((s) => (
+              <Card key={s.settlement_id} className="bg-white border-slate-200">
+                <CardContent className="p-4">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex-1 min-w-[150px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Exchanger</p>
+                      <div className="flex items-center gap-2"><Store className="w-4 h-4 text-[#66FCF1]" /><p className="text-white">{s.vendor_name}</p></div>
+                    </div>
+                    <div className="min-w-[100px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Gross</p>
+                      <p className="font-mono text-sm font-bold text-white">{s.gross_amount?.toLocaleString()} {s.source_currency || 'USD'}</p>
+                    </div>
+                    <div className="min-w-[100px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Settlement</p>
+                      <p className="font-mono text-sm font-bold text-green-400">{s.settlement_amount?.toLocaleString()} {s.destination_currency || 'USD'}</p>
+                    </div>
+                    <div className="min-w-[80px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Txns</p>
+                      <p className="text-white text-sm">{s.transaction_count}</p>
+                    </div>
+                    <ApproveRejectButtons approveId={s.settlement_id} onApprove={() => initiateApprove(s.settlement_id, true)} onReject={() => initiateReject(s.settlement_id, true)} onView={() => setViewSettlement(s)} processing={processingId} />
+                  </div>
                 </CardContent>
               </Card>
-            ) : (
-              pendingSettlements.map((settlement) => (
-                <Card key={settlement.settlement_id} className="bg-white border-slate-200">
-                  <CardContent className="p-6">
-                    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                      {/* Settlement Info */}
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Exchanger</p>
-                          <div className="flex items-center gap-2">
-                            <Store className="w-4 h-4 text-[#66FCF1]" />
-                            <p className="text-white">{settlement.vendor_name}</p>
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Type</p>
-                          <Badge className={settlement.settlement_type === 'bank' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}>
-                            {settlement.settlement_type === 'bank' ? <Building2 className="w-3 h-3 mr-1" /> : <Banknote className="w-3 h-3 mr-1" />}
-                            {settlement.settlement_type}
-                          </Badge>
-                        </div>
-                        <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Gross Amount</p>
-                          <p className="font-mono text-lg font-bold text-white">
-                            {settlement.source_currency !== 'USD' ? '' : '$'}{settlement.gross_amount?.toLocaleString()} {settlement.source_currency || 'USD'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Settlement Amount</p>
-                          <p className="font-mono text-lg font-bold text-green-400">
-                            {settlement.destination_currency !== 'USD' ? '' : '$'}{settlement.settlement_amount?.toLocaleString()} {settlement.destination_currency || 'USD'}
-                          </p>
-                        </div>
-                      </div>
+            ))}
+          </PendingList>
+        </TabsContent>
 
-                      {/* Destination & Date */}
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Destination</p>
-                          <p className="text-white">{settlement.settlement_destination_name}</p>
-                          <p className="text-xs text-[#C5C6C7]">{settlement.transaction_count} transactions</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created</p>
-                          <p className="text-white text-sm">{formatDate(settlement.created_at)}</p>
-                          <p className="text-xs text-[#C5C6C7]">by {settlement.created_by_name || 'System'}</p>
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setViewSettlement(settlement)}
-                          className="text-[#C5C6C7] hover:text-white hover:bg-white/5"
-                          data-testid={`view-settlement-${settlement.settlement_id}`}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          onClick={() => initiateApprove(settlement.settlement_id, true)}
-                          disabled={processingId === settlement.settlement_id}
-                          className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
-                          data-testid={`approve-settlement-${settlement.settlement_id}`}
-                        >
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                          Approve
-                        </Button>
-                        <Button
-                          onClick={() => initiateReject(settlement.settlement_id, true)}
-                          disabled={processingId === settlement.settlement_id}
-                          className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
-                          data-testid={`reject-settlement-${settlement.settlement_id}`}
-                        >
-                          <XCircle className="w-4 h-4 mr-2" />
-                          Reject
-                        </Button>
-                      </div>
+        {/* ===== Income/Expenses Tab ===== */}
+        <TabsContent value="ie">
+          <PendingList loading={loading} items={pendingIE} emptyMsg="No pending income/expense entries">
+            {pendingIE.map((ie) => (
+              <Card key={ie.entry_id} className="bg-white border-slate-200">
+                <CardContent className="p-4">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex-1 min-w-[120px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Description</p>
+                      <p className="text-white text-sm truncate">{ie.description || ie.category || ie.ie_category_name || '-'}</p>
+                      {ie.vendor_name && <p className="text-[10px] text-[#C5C6C7]">Exchanger: {ie.vendor_name}</p>}
+                      {ie.client_name && <p className="text-[10px] text-[#C5C6C7]">Client: {ie.client_name}</p>}
                     </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+                    <div className="min-w-[80px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Type</p>
+                      {getTypeBadge(ie.entry_type)}
+                    </div>
+                    <div className="min-w-[120px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Amount</p>
+                      <p className={`font-mono text-sm font-bold ${ie.entry_type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
+                        {ie.entry_type === 'income' ? '+' : '-'}{formatCurrency(ie.amount, ie.currency)}
+                      </p>
+                      {ie.base_currency && ie.base_currency !== ie.currency && ie.base_amount && (
+                        <p className="text-[10px] text-[#C5C6C7]">{ie.base_amount?.toLocaleString()} {ie.base_currency}</p>
+                      )}
+                    </div>
+                    <div className="min-w-[100px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Treasury</p>
+                      <p className="text-white text-xs truncate">{ie.treasury_account_name || '-'}</p>
+                    </div>
+                    <div className="min-w-[80px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Date</p>
+                      <p className="text-white text-xs">{ie.date || formatDate(ie.created_at)}</p>
+                    </div>
+                    <ApproveRejectButtons approveId={ie.entry_id} onApprove={() => initiateGenericApprove('ie', ie.entry_id)} onReject={() => initiateGenericReject('ie', ie.entry_id)} onView={() => setViewItem({ ...ie, _viewType: 'ie' })} processing={processingId} />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </PendingList>
+        </TabsContent>
+
+        {/* ===== Loan Disbursements Tab ===== */}
+        <TabsContent value="loans">
+          <PendingList loading={loading} items={pendingLoans} emptyMsg="No pending loan disbursements">
+            {pendingLoans.map((loan) => (
+              <Card key={loan.loan_id} className="bg-white border-slate-200">
+                <CardContent className="p-4">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex-1 min-w-[120px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Borrower</p>
+                      <p className="text-white text-sm font-medium">{loan.borrower_name}</p>
+                      {loan.vendor_name && <p className="text-[10px] text-[#C5C6C7]">Exchanger: {loan.vendor_name}</p>}
+                    </div>
+                    <div className="min-w-[120px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Amount</p>
+                      <p className="font-mono text-sm font-bold text-red-400">-{formatCurrency(loan.amount, loan.currency)}</p>
+                    </div>
+                    <div className="min-w-[80px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Interest</p>
+                      <p className="text-white text-xs">{loan.interest_rate}%</p>
+                    </div>
+                    <div className="min-w-[100px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Source</p>
+                      <p className="text-white text-xs truncate">{loan.source_vendor_name || 'Treasury'}</p>
+                    </div>
+                    <div className="min-w-[80px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Due Date</p>
+                      <p className="text-white text-xs">{loan.due_date?.split('T')[0]}</p>
+                    </div>
+                    <ApproveRejectButtons approveId={loan.loan_id} onApprove={() => initiateGenericApprove('loan', loan.loan_id)} onReject={() => initiateGenericReject('loan', loan.loan_id)} onView={() => setViewItem({ ...loan, _viewType: 'loan' })} processing={processingId} />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </PendingList>
+        </TabsContent>
+
+        {/* ===== Loan Repayments Tab ===== */}
+        <TabsContent value="repayments">
+          <PendingList loading={loading} items={pendingRepayments} emptyMsg="No pending loan repayments">
+            {pendingRepayments.map((rep) => (
+              <Card key={rep.repayment_id} className="bg-white border-slate-200">
+                <CardContent className="p-4">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex-1 min-w-[120px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Borrower</p>
+                      <p className="text-white text-sm font-medium">{rep.borrower_name || '-'}</p>
+                      <p className="text-[10px] text-[#C5C6C7] font-mono">{rep.loan_id}</p>
+                    </div>
+                    <div className="min-w-[120px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Amount</p>
+                      <p className="font-mono text-sm font-bold text-green-400">+{formatCurrency(rep.amount, rep.currency)}</p>
+                      {rep.currency !== rep.loan_currency && (
+                        <p className="text-[10px] text-[#C5C6C7]">{formatCurrency(rep.amount_in_loan_currency, rep.loan_currency)}</p>
+                      )}
+                    </div>
+                    <div className="min-w-[80px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Payment Date</p>
+                      <p className="text-white text-xs">{rep.payment_date}</p>
+                    </div>
+                    <div className="min-w-[80px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Reference</p>
+                      <p className="text-white text-xs truncate">{rep.reference || '-'}</p>
+                    </div>
+                    <ApproveRejectButtons approveId={rep.repayment_id} onApprove={() => initiateGenericApprove('repayment', rep.repayment_id)} onReject={() => initiateGenericReject('repayment', rep.repayment_id)} onView={() => setViewItem({ ...rep, _viewType: 'repayment' })} processing={processingId} />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </PendingList>
+        </TabsContent>
+
+        {/* ===== PSP Settlements Tab ===== */}
+        <TabsContent value="psp_settlements">
+          <PendingList loading={loading} items={pendingPSPSettlements} emptyMsg="No pending PSP settlements">
+            {pendingPSPSettlements.map((stl) => (
+              <Card key={stl.settlement_id} className="bg-white border-slate-200">
+                <CardContent className="p-4">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex-1 min-w-[120px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">PSP</p>
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-purple-400" />
+                        <p className="text-white text-sm">{stl.psp_name}</p>
+                      </div>
+                      <Badge className="mt-1 bg-slate-100 text-[#C5C6C7] text-[10px]">{stl.settlement_type || 'standard'}</Badge>
+                    </div>
+                    <div className="min-w-[100px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Gross</p>
+                      <p className="font-mono text-sm text-white">${stl.gross_amount?.toLocaleString()}</p>
+                    </div>
+                    <div className="min-w-[100px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Net Amount</p>
+                      <p className="font-mono text-sm font-bold text-green-400">${stl.net_amount?.toLocaleString()}</p>
+                    </div>
+                    <div className="min-w-[80px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Txns</p>
+                      <p className="text-white text-sm">{stl.transaction_count}</p>
+                    </div>
+                    <div className="min-w-[120px]">
+                      <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Destination</p>
+                      <p className="text-white text-xs truncate">{stl.settlement_destination_name || '-'}</p>
+                    </div>
+                    <ApproveRejectButtons approveId={stl.settlement_id} onApprove={() => initiateGenericApprove('psp_settlement', stl.settlement_id)} onReject={() => initiateGenericReject('psp_settlement', stl.settlement_id)} onView={() => setViewItem({ ...stl, _viewType: 'psp_settlement' })} processing={processingId} />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </PendingList>
         </TabsContent>
       </Tabs>
 
@@ -956,9 +807,7 @@ export default function AccountantDashboard() {
       <Dialog open={!!viewTransaction} onOpenChange={() => setViewTransaction(null)}>
         <DialogContent className="bg-white border-slate-200 text-white max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
-              Transaction Details
-            </DialogTitle>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>Transaction Details</DialogTitle>
           </DialogHeader>
           {viewTransaction && (
             <div className="space-y-4">
@@ -966,90 +815,26 @@ export default function AccountantDashboard() {
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reference</p>
                   <p className="text-white font-mono text-lg">{viewTransaction.reference}</p>
-                  {viewTransaction.crm_reference && (
-                    <p className="text-purple-400 font-mono text-sm mt-1">CRM: {viewTransaction.crm_reference}</p>
-                  )}
+                  {viewTransaction.crm_reference && <p className="text-purple-400 font-mono text-sm mt-1">CRM: {viewTransaction.crm_reference}</p>}
                 </div>
                 <Badge className="status-pending text-xs uppercase">Pending</Badge>
               </div>
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
-                <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Client</p>
-                  <p className="text-white">{viewTransaction.client_name}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Type</p>
-                  {getTypeBadge(viewTransaction.transaction_type)}
-                </div>
+                <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Client</p><p className="text-white">{viewTransaction.client_name}</p></div>
+                <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Type</p>{getTypeBadge(viewTransaction.transaction_type)}</div>
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Amount (USD)</p>
                   <p className={`font-mono text-xl ${['deposit', 'rebate'].includes(viewTransaction.transaction_type) ? 'text-green-400' : 'text-red-400'}`}>
                     {['deposit', 'rebate'].includes(viewTransaction.transaction_type) ? '+' : '-'}${viewTransaction.amount?.toLocaleString()} USD
                   </p>
-                  {viewTransaction.base_currency && viewTransaction.base_currency !== 'USD' && viewTransaction.base_amount && (
-                    <p className="text-sm text-[#C5C6C7]">
-                      Original: {viewTransaction.base_amount?.toLocaleString()} {viewTransaction.base_currency}
-                    </p>
-                  )}
                 </div>
-                <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created</p>
-                  <p className="text-white text-sm">{formatDate(viewTransaction.transaction_date || viewTransaction.created_at)}</p>
-                </div>
+                <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created</p><p className="text-white text-sm">{formatDate(viewTransaction.transaction_date || viewTransaction.created_at)}</p></div>
               </div>
               {viewTransaction.destination_account_name && (
                 <div className="pt-4 border-t border-slate-200">
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Destination</p>
                   <p className="text-white">{viewTransaction.destination_account_name}</p>
                   <p className="text-sm text-[#C5C6C7]">{viewTransaction.destination_bank_name}</p>
-                </div>
-              )}
-              {/* Client Bank Details */}
-              {viewTransaction.client_bank_name && (
-                <div className="pt-4 border-t border-slate-200" data-testid="approval-bank-details">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Client Bank Details</p>
-                  <div className="grid grid-cols-2 gap-3 p-3 bg-[#1F2833] rounded-sm border border-[#66FCF1]/20">
-                    <div>
-                      <p className="text-xs text-[#C5C6C7]">Bank Name</p>
-                      <p className="text-white text-sm font-medium">{viewTransaction.client_bank_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#C5C6C7]">Account Holder</p>
-                      <p className="text-white text-sm font-medium">{viewTransaction.client_bank_account_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#C5C6C7]">Account Number</p>
-                      <p className="text-white text-sm font-mono">{viewTransaction.client_bank_account_number}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#C5C6C7]">SWIFT / IBAN</p>
-                      <p className="text-white text-sm font-mono">{viewTransaction.client_bank_swift_iban || '-'}</p>
-                    </div>
-                    {viewTransaction.client_bank_currency && (
-                      <div>
-                        <p className="text-xs text-[#C5C6C7]">Currency</p>
-                        <p className="text-white text-sm font-medium">{viewTransaction.client_bank_currency}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              {/* USDT Details */}
-              {viewTransaction.client_usdt_address && (
-                <div className="pt-4 border-t border-slate-200" data-testid="approval-usdt-details">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">USDT Details</p>
-                  <div className="grid grid-cols-1 gap-3 p-3 bg-[#1F2833] rounded-sm border border-[#66FCF1]/20">
-                    <div>
-                      <p className="text-xs text-[#C5C6C7]">Wallet Address</p>
-                      <p className="text-white text-sm font-mono break-all">{viewTransaction.client_usdt_address}</p>
-                    </div>
-                    {viewTransaction.client_usdt_network && (
-                      <div>
-                        <p className="text-xs text-[#C5C6C7]">Network</p>
-                        <p className="text-white text-sm font-medium">{viewTransaction.client_usdt_network}</p>
-                      </div>
-                    )}
-                  </div>
                 </div>
               )}
               {viewTransaction.description && (
@@ -1061,101 +846,15 @@ export default function AccountantDashboard() {
               {viewTransaction.proof_image && (
                 <div className="pt-4 border-t border-slate-200">
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Proof of Payment</p>
-                  <img 
-                    src={viewTransaction.proof_image?.startsWith('http') ? viewTransaction.proof_image : `data:image/png;base64,${viewTransaction.proof_image}`} 
-                    alt="Proof of payment" 
-                    className="max-w-full rounded border border-slate-200"
-                  />
+                  <img src={viewTransaction.proof_image?.startsWith('http') ? viewTransaction.proof_image : `data:image/png;base64,${viewTransaction.proof_image}`} alt="Proof" className="max-w-full rounded border border-slate-200" />
                 </div>
               )}
               <div className="flex gap-2 pt-4">
-                <Button
-                  onClick={() => {
-                    setViewTransaction(null);
-                    initiateApprove(viewTransaction.transaction_id);
-                  }}
-                  className="flex-1 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Approve
-                </Button>
-                <Button
-                  onClick={() => {
-                    setViewTransaction(null);
-                    initiateReject(viewTransaction.transaction_id);
-                  }}
-                  className="flex-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Reject
-                </Button>
+                <Button onClick={() => { setViewTransaction(null); initiateApprove(viewTransaction.transaction_id); }} className="flex-1 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"><CheckCircle className="w-4 h-4 mr-2" />Approve</Button>
+                <Button onClick={() => { setViewTransaction(null); initiateReject(viewTransaction.transaction_id); }} className="flex-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"><XCircle className="w-4 h-4 mr-2" />Reject</Button>
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Captcha Dialog */}
-      <Dialog open={showCaptcha} onOpenChange={(open) => { 
-        if (!open) {
-          setShowCaptcha(false);
-          setCaptchaAction(null);
-        }
-      }}>
-        <DialogContent className="bg-white border-slate-200 text-white max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
-              <Calculator className="w-6 h-6 text-[#66FCF1]" />
-              Verification Required
-            </DialogTitle>
-          </DialogHeader>
-          <MathCaptcha
-            actionType={captchaAction?.type}
-            onVerified={handleCaptchaVerified}
-            onCancel={() => {
-              setShowCaptcha(false);
-              setCaptchaAction(null);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Reject Reason Dialog */}
-      <Dialog open={!!showRejectDialog} onOpenChange={() => { setShowRejectDialog(null); setRejectReason(''); }}>
-        <DialogContent className="bg-white border-slate-200 text-white max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
-              <AlertCircle className="w-6 h-6 text-red-400" />
-              Reject Transaction
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-[#C5C6C7]">Please provide a reason for rejecting this transaction:</p>
-            <Textarea
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Enter rejection reason..."
-              className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1]"
-              rows={3}
-              data-testid="reject-reason"
-            />
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => { setShowRejectDialog(null); setRejectReason(''); }}
-                className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleRejectWithCaptcha}
-                className="flex-1 bg-red-500 text-white hover:bg-red-600"
-                data-testid="continue-reject-btn"
-              >
-                Continue
-              </Button>
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
 
@@ -1163,135 +862,107 @@ export default function AccountantDashboard() {
       <Dialog open={!!viewSettlement} onOpenChange={() => setViewSettlement(null)}>
         <DialogContent className="bg-white border-slate-200 text-white max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
-              <Wallet className="w-6 h-6 text-[#66FCF1]" />
-              Settlement Details
-            </DialogTitle>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}><Wallet className="w-6 h-6 text-[#66FCF1]" />Settlement Details</DialogTitle>
           </DialogHeader>
           {viewSettlement && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Store className="w-5 h-5 text-[#66FCF1]" />
-                  <span className="text-white text-lg">{viewSettlement.vendor_name}</span>
-                </div>
-                <Badge className="bg-yellow-500/20 text-yellow-400 text-xs uppercase">Pending</Badge>
-              </div>
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
-                <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Settlement Type</p>
-                  <Badge className={viewSettlement.settlement_type === 'bank' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}>
-                    {viewSettlement.settlement_type === 'bank' ? <Building2 className="w-3 h-3 mr-1 inline" /> : <Banknote className="w-3 h-3 mr-1 inline" />}
-                    {viewSettlement.settlement_type}
-                  </Badge>
-                </div>
-                <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Transactions</p>
-                  <p className="text-white font-mono">{viewSettlement.transaction_count}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Gross Amount</p>
-                  <p className="text-white font-mono text-xl">{viewSettlement.gross_amount?.toLocaleString()} {viewSettlement.source_currency || 'USD'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Commission</p>
-                  <p className="text-red-400 font-mono">-{viewSettlement.commission_amount?.toLocaleString()} {viewSettlement.source_currency || 'USD'}</p>
-                </div>
-                {viewSettlement.charges_amount > 0 && (
-                  <>
-                    <div>
-                      <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Charges</p>
-                      <p className="text-red-400 font-mono">-{viewSettlement.charges_amount?.toLocaleString()} {viewSettlement.source_currency || 'USD'}</p>
-                    </div>
-                    {viewSettlement.charges_description && (
-                      <div>
-                        <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Charges Desc.</p>
-                        <p className="text-white text-sm">{viewSettlement.charges_description}</p>
-                      </div>
-                    )}
-                  </>
-                )}
-                <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Net (Source)</p>
-                  <p className="text-white font-mono">{viewSettlement.net_amount_source?.toLocaleString()} {viewSettlement.source_currency || 'USD'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Settlement Amount</p>
-                  <p className="text-green-400 font-mono text-xl">
-                    {viewSettlement.settlement_amount?.toLocaleString()} {viewSettlement.destination_currency || 'USD'}
-                  </p>
-                </div>
-              </div>
-              <div className="pt-4 border-t border-slate-200">
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Destination Account</p>
-                <p className="text-white">{viewSettlement.settlement_destination_name}</p>
-              </div>
-              <div className="pt-4 border-t border-slate-200">
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created By</p>
-                <p className="text-white">{viewSettlement.created_by_name}</p>
-                <p className="text-sm text-[#C5C6C7]">{formatDate(viewSettlement.created_at)}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Exchanger</p><p className="text-white">{viewSettlement.vendor_name}</p></div>
+                <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Type</p><Badge className="bg-purple-500/20 text-purple-400">{viewSettlement.settlement_type}</Badge></div>
+                <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Gross</p><p className="text-white font-mono">{viewSettlement.gross_amount?.toLocaleString()} {viewSettlement.source_currency || 'USD'}</p></div>
+                <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Settlement</p><p className="text-green-400 font-mono">{viewSettlement.settlement_amount?.toLocaleString()} {viewSettlement.destination_currency || 'USD'}</p></div>
+                <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Destination</p><p className="text-white">{viewSettlement.settlement_destination_name}</p></div>
+                <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created</p><p className="text-white text-sm">{formatDate(viewSettlement.created_at)}</p></div>
               </div>
               <div className="flex gap-2 pt-4">
-                <Button
-                  onClick={() => {
-                    setViewSettlement(null);
-                    initiateApprove(viewSettlement.settlement_id, true);
-                  }}
-                  className="flex-1 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Approve
-                </Button>
-                <Button
-                  onClick={() => {
-                    setViewSettlement(null);
-                    initiateReject(viewSettlement.settlement_id, true);
-                  }}
-                  className="flex-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Reject
-                </Button>
+                <Button onClick={() => { setViewSettlement(null); initiateApprove(viewSettlement.settlement_id, true); }} className="flex-1 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"><CheckCircle className="w-4 h-4 mr-2" />Approve</Button>
+                <Button onClick={() => { setViewSettlement(null); initiateReject(viewSettlement.settlement_id, true); }} className="flex-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"><XCircle className="w-4 h-4 mr-2" />Reject</Button>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
+      {/* Generic View Item Dialog (IE / Loan / Repayment / PSP Settlement) */}
+      <Dialog open={!!viewItem} onOpenChange={() => setViewItem(null)}>
+        <DialogContent className="bg-white border-slate-200 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+              {viewItem?._viewType === 'ie' ? 'Income/Expense Details' : viewItem?._viewType === 'loan' ? 'Loan Details' : viewItem?._viewType === 'repayment' ? 'Repayment Details' : 'PSP Settlement Details'}
+            </DialogTitle>
+          </DialogHeader>
+          {viewItem && (
+            <div className="space-y-4">
+              <GenericDetailView item={viewItem} formatCurrency={formatCurrency} formatDate={formatDate} getTypeBadge={getTypeBadge} />
+              <div className="flex gap-2 pt-4">
+                <Button onClick={() => {
+                  const type = viewItem._viewType;
+                  const id = type === 'ie' ? viewItem.entry_id : type === 'loan' ? viewItem.loan_id : type === 'repayment' ? viewItem.repayment_id : viewItem.settlement_id;
+                  setViewItem(null);
+                  initiateGenericApprove(type, id);
+                }} className="flex-1 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"><CheckCircle className="w-4 h-4 mr-2" />Approve</Button>
+                <Button onClick={() => {
+                  const type = viewItem._viewType;
+                  const id = type === 'ie' ? viewItem.entry_id : type === 'loan' ? viewItem.loan_id : type === 'repayment' ? viewItem.repayment_id : viewItem.settlement_id;
+                  setViewItem(null);
+                  initiateGenericReject(type, id);
+                }} className="flex-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"><XCircle className="w-4 h-4 mr-2" />Reject</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Captcha Dialog */}
+      <Dialog open={showCaptcha} onOpenChange={(open) => { if (!open) { setShowCaptcha(false); setCaptchaAction(null); } }}>
+        <DialogContent className="bg-white border-slate-200 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}><Calculator className="w-6 h-6 text-[#66FCF1]" />Verification Required</DialogTitle>
+          </DialogHeader>
+          <MathCaptcha actionType={captchaAction?.type} onVerified={handleCaptchaVerified} onCancel={() => { setShowCaptcha(false); setCaptchaAction(null); }} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Reason Dialog (Transactions) */}
+      <Dialog open={!!showRejectDialog} onOpenChange={() => { setShowRejectDialog(null); setRejectReason(''); }}>
+        <DialogContent className="bg-white border-slate-200 text-white max-w-md">
+          <DialogHeader><DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}><AlertCircle className="w-6 h-6 text-red-400" />Reject Transaction</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-[#C5C6C7]">Please provide a reason for rejecting this transaction:</p>
+            <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Enter rejection reason..." className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1]" rows={3} data-testid="reject-reason" />
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => { setShowRejectDialog(null); setRejectReason(''); }} className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5">Cancel</Button>
+              <Button onClick={handleRejectWithCaptcha} className="flex-1 bg-red-500 text-white hover:bg-red-600" data-testid="continue-reject-btn">Continue</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Settlement Reject Reason Dialog */}
       <Dialog open={!!showSettlementRejectDialog} onOpenChange={() => { setShowSettlementRejectDialog(null); setRejectReason(''); }}>
         <DialogContent className="bg-white border-slate-200 text-white max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
-              <AlertCircle className="w-6 h-6 text-red-400" />
-              Reject Settlement
-            </DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}><AlertCircle className="w-6 h-6 text-red-400" />Reject Settlement</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <p className="text-[#C5C6C7]">Please provide a reason for rejecting this settlement:</p>
-            <Textarea
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Enter rejection reason..."
-              className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1]"
-              rows={3}
-              data-testid="settlement-reject-reason"
-            />
+            <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Enter rejection reason..." className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1]" rows={3} data-testid="settlement-reject-reason" />
             <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => { setShowSettlementRejectDialog(null); setRejectReason(''); }}
-                className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSettlementRejectWithCaptcha}
-                className="flex-1 bg-red-500 text-white hover:bg-red-600"
-                data-testid="continue-settlement-reject-btn"
-              >
-                Continue
-              </Button>
+              <Button variant="outline" onClick={() => { setShowSettlementRejectDialog(null); setRejectReason(''); }} className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5">Cancel</Button>
+              <Button onClick={handleSettlementRejectWithCaptcha} className="flex-1 bg-red-500 text-white hover:bg-red-600" data-testid="continue-settlement-reject-btn">Continue</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generic Reject Reason Dialog (IE / Loans / Repayments / PSP Settlements) */}
+      <Dialog open={!!showGenericRejectDialog} onOpenChange={() => { setShowGenericRejectDialog(null); setRejectReason(''); }}>
+        <DialogContent className="bg-white border-slate-200 text-white max-w-md">
+          <DialogHeader><DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}><AlertCircle className="w-6 h-6 text-red-400" />Reject Item</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-[#C5C6C7]">Please provide a reason for rejection:</p>
+            <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Enter rejection reason..." className="bg-slate-50 border-slate-200 text-white focus:border-[#66FCF1]" rows={3} data-testid="generic-reject-reason" />
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => { setShowGenericRejectDialog(null); setRejectReason(''); }} className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5">Cancel</Button>
+              <Button onClick={handleGenericRejectWithCaptcha} className="flex-1 bg-red-500 text-white hover:bg-red-600" data-testid="continue-generic-reject-btn">Continue</Button>
             </div>
           </div>
         </DialogContent>
@@ -1300,185 +971,60 @@ export default function AccountantDashboard() {
       {/* Upload Proof Dialog for Withdrawals */}
       <Dialog open={!!uploadingProof} onOpenChange={() => { setUploadingProof(null); setProofPreview(null); }}>
         <DialogContent className="bg-white border-slate-200 text-white max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
-              <Upload className="w-6 h-6 text-[#66FCF1]" />
-              Upload Proof of Payment
-            </DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}><Upload className="w-6 h-6 text-[#66FCF1]" />Upload Proof of Payment</DialogTitle></DialogHeader>
           {uploadingProof && (
             <div className="space-y-4">
               <div className="p-4 bg-slate-50 rounded-sm">
                 <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Transaction</p>
                 <p className="text-white font-mono">{uploadingProof.reference}</p>
-                <p className="text-sm text-[#C5C6C7] mt-2">
-                  Withdrawal of <span className="text-red-400 font-mono">${uploadingProof.amount?.toLocaleString()}</span> to:
-                </p>
-                {uploadingProof.destination_type === 'bank' && uploadingProof.client_bank_name && (
-                  <div className="mt-2 p-2 bg-white rounded-sm">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-blue-400" />
-                      <span className="text-white text-sm">{uploadingProof.client_bank_name}</span>
-                    </div>
-                    <p className="text-xs text-[#C5C6C7] font-mono mt-1">{uploadingProof.client_bank_account_number}</p>
-                  </div>
-                )}
-                {uploadingProof.destination_type === 'usdt' && uploadingProof.client_usdt_address && (
-                  <div className="mt-2 p-2 bg-white rounded-sm">
-                    <div className="flex items-center gap-2">
-                      <Wallet className="w-4 h-4 text-green-400" />
-                      <Badge className="bg-green-500/20 text-green-400 text-xs">{uploadingProof.client_usdt_network}</Badge>
-                    </div>
-                    <p className="text-xs text-[#C5C6C7] font-mono mt-1 break-all">{uploadingProof.client_usdt_address}</p>
-                  </div>
-                )}
+                <p className="text-sm text-[#C5C6C7] mt-2">Withdrawal of <span className="text-red-400 font-mono">${uploadingProof.amount?.toLocaleString()}</span></p>
               </div>
-              
               {proofPreview ? (
                 <div className="relative">
                   <img src={proofPreview} alt="Proof preview" className="w-full h-48 object-contain bg-slate-50 rounded-sm" />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setProofPreview(null)}
-                    className="absolute top-2 right-2 bg-red-500/80 text-white hover:bg-red-500"
-                  >
-                    Remove
-                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setProofPreview(null)} className="absolute top-2 right-2 bg-red-500/80 text-white hover:bg-red-500">Remove</Button>
                 </div>
               ) : (
                 <div className="border-2 border-dashed border-white/20 rounded-sm p-8 text-center">
                   <Upload className="w-8 h-8 text-[#C5C6C7] mx-auto mb-2" />
                   <p className="text-[#C5C6C7] mb-2">Upload screenshot of completed payment</p>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleProofUpload}
-                    className="hidden"
-                    id="proof-upload-input"
-                  />
-                  <Label
-                    htmlFor="proof-upload-input"
-                    className="cursor-pointer inline-block px-4 py-2 bg-[#66FCF1] text-[#0B0C10] font-bold uppercase text-sm rounded-sm hover:bg-[#45A29E]"
-                  >
-                    Choose File
-                  </Label>
+                  <Input type="file" accept="image/*" onChange={handleProofUpload} className="hidden" id="proof-upload-input" />
+                  <Label htmlFor="proof-upload-input" className="cursor-pointer inline-block px-4 py-2 bg-[#66FCF1] text-[#0B0C10] font-bold uppercase text-sm rounded-sm hover:bg-[#45A29E]">Choose File</Label>
                 </div>
               )}
-              
-              <Button
-                variant="outline"
-                onClick={() => { setUploadingProof(null); setProofPreview(null); }}
-                className="w-full border-slate-200 text-[#C5C6C7] hover:bg-white/5"
-              >
-                Cancel
-              </Button>
+              <Button variant="outline" onClick={() => { setUploadingProof(null); setProofPreview(null); }} className="w-full border-slate-200 text-[#C5C6C7] hover:bg-white/5">Cancel</Button>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
       {/* Transaction Approval Dialog - For Deposits and Withdrawals with Screenshot */}
-      <Dialog open={!!showApprovalDialog} onOpenChange={() => { 
-        setShowApprovalDialog(null); 
-        setApprovalSourceAccount(''); 
-        setApprovalProof(null); 
-        setApprovalProofPreview(null);
-        setBankReceiptDate('');
-      }}>
+      <Dialog open={!!showApprovalDialog} onOpenChange={() => { setShowApprovalDialog(null); setApprovalSourceAccount(''); setApprovalProof(null); setApprovalProofPreview(null); setBankReceiptDate(''); }}>
         <DialogContent className="bg-white border-slate-200 text-white max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
-              <CheckCircle className="w-6 h-6 text-green-400" />
-              Approve {showApprovalDialog?.transaction_type === 'withdrawal' ? 'Withdrawal' : 'Deposit'}
+              <CheckCircle className="w-6 h-6 text-green-400" />Approve {showApprovalDialog?.transaction_type === 'withdrawal' ? 'Withdrawal' : 'Deposit'}
             </DialogTitle>
           </DialogHeader>
           {showApprovalDialog && (
             <div className="space-y-4">
-              {/* Transaction Details */}
               <div className="p-4 bg-slate-50 rounded-sm">
                 <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Transaction</p>
                 <p className="text-white font-mono">{showApprovalDialog.reference}</p>
-                {showApprovalDialog.crm_reference && (
-                  <p className="text-purple-400 font-mono text-xs mt-1">CRM: {showApprovalDialog.crm_reference}</p>
-                )}
-                {showApprovalDialog.description && (
-                  <p className="text-[#C5C6C7] text-xs mt-1">{showApprovalDialog.description}</p>
-                )}
                 <div className="mt-2 flex items-center justify-between">
                   <span className="text-[#C5C6C7]">Amount:</span>
                   <span className={`font-mono text-lg font-bold ${showApprovalDialog.transaction_type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
                     {showApprovalDialog.transaction_type === 'deposit' ? '+' : '-'}${showApprovalDialog.amount?.toLocaleString()}
                   </span>
                 </div>
-                <div className="mt-2">
-                  <span className="text-[#C5C6C7] text-sm">Client: </span>
-                  <span className="text-white">{showApprovalDialog.client_name}</span>
-                </div>
-                <div className="mt-1">
-                  <Badge className={showApprovalDialog.transaction_type === 'deposit' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}>
-                    {showApprovalDialog.transaction_type === 'deposit' ? <ArrowDownRight className="w-3 h-3 mr-1" /> : <ArrowUpRight className="w-3 h-3 mr-1" />}
-                    {showApprovalDialog.transaction_type}
-                  </Badge>
-                </div>
+                <div className="mt-2"><span className="text-[#C5C6C7] text-sm">Client: </span><span className="text-white">{showApprovalDialog.client_name}</span></div>
               </div>
-
-              {/* Destination Details - Only for Withdrawals */}
-              {showApprovalDialog.transaction_type === 'withdrawal' && (
-                <div className="p-4 bg-slate-50 rounded-sm">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Sending To</p>
-                  {showApprovalDialog.destination_type === 'bank' && showApprovalDialog.client_bank_name && (
-                    <div className="flex items-start gap-2">
-                      <Building2 className="w-5 h-5 text-blue-400 mt-0.5" />
-                      <div>
-                        <p className="text-white">{showApprovalDialog.client_bank_name}</p>
-                        <p className="text-sm text-[#C5C6C7]">{showApprovalDialog.client_bank_account_name}</p>
-                        <p className="text-xs text-[#C5C6C7] font-mono">{showApprovalDialog.client_bank_account_number}</p>
-                        {showApprovalDialog.client_bank_swift_iban && (
-                          <p className="text-xs text-[#C5C6C7]">SWIFT: {showApprovalDialog.client_bank_swift_iban}</p>
-                        )}
-                        <Badge className="mt-1 bg-blue-500/20 text-blue-400 text-xs">{showApprovalDialog.client_bank_currency || 'USD'}</Badge>
-                      </div>
-                    </div>
-                  )}
-                  {showApprovalDialog.destination_type === 'usdt' && showApprovalDialog.client_usdt_address && (
-                    <div className="flex items-start gap-2">
-                      <Wallet className="w-5 h-5 text-green-400 mt-0.5" />
-                      <div>
-                        <Badge className="bg-green-500/20 text-green-400 text-xs">{showApprovalDialog.client_usdt_network}</Badge>
-                        <p className="text-xs text-[#C5C6C7] font-mono mt-1 break-all">{showApprovalDialog.client_usdt_address}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Deposit Destination Info */}
-              {showApprovalDialog.transaction_type === 'deposit' && showApprovalDialog.destination_account_name && (
-                <div className="p-4 bg-slate-50 rounded-sm">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Depositing To</p>
-                  <div className="flex items-start gap-2">
-                    <Building2 className="w-5 h-5 text-[#66FCF1] mt-0.5" />
-                    <div>
-                      <p className="text-white">{showApprovalDialog.destination_account_name}</p>
-                      <p className="text-sm text-[#C5C6C7]">{showApprovalDialog.destination_bank_name}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Source Treasury/USDT Account Selection - Only for Withdrawals */}
               {showApprovalDialog.transaction_type === 'withdrawal' && (
                 <div className="space-y-2">
                   <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Source Account (Where funds come from) *</Label>
                   <Select value={approvalSourceAccount} onValueChange={setApprovalSourceAccount}>
-                    <SelectTrigger className="bg-slate-50 border-slate-200 text-white" data-testid="approval-source-account">
-                      <SelectValue placeholder="Select treasury, USDT or PSP account" />
-                    </SelectTrigger>
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-white" data-testid="approval-source-account"><SelectValue placeholder="Select treasury, USDT or PSP account" /></SelectTrigger>
                     <SelectContent className="bg-white border-slate-200 max-h-[250px]">
-                      {treasuryAccounts.length > 0 && (
-                        <div className="px-2 py-1 text-[10px] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-100">Treasury / USDT</div>
-                      )}
                       {treasuryAccounts.map((account) => (
                         <SelectItem key={account.account_id} value={account.account_id} className="text-white hover:bg-white/5">
                           <div className="flex items-center gap-2">
@@ -1489,16 +1035,11 @@ export default function AccountantDashboard() {
                           </div>
                         </SelectItem>
                       ))}
-                      {psps.length > 0 && (
-                        <div className="px-2 py-1 text-[10px] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-100 mt-1">PSP</div>
-                      )}
                       {psps.filter(p => p.status === 'active').map((psp) => (
                         <SelectItem key={`psp_${psp.psp_id}`} value={`psp_${psp.psp_id}`} className="text-white hover:bg-white/5">
                           <div className="flex items-center gap-2">
                             <CreditCard className="w-3 h-3 text-purple-400" />
                             <span>{psp.psp_name}</span>
-                            <span className="text-[#C5C6C7] text-xs">({psp.currency || 'USD'})</span>
-                            <span className="text-purple-400 font-mono text-xs">{psp.current_balance?.toLocaleString() || '0'}</span>
                           </div>
                         </SelectItem>
                       ))}
@@ -1506,83 +1047,29 @@ export default function AccountantDashboard() {
                   </Select>
                 </div>
               )}
-
-              {/* Bank Receipt Date - Optional */}
               <div className="space-y-2">
                 <Label className="text-slate-600 text-xs uppercase tracking-wider">Bank Receipt Date (Actual payment date)</Label>
-                <Input
-                  type="date"
-                  value={bankReceiptDate}
-                  onChange={e => setBankReceiptDate(e.target.value)}
-                  className="bg-slate-50 border-slate-200 text-slate-800"
-                  data-testid="bank-receipt-date"
-                />
-                <p className="text-slate-400 text-xs">Date the payment was actually received in the bank. Used for reconciliation matching.</p>
+                <Input type="date" value={bankReceiptDate} onChange={e => setBankReceiptDate(e.target.value)} className="bg-slate-50 border-slate-200 text-slate-800" data-testid="bank-receipt-date" />
               </div>
-
-              {/* Proof of Payment Upload - Required for both */}
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
-                  Proof of {showApprovalDialog.transaction_type === 'deposit' ? 'Deposit' : 'Payment'} (Screenshot) *
-                </Label>
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Proof of {showApprovalDialog.transaction_type === 'deposit' ? 'Deposit' : 'Payment'} (Screenshot) *</Label>
                 {approvalProofPreview ? (
                   <div className="relative">
                     <img src={approvalProofPreview} alt="Proof preview" className="w-full h-40 object-contain bg-slate-50 rounded-sm" />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => { setApprovalProof(null); setApprovalProofPreview(null); }}
-                      className="absolute top-2 right-2 bg-red-500/80 text-white hover:bg-red-500"
-                    >
-                      Remove
-                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => { setApprovalProof(null); setApprovalProofPreview(null); }} className="absolute top-2 right-2 bg-red-500/80 text-white hover:bg-red-500">Remove</Button>
                   </div>
                 ) : (
                   <div className="border-2 border-dashed border-white/20 rounded-sm p-6 text-center">
                     <Upload className="w-6 h-6 text-[#C5C6C7] mx-auto mb-2" />
-                    <p className="text-[#C5C6C7] text-sm mb-2">
-                      Upload {showApprovalDialog.transaction_type === 'deposit' ? 'deposit confirmation' : 'payment confirmation'} screenshot
-                    </p>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleApprovalProofChange}
-                      className="hidden"
-                      id="approval-proof-input"
-                    />
-                    <Label
-                      htmlFor="approval-proof-input"
-                      className="cursor-pointer inline-block px-4 py-2 bg-[#66FCF1] text-[#0B0C10] font-bold uppercase text-sm rounded-sm hover:bg-[#45A29E]"
-                    >
-                      Choose File
-                    </Label>
+                    <Input type="file" accept="image/*" onChange={handleApprovalProofChange} className="hidden" id="approval-proof-input" />
+                    <Label htmlFor="approval-proof-input" className="cursor-pointer inline-block px-4 py-2 bg-[#66FCF1] text-[#0B0C10] font-bold uppercase text-sm rounded-sm hover:bg-[#45A29E]">Choose File</Label>
                   </div>
                 )}
               </div>
-
-              {/* Action Buttons */}
               <div className="flex gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => { 
-                    setShowApprovalDialog(null); 
-                    setApprovalSourceAccount(''); 
-                    setApprovalProof(null); 
-                    setApprovalProofPreview(null);
-                    setBankReceiptDate('');
-                  }}
-                  className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleTransactionApproval}
-                  disabled={(showApprovalDialog.transaction_type === 'withdrawal' && !approvalSourceAccount) || !approvalProof}
-                  className="flex-1 bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  data-testid="confirm-transaction-approval"
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Continue to Approve
+                <Button variant="outline" onClick={() => { setShowApprovalDialog(null); setApprovalSourceAccount(''); setApprovalProof(null); setApprovalProofPreview(null); setBankReceiptDate(''); }} className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5">Cancel</Button>
+                <Button onClick={handleTransactionApproval} disabled={(showApprovalDialog.transaction_type === 'withdrawal' && !approvalSourceAccount) || !approvalProof} className="flex-1 bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed" data-testid="confirm-transaction-approval">
+                  <CheckCircle className="w-4 h-4 mr-2" />Continue to Approve
                 </Button>
               </div>
             </div>
@@ -1591,4 +1078,101 @@ export default function AccountantDashboard() {
       </Dialog>
     </div>
   );
+}
+
+// ---- Helper Components ----
+
+function PendingList({ loading, items, emptyMsg, children }) {
+  if (loading) return <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" /></div>;
+  if (!items || items.length === 0) return (
+    <Card className="bg-white border-slate-200"><CardContent className="p-12 text-center"><CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" /><p className="text-white text-lg">All caught up!</p><p className="text-[#C5C6C7] mt-2">{emptyMsg}</p></CardContent></Card>
+  );
+  return <div className="space-y-3">{children}</div>;
+}
+
+function ApproveRejectButtons({ approveId, onApprove, onReject, onView, processing, disabled = false }) {
+  return (
+    <div className="flex items-center gap-1.5 ml-auto">
+      <Button variant="ghost" size="sm" onClick={onView} className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0" data-testid={`view-${approveId}`}><Eye className="w-4 h-4" /></Button>
+      <Button size="sm" onClick={onApprove} disabled={processing === approveId || disabled} className={`h-8 text-xs px-3 ${disabled ? 'bg-slate-500/20 text-slate-500 cursor-not-allowed' : 'bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30'}`} data-testid={`approve-${approveId}`}>
+        <CheckCircle className="w-3.5 h-3.5 mr-1" />Approve
+      </Button>
+      <Button size="sm" onClick={onReject} disabled={processing === approveId} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3" data-testid={`reject-${approveId}`}>
+        <XCircle className="w-3.5 h-3.5 mr-1" />Reject
+      </Button>
+    </div>
+  );
+}
+
+function GenericDetailView({ item, formatCurrency, formatDate, getTypeBadge }) {
+  if (item._viewType === 'ie') return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <Badge className={item.entry_type === 'income' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}>{item.entry_type}</Badge>
+        <Badge className="bg-yellow-500/20 text-yellow-400 text-xs uppercase">Pending</Badge>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Description</p><p className="text-white">{item.description || item.category || item.ie_category_name || '-'}</p></div>
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Amount</p><p className={`font-mono text-xl ${item.entry_type === 'income' ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(item.amount, item.currency)}</p></div>
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Treasury</p><p className="text-white">{item.treasury_account_name || '-'}</p></div>
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Date</p><p className="text-white">{item.date || formatDate(item.created_at)}</p></div>
+        {item.vendor_name && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Exchanger</p><p className="text-white">{item.vendor_name}</p></div>}
+        {item.client_name && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Client</p><p className="text-white">{item.client_name}</p></div>}
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created By</p><p className="text-white">{item.created_by_name}</p></div>
+        {item.reference && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reference</p><p className="text-white font-mono text-sm">{item.reference}</p></div>}
+      </div>
+    </div>
+  );
+  if (item._viewType === 'loan') return (
+    <div className="space-y-4">
+      <Badge className="bg-yellow-500/20 text-yellow-400 text-xs uppercase">Pending Approval</Badge>
+      <div className="grid grid-cols-2 gap-4">
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Borrower</p><p className="text-white text-lg">{item.borrower_name}</p></div>
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Amount</p><p className="font-mono text-xl text-red-400">-{formatCurrency(item.amount, item.currency)}</p></div>
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Interest Rate</p><p className="text-white">{item.interest_rate}%</p></div>
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Loan Type</p><p className="text-white capitalize">{item.loan_type?.replace('_', ' ')}</p></div>
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Loan Date</p><p className="text-white">{item.loan_date?.split('T')[0]}</p></div>
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Due Date</p><p className="text-white">{item.due_date?.split('T')[0]}</p></div>
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Source</p><p className="text-white">{item.source_vendor_name || 'Treasury'}</p></div>
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created By</p><p className="text-white">{item.created_by_name}</p></div>
+      </div>
+      {item.notes && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Notes</p><p className="text-white">{item.notes}</p></div>}
+    </div>
+  );
+  if (item._viewType === 'repayment') return (
+    <div className="space-y-4">
+      <Badge className="bg-yellow-500/20 text-yellow-400 text-xs uppercase">Pending Approval</Badge>
+      <div className="grid grid-cols-2 gap-4">
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Borrower</p><p className="text-white text-lg">{item.borrower_name}</p></div>
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Repayment Amount</p><p className="font-mono text-xl text-green-400">+{formatCurrency(item.amount, item.currency)}</p></div>
+        {item.currency !== item.loan_currency && (
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">In Loan Currency</p><p className="text-white font-mono">{formatCurrency(item.amount_in_loan_currency, item.loan_currency)}</p></div>
+        )}
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Payment Date</p><p className="text-white">{item.payment_date}</p></div>
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Loan ID</p><p className="text-white font-mono text-xs">{item.loan_id}</p></div>
+        {item.reference && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reference</p><p className="text-white">{item.reference}</p></div>}
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created By</p><p className="text-white">{item.created_by_name}</p></div>
+      </div>
+      {item.notes && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Notes</p><p className="text-white">{item.notes}</p></div>}
+    </div>
+  );
+  if (item._viewType === 'psp_settlement') return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2"><CreditCard className="w-5 h-5 text-purple-400" /><span className="text-white text-lg">{item.psp_name}</span></div>
+        <Badge className="bg-yellow-500/20 text-yellow-400 text-xs uppercase">Pending</Badge>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Type</p><Badge className="bg-purple-500/20 text-purple-400">{item.settlement_type || 'standard'}</Badge></div>
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Transactions</p><p className="text-white font-mono">{item.transaction_count}</p></div>
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Gross Amount</p><p className="text-white font-mono text-xl">${item.gross_amount?.toLocaleString()}</p></div>
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Net Amount</p><p className="text-green-400 font-mono text-xl">${item.net_amount?.toLocaleString()}</p></div>
+        {item.commission_amount > 0 && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Commission</p><p className="text-red-400 font-mono">-${item.commission_amount?.toLocaleString()}</p></div>}
+        {item.reserve_fund_amount > 0 && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reserve Fund</p><p className="text-red-400 font-mono">-${item.reserve_fund_amount?.toLocaleString()}</p></div>}
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Destination</p><p className="text-white">{item.settlement_destination_name}</p></div>
+        <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created By</p><p className="text-white">{item.created_by_name}</p><p className="text-xs text-[#C5C6C7]">{formatDate(item.created_at)}</p></div>
+      </div>
+    </div>
+  );
+  return null;
 }
