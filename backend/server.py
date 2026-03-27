@@ -9486,8 +9486,8 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, request: Reques
     # Calculate USD equivalent
     amount_usd = convert_to_usd(entry_data.amount, entry_data.currency)
     
-    # Determine initial status: pending if exchanger-linked, completed otherwise
-    status = "pending_vendor" if vendor_info else "completed"
+    # Determine initial status: always pending for approval
+    status = "pending"
     
     # Calculate vendor commission at creation time
     ie_commission_rate = 0.0
@@ -9561,92 +9561,14 @@ async def create_income_expense(entry_data: IncomeExpenseCreate, request: Reques
     
     await db.income_expenses.insert_one(entry_doc)
     
-    # Only update treasury if not vendor-linked (vendor must approve first)
-    if not vendor_info and treasury:
-        treasury_currency = treasury.get("currency", "USD")
-        
-        # Determine the amount to use for treasury update
-        # If base_currency matches treasury currency, use base_amount directly
-        # Otherwise convert from the appropriate currency
-        if entry_data.base_currency and entry_data.base_amount:
-            # Payment was made in a non-USD currency
-            if treasury_currency.upper() == entry_data.base_currency.upper():
-                # Treasury currency matches payment currency - use base_amount directly
-                converted_amount = entry_data.base_amount
-                original_amount = entry_data.base_amount
-                original_currency = entry_data.base_currency
-            elif treasury_currency.upper() == "USD":
-                # Treasury is in USD - use the USD amount
-                converted_amount = entry_data.amount
-                original_amount = entry_data.base_amount
-                original_currency = entry_data.base_currency
-            else:
-                # Treasury is in a different currency - convert from USD
-                converted_amount = convert_currency(entry_data.amount, "USD", treasury_currency)
-                original_amount = entry_data.base_amount
-                original_currency = entry_data.base_currency
-        else:
-            # Payment was made in USD (no base_currency)
-            if treasury_currency.upper() == "USD":
-                converted_amount = entry_data.amount
-                original_amount = entry_data.amount
-                original_currency = "USD"
-            else:
-                converted_amount = convert_currency(entry_data.amount, "USD", treasury_currency)
-                original_amount = entry_data.amount
-                original_currency = "USD"
-        
-        if entry_data.entry_type == IncomeExpenseType.INCOME:
-            await db.treasury_accounts.update_one(
-                {"account_id": entry_data.treasury_account_id},
-                {"$inc": {"balance": converted_amount}, "$set": {"updated_at": now.isoformat()}}
-            )
-        else:
-            if treasury.get("balance", 0) < converted_amount:
-                raise HTTPException(status_code=400, detail="Insufficient balance in treasury account")
-            await db.treasury_accounts.update_one(
-                {"account_id": entry_data.treasury_account_id},
-                {"$inc": {"balance": -converted_amount}, "$set": {"updated_at": now.isoformat()}}
-            )
-        
-        # Record in treasury transactions
-        tx_id = f"ttx_{uuid.uuid4().hex[:12]}"
-        tx_type = "income" if entry_data.entry_type == IncomeExpenseType.INCOME else "expense"
-        tx_amount = converted_amount if entry_data.entry_type == IncomeExpenseType.INCOME else -converted_amount
-        
-        # Build reference from category name
-        category_label = entry_data.category.replace('_', ' ').title() if entry_data.category else (ie_category_info["name"] if ie_category_info else "Other")
-        
-        # Include conversion info if applicable
-        conversion_note = ""
-        if original_currency.upper() != treasury_currency.upper():
-            conversion_note = f" (Converted from {original_amount:,.2f} {original_currency})"
-        
-        tx_doc = {
-            "treasury_transaction_id": tx_id,
-            "account_id": entry_data.treasury_account_id,
-            "transaction_type": tx_type,
-            "amount": tx_amount,
-            "currency": treasury_currency,
-            "original_amount": original_amount,
-            "original_currency": original_currency,
-            "base_amount": entry_data.base_amount,
-            "base_currency": entry_data.base_currency,
-            "exchange_rate": entry_data.exchange_rate,
-            "reference": f"{category_label}: {entry_data.description or 'N/A'}{conversion_note}",
-            "income_expense_id": entry_id,
-            "created_at": f"{entry_date}T12:00:00+00:00",
-            "created_by": user["user_id"],
-            "created_by_name": user["name"]
-        }
-        await db.treasury_transactions.insert_one(tx_doc)
+    # Treasury update is deferred to approval step
     
     entry_doc.pop("_id", None)
     if treasury:
         entry_doc["treasury_account_name"] = treasury["account_name"]
     
     # Log activity
-    await log_activity(request, user, "create", "income_expenses", f"Created {entry_data.entry_type}: {entry_data.description or entry_data.category}", reference_id=entry_id)
+    await log_activity(request, user, "create", "income_expenses", f"Created {entry_data.entry_type}: {entry_data.description or entry_data.category} (pending approval)", reference_id=entry_id)
     
     # Notify exchanger if assigned
     if vendor_info and entry_data.vendor_id:
@@ -10634,7 +10556,7 @@ async def create_loan(loan_data: LoanCreate, request: Request, user: dict = Depe
         "bank_details": loan_data.bank_details,
         "total_repaid": 0,
         "repayment_count": 0,
-        "status": LoanStatus.ACTIVE,
+        "status": "pending_approval",
         "notes": loan_data.notes,
         "created_at": now.isoformat(),
         "created_by": user["user_id"],
