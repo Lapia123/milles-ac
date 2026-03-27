@@ -40,8 +40,8 @@ Comprehensive back-office accounting software for FX brokerage "Miles Capitals".
   - Direct Transfer option: record payment without linking to treasury account
   - Treasury destination option: link to specific treasury account
   - All settlements go through Pending Approvals workflow
-  - Settlement preview with charges breakdown
-  - Notes field for settlement reference
+  - **Bug Fix**: Custom settlements now properly deduct from vendor balance in all views (detail, list, portal)
+  - Balance breakdown shows "Custom Settled" line item per currency
 
 ## Completed Features (Previous Sessions)
 - [x] PSP Pending Settlement calculation fix, Net Settlement feature, Settlement History

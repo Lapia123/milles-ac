@@ -632,6 +632,13 @@ export default function Exchangers() {
                             <span>Commission:</span>
                             <span>-{item.commission_earned_base?.toLocaleString()}</span>
                           </div>
+                          {/* Custom Settled */}
+                          {(item.custom_settled > 0) && (
+                            <div className="flex justify-between text-blue-500">
+                              <span>Custom Settled:</span>
+                              <span>-{item.custom_settled?.toLocaleString()}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1420,6 +1427,7 @@ export default function Exchangers() {
                           <div className="flex justify-between text-green-500"><span>Money In (Dep + I&E + Loan)</span><span>+{item.total_in?.toLocaleString()}</span></div>
                           <div className="flex justify-between text-red-400"><span>Money Out (Wdr + I&E + Loan)</span><span>-{item.total_out?.toLocaleString()}</span></div>
                           <div className="flex justify-between text-yellow-400"><span>Commission</span><span>-{item.commission_earned_base?.toLocaleString()}</span></div>
+                        {(item.custom_settled > 0) && <div className="flex justify-between text-blue-400"><span>Custom Settled</span><span>-{item.custom_settled?.toLocaleString()}</span></div>}
                         </div>
                         {item.currency !== 'USD' && (
                           <div className="flex justify-between text-xs">
