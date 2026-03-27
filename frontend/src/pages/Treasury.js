@@ -1127,8 +1127,7 @@ export default function Treasury() {
                     </SelectContent>
                   </Select>
                 </div>
-                {(historyFilters.period === 'custom' || (!historyFilters.period && (historyFilters.startDate || historyFilters.endDate))) && (
-                  <>
+                {/* Always show date inputs */}
                     <div className="min-w-[140px] space-y-1">
                       <Label className="text-slate-500 text-xs uppercase tracking-wider">From</Label>
                       <Input
@@ -1149,8 +1148,6 @@ export default function Treasury() {
                         data-testid="history-end-date"
                       />
                     </div>
-                  </>
-                )}
                 <div className="min-w-[140px] space-y-1">
                   <Label className="text-slate-500 text-xs uppercase tracking-wider">Type</Label>
                   <Select
