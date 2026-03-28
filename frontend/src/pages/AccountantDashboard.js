@@ -268,7 +268,7 @@ export default function AccountantDashboard() {
       // Vendor settlements also go through the date approval dialog
       const s = pendingSettlements.find(st => st.settlement_id === transactionId);
       setShowGenericApprovalDialog({ type: 'vendor_settlement', id: transactionId, item: s || null });
-      setGenericApprovalDate(new Date().toISOString().split('T')[0]);
+      setGenericApprovalDate(getItemOriginalDate('vendor_settlement', s));
       return;
     }
     const tx = pendingTransactions.find(t => t.transaction_id === transactionId);
@@ -386,9 +386,21 @@ export default function AccountantDashboard() {
   };
 
   // ---- Generic Approve/Reject for IE, Loans, Repayments, PSP Settlements ----
+  const getItemOriginalDate = (type, item) => {
+    if (!item) return new Date().toISOString().split('T')[0];
+    let raw = null;
+    if (type === 'ie') raw = item.date || item.created_at;
+    else if (type === 'loan') raw = item.loan_date || item.created_at;
+    else if (type === 'repayment') raw = item.payment_date || item.created_at;
+    else if (type === 'psp_settlement') raw = item.settlement_date || item.created_at;
+    else if (type === 'vendor_settlement') raw = item.created_at;
+    if (!raw) return new Date().toISOString().split('T')[0];
+    return raw.split('T')[0];
+  };
+
   const initiateGenericApprove = (type, id, item = null) => {
     setShowGenericApprovalDialog({ type, id, item });
-    setGenericApprovalDate(new Date().toISOString().split('T')[0]);
+    setGenericApprovalDate(getItemOriginalDate(type, item));
   };
 
   const handleGenericApprovalConfirm = () => {
